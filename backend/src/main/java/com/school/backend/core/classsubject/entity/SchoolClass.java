@@ -1,0 +1,65 @@
+package com.school.backend.core.classsubject.entity;
+
+import com.school.backend.common.entity.BaseEntity;
+import com.school.backend.core.teacher.entity.Teacher;
+import com.school.backend.school.entity.School;
+import jakarta.persistence.*;
+import lombok.*;
+
+@Entity
+@Table(name = "school_classes", indexes = {
+        @Index(name = "idx_schoolclass_schoolid_name_session", columnList = "school_id,name,session")
+})
+@Getter
+@Setter
+@NoArgsConstructor
+@AllArgsConstructor
+@Builder
+@EqualsAndHashCode(callSuper = false, onlyExplicitlyIncluded = true)
+public class SchoolClass extends BaseEntity {
+
+    @Id
+    @GeneratedValue(strategy = GenerationType.IDENTITY)
+    @EqualsAndHashCode.Include
+    private Long id;
+
+    /**
+     * Class name: "Nursery", "LKG", "1", "10", etc.
+     */
+    @Column(nullable = false)
+    private String name;
+
+    /**
+     * Section (optional). We keep a simple single-letter/label.
+     */
+    private String section;
+
+    /**
+     * Academic session like "2025-26"
+     */
+    @Column(nullable = false)
+    private String session;
+
+    /**
+     * Capacity of the class (optional)
+     */
+    private Integer capacity;
+
+    /**
+     * Optional reference to the class teacher (User / Teacher id)
+     */
+    @ManyToOne(fetch = FetchType.LAZY)
+    @JoinColumn(name = "class_teacher_id")
+    private Teacher classTeacher;
+
+    /**
+     * Many classes belong to a School (multi-tenant)
+     */
+    @ManyToOne(fetch = FetchType.LAZY)
+    @JoinColumn(name = "school_id", nullable = false)
+    private School school;
+
+    private boolean active = true;
+
+    private String remarks;
+}

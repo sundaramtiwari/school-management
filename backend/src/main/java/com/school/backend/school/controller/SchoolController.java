@@ -1,12 +1,17 @@
 package com.school.backend.school.controller;
 
-import com.school.backend.school.entity.School;
+import com.school.backend.common.dto.PageResponse;
+import com.school.backend.common.dto.PageResponseMapper;
+import com.school.backend.school.dto.SchoolDto;
 import com.school.backend.school.service.SchoolService;
 import lombok.RequiredArgsConstructor;
+import org.springframework.data.domain.Page;
+import org.springframework.data.domain.Pageable;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
+import org.springframework.web.servlet.support.ServletUriComponentsBuilder;
 
-import java.util.List;
+import java.net.URI;
 
 @RestController
 @RequestMapping("/api/schools")
@@ -15,18 +20,54 @@ public class SchoolController {
 
     private final SchoolService schoolService;
 
+    /**
+     * Create - returns 201 Created with Location header
+     */
     @PostMapping
-    public ResponseEntity<School> create(@RequestBody School school) {
-        return ResponseEntity.ok(schoolService.create(school));
+    public ResponseEntity<SchoolDto> create(@RequestBody SchoolDto schoolDto) {
+        SchoolDto created = schoolService.create(schoolDto);
+
+        URI location = ServletUriComponentsBuilder.fromCurrentRequest()
+                .path("/{code}")
+                .buildAndExpand(created.getSchoolCode())
+                .toUri();
+
+        return ResponseEntity.created(location).body(created);
     }
 
+    /**
+     * Paginated list
+     */
     @GetMapping
-    public ResponseEntity<List<School>> getAll() {
-        return ResponseEntity.ok(schoolService.getAll());
+    public ResponseEntity<PageResponse<SchoolDto>> getAll(Pageable pageable) {
+        Page<SchoolDto> page = schoolService.listSchools(pageable);
+        PageResponse<SchoolDto> response = PageResponseMapper.fromPage(page);
+        return ResponseEntity.ok(response);
     }
 
+    /**
+     * Get by schoolCode
+     */
     @GetMapping("/{code}")
-    public ResponseEntity<School> getByCode(@PathVariable String code) {
+    public ResponseEntity<SchoolDto> getByCode(@PathVariable String code) {
         return ResponseEntity.ok(schoolService.getByCode(code));
+    }
+
+    /**
+     * PUT - full replace. Client should send full DTO (fields missing will be overwritten).
+     */
+    @PutMapping("/{code}")
+    public ResponseEntity<SchoolDto> replace(@PathVariable String code, @RequestBody SchoolDto schoolDto) {
+        SchoolDto replaced = schoolService.replaceByCode(code, schoolDto);
+        return ResponseEntity.ok(replaced);
+    }
+
+    /**
+     * PATCH - partial update. Only non-null fields in DTO are applied.
+     */
+    @PatchMapping("/{code}")
+    public ResponseEntity<SchoolDto> update(@PathVariable String code, @RequestBody SchoolDto schoolDto) {
+        SchoolDto updated = schoolService.updateByCode(code, schoolDto);
+        return ResponseEntity.ok(updated);
     }
 }
