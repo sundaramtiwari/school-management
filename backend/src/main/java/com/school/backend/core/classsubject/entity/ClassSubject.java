@@ -54,5 +54,6 @@ public class ClassSubject extends BaseEntity {
     @JoinColumn(name = "school_id", nullable = false)
     private School school;
 
+    @Builder.Default
     private boolean active = true;
 }

@@ -43,6 +43,7 @@ public class Subject extends BaseEntity {
     private Integer maxMarks;
     private Integer minMarks;
 
+    @Builder.Default
     private boolean active = true;
 
     private String remarks;
