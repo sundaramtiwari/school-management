@@ -2,10 +2,8 @@ package com.school.backend.core.student.service;
 
 import com.school.backend.common.exception.ResourceNotFoundException;
 import com.school.backend.core.classsubject.repository.SchoolClassRepository;
-import com.school.backend.core.student.dto.PromotionRequest;
 import com.school.backend.core.student.dto.StudentEnrollmentDto;
 import com.school.backend.core.student.dto.StudentEnrollmentRequest;
-import com.school.backend.core.student.entity.PromotionRecord;
 import com.school.backend.core.student.entity.StudentEnrollment;
 import com.school.backend.core.student.mapper.StudentEnrollmentMapper;
 import com.school.backend.core.student.repository.PromotionRecordRepository;
@@ -48,36 +46,6 @@ public class EnrollmentService {
         });
 
         return enrollmentMapper.toDto(saved);
-    }
-
-    @Transactional
-    public PromotionRecord promote(PromotionRequest req) {
-        studentRepository.findById(req.getStudentId())
-                .orElseThrow(() -> new ResourceNotFoundException("Student not found"));
-
-        classRepository.findById(req.getToClassId())
-                .orElseThrow(() -> new ResourceNotFoundException("To class not found"));
-
-        PromotionRecord pr = new PromotionRecord();
-        pr.setStudentId(req.getStudentId());
-        pr.setFromClassId(req.getFromClassId());
-        pr.setToClassId(req.getToClassId());
-        pr.setSession(req.getSession());
-        pr.setPromotedOn(req.getPromotedOn() != null ? req.getPromotedOn() : LocalDate.now());
-        pr.setRemarks(req.getRemarks());
-        pr.setFeePending(req.isFeePending());
-
-        PromotionRecord saved = promotionRepo.save(pr);
-
-        // update student's currentClass
-        studentRepository.findById(req.getStudentId()).ifPresent(s -> {
-            classRepository.findById(req.getToClassId()).ifPresent(c -> {
-                s.setCurrentClass(c);
-                studentRepository.save(s);
-            });
-        });
-
-        return saved;
     }
 
     @Transactional(readOnly = true)

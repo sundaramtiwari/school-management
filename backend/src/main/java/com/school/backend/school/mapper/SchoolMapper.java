@@ -60,7 +60,8 @@ public final class SchoolMapper {
         entity.setDisplayName(dto.getDisplayName());
         entity.setBoard(dto.getBoard());
         entity.setMedium(dto.getMedium());
-        entity.setSchoolCode(dto.getSchoolCode());
+
+        entity.setSchoolCode(generateSchoolCode(dto.getName()));
 
         entity.setAddress(dto.getAddress());
         entity.setCity(dto.getCity());
@@ -80,6 +81,13 @@ public final class SchoolMapper {
         }
 
         return entity;
+    }
+
+    private static String generateSchoolCode(String name) {
+        String prefix = name.replaceAll("\\s+", "")
+                .toUpperCase()
+                .substring(0, Math.min(4, name.length()));
+        return prefix + "-" + System.currentTimeMillis();
     }
 
     public static List<SchoolDto> toDtos(List<School> entities) {

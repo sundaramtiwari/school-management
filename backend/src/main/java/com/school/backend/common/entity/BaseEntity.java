@@ -24,4 +24,7 @@ public abstract class BaseEntity {
 
     @Column(name = "created_by")
     private Long createdBy;
+
+    @Column(name = "updated_by")
+    private Long updatedBy;
 }

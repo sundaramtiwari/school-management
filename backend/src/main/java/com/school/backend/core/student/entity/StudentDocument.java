@@ -7,7 +7,9 @@ import lombok.*;
 import java.time.LocalDateTime;
 
 @Entity
-@Table(name = "student_documents")
+@Table(name = "student_documents", indexes = {
+        @Index(name = "idx_student_document_student", columnList = "student_id")
+})
 @Getter
 @Setter
 @NoArgsConstructor
@@ -24,8 +26,9 @@ public class StudentDocument extends BaseEntity {
     @Column(name = "student_id", nullable = false)
     private Long studentId;
 
-    private String type;
-    private String fileUrl;
+    private String fileType;   // e.g. "Birth Certificate"
+    private String fileName;   // original file name
+    private String fileUrl;    // stored location link (S3/local/DB)
     private LocalDateTime uploadedAt;
     private String remarks;
 }

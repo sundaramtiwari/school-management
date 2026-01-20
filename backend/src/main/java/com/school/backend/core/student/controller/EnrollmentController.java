@@ -2,7 +2,6 @@ package com.school.backend.core.student.controller;
 
 import com.school.backend.common.dto.PageResponse;
 import com.school.backend.common.dto.PageResponseMapper;
-import com.school.backend.core.student.dto.PromotionRequest;
 import com.school.backend.core.student.dto.StudentEnrollmentDto;
 import com.school.backend.core.student.dto.StudentEnrollmentRequest;
 import com.school.backend.core.student.service.EnrollmentService;
@@ -24,12 +23,6 @@ public class EnrollmentController {
     @PostMapping
     public ResponseEntity<StudentEnrollmentDto> enroll(@Valid @RequestBody StudentEnrollmentRequest req) {
         return ResponseEntity.ok(service.enroll(req));
-    }
-
-    @PostMapping("/promote")
-    public ResponseEntity<Void> promote(@Valid @RequestBody PromotionRequest req) {
-        service.promote(req);
-        return ResponseEntity.ok().build();
     }
 
     @GetMapping("/by-class/{classId}")

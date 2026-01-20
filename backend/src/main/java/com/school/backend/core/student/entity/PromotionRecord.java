@@ -23,17 +23,27 @@ public class PromotionRecord extends BaseEntity {
     @EqualsAndHashCode.Include
     private Long id;
 
-    @Column(name = "student_id", nullable = false)
+    @Column(nullable = false)
     private Long studentId;
 
-    @Column(name = "from_class_id")
     private Long fromClassId;
+    private String fromSection;
 
-    @Column(name = "to_class_id")
+    @Column(nullable = false)
     private Long toClassId;
+    private String toSection;
 
+    @Column(nullable = false)
     private String session;
-    private LocalDate promotedOn;
+
+    @Builder.Default
+    private LocalDate promotedOn = LocalDate.now();
+
+    @Builder.Default
+    private boolean promoted = true;
+
+    @Builder.Default
+    private boolean feePending = false;
+
     private String remarks;
-    private boolean feePending;
 }

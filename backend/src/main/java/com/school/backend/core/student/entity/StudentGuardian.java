@@ -6,7 +6,7 @@ import lombok.*;
 
 @Entity
 @Table(name = "student_guardians", uniqueConstraints = {
-        @UniqueConstraint(columnNames = {"student_id", "guardian_id"})
+        @UniqueConstraint(name = "uk_student_guardian", columnNames = {"student_id", "guardian_id"})
 })
 @Getter
 @Setter
@@ -27,6 +27,9 @@ public class StudentGuardian extends BaseEntity {
     @Column(name = "guardian_id", nullable = false)
     private Long guardianId;
 
+    /**
+     * Whether this is the primary contact for the student.
+     */
     @Builder.Default
     private boolean primaryGuardian = false; // one primary per student
 }
