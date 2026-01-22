@@ -6,6 +6,12 @@ import com.school.backend.core.student.dto.*;
 import com.school.backend.core.student.repository.PromotionRecordRepository;
 import com.school.backend.core.student.repository.StudentEnrollmentRepository;
 import com.school.backend.core.student.repository.StudentRepository;
+import com.school.backend.fee.dto.*;
+import com.school.backend.fee.entity.FeeType;
+import com.school.backend.fee.repository.FeePaymentRepository;
+import com.school.backend.fee.repository.FeeStructureRepository;
+import com.school.backend.fee.repository.FeeTypeRepository;
+import com.school.backend.fee.repository.StudentFeeAssignmentRepository;
 import com.school.backend.school.entity.School;
 import com.school.backend.school.repository.SchoolRepository;
 import org.assertj.core.api.Assertions;
@@ -31,6 +37,18 @@ public class StudentFlowIntegrationTest {
     private TestRestTemplate restTemplate;
 
     @Autowired
+    private FeePaymentRepository feePaymentRepository;
+
+    @Autowired
+    private FeeStructureRepository feeStructureRepository;
+
+    @Autowired
+    private FeeTypeRepository feeTypeRepository;
+
+    @Autowired
+    private StudentFeeAssignmentRepository assignmentRepository;
+
+    @Autowired
     private PromotionRecordRepository promotionRecordRepository;
 
     @Autowired
@@ -48,6 +66,8 @@ public class StudentFlowIntegrationTest {
     private Long schoolId;
     private Long classId;
     private Long studentId;
+    private Long feeStructureId;
+    private Long feeTypeId;
 
     @Test
     void student_register_enroll_promote_flow() {
@@ -98,6 +118,61 @@ public class StudentFlowIntegrationTest {
         ResponseEntity<StudentEnrollmentDto> enrollResp =
                 restTemplate.postForEntity("/api/enrollments", er, StudentEnrollmentDto.class);
         Assertions.assertThat(enrollResp.getStatusCode()).isEqualTo(HttpStatus.OK);
+
+        // --------- Setup Fee ---------
+
+        // Create FeeType
+        FeeType type = new FeeType();
+        type.setName("TUITION");
+
+        ResponseEntity<FeeType> typeResp =
+                restTemplate.postForEntity("/api/fees/types", type, FeeType.class);
+
+        feeTypeId = typeResp.getBody().getId();
+
+
+        // Create FeeStructure
+        FeeStructureCreateRequest fsReq = new FeeStructureCreateRequest();
+
+        fsReq.setSchoolId(schoolId);
+        fsReq.setClassId(classId);   // or fromClassId
+        fsReq.setSession("2025-26");
+        fsReq.setFeeTypeId(feeTypeId);
+        fsReq.setAmount(10000);
+
+        ResponseEntity<FeeStructureDto> fsResp =
+                restTemplate.postForEntity("/api/fees/structures", fsReq, FeeStructureDto.class);
+
+        feeStructureId = fsResp.getBody().getId();
+
+
+        // Assign Fee
+        StudentFeeAssignRequest assignReq = new StudentFeeAssignRequest();
+
+        assignReq.setStudentId(studentId);
+        assignReq.setFeeStructureId(feeStructureId);
+        assignReq.setSession("2025-26");
+
+        restTemplate.postForEntity(
+                "/api/fees/assignments",
+                assignReq,
+                StudentFeeAssignmentDto.class
+        );
+
+
+        // Pay Full Fee
+        FeePaymentRequest payReq = new FeePaymentRequest();
+
+        payReq.setStudentId(studentId);
+        payReq.setAmountPaid(10000);
+        payReq.setMode("CASH");
+
+        restTemplate.postForEntity(
+                "/api/fees/payments",
+                payReq,
+                FeePaymentDto.class
+        );
+
 
         // promote student
         PromotionRequest pr = new PromotionRequest();
@@ -151,17 +226,41 @@ public class StudentFlowIntegrationTest {
                     .forEach(studentEnrollmentRepository::delete);
         }
 
-        // 3. Student
+        // 3. Fee payments
+        if (studentId != null) {
+            feePaymentRepository
+                    .findByStudentId(studentId)
+                    .forEach(feePaymentRepository::delete);
+        }
+
+        // 4. Fee assignments
+        if (studentId != null) {
+            assignmentRepository
+                    .findByStudentIdAndSession(studentId, "2025-26")
+                    .forEach(assignmentRepository::delete);
+        }
+
+        // 5. Fee structure
+        if (feeStructureId != null) {
+            feeStructureRepository.deleteById(feeStructureId);
+        }
+
+        // 6. Fee type
+        if (feeTypeId != null) {
+            feeTypeRepository.deleteById(feeTypeId);
+        }
+
+        // 7. Student
         if (studentId != null) {
             studentRepository.deleteById(studentId);
         }
 
-        // 4. Class
+        // 8. Class
         if (classId != null) {
             schoolClassRepository.deleteById(classId);
         }
 
-        // 5. School
+        // 9. School
         if (schoolId != null) {
             schoolRepository.deleteById(schoolId);
         }

@@ -1,5 +1,6 @@
 package com.school.backend.core.student.service;
 
+import com.school.backend.common.exception.BusinessException;
 import com.school.backend.common.exception.ResourceNotFoundException;
 import com.school.backend.core.classsubject.entity.SchoolClass;
 import com.school.backend.core.classsubject.repository.SchoolClassRepository;
@@ -12,6 +13,8 @@ import com.school.backend.core.student.entity.StudentEnrollment;
 import com.school.backend.core.student.repository.PromotionRecordRepository;
 import com.school.backend.core.student.repository.StudentEnrollmentRepository;
 import com.school.backend.core.student.repository.StudentRepository;
+import com.school.backend.fee.dto.FeeSummaryDto;
+import com.school.backend.fee.service.FeeSummaryService;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
@@ -24,6 +27,8 @@ import java.util.List;
 public class StudentHistoryService {
 
     private final StudentEnrollmentRepository enrollmentRepo;
+
+    private final FeeSummaryService feeSummaryService;
     private final PromotionRecordRepository promotionRepo;
     private final StudentRepository studentRepo;
     private final SchoolClassRepository classRepo;
@@ -62,6 +67,15 @@ public class StudentHistoryService {
 
         Student student = studentRepo.findById(studentId)
                 .orElseThrow(() -> new ResourceNotFoundException("Student not found: " + studentId));
+
+        // ---------------- FEE CHECK ----------------
+        FeeSummaryDto summary =
+                feeSummaryService.getStudentFeeSummary(studentId, req.getSession());
+
+        if (summary.isFeePending()) {
+            throw new BusinessException(
+                    "Fee pending (" + summary.getPendingFee() + "). Clear dues before promotion.");
+        }
 
         // ---- Extract current class info ----
         SchoolClass currentClass = student.getCurrentClass();
