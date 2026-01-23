@@ -24,6 +24,14 @@ spring:
       enabled: true
       path: /h2-console
 
+springdoc:
+  api-docs:
+    enabled: true
+    path: /v3/api-docs
+
+  swagger-ui:
+    enabled: true
+
 jwt:
   secret: "replace_this_with_a_very_long_random_secret_at_deploy_time"
   expiration-ms: 3600000  # 1 hour

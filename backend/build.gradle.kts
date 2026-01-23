@@ -24,6 +24,9 @@ repositories {
 
 dependencies {
 
+    // Swagger / OpenAPI
+    implementation("org.springdoc:springdoc-openapi-starter-webmvc-ui:2.8.15")
+
     // Spring Boot Starters
     implementation("org.springframework.boot:spring-boot-starter-actuator")
     implementation("org.springframework.boot:spring-boot-starter-data-jpa")
