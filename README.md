@@ -89,6 +89,7 @@ cd backend
 ./gradlew bootRun
 Backend runs at:
 http://localhost:8080
+```
 
 Swagger UI:
 http://localhost:8080/swagger-ui.html
@@ -97,6 +98,7 @@ http://localhost:8080/swagger-ui.html
 Requirements
 Node.js (18+ recommended)
 
+```bash
 npm / yarn
 
 Run Frontend
@@ -106,15 +108,18 @@ Run Frontend
 
 Frontend runs at:
 http://localhost:3000
-
+```
 
 🧪 Running Tests
 
+```bash
 Backend tests:
 
 cd backend
 ./gradlew test
 Uses H2 in-memory DB.
+```
+
 
 🗄️ Environment Profiles
 dev → Local development
@@ -122,6 +127,8 @@ dev → Local development
 test → Integration tests
 
 prod → Production (planned)
+
+---
 
 📌 Development Guidelines
 Use DTOs for API communication
@@ -133,6 +140,8 @@ Prefer pagination for list APIs
 Write integration tests for major flows
 
 Commit stable code frequently
+
+---
 
 📈 Roadmap
 Planned Features:
@@ -152,6 +161,8 @@ Parent Portal
 Mobile-friendly UI
 
 Payment Gateway Integration
+
+---
 
 👨‍💻 Author
 Developed by: Sundaram Tiwari
