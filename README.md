@@ -33,8 +33,6 @@ school-management/
 ├── backend/ → Spring Boot application
 └── frontend/ → Next.js application
 
-shell
-Copy code
 
 ### Backend Modules
 
@@ -49,9 +47,6 @@ com.school.backend
 ├── fee
 ├── testmanagement
 └── common
-
-markdown
-Copy code
 
 ---
 
@@ -93,15 +88,11 @@ Copy code
 cd backend
 ./gradlew bootRun
 Backend runs at:
-
-arduino
-Copy code
 http://localhost:8080
-Swagger UI:
 
-bash
-Copy code
+Swagger UI:
 http://localhost:8080/swagger-ui.html
+
 ⚙️ Frontend Setup
 Requirements
 Node.js (18+ recommended)
@@ -109,21 +100,18 @@ Node.js (18+ recommended)
 npm / yarn
 
 Run Frontend
-bash
-Copy code
-cd frontend
-npm install
-npm run dev
-Frontend runs at:
+  cd frontend
+  npm install
+  npm run dev
 
-arduino
-Copy code
+Frontend runs at:
 http://localhost:3000
+
+
 🧪 Running Tests
+
 Backend tests:
 
-bash
-Copy code
 cd backend
 ./gradlew test
 Uses H2 in-memory DB.
@@ -173,15 +161,4 @@ Backend-focused SaaS platform for Indian schools.
 📄 License
 This project is currently private and under active development.
 
-yaml
-Copy code
-
 ---
-
-If you want, next time we can also:
-
-✅ Add screenshots  
-✅ Add API examples  
-✅ Add deployment steps  
-
-For now, this is more than solid. 💯
