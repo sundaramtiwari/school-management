@@ -61,7 +61,8 @@ public final class SchoolMapper {
         entity.setBoard(dto.getBoard());
         entity.setMedium(dto.getMedium());
 
-        entity.setSchoolCode(generateSchoolCode(dto.getName()));
+        // TODO: Remove this dto.getSchoolCode before going live. Only for testing
+        entity.setSchoolCode(Objects.isNull(dto.getSchoolCode()) ? generateSchoolCode(dto.getName()) : dto.getSchoolCode());
 
         entity.setAddress(dto.getAddress());
         entity.setCity(dto.getCity());
