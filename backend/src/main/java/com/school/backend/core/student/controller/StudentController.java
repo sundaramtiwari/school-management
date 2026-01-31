@@ -4,6 +4,7 @@ import com.school.backend.common.dto.PageResponse;
 import com.school.backend.common.dto.PageResponseMapper;
 import com.school.backend.core.student.dto.StudentCreateRequest;
 import com.school.backend.core.student.dto.StudentDto;
+import com.school.backend.core.student.dto.StudentUpdateRequest;
 import com.school.backend.core.student.service.StudentService;
 import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
@@ -42,7 +43,9 @@ public class StudentController {
     }
 
     @PutMapping("/{id}")
-    public ResponseEntity<StudentDto> update(@PathVariable Long id, @Valid @RequestBody StudentCreateRequest req) {
+    public ResponseEntity<StudentDto> update(
+            @PathVariable Long id,
+            @Valid @RequestBody StudentUpdateRequest req) {
         return ResponseEntity.ok(service.update(id, req));
     }
 

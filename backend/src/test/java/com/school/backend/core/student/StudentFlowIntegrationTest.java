@@ -209,6 +209,115 @@ public class StudentFlowIntegrationTest {
     /**
      * FK-safe cleanup after each test.
      */
+    @Test
+    void student_update_profile_flow() {
+
+        // 1. Create School
+        Map<String, Object> schoolReq = Map.of(
+                "name", "Update Test School",
+                "displayName", "UTS",
+                "board", "CBSE",
+                "schoolCode", "UTS-2025",
+                "contactEmail", "uts@example.com",
+                "city", "Varanasi",
+                "state", "Uttar Pradesh"
+        );
+
+        ResponseEntity<School> schoolResp =
+                restTemplate.postForEntity("/api/schools", schoolReq, School.class);
+
+        Assertions.assertThat(schoolResp.getStatusCode()).isEqualTo(HttpStatus.CREATED);
+
+        schoolId = schoolResp.getBody().getId();
+
+
+        // 2. Register Student
+        StudentCreateRequest createReq = new StudentCreateRequest();
+
+        createReq.setAdmissionNumber("ADM-200");
+        createReq.setFirstName("Rahul");
+        createReq.setLastName("Sharma");
+        createReq.setGender("Male");
+        createReq.setSchoolId(schoolId);
+
+        ResponseEntity<StudentDto> createResp =
+                restTemplate.postForEntity("/api/students", createReq, StudentDto.class);
+
+        Assertions.assertThat(createResp.getStatusCode()).isEqualTo(HttpStatus.OK);
+
+        StudentDto created = createResp.getBody();
+
+        Assertions.assertThat(created).isNotNull();
+
+        studentId = created.getId();
+
+
+        // 3. Update Student
+        StudentUpdateRequest updateReq = new StudentUpdateRequest();
+
+        updateReq.setFirstName("Rahul Updated");
+        updateReq.setContactNumber("9999999999");
+        updateReq.setCity("Lucknow");
+
+        // Previous school info
+        updateReq.setPreviousSchoolName("ABC Public School");
+        updateReq.setPreviousSchoolBoard("ICSE");
+        updateReq.setPreviousClass("5");
+        updateReq.setPreviousYearOfPassing(2023);
+        updateReq.setTransferCertificateNumber("TC-12345");
+
+        ResponseEntity<StudentDto> updateResp =
+                restTemplate.exchange(
+                        "/api/students/" + studentId,
+                        HttpMethod.PUT,
+                        new org.springframework.http.HttpEntity<>(updateReq),
+                        StudentDto.class
+                );
+
+        Assertions.assertThat(updateResp.getStatusCode()).isEqualTo(HttpStatus.OK);
+
+
+        // 4. Fetch Updated Student
+        ResponseEntity<StudentDto> getResp =
+                restTemplate.getForEntity(
+                        "/api/students/" + studentId,
+                        StudentDto.class
+                );
+
+        Assertions.assertThat(getResp.getStatusCode()).isEqualTo(HttpStatus.OK);
+
+        StudentDto updated = getResp.getBody();
+
+        Assertions.assertThat(updated).isNotNull();
+
+
+        // 5. Assertions
+
+        Assertions.assertThat(updated.getFirstName())
+                .isEqualTo("Rahul Updated");
+
+        Assertions.assertThat(updated.getContactNumber())
+                .isEqualTo("9999999999");
+
+        Assertions.assertThat(updated.getCity())
+                .isEqualTo("Lucknow");
+
+        Assertions.assertThat(updated.getPreviousSchoolName())
+                .isEqualTo("ABC Public School");
+
+        Assertions.assertThat(updated.getPreviousSchoolBoard())
+                .isEqualTo("ICSE");
+
+        Assertions.assertThat(updated.getPreviousClass())
+                .isEqualTo("5");
+
+        Assertions.assertThat(updated.getPreviousYearOfPassing())
+                .isEqualTo(2023);
+
+        Assertions.assertThat(updated.getTransferCertificateNumber())
+                .isEqualTo("TC-12345");
+    }
+
     @AfterEach
     void cleanup() {
 

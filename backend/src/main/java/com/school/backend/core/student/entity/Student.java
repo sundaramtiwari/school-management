@@ -61,6 +61,19 @@ public class Student extends BaseEntity {
     private LocalDate dateOfLeaving;
     private String reasonForLeaving;
 
+    // Start Previous School Details
+
+    private String previousSchoolName;
+    private String previousSchoolContact;
+    private String previousSchoolAddress;
+    private String previousSchoolBoard;
+    private String previousClass;
+    private Integer previousYearOfPassing;
+    private String transferCertificateNumber;
+    private String reasonForLeavingPreviousSchool;
+
+    // End Previous School Details
+
     @Builder.Default
     private boolean active = true;
 

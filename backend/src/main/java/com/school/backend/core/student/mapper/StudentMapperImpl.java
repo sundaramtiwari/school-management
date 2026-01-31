@@ -39,6 +39,15 @@ public class StudentMapperImpl implements StudentMapper {
         if (entity.getCurrentClass() != null) dto.setCurrentClassId(entity.getCurrentClass().getId());
         if (entity.getSchool() != null) dto.setSchoolId(entity.getSchool().getId());
         dto.setRemarks(entity.getRemarks());
+        dto.setPreviousSchoolName(entity.getPreviousSchoolName());
+        dto.setPreviousSchoolBoard(entity.getPreviousSchoolBoard());
+        dto.setPreviousClass(entity.getPreviousClass());
+        dto.setPreviousYearOfPassing(entity.getPreviousYearOfPassing());
+        dto.setTransferCertificateNumber(entity.getTransferCertificateNumber());
+        dto.setPreviousSchoolAddress(entity.getPreviousSchoolAddress());
+        dto.setPreviousSchoolContact(entity.getPreviousSchoolContact());
+        dto.setReasonForLeavingPreviousSchool(entity.getReasonForLeavingPreviousSchool());
+
         return dto;
     }
 
@@ -67,6 +76,15 @@ public class StudentMapperImpl implements StudentMapper {
         entity.setDateOfAdmission(dto.getDateOfAdmission());
         entity.setRemarks(dto.getRemarks());
         // school will be set by service using schoolId
+        entity.setPreviousSchoolName(dto.getPreviousSchoolName());
+        entity.setPreviousSchoolBoard(dto.getPreviousSchoolBoard());
+        entity.setPreviousClass((dto.getPreviousClass()));
+        entity.setPreviousYearOfPassing(dto.getPreviousYearOfPassing());
+        entity.setTransferCertificateNumber(dto.getTransferCertificateNumber());
+        entity.setPreviousSchoolAddress(dto.getPreviousSchoolAddress());
+        entity.setPreviousSchoolContact(dto.getPreviousSchoolContact());
+        entity.setReasonForLeavingPreviousSchool(dto.getReasonForLeavingPreviousSchool());
+
         return entity;
     }
 }

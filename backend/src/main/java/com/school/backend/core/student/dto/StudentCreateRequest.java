@@ -31,4 +31,14 @@ public class StudentCreateRequest {
     private LocalDate dateOfAdmission;
     private Long schoolId;
     private String remarks;
+    // Previous School Details
+    private String previousSchoolName;
+    private String previousSchoolBoard;
+    private String previousClass;
+    private Integer previousYearOfPassing;
+    private String transferCertificateNumber;
+    private String previousSchoolAddress;
+    private String previousSchoolContact;
+    private String reasonForLeavingPreviousSchool;
+
 }

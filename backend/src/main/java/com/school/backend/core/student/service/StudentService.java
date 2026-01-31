@@ -4,6 +4,7 @@ import com.school.backend.common.exception.ResourceNotFoundException;
 import com.school.backend.core.classsubject.repository.SchoolClassRepository;
 import com.school.backend.core.student.dto.StudentCreateRequest;
 import com.school.backend.core.student.dto.StudentDto;
+import com.school.backend.core.student.dto.StudentUpdateRequest;
 import com.school.backend.core.student.entity.Student;
 import com.school.backend.core.student.mapper.StudentMapper;
 import com.school.backend.core.student.repository.StudentRepository;
@@ -53,19 +54,64 @@ public class StudentService {
     }
 
     @Transactional
-    public StudentDto update(Long id, StudentCreateRequest req) {
-        Student existing = repository.findById(id).orElseThrow(() -> new ResourceNotFoundException("Student not found: " + id));
-        // update fields (simple approach)
-        existing.setFirstName(req.getFirstName());
-        existing.setLastName(req.getLastName());
-        existing.setDob(req.getDob());
-        existing.setGender(req.getGender());
-        existing.setContactNumber(req.getContactNumber());
-        existing.setCity(req.getCity());
-        existing.setRemarks(req.getRemarks());
-        // other fields as needed
+    public StudentDto update(Long id, StudentUpdateRequest req) {
+
+        Student existing = repository.findById(id)
+                .orElseThrow(() -> new ResourceNotFoundException("Student not found: " + id));
+
+        updateStudentDetails(req, existing);
+
         return mapper.toDto(repository.save(existing));
     }
+
+    private static void updateStudentDetails(StudentUpdateRequest req, Student existing) {
+        if (req.getFirstName() != null)
+            existing.setFirstName(req.getFirstName());
+
+        if (req.getLastName() != null)
+            existing.setLastName(req.getLastName());
+
+        if (req.getDob() != null)
+            existing.setDob(req.getDob());
+
+        if (req.getGender() != null)
+            existing.setGender(req.getGender());
+
+        if (req.getContactNumber() != null)
+            existing.setContactNumber(req.getContactNumber());
+
+        if (req.getCity() != null)
+            existing.setCity(req.getCity());
+
+        if (req.getRemarks() != null)
+            existing.setRemarks(req.getRemarks());
+
+        // Previous School
+        if (req.getPreviousSchoolName() != null)
+            existing.setPreviousSchoolName(req.getPreviousSchoolName());
+
+        if (req.getPreviousSchoolBoard() != null)
+            existing.setPreviousSchoolBoard(req.getPreviousSchoolBoard());
+
+        if (req.getPreviousClass() != null)
+            existing.setPreviousClass(req.getPreviousClass());
+
+        if (req.getPreviousYearOfPassing() != null)
+            existing.setPreviousYearOfPassing(req.getPreviousYearOfPassing());
+
+        if (req.getTransferCertificateNumber() != null)
+            existing.setTransferCertificateNumber(req.getTransferCertificateNumber());
+
+        if (req.getReasonForLeavingPreviousSchool() != null)
+            existing.setReasonForLeavingPreviousSchool(req.getReasonForLeavingPreviousSchool());
+
+        if (req.getActive() != null)
+            existing.setActive(req.getActive());
+
+        if (req.getCurrentStatus() != null)
+            existing.setCurrentStatus(req.getCurrentStatus());
+    }
+
 
     @Transactional
     public void delete(Long id) {
