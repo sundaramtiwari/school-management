@@ -175,6 +175,12 @@ export default function SchoolsPage() {
     }
   }
 
+  /* ---------------- Open Students Tab --------------- */
+  function openSchool(s: any) {
+    localStorage.setItem("schoolId", String(s.id));
+    window.location.href = "/students";
+  }
+
   /* ---------------- Edit ---------------- */
 
   function openEdit(s: School) {
@@ -243,6 +249,7 @@ export default function SchoolsPage() {
                 <th className="p-3 text-center">Board</th>
                 <th className="p-3 text-center">City</th>
                 <th className="p-3 text-center">Email</th>
+                <th className="p-3 text-center">Actions</th>
               </tr>
             </thead>
 
@@ -255,19 +262,30 @@ export default function SchoolsPage() {
                   onClick={() => openEdit(s)}
                   className="border-t cursor-pointer hover:bg-gray-50"
                 >
-
-                  <td className="p-3">{s.name}</td>
+                  <td
+                    className="p-3 text-blue-600 cursor-pointer hover:underline"
+                    onClick={() => openSchool(s)}
+                  >
+                    {s.name}
+                  </td>
                   <td className="p-3 text-center">{s.schoolCode}</td>
                   <td className="p-3 text-center">{s.board}</td>
                   <td className="p-3 text-center">{s.city}</td>
                   <td className="p-3 text-center">{s.contactEmail}</td>
-
+                  <td className="p-3 text-center">
+                    <button
+                      onClick={(e) => {
+                        e.stopPropagation();
+                        openEdit(s);
+                      }}
+                      className="text-blue-600 hover:text-blue-800 text-sm font-medium"
+                    >
+                      Edit
+                    </button>
+                  </td>
                 </tr>
-
               ))}
-
             </tbody>
-
           </table>
 
         </div>

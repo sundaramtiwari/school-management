@@ -43,6 +43,14 @@ public class StudentService {
     }
 
     @Transactional(readOnly = true)
+    public Page<StudentDto> listByClass(Long classId, Pageable pageable) {
+
+        return repository
+                .findByClassId(classId, pageable)
+                .map(mapper::toDto);
+    }
+
+    @Transactional(readOnly = true)
     public StudentDto getById(Long id) {
         Student s = repository.findById(id).orElseThrow(() -> new ResourceNotFoundException("Student not found: " + id));
         return mapper.toDto(s);

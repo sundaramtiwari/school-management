@@ -54,4 +54,17 @@ public class StudentController {
         service.delete(id);
         return ResponseEntity.noContent().build();
     }
+
+    @GetMapping("/by-class/{classId}")
+    public ResponseEntity<PageResponse<StudentDto>> byClass(
+            @PathVariable Long classId,
+            @RequestParam(defaultValue = "0") int page,
+            @RequestParam(defaultValue = "20") int size
+    ) {
+
+        Pageable pageable = PageRequest.of(page, size);
+        Page<StudentDto> p = service.listByClass(classId, pageable);
+        return ResponseEntity.ok(PageResponseMapper.fromPage(p));
+    }
+
 }
