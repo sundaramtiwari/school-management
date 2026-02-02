@@ -2,6 +2,7 @@
 
 import { useEffect, useState } from "react";
 import { schoolApi } from "@/lib/schoolApi";
+import { studentApi } from "@/lib/studentApi";
 import { api } from "@/lib/api";
 
 /* ---------------- Types ---------------- */
@@ -24,13 +25,14 @@ type Student = {
   lastName: string;
   admissionNumber: string;
   gender: string;
+  contactNumber: string;
 };
 
 /* ---------------- Page ---------------- */
 
 export default function StudentsPage() {
 
-  /* ---------------- State ---------------- */
+  /* ---------- Filters ---------- */
 
   const [schools, setSchools] = useState<School[]>([]);
   const [classes, setClasses] = useState<SchoolClass[]>([]);
@@ -38,13 +40,32 @@ export default function StudentsPage() {
   const [selectedSchool, setSelectedSchool] = useState<number | "">("");
   const [selectedClass, setSelectedClass] = useState<number | "">("");
 
-  const [loadingSchools, setLoadingSchools] = useState(true);
-  const [loadingClasses, setLoadingClasses] = useState(false);
+  /* ---------- Students ---------- */
 
   const [students, setStudents] = useState<Student[]>([]);
   const [loadingStudents, setLoadingStudents] = useState(false);
 
+  /* ---------- Loading ---------- */
+
+  const [loadingSchools, setLoadingSchools] = useState(true);
+  const [loadingClasses, setLoadingClasses] = useState(false);
+
   const [error, setError] = useState("");
+
+  /* ---------- Add Modal ---------- */
+
+  const [showAddModal, setShowAddModal] = useState(false);
+
+  const [studentForm, setStudentForm] = useState({
+    admissionNumber: "",
+    firstName: "",
+    lastName: "",
+    gender: "",
+    contactNumber: "",
+    email: "",
+    classId: "",
+    session: "",
+  });
 
   /* ---------------- Load Schools ---------------- */
 
@@ -57,7 +78,6 @@ export default function StudentsPage() {
       setLoadingSchools(true);
 
       const res = await schoolApi.list(0, 100);
-
       setSchools(res.data.content || []);
 
     } catch {
@@ -74,6 +94,7 @@ export default function StudentsPage() {
       setLoadingClasses(true);
       setClasses([]);
       setSelectedClass("");
+      setStudents([]);
 
       const res = await api.get(`/api/classes/by-school/${schoolId}`);
 
@@ -86,14 +107,13 @@ export default function StudentsPage() {
     }
   }
 
-  /* ---------------- Load Students --------------*/
+  /* ---------------- Load Students ---------------- */
 
   async function loadStudents(classId: number) {
     try {
       setLoadingStudents(true);
-      setStudents([]);
 
-      const res = await api.get(`/api/students/by-class/${classId}`);
+      const res = await studentApi.byClass(classId, 0, 20);
 
       setStudents(res.data.content || []);
 
@@ -113,6 +133,7 @@ export default function StudentsPage() {
     setSelectedSchool(value);
     setSelectedClass("");
     setClasses([]);
+    setStudents([]);
 
     if (value) {
       loadClasses(Number(value));
@@ -131,6 +152,87 @@ export default function StudentsPage() {
     }
   }
 
+  function updateStudentField(e: any) {
+
+    setStudentForm({
+      ...studentForm,
+      [e.target.name]: e.target.value,
+    });
+  }
+
+  function resetStudentForm() {
+
+    setStudentForm({
+      admissionNumber: "",
+      firstName: "",
+      lastName: "",
+      gender: "",
+      contactNumber: "",
+      email: "",
+      classId: "",
+      session: "",
+    });
+  }
+
+  /* ---------------- Save Student ---------------- */
+
+  async function saveStudent() {
+
+    if (!studentForm.firstName) {
+      alert("First name required");
+      return;
+    }
+
+    if (!studentForm.gender) {
+      alert("Gender required");
+      return;
+    }
+
+    if (!studentForm.classId) {
+      alert("Select class");
+      return;
+    }
+
+    if (!studentForm.session) {
+      alert("Session required");
+      return;
+    }
+
+    try {
+
+      // 1. Create student
+      const res = await studentApi.create({
+        admissionNumber: studentForm.admissionNumber,
+        firstName: studentForm.firstName,
+        lastName: studentForm.lastName,
+        gender: studentForm.gender,
+        contactNumber: studentForm.contactNumber,
+        email: studentForm.email,
+        schoolId: selectedSchool,
+      });
+
+      const studentId = res.data.id;
+
+      // 2. Enroll student
+      await studentApi.enroll({
+        studentId,
+        classId: studentForm.classId,
+        session: studentForm.session,
+      });
+
+      alert("Student added successfully");
+
+      setShowAddModal(false);
+      resetStudentForm();
+
+      if (selectedClass) {
+        loadStudents(Number(selectedClass));
+      }
+
+    } catch {
+      alert("Failed to save student");
+    }
+  }
 
   /* ---------------- UI ---------------- */
 
@@ -139,26 +241,35 @@ export default function StudentsPage() {
 
       {/* ---------------- Header ---------------- */}
 
-      <h1 className="text-2xl font-bold">Students</h1>
+      <div className="flex justify-between items-center">
+
+        <h1 className="text-2xl font-bold">Students</h1>
+
+        <button
+          disabled={!selectedClass}
+          onClick={() => setShowAddModal(true)}
+          className="bg-blue-600 text-white px-4 py-2 rounded disabled:bg-gray-400"
+        >
+          + Add Student
+        </button>
+
+      </div>
 
       {/* ---------------- Filters ---------------- */}
 
       <div className="bg-white p-4 border rounded flex gap-4 items-center">
 
-        {/* School Dropdown */}
+        {/* School */}
 
         <div className="w-1/3">
 
-          <label className="block text-sm font-medium mb-1">
-            School
-          </label>
+          <label className="block text-sm mb-1">School</label>
 
           <select
             value={selectedSchool}
             onChange={onSchoolChange}
             className="w-full border rounded px-3 py-2"
           >
-
             <option value="">Select School</option>
 
             {schools.map((s) => (
@@ -166,18 +277,15 @@ export default function StudentsPage() {
                 {s.name}
               </option>
             ))}
-
           </select>
 
         </div>
 
-        {/* Class Dropdown */}
+        {/* Class */}
 
         <div className="w-1/3">
 
-          <label className="block text-sm font-medium mb-1">
-            Class
-          </label>
+          <label className="block text-sm mb-1">Class</label>
 
           <select
             value={selectedClass}
@@ -185,7 +293,6 @@ export default function StudentsPage() {
             disabled={!selectedSchool || loadingClasses}
             className="w-full border rounded px-3 py-2 disabled:bg-gray-100"
           >
-
             <option value="">Select Class</option>
 
             {classes.map((c) => (
@@ -193,7 +300,6 @@ export default function StudentsPage() {
                 {c.name} {c.section} ({c.session})
               </option>
             ))}
-
           </select>
 
         </div>
@@ -202,75 +308,183 @@ export default function StudentsPage() {
 
       {/* ---------------- Status ---------------- */}
 
-      {loadingSchools && (
-        <p className="text-gray-500">Loading schools...</p>
-      )}
+      {loadingSchools && <p>Loading schools...</p>}
+      {loadingClasses && <p>Loading classes...</p>}
+      {loadingStudents && <p>Loading students...</p>}
 
-      {loadingClasses && (
-        <p className="text-gray-500">Loading classes...</p>
-      )}
+      {error && <p className="text-red-600">{error}</p>}
 
-      {error && (
-        <p className="text-red-600">{error}</p>
-      )}
+      {/* ---------------- Students Table ---------------- */}
 
-      {/* ---------------- Placeholder ---------------- */}
-
-      {selectedClass && (
+      {selectedClass && !loadingStudents && (
 
         <div className="bg-white border rounded">
 
-          <div className="p-3 border-b font-medium">
-            Students
-          </div>
+          <table className="w-full text-sm">
 
-          {loadingStudents && (
-            <p className="p-4 text-gray-500">Loading students...</p>
-          )}
+            <thead className="bg-gray-100">
+              <tr>
+                <th className="p-3 text-left">Name</th>
+                <th className="p-3">Admission No</th>
+                <th className="p-3">Gender</th>
+                <th className="p-3">Phone</th>
+              </tr>
+            </thead>
 
-          {!loadingStudents && students.length === 0 && (
-            <p className="p-4 text-gray-500">No students found</p>
-          )}
+            <tbody>
 
-          {!loadingStudents && students.length > 0 && (
+              {students.map((s) => (
 
-            <table className="w-full text-sm">
+                <tr key={s.id} className="border-t">
 
-              <thead className="bg-gray-100">
-                <tr>
-                  <th className="p-3 text-left">Name</th>
-                  <th className="p-3 text-center">Admission No</th>
-                  <th className="p-3 text-center">Gender</th>
+                  <td className="p-3">
+                    {s.firstName} {s.lastName}
+                  </td>
+
+                  <td className="p-3 text-center">
+                    {s.admissionNumber}
+                  </td>
+
+                  <td className="p-3 text-center">
+                    {s.gender}
+                  </td>
+
+                  <td className="p-3 text-center">
+                    {s.contactNumber}
+                  </td>
+
                 </tr>
-              </thead>
 
-              <tbody>
+              ))}
 
-                {students.map((s) => (
+              {students.length === 0 && (
 
-                  <tr key={s.id} className="border-t">
+                <tr>
+                  <td colSpan={4} className="p-4 text-center text-gray-500">
+                    No students found
+                  </td>
+                </tr>
 
-                    <td className="p-3">
-                      {s.firstName} {s.lastName}
-                    </td>
+              )}
 
-                    <td className="p-3 text-center">
-                      {s.admissionNumber}
-                    </td>
+            </tbody>
 
-                    <td className="p-3 text-center">
-                      {s.gender}
-                    </td>
+          </table>
 
-                  </tr>
+        </div>
+      )}
 
+      {/* ---------------- Add Student Modal ---------------- */}
+
+      {showAddModal && (
+
+        <div className="fixed inset-0 bg-black/40 flex items-center justify-center z-50">
+
+          <div className="bg-white p-6 rounded w-[600px] space-y-4">
+
+            <h2 className="font-semibold text-lg">Add Student</h2>
+
+            <div className="grid grid-cols-2 gap-4">
+
+              <input
+                name="admissionNumber"
+                placeholder="Admission No"
+                value={studentForm.admissionNumber}
+                onChange={updateStudentField}
+                className="input"
+              />
+
+              <input
+                name="firstName"
+                placeholder="First Name *"
+                value={studentForm.firstName}
+                onChange={updateStudentField}
+                className="input"
+              />
+
+              <input
+                name="lastName"
+                placeholder="Last Name"
+                value={studentForm.lastName}
+                onChange={updateStudentField}
+                className="input"
+              />
+
+              <select
+                name="gender"
+                value={studentForm.gender}
+                onChange={updateStudentField}
+                className="input"
+              >
+                <option value="">Gender *</option>
+                <option>Male</option>
+                <option>Female</option>
+              </select>
+
+              <input
+                name="contactNumber"
+                placeholder="Phone"
+                value={studentForm.contactNumber}
+                onChange={updateStudentField}
+                className="input"
+              />
+
+              <input
+                name="email"
+                placeholder="Email"
+                value={studentForm.email}
+                onChange={updateStudentField}
+                className="input"
+              />
+
+              <select
+                name="classId"
+                value={studentForm.classId}
+                onChange={updateStudentField}
+                className="input col-span-2"
+              >
+                <option value="">Select Class *</option>
+
+                {classes.map((c) => (
+                  <option key={c.id} value={c.id}>
+                    {c.name} {c.section}
+                  </option>
                 ))}
 
-              </tbody>
+              </select>
 
-            </table>
+              <input
+                name="session"
+                placeholder="Session (2025-26) *"
+                value={studentForm.session}
+                onChange={updateStudentField}
+                className="input col-span-2"
+              />
 
-          )}
+            </div>
+
+            <div className="flex justify-end gap-3 pt-4">
+
+              <button
+                onClick={() => {
+                  setShowAddModal(false);
+                  resetStudentForm();
+                }}
+                className="px-4 py-2 border rounded"
+              >
+                Cancel
+              </button>
+
+              <button
+                onClick={saveStudent}
+                className="bg-blue-600 text-white px-5 py-2 rounded"
+              >
+                Save
+              </button>
+
+            </div>
+
+          </div>
 
         </div>
       )}

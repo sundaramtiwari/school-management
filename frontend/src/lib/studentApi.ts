@@ -14,6 +14,9 @@ byClass: (classId: number, page = 0, size = 20) =>
 create: (data: any) =>
     api.post("/api/students", data),
 
+enroll: (data: any) =>
+    api.post("/api/enrollments", data),
+
 update: (id: number, data: any) =>
     api.put(`/api/students/${id}`, data),
 
