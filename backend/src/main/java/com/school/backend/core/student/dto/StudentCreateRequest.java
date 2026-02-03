@@ -1,6 +1,8 @@
 package com.school.backend.core.student.dto;
 
+import com.school.backend.common.enums.Gender;
 import jakarta.validation.constraints.NotBlank;
+import jakarta.validation.constraints.NotNull;
 import lombok.Data;
 
 import java.time.LocalDate;
@@ -13,8 +15,8 @@ public class StudentCreateRequest {
     private String firstName;
     private String lastName;
     private LocalDate dob;
-    @NotBlank
-    private String gender;
+    @NotNull
+    private Gender gender;
     private String pen;
     private String aadharNumber;
     private String religion;
@@ -29,6 +31,7 @@ public class StudentCreateRequest {
     private String bloodGroup;
     private String photoUrl;
     private LocalDate dateOfAdmission;
+    @NotNull
     private Long schoolId;
     private String remarks;
     // Previous School Details

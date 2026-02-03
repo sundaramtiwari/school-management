@@ -1,5 +1,6 @@
 package com.school.backend.core.student.dto;
 
+import com.school.backend.common.enums.Gender;
 import lombok.Data;
 
 import java.time.LocalDate;
@@ -10,7 +11,7 @@ public class StudentUpdateRequest {
     private String firstName;
     private String lastName;
     private LocalDate dob;
-    private String gender;
+    private Gender gender;
 
     private String pen;
     private String aadharNumber;

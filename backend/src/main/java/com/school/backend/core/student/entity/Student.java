@@ -6,6 +6,7 @@ import com.school.backend.school.entity.School;
 import jakarta.persistence.*;
 import lombok.*;
 
+import com.school.backend.common.enums.Gender;
 import java.time.LocalDate;
 
 @Entity
@@ -36,8 +37,9 @@ public class Student extends BaseEntity {
 
     private LocalDate dob;
 
+    @Enumerated(EnumType.STRING)
     @Column(nullable = false)
-    private String gender;
+    private Gender gender;
 
     private String pen;
     @Column(name = "aadhar_number")
