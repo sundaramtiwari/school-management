@@ -1,6 +1,7 @@
 package com.school.backend.core.student;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
+import com.school.backend.common.BaseAuthenticatedIntegrationTest;
 import com.school.backend.common.TestAuthHelper;
 import com.school.backend.core.classsubject.dto.SchoolClassCreateRequest;
 import com.school.backend.core.classsubject.dto.SchoolClassDto;
@@ -36,11 +37,8 @@ import java.time.LocalDate;
 import static com.school.backend.common.enums.Gender.MALE;
 import static org.assertj.core.api.Assertions.assertThat;
 
-@SpringBootTest(webEnvironment = SpringBootTest.WebEnvironment.RANDOM_PORT)
-public class PromotionFlowIntegrationTest {
+public class PromotionFlowIntegrationTest extends BaseAuthenticatedIntegrationTest {
 
-    @Autowired
-    private TestRestTemplate restTemplate;
     @Autowired
     private ObjectMapper mapper;
     @Autowired
@@ -61,11 +59,7 @@ public class PromotionFlowIntegrationTest {
     private SchoolClassRepository schoolClassRepository;
     @Autowired
     private SchoolRepository schoolRepository;
-    @Autowired
-    private TestAuthHelper authHelper;
 
-    private HttpHeaders headers;
-    private String token;
     private Long schoolId;
     private Long feeTypeId;
     private Long feeStructureId;
@@ -75,11 +69,6 @@ public class PromotionFlowIntegrationTest {
 
     @BeforeEach
     void setup() {
-
-        token = authHelper.createSuperAdminAndLogin();
-
-        headers = authHelper.authHeaders(token);
-
         this.schoolId = createSchool("Test School");
         this.fromClassId = createClass(schoolId, "Class 1", "A", "2024-25");
         this.toClassId = createClass(schoolId, "Class 2", "B", "2025-26");

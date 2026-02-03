@@ -1,5 +1,6 @@
 package com.school.backend.testmanagement;
 
+import com.school.backend.common.BaseAuthenticatedIntegrationTest;
 import com.school.backend.common.TestAuthHelper;
 import com.school.backend.common.enums.Gender;
 import com.school.backend.core.classsubject.repository.SchoolClassRepository;
@@ -30,54 +31,25 @@ import org.springframework.test.context.ActiveProfiles;
 
 import java.util.Map;
 
-@SpringBootTest(webEnvironment = SpringBootTest.WebEnvironment.RANDOM_PORT)
-@ActiveProfiles("test")
-public class MarksheetFlowIntegrationTest {
-
-    @Autowired
-    private TestRestTemplate restTemplate;
-
-    @Autowired
-    private TestAuthHelper authHelper;
-
+public class MarksheetFlowIntegrationTest extends BaseAuthenticatedIntegrationTest {
     @Autowired
     private SchoolRepository schoolRepo;
-
     @Autowired
     private SchoolClassRepository classRepo;
-
     @Autowired
     private StudentRepository studentRepo;
-
     @Autowired
     private ExamRepository examRepo;
-
     @Autowired
     private ExamSubjectRepository examSubjectRepo;
-
     @Autowired
     private StudentMarkRepository markRepo;
-
-    private String token;
-    private HttpHeaders headers;
 
     private Long schoolId;
     private Long classId;
     private Long studentId;
-
     private Long examId;
     private Long examSubjectId;
-
-    // ------------------------------------------------
-
-    @BeforeEach
-    void setup() {
-
-        token = authHelper.createSuperAdminAndLogin();
-        headers = authHelper.authHeaders(token);
-    }
-
-    // ------------------------------------------------
 
     @Test
     void full_marksheet_flow() {

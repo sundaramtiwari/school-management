@@ -1,5 +1,6 @@
 package com.school.backend.core.classsubject;
 
+import com.school.backend.common.BaseAuthenticatedIntegrationTest;
 import com.school.backend.common.TestAuthHelper;
 import com.school.backend.common.dto.PageResponse;
 import com.school.backend.core.classsubject.dto.ClassSubjectDto;
@@ -26,39 +27,21 @@ import org.springframework.test.context.ActiveProfiles;
 
 import java.util.Map;
 
-@SpringBootTest(webEnvironment = SpringBootTest.WebEnvironment.RANDOM_PORT)
-@ActiveProfiles("test")
-public class ClassSubjectFlowIntegrationTest {
-
-    @Autowired
-    private TestRestTemplate restTemplate;
+public class ClassSubjectFlowIntegrationTest extends BaseAuthenticatedIntegrationTest {
 
     @Autowired
     private ClassSubjectRepository classSubjectRepository;
-
     @Autowired
     private SchoolClassRepository schoolClassRepository;
-
     @Autowired
     private SubjectRepository subjectRepository;
-
     @Autowired
     private SchoolRepository schoolRepository;
-
-    @Autowired
-    private TestAuthHelper authHelper;
-
-    private String token;
 
     private Long schoolId;
     private Long classId;
     private Long subjectId;
     private Long classSubjectId;
-
-    @BeforeEach
-    void setup() {
-        token = authHelper.createSuperAdminAndLogin();
-    }
 
     @Test
     void fullFlow_createSchool_createSubject_createClass_assignSubject_and_page() {

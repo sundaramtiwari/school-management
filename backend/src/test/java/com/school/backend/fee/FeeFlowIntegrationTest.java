@@ -1,5 +1,6 @@
 package com.school.backend.fee;
 
+import com.school.backend.common.BaseAuthenticatedIntegrationTest;
 import com.school.backend.common.TestAuthHelper;
 import com.school.backend.common.enums.Gender;
 import com.school.backend.core.classsubject.repository.SchoolClassRepository;
@@ -27,56 +28,27 @@ import org.springframework.test.context.ActiveProfiles;
 
 import java.util.Map;
 
-@SpringBootTest(webEnvironment = SpringBootTest.WebEnvironment.RANDOM_PORT)
-@ActiveProfiles("test")
-public class FeeFlowIntegrationTest {
-
-    @Autowired
-    private TestRestTemplate restTemplate;
-
-    @Autowired
-    private TestAuthHelper authHelper;
-
+public class FeeFlowIntegrationTest extends BaseAuthenticatedIntegrationTest {
     @Autowired
     private FeeTypeRepository feeTypeRepository;
-
     @Autowired
     private FeeStructureRepository feeStructureRepository;
-
     @Autowired
     private StudentFeeAssignmentRepository assignmentRepository;
-
     @Autowired
     private FeePaymentRepository paymentRepository;
-
     @Autowired
     private StudentRepository studentRepository;
-
     @Autowired
     private SchoolClassRepository classRepository;
-
     @Autowired
     private SchoolRepository schoolRepository;
-
-    private String token;
-    private HttpHeaders headers;
 
     private Long schoolId;
     private Long classId;
     private Long studentId;
     private Long feeTypeId;
     private Long feeStructureId;
-
-    // ------------------------------------------------
-
-    @BeforeEach
-    void setup() {
-
-        token = authHelper.createSuperAdminAndLogin();
-        headers = authHelper.authHeaders(token);
-    }
-
-    // ------------------------------------------------
 
     @Test
     void full_fee_flow_should_work() {

@@ -1,5 +1,6 @@
 package com.school.backend.core.student;
 
+import com.school.backend.common.BaseAuthenticatedIntegrationTest;
 import com.school.backend.common.TestAuthHelper;
 import com.school.backend.common.dto.PageResponse;
 import com.school.backend.common.enums.Gender;
@@ -30,62 +31,32 @@ import org.springframework.test.context.ActiveProfiles;
 
 import java.util.Map;
 
-@SpringBootTest(webEnvironment = SpringBootTest.WebEnvironment.RANDOM_PORT)
-@ActiveProfiles("test")
-public class StudentFlowIntegrationTest {
-
-    @Autowired
-    private TestRestTemplate restTemplate;
-
-    @Autowired
-    private TestAuthHelper authHelper;
+public class StudentFlowIntegrationTest extends BaseAuthenticatedIntegrationTest {
 
     @Autowired
     private FeePaymentRepository feePaymentRepository;
-
     @Autowired
     private FeeStructureRepository feeStructureRepository;
-
     @Autowired
     private FeeTypeRepository feeTypeRepository;
-
     @Autowired
     private StudentFeeAssignmentRepository assignmentRepository;
-
     @Autowired
     private PromotionRecordRepository promotionRecordRepository;
-
     @Autowired
     private StudentEnrollmentRepository studentEnrollmentRepository;
-
     @Autowired
     private StudentRepository studentRepository;
-
     @Autowired
     private SchoolClassRepository schoolClassRepository;
-
     @Autowired
     private SchoolRepository schoolRepository;
-
-    private String token;
-    private HttpHeaders headers;
 
     private Long schoolId;
     private Long classId;
     private Long studentId;
     private Long feeStructureId;
     private Long feeTypeId;
-
-    // ------------------------------------------------
-
-    @BeforeEach
-    void setup() {
-
-        token = authHelper.createSuperAdminAndLogin();
-        headers = authHelper.authHeaders(token);
-    }
-
-    // ------------------------------------------------
 
     @Test
     void student_register_enroll_promote_flow() {

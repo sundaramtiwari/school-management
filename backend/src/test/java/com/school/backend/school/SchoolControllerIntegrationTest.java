@@ -1,49 +1,29 @@
 package com.school.backend.school;
 
-import com.school.backend.common.TestAuthHelper;
+import com.school.backend.common.BaseAuthenticatedIntegrationTest;
 import com.school.backend.common.dto.PageResponse;
 import com.school.backend.school.dto.SchoolDto;
 import com.school.backend.school.repository.SchoolRepository;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
-import org.springframework.boot.test.context.SpringBootTest;
-import org.springframework.boot.test.web.client.TestRestTemplate;
 import org.springframework.core.ParameterizedTypeReference;
 import org.springframework.http.*;
-import org.springframework.test.annotation.DirtiesContext;
 import org.springframework.web.util.UriComponentsBuilder;
 
 import java.util.List;
 
 import static org.junit.jupiter.api.Assertions.*;
 
-@SpringBootTest(webEnvironment = SpringBootTest.WebEnvironment.RANDOM_PORT)
-@DirtiesContext(classMode = DirtiesContext.ClassMode.AFTER_EACH_TEST_METHOD)
-public class SchoolControllerIntegrationTest {
-
-    @Autowired
-    private TestRestTemplate testRestTemplate;
+public class SchoolControllerIntegrationTest extends BaseAuthenticatedIntegrationTest {
 
     @Autowired
     private SchoolRepository schoolRepository;
 
-    @Autowired
-    private TestAuthHelper authHelper;
-
-    private String token;
-    private HttpHeaders headers;
-
     private static final String BASE = "/api/schools";
-
-    // ------------------------------------------------
 
     @BeforeEach
     void setup() {
-
-        token = authHelper.createSuperAdminAndLogin();
-        headers = authHelper.authHeaders(token);
-
         schoolRepository.deleteAll();
     }
 
@@ -72,7 +52,7 @@ public class SchoolControllerIntegrationTest {
                 new HttpEntity<>(dto, headers);
 
         ResponseEntity<SchoolDto> resp =
-                testRestTemplate.exchange(
+                restTemplate.exchange(
                         BASE,
                         HttpMethod.POST,
                         entity,
@@ -126,7 +106,7 @@ public class SchoolControllerIntegrationTest {
                 new HttpEntity<>(headers);
 
         ResponseEntity<PageResponse<SchoolDto>> response =
-                testRestTemplate.exchange(
+                restTemplate.exchange(
                         url,
                         HttpMethod.GET,
                         listEntity,
