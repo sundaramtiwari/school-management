@@ -1,5 +1,6 @@
 package com.school.backend.core.classsubject;
 
+import com.school.backend.common.TestAuthHelper;
 import com.school.backend.common.dto.PageResponse;
 import com.school.backend.core.classsubject.dto.ClassSubjectDto;
 import com.school.backend.core.classsubject.dto.SchoolClassDto;
@@ -11,11 +12,13 @@ import com.school.backend.school.dto.SchoolDto;
 import com.school.backend.school.repository.SchoolRepository;
 import org.assertj.core.api.Assertions;
 import org.junit.jupiter.api.AfterEach;
+import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.context.SpringBootTest;
 import org.springframework.boot.test.web.client.TestRestTemplate;
 import org.springframework.core.ParameterizedTypeReference;
+import org.springframework.http.HttpEntity;
 import org.springframework.http.HttpMethod;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
@@ -42,13 +45,26 @@ public class ClassSubjectFlowIntegrationTest {
     @Autowired
     private SchoolRepository schoolRepository;
 
+    @Autowired
+    private TestAuthHelper authHelper;
+
+    private String token;
+
     private Long schoolId;
     private Long classId;
     private Long subjectId;
     private Long classSubjectId;
 
+    @BeforeEach
+    void setup() {
+        token = authHelper.createSuperAdminAndLogin();
+    }
+
     @Test
     void fullFlow_createSchool_createSubject_createClass_assignSubject_and_page() {
+
+        var headers = authHelper.authHeaders(token);
+
         // 1) Create School
         Map<String, Object> schoolReq = Map.of(
                 "name", "Integration Test School",
@@ -60,8 +76,15 @@ public class ClassSubjectFlowIntegrationTest {
                 "state", "Uttar Pradesh"
         );
 
+        var schoolEntity = new HttpEntity<>(schoolReq, headers);
+
         ResponseEntity<SchoolDto> schoolResp =
-                restTemplate.postForEntity("/api/schools", schoolReq, SchoolDto.class);
+                restTemplate.exchange(
+                        "/api/schools",
+                        HttpMethod.POST,
+                        schoolEntity,
+                        SchoolDto.class
+                );
 
         Assertions.assertThat(schoolResp.getStatusCode()).isEqualTo(HttpStatus.CREATED);
         schoolId = schoolResp.getBody().getId();
@@ -70,8 +93,15 @@ public class ClassSubjectFlowIntegrationTest {
         SubjectDto subjectReq = new SubjectDto();
         subjectReq.setName("Mathematics");
 
+        var subjectEntity = new HttpEntity<>(subjectReq, headers);
+
         ResponseEntity<SubjectDto> subjectResp =
-                restTemplate.postForEntity("/api/subjects", subjectReq, SubjectDto.class);
+                restTemplate.exchange(
+                        "/api/subjects",
+                        HttpMethod.POST,
+                        subjectEntity,
+                        SubjectDto.class
+                );
 
         Assertions.assertThat(subjectResp.getStatusCode()).isEqualTo(HttpStatus.OK);
         subjectId = subjectResp.getBody().getId();
@@ -82,8 +112,15 @@ public class ClassSubjectFlowIntegrationTest {
         classReq.setSession("2025-26");
         classReq.setSchoolId(schoolId);
 
+        var classEntity = new HttpEntity<>(classReq, headers);
+
         ResponseEntity<SchoolClassDto> classResp =
-                restTemplate.postForEntity("/api/classes", classReq, SchoolClassDto.class);
+                restTemplate.exchange(
+                        "/api/classes",
+                        HttpMethod.POST,
+                        classEntity,
+                        SchoolClassDto.class
+                );
 
         Assertions.assertThat(classResp.getStatusCode()).isEqualTo(HttpStatus.OK);
         classId = classResp.getBody().getId();
@@ -94,8 +131,15 @@ public class ClassSubjectFlowIntegrationTest {
         assignReq.setSubjectId(subjectId);
         assignReq.setSchoolId(schoolId);
 
+        var assignEntity = new HttpEntity<>(assignReq, headers);
+
         ResponseEntity<ClassSubjectDto> assignResp =
-                restTemplate.postForEntity("/api/class-subjects", assignReq, ClassSubjectDto.class);
+                restTemplate.exchange(
+                        "/api/class-subjects",
+                        HttpMethod.POST,
+                        assignEntity,
+                        ClassSubjectDto.class
+                );
 
         Assertions.assertThat(assignResp.getStatusCode()).isEqualTo(HttpStatus.OK);
         classSubjectId = assignResp.getBody().getId();
@@ -103,18 +147,27 @@ public class ClassSubjectFlowIntegrationTest {
         // 5) Verify paging
         String url = "/api/class-subjects/by-class/" + classId + "?page=0&size=10";
 
+        var pageEntity = new HttpEntity<>(headers);
+
         ParameterizedTypeReference<PageResponse<ClassSubjectDto>> ptr =
                 new ParameterizedTypeReference<>() {
                 };
 
         ResponseEntity<PageResponse<ClassSubjectDto>> pageResp =
-                restTemplate.exchange(url, HttpMethod.GET, null, ptr);
+                restTemplate.exchange(
+                        url,
+                        HttpMethod.GET,
+                        pageEntity,
+                        ptr
+                );
 
         Assertions.assertThat(pageResp.getStatusCode()).isEqualTo(HttpStatus.OK);
+
         Assertions.assertThat(pageResp.getBody().content())
                 .extracting(ClassSubjectDto::getId)
                 .contains(classSubjectId);
     }
+
 
     /**
      * Cleanup runs after EACH test method.

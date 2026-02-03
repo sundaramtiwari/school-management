@@ -1,5 +1,7 @@
 package com.school.backend.fee;
 
+import com.school.backend.common.TestAuthHelper;
+import com.school.backend.common.enums.Gender;
 import com.school.backend.core.classsubject.repository.SchoolClassRepository;
 import com.school.backend.core.student.dto.StudentCreateRequest;
 import com.school.backend.core.student.dto.StudentDto;
@@ -14,12 +16,13 @@ import com.school.backend.school.entity.School;
 import com.school.backend.school.repository.SchoolRepository;
 import org.assertj.core.api.Assertions;
 import org.junit.jupiter.api.AfterEach;
+import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.context.SpringBootTest;
 import org.springframework.boot.test.web.client.TestRestTemplate;
-import org.springframework.http.HttpStatus;
-import org.springframework.http.ResponseEntity;
+import org.springframework.core.ParameterizedTypeReference;
+import org.springframework.http.*;
 import org.springframework.test.context.ActiveProfiles;
 
 import java.util.Map;
@@ -30,6 +33,9 @@ public class FeeFlowIntegrationTest {
 
     @Autowired
     private TestRestTemplate restTemplate;
+
+    @Autowired
+    private TestAuthHelper authHelper;
 
     @Autowired
     private FeeTypeRepository feeTypeRepository;
@@ -52,11 +58,25 @@ public class FeeFlowIntegrationTest {
     @Autowired
     private SchoolRepository schoolRepository;
 
+    private String token;
+    private HttpHeaders headers;
+
     private Long schoolId;
     private Long classId;
     private Long studentId;
     private Long feeTypeId;
     private Long feeStructureId;
+
+    // ------------------------------------------------
+
+    @BeforeEach
+    void setup() {
+
+        token = authHelper.createSuperAdminAndLogin();
+        headers = authHelper.authHeaders(token);
+    }
+
+    // ------------------------------------------------
 
     @Test
     void full_fee_flow_should_work() {
@@ -72,10 +92,19 @@ public class FeeFlowIntegrationTest {
                 "state", "UP"
         );
 
-        ResponseEntity<School> schoolResp =
-                restTemplate.postForEntity("/api/schools", schoolReq, School.class);
+        HttpEntity<Map<String, Object>> schoolEntity =
+                new HttpEntity<>(schoolReq, headers);
 
-        Assertions.assertThat(schoolResp.getStatusCode()).isEqualTo(HttpStatus.CREATED);
+        ResponseEntity<School> schoolResp =
+                restTemplate.exchange(
+                        "/api/schools",
+                        HttpMethod.POST,
+                        schoolEntity,
+                        School.class
+                );
+
+        Assertions.assertThat(schoolResp.getStatusCode())
+                .isEqualTo(HttpStatus.CREATED);
 
         schoolId = schoolResp.getBody().getId();
 
@@ -88,27 +117,48 @@ public class FeeFlowIntegrationTest {
                 "schoolId", schoolId
         );
 
+        HttpEntity<Map<String, Object>> classEntity =
+                new HttpEntity<>(classReq, headers);
+
         ResponseEntity<Map> classResp =
-                restTemplate.postForEntity("/api/classes", classReq, Map.class);
+                restTemplate.exchange(
+                        "/api/classes",
+                        HttpMethod.POST,
+                        classEntity,
+                        Map.class
+                );
 
-        Assertions.assertThat(classResp.getStatusCode()).isEqualTo(HttpStatus.OK);
+        Assertions.assertThat(classResp.getStatusCode())
+                .isEqualTo(HttpStatus.OK);
 
-        classId = Long.valueOf(String.valueOf(classResp.getBody().get("id")));
+        classId = Long.valueOf(
+                String.valueOf(classResp.getBody().get("id"))
+        );
 
 
         /* ----------------- 3. Create Student ----------------- */
 
-        StudentCreateRequest sreq = new StudentCreateRequest();
+        StudentCreateRequest sreq =
+                new StudentCreateRequest();
 
         sreq.setAdmissionNumber("ADM-FEE-1");
         sreq.setFirstName("Fee");
-        sreq.setGender("Male");
+        sreq.setGender(Gender.MALE);
         sreq.setSchoolId(schoolId);
 
-        ResponseEntity<StudentDto> studentResp =
-                restTemplate.postForEntity("/api/students", sreq, StudentDto.class);
+        HttpEntity<StudentCreateRequest> studentEntity =
+                new HttpEntity<>(sreq, headers);
 
-        Assertions.assertThat(studentResp.getStatusCode()).isEqualTo(HttpStatus.OK);
+        ResponseEntity<StudentDto> studentResp =
+                restTemplate.exchange(
+                        "/api/students",
+                        HttpMethod.POST,
+                        studentEntity,
+                        StudentDto.class
+                );
+
+        Assertions.assertThat(studentResp.getStatusCode())
+                .isEqualTo(HttpStatus.OK);
 
         studentId = studentResp.getBody().getId();
 
@@ -118,17 +168,27 @@ public class FeeFlowIntegrationTest {
         FeeType typeReq = new FeeType();
         typeReq.setName("TUITION");
 
-        ResponseEntity<FeeType> typeResp =
-                restTemplate.postForEntity("/api/fees/types", typeReq, FeeType.class);
+        HttpEntity<FeeType> typeEntity =
+                new HttpEntity<>(typeReq, headers);
 
-        Assertions.assertThat(typeResp.getStatusCode()).isEqualTo(HttpStatus.OK);
+        ResponseEntity<FeeType> typeResp =
+                restTemplate.exchange(
+                        "/api/fees/types",
+                        HttpMethod.POST,
+                        typeEntity,
+                        FeeType.class
+                );
+
+        Assertions.assertThat(typeResp.getStatusCode())
+                .isEqualTo(HttpStatus.OK);
 
         feeTypeId = typeResp.getBody().getId();
 
 
         /* ----------------- 5. Create FeeStructure ----------------- */
 
-        FeeStructureCreateRequest fsReq = new FeeStructureCreateRequest();
+        FeeStructureCreateRequest fsReq =
+                new FeeStructureCreateRequest();
 
         fsReq.setSchoolId(schoolId);
         fsReq.setClassId(classId);
@@ -136,42 +196,69 @@ public class FeeFlowIntegrationTest {
         fsReq.setFeeTypeId(feeTypeId);
         fsReq.setAmount(12000);
 
-        ResponseEntity<FeeStructureDto> fsResp =
-                restTemplate.postForEntity("/api/fees/structures", fsReq, FeeStructureDto.class);
+        HttpEntity<FeeStructureCreateRequest> fsEntity =
+                new HttpEntity<>(fsReq, headers);
 
-        Assertions.assertThat(fsResp.getStatusCode()).isEqualTo(HttpStatus.OK);
+        ResponseEntity<FeeStructureDto> fsResp =
+                restTemplate.exchange(
+                        "/api/fees/structures",
+                        HttpMethod.POST,
+                        fsEntity,
+                        FeeStructureDto.class
+                );
+
+        Assertions.assertThat(fsResp.getStatusCode())
+                .isEqualTo(HttpStatus.OK);
 
         feeStructureId = fsResp.getBody().getId();
 
 
         /* ----------------- 6. Assign Fee ----------------- */
 
-        StudentFeeAssignRequest assignReq = new StudentFeeAssignRequest();
+        StudentFeeAssignRequest assignReq =
+                new StudentFeeAssignRequest();
 
         assignReq.setStudentId(studentId);
         assignReq.setFeeStructureId(feeStructureId);
         assignReq.setSession("2025-26");
 
-        ResponseEntity<StudentFeeAssignmentDto> assignResp =
-                restTemplate.postForEntity("/api/fees/assignments", assignReq,
-                        StudentFeeAssignmentDto.class);
+        HttpEntity<StudentFeeAssignRequest> assignEntity =
+                new HttpEntity<>(assignReq, headers);
 
-        Assertions.assertThat(assignResp.getStatusCode()).isEqualTo(HttpStatus.OK);
+        ResponseEntity<StudentFeeAssignmentDto> assignResp =
+                restTemplate.exchange(
+                        "/api/fees/assignments",
+                        HttpMethod.POST,
+                        assignEntity,
+                        StudentFeeAssignmentDto.class
+                );
+
+        Assertions.assertThat(assignResp.getStatusCode())
+                .isEqualTo(HttpStatus.OK);
 
 
         /* ----------------- 7. Pay Fee ----------------- */
 
-        FeePaymentRequest payReq = new FeePaymentRequest();
+        FeePaymentRequest payReq =
+                new FeePaymentRequest();
 
         payReq.setStudentId(studentId);
         payReq.setAmountPaid(5000);
         payReq.setMode("UPI");
 
-        ResponseEntity<FeePaymentDto> payResp =
-                restTemplate.postForEntity("/api/fees/payments", payReq,
-                        FeePaymentDto.class);
+        HttpEntity<FeePaymentRequest> payEntity =
+                new HttpEntity<>(payReq, headers);
 
-        Assertions.assertThat(payResp.getStatusCode()).isEqualTo(HttpStatus.OK);
+        ResponseEntity<FeePaymentDto> payResp =
+                restTemplate.exchange(
+                        "/api/fees/payments",
+                        HttpMethod.POST,
+                        payEntity,
+                        FeePaymentDto.class
+                );
+
+        Assertions.assertThat(payResp.getStatusCode())
+                .isEqualTo(HttpStatus.OK);
 
 
         /* ----------------- 8. Get Summary ----------------- */
@@ -179,10 +266,19 @@ public class FeeFlowIntegrationTest {
         String url =
                 "/api/fees/summary/students/" + studentId + "?session=2025-26";
 
-        ResponseEntity<FeeSummaryDto> summaryResp =
-                restTemplate.getForEntity(url, FeeSummaryDto.class);
+        HttpEntity<Void> summaryEntity =
+                new HttpEntity<>(headers);
 
-        Assertions.assertThat(summaryResp.getStatusCode()).isEqualTo(HttpStatus.OK);
+        ResponseEntity<FeeSummaryDto> summaryResp =
+                restTemplate.exchange(
+                        url,
+                        HttpMethod.GET,
+                        summaryEntity,
+                        FeeSummaryDto.class
+                );
+
+        Assertions.assertThat(summaryResp.getStatusCode())
+                .isEqualTo(HttpStatus.OK);
 
         FeeSummaryDto summary = summaryResp.getBody();
 
@@ -193,17 +289,18 @@ public class FeeFlowIntegrationTest {
         Assertions.assertThat(summary.isFeePending()).isTrue();
     }
 
-
-    /* ----------------- CLEANUP ----------------- */
+    // ------------------------------------------------
 
     @AfterEach
     void cleanup() {
 
         if (studentId != null) {
+
             paymentRepository.findByStudentId(studentId)
                     .forEach(paymentRepository::delete);
 
-            assignmentRepository.findByStudentIdAndSession(studentId, "2025-26")
+            assignmentRepository
+                    .findByStudentIdAndSession(studentId, "2025-26")
                     .forEach(assignmentRepository::delete);
 
             studentRepository.deleteById(studentId);
