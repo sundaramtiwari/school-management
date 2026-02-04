@@ -20,9 +20,19 @@ public abstract class BaseAuthenticatedIntegrationTest {
     protected String token;
     protected HttpHeaders headers;
 
+    // Default: super admin
     @BeforeEach
     void baseSetup() {
+        loginAsSuperAdmin();
+    }
+
+    protected void loginAsSuperAdmin() {
         token = authHelper.createSuperAdminAndLogin();
+        headers = authHelper.authHeaders(token);
+    }
+
+    protected void loginAsSchoolAdmin(Long schoolId) {
+        token = authHelper.createSchoolAdminAndLogin(schoolId);
         headers = authHelper.authHeaders(token);
     }
 }

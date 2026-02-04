@@ -46,7 +46,6 @@ public class UserPersistenceIntegrationTest {
 
     @BeforeEach
     void setup() {
-
         token = authHelper.createSuperAdminAndLogin();
         headers = authHelper.authHeaders(token);
     }

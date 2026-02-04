@@ -1,12 +1,13 @@
 package com.school.backend.core.student.entity;
 
-import com.school.backend.common.entity.BaseEntity;
+import com.school.backend.common.entity.TenantEntity;
+import com.school.backend.common.enums.Gender;
 import com.school.backend.core.classsubject.entity.SchoolClass;
 import com.school.backend.school.entity.School;
 import jakarta.persistence.*;
 import lombok.*;
+import lombok.experimental.SuperBuilder;
 
-import com.school.backend.common.enums.Gender;
 import java.time.LocalDate;
 
 @Entity
@@ -18,9 +19,9 @@ import java.time.LocalDate;
 @Setter
 @NoArgsConstructor
 @AllArgsConstructor
-@Builder
+@SuperBuilder
 @EqualsAndHashCode(callSuper = false, onlyExplicitlyIncluded = true)
-public class Student extends BaseEntity {
+public class Student extends TenantEntity {
 
     @Id
     @GeneratedValue(strategy = GenerationType.IDENTITY)
@@ -64,7 +65,6 @@ public class Student extends BaseEntity {
     private String reasonForLeaving;
 
     // Start Previous School Details
-
     private String previousSchoolName;
     private String previousSchoolContact;
     private String previousSchoolAddress;
@@ -73,7 +73,6 @@ public class Student extends BaseEntity {
     private Integer previousYearOfPassing;
     private String transferCertificateNumber;
     private String reasonForLeavingPreviousSchool;
-
     // End Previous School Details
 
     @Builder.Default
@@ -88,7 +87,7 @@ public class Student extends BaseEntity {
     private SchoolClass currentClass;
 
     @ManyToOne(fetch = FetchType.LAZY)
-    @JoinColumn(name = "school_id", nullable = false)
+    @JoinColumn(name = "school_id", insertable = false, updatable = false)
     private School school;
 
     private String remarks;

@@ -1,6 +1,6 @@
 package com.school.backend.core.classsubject.entity;
 
-import com.school.backend.common.entity.BaseEntity;
+import com.school.backend.common.entity.TenantEntity;
 import com.school.backend.core.teacher.entity.Teacher;
 import com.school.backend.school.entity.School;
 import jakarta.persistence.*;
@@ -16,7 +16,7 @@ import lombok.*;
 @AllArgsConstructor
 @Builder
 @EqualsAndHashCode(callSuper = false, onlyExplicitlyIncluded = true)
-public class ClassSubject extends BaseEntity {
+public class ClassSubject extends TenantEntity {
 
     @Id
     @GeneratedValue(strategy = GenerationType.IDENTITY)
@@ -51,7 +51,7 @@ public class ClassSubject extends BaseEntity {
     private Integer displayOrder;
 
     @ManyToOne(fetch = FetchType.LAZY)
-    @JoinColumn(name = "school_id", nullable = false)
+    @JoinColumn(name = "school_id", insertable = false, updatable = false)
     private School school;
 
     @Builder.Default

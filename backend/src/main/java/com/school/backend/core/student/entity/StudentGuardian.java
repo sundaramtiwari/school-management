@@ -1,6 +1,6 @@
 package com.school.backend.core.student.entity;
 
-import com.school.backend.common.entity.BaseEntity;
+import com.school.backend.common.entity.TenantEntity;
 import jakarta.persistence.*;
 import lombok.*;
 
@@ -14,7 +14,7 @@ import lombok.*;
 @AllArgsConstructor
 @Builder
 @EqualsAndHashCode(callSuper = false, onlyExplicitlyIncluded = true)
-public class StudentGuardian extends BaseEntity {
+public class StudentGuardian extends TenantEntity {
 
     @Id
     @GeneratedValue(strategy = GenerationType.IDENTITY)

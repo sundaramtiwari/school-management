@@ -15,7 +15,6 @@ public class ClassSubjectMapperImpl implements ClassSubjectMapper {
         if (entity.getSchoolClass() != null) dto.setClassId(entity.getSchoolClass().getId());
         if (entity.getSubject() != null) dto.setSubjectId(entity.getSubject().getId());
         if (entity.getTeacher() != null) dto.setTeacherId(entity.getTeacher().getId());
-        if (entity.getSchool() != null) dto.setSchoolId(entity.getSchool().getId());
         dto.setDisplayOrder(entity.getDisplayOrder());
         dto.setActive(entity.isActive());
         return dto;

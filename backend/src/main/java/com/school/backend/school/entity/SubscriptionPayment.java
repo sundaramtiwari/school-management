@@ -1,6 +1,6 @@
 package com.school.backend.school.entity;
 
-import com.school.backend.common.entity.BaseEntity;
+import com.school.backend.common.entity.TenantEntity;
 import jakarta.persistence.*;
 import lombok.*;
 
@@ -13,7 +13,7 @@ import java.time.LocalDate;
 @AllArgsConstructor
 @Builder
 @EqualsAndHashCode(callSuper = false, onlyExplicitlyIncluded = true)
-public class SubscriptionPayment extends BaseEntity {
+public class SubscriptionPayment extends TenantEntity {
 
     @Id
     @GeneratedValue(strategy = GenerationType.IDENTITY)

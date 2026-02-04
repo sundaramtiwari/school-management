@@ -1,6 +1,6 @@
 package com.school.backend.core.guardian.entity;
 
-import com.school.backend.common.entity.BaseEntity;
+import com.school.backend.common.entity.TenantEntity;
 import com.school.backend.school.entity.School;
 import jakarta.persistence.*;
 import lombok.*;
@@ -15,7 +15,7 @@ import lombok.*;
 @AllArgsConstructor
 @Builder
 @EqualsAndHashCode(callSuper = false, onlyExplicitlyIncluded = true)
-public class Guardian extends BaseEntity {
+public class Guardian extends TenantEntity {
 
     @Id
     @GeneratedValue(strategy = GenerationType.IDENTITY)
@@ -34,7 +34,7 @@ public class Guardian extends BaseEntity {
     private String address;
 
     @ManyToOne(fetch = FetchType.LAZY)
-    @JoinColumn(name = "school_id", nullable = false)
+    @JoinColumn(name = "school_id", insertable = false, updatable = false)
     private School school;
 
     private String photoUrl;

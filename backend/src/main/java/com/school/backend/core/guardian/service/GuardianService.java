@@ -1,13 +1,12 @@
 package com.school.backend.core.guardian.service;
 
 import com.school.backend.common.exception.ResourceNotFoundException;
+import com.school.backend.common.tenant.TenantContext;
 import com.school.backend.core.guardian.dto.GuardianCreateRequest;
 import com.school.backend.core.guardian.dto.GuardianDto;
 import com.school.backend.core.guardian.entity.Guardian;
 import com.school.backend.core.guardian.mapper.GuardianMapper;
 import com.school.backend.core.guardian.repository.GuardianRepository;
-import com.school.backend.school.entity.School;
-import com.school.backend.school.repository.SchoolRepository;
 import lombok.RequiredArgsConstructor;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
@@ -20,14 +19,11 @@ public class GuardianService {
 
     private final GuardianRepository repository;
     private final GuardianMapper mapper;
-    private final SchoolRepository schoolRepository;
 
     @Transactional
     public GuardianDto create(GuardianCreateRequest req) {
-        School school = schoolRepository.findById(req.getSchoolId())
-                .orElseThrow(() -> new ResourceNotFoundException("School not found: " + req.getSchoolId()));
         Guardian g = mapper.toEntity(req);
-        g.setSchool(school);
+        g.setSchoolId(TenantContext.getSchoolId());
         return mapper.toDto(repository.save(g));
     }
 

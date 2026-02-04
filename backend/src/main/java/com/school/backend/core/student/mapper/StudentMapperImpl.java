@@ -1,5 +1,6 @@
 package com.school.backend.core.student.mapper;
 
+import com.school.backend.common.tenant.TenantContext;
 import com.school.backend.core.student.dto.StudentCreateRequest;
 import com.school.backend.core.student.dto.StudentDto;
 import com.school.backend.core.student.entity.Student;
@@ -75,7 +76,7 @@ public class StudentMapperImpl implements StudentMapper {
         entity.setPhotoUrl(dto.getPhotoUrl());
         entity.setDateOfAdmission(dto.getDateOfAdmission());
         entity.setRemarks(dto.getRemarks());
-        // school will be set by service using schoolId
+        entity.setSchoolId(TenantContext.getSchoolId());
         entity.setPreviousSchoolName(dto.getPreviousSchoolName());
         entity.setPreviousSchoolBoard(dto.getPreviousSchoolBoard());
         entity.setPreviousClass((dto.getPreviousClass()));

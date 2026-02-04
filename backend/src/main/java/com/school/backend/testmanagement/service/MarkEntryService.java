@@ -1,6 +1,7 @@
 package com.school.backend.testmanagement.service;
 
 import com.school.backend.common.exception.ResourceNotFoundException;
+import com.school.backend.common.tenant.TenantContext;
 import com.school.backend.testmanagement.dto.MarkEntryRequest;
 import com.school.backend.testmanagement.entity.ExamSubject;
 import com.school.backend.testmanagement.entity.StudentMark;
@@ -38,6 +39,7 @@ public class MarkEntryService {
                 .studentId(req.getStudentId())
                 .marksObtained(req.getMarksObtained())
                 .remarks(req.getRemarks())
+                .schoolId(TenantContext.getSchoolId())
                 .build();
 
         return markRepository.save(mark);

@@ -2,6 +2,7 @@ package com.school.backend.core.student.service;
 
 import com.school.backend.common.exception.BusinessException;
 import com.school.backend.common.exception.ResourceNotFoundException;
+import com.school.backend.common.tenant.TenantContext;
 import com.school.backend.core.classsubject.entity.SchoolClass;
 import com.school.backend.core.classsubject.repository.SchoolClassRepository;
 import com.school.backend.core.student.dto.PromotionRecordDto;
@@ -103,6 +104,7 @@ public class StudentHistoryService {
                 .promoted(req.isPromoted())
                 .feePending(req.isFeePending())
                 .remarks(req.getRemarks())
+                .schoolId(TenantContext.getSchoolId())
                 .build();
 
         PromotionRecord savedRecord = promotionRepo.save(record);
@@ -117,6 +119,7 @@ public class StudentHistoryService {
                 .enrollmentDate(LocalDate.now())
                 .active(true)
                 .remarks(req.getRemarks())
+                .schoolId(TenantContext.getSchoolId())
                 .build();
 
         enrollmentRepo.save(enrollment);

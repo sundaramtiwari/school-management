@@ -1,7 +1,6 @@
 package com.school.backend.core.student;
 
 import com.school.backend.common.BaseAuthenticatedIntegrationTest;
-import com.school.backend.common.TestAuthHelper;
 import com.school.backend.common.dto.PageResponse;
 import com.school.backend.common.enums.Gender;
 import com.school.backend.core.classsubject.repository.SchoolClassRepository;
@@ -17,17 +16,17 @@ import com.school.backend.fee.repository.FeeTypeRepository;
 import com.school.backend.fee.repository.StudentFeeAssignmentRepository;
 import com.school.backend.school.entity.School;
 import com.school.backend.school.repository.SchoolRepository;
+import com.school.backend.user.repository.UserRepository;
 import org.assertj.core.api.Assertions;
 import org.junit.jupiter.api.AfterEach;
-import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
-import org.springframework.boot.test.context.SpringBootTest;
-import org.springframework.boot.test.web.client.TestRestTemplate;
 import org.springframework.core.ParameterizedTypeReference;
 import org.springframework.data.domain.Pageable;
-import org.springframework.http.*;
-import org.springframework.test.context.ActiveProfiles;
+import org.springframework.http.HttpEntity;
+import org.springframework.http.HttpMethod;
+import org.springframework.http.HttpStatus;
+import org.springframework.http.ResponseEntity;
 
 import java.util.Map;
 
@@ -51,6 +50,8 @@ public class StudentFlowIntegrationTest extends BaseAuthenticatedIntegrationTest
     private SchoolClassRepository schoolClassRepository;
     @Autowired
     private SchoolRepository schoolRepository;
+    @Autowired
+    private UserRepository userRepository;
 
     private Long schoolId;
     private Long classId;
@@ -89,6 +90,8 @@ public class StudentFlowIntegrationTest extends BaseAuthenticatedIntegrationTest
 
         schoolId = schoolResp.getBody().getId();
 
+        // LOGIN AS SCHOOL ADMIN NOW
+        loginAsSchoolAdmin(schoolId);
 
         // ---------- Create Class ----------
 
@@ -123,7 +126,6 @@ public class StudentFlowIntegrationTest extends BaseAuthenticatedIntegrationTest
         sreq.setAdmissionNumber("ADM-100");
         sreq.setFirstName("Test");
         sreq.setGender(Gender.MALE);
-        sreq.setSchoolId(schoolId);
 
         HttpEntity<StudentCreateRequest> studentEntity =
                 new HttpEntity<>(sreq, headers);
@@ -188,7 +190,6 @@ public class StudentFlowIntegrationTest extends BaseAuthenticatedIntegrationTest
         FeeStructureCreateRequest fsReq =
                 new FeeStructureCreateRequest();
 
-        fsReq.setSchoolId(schoolId);
         fsReq.setClassId(classId);
         fsReq.setSession("2025-26");
         fsReq.setFeeTypeId(feeTypeId);
@@ -326,6 +327,7 @@ public class StudentFlowIntegrationTest extends BaseAuthenticatedIntegrationTest
         schoolId = schoolResp.getBody().getId();
 
 
+        loginAsSchoolAdmin(schoolId);
         // ---------- Create Student ----------
 
         StudentCreateRequest createReq =
@@ -335,7 +337,6 @@ public class StudentFlowIntegrationTest extends BaseAuthenticatedIntegrationTest
         createReq.setFirstName("Rahul");
         createReq.setLastName("Sharma");
         createReq.setGender(Gender.MALE);
-        createReq.setSchoolId(schoolId);
 
         HttpEntity<StudentCreateRequest> createEntity =
                 new HttpEntity<>(createReq, headers);
@@ -477,6 +478,17 @@ public class StudentFlowIntegrationTest extends BaseAuthenticatedIntegrationTest
             schoolClassRepository.deleteById(classId);
         }
 
+        if (schoolId != null) {
+            userRepository
+                    .findAll()
+                    .stream()
+                    .filter(u ->
+                            u.getSchool() != null &&
+                                    u.getSchool().getId().equals(schoolId)
+                    )
+                    .forEach(userRepository::delete);
+        }
+        
         if (schoolId != null) {
             schoolRepository.deleteById(schoolId);
         }

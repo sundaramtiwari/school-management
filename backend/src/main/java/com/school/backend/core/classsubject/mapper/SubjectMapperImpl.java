@@ -1,5 +1,6 @@
 package com.school.backend.core.classsubject.mapper;
 
+import com.school.backend.common.tenant.TenantContext;
 import com.school.backend.core.classsubject.dto.SubjectDto;
 import com.school.backend.core.classsubject.entity.Subject;
 import org.springframework.stereotype.Component;
@@ -33,6 +34,7 @@ public class SubjectMapperImpl implements SubjectMapper {
         entity.setMinMarks(dto.getMinMarks());
         entity.setActive(dto.isActive());
         entity.setRemarks(dto.getRemarks());
+        entity.setSchoolId(TenantContext.getSchoolId());
         return entity;
     }
 }

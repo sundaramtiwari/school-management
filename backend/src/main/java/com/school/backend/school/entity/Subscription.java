@@ -1,6 +1,6 @@
 package com.school.backend.school.entity;
 
-import com.school.backend.common.entity.BaseEntity;
+import com.school.backend.common.entity.TenantEntity;
 import jakarta.persistence.*;
 import lombok.*;
 
@@ -13,14 +13,14 @@ import java.time.LocalDate;
 @AllArgsConstructor
 @Builder
 @EqualsAndHashCode(callSuper = false, onlyExplicitlyIncluded = true)
-public class Subscription extends BaseEntity {
+public class Subscription extends TenantEntity {
 
     @Id
     @GeneratedValue(strategy = GenerationType.IDENTITY)
     private Long id;
 
     @ManyToOne(fetch = FetchType.LAZY)
-    @JoinColumn(name = "school_id", nullable = false)
+    @JoinColumn(name = "school_id", insertable = false, updatable = false)
     private School school;
 
     @Column(nullable = false)

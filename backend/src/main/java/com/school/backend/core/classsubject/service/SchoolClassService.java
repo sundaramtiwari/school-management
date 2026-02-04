@@ -1,12 +1,12 @@
 package com.school.backend.core.classsubject.service;
 
 import com.school.backend.common.exception.ResourceNotFoundException;
+import com.school.backend.common.tenant.TenantContext;
 import com.school.backend.core.classsubject.dto.SchoolClassDto;
 import com.school.backend.core.classsubject.entity.SchoolClass;
 import com.school.backend.core.classsubject.mapper.SchoolClassMapper;
 import com.school.backend.core.classsubject.repository.SchoolClassRepository;
 import com.school.backend.core.teacher.entity.Teacher;
-import com.school.backend.school.entity.School;
 import lombok.RequiredArgsConstructor;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
@@ -20,24 +20,24 @@ public class SchoolClassService {
     private final SchoolClassMapper mapper;
 
     public SchoolClassDto create(SchoolClassDto dto) {
+        Long schoolId = TenantContext.getSchoolId();
+        System.err.println("SchoolID: " + schoolId);
         // duplication check using repository method
         if (repository.existsByNameAndSectionAndSessionAndSchoolId(dto.getName(),
-                dto.getSection(), dto.getSession(), dto.getSchoolId())) {
+                dto.getSection(), dto.getSession(), schoolId)) {
             throw new IllegalArgumentException("Class with same name/section/session already exists for this school");
         }
 
         SchoolClass entity = mapper.toEntity(dto);
 
         // assign school stub by id to avoid extra DB hit
-        School school = new School();
-        school.setId(dto.getSchoolId());
-        entity.setSchool(school);
+        entity.setSchoolId(schoolId);
 
         // assign teacher stub if provided
         if (dto.getClassTeacherId() != null) {
             Teacher t = new Teacher();
             t.setId(dto.getClassTeacherId());
-            t.setSchoolId(dto.getSchoolId());
+            t.setSchoolId(schoolId);
             entity.setClassTeacher(t);
         }
 
@@ -59,7 +59,7 @@ public class SchoolClassService {
         if (dto.getClassTeacherId() != null) {
             Teacher t = new Teacher();
             t.setId(dto.getClassTeacherId());
-            t.setSchoolId(dto.getSchoolId());
+            t.setSchoolId(TenantContext.getSchoolId());
             existing.setClassTeacher(t);
         } else {
             existing.setClassTeacher(null);

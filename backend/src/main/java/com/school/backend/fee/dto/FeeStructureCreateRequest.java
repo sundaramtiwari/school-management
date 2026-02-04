@@ -8,17 +8,11 @@ import lombok.Data;
 public class FeeStructureCreateRequest {
 
     @NotNull
-    private Long schoolId;
-
-    @NotNull
     private Long classId;
-
     @NotBlank
     private String session;
-
     @NotNull
     private Long feeTypeId;
-
     @NotNull
     private Integer amount;
 }

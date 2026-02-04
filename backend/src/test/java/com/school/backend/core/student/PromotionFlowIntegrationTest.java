@@ -2,7 +2,6 @@ package com.school.backend.core.student;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.school.backend.common.BaseAuthenticatedIntegrationTest;
-import com.school.backend.common.TestAuthHelper;
 import com.school.backend.core.classsubject.dto.SchoolClassCreateRequest;
 import com.school.backend.core.classsubject.dto.SchoolClassDto;
 import com.school.backend.core.classsubject.repository.SchoolClassRepository;
@@ -18,18 +17,16 @@ import com.school.backend.fee.repository.FeeTypeRepository;
 import com.school.backend.fee.repository.StudentFeeAssignmentRepository;
 import com.school.backend.school.dto.SchoolDto;
 import com.school.backend.school.repository.SchoolRepository;
+import com.school.backend.user.repository.UserRepository;
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
-import org.springframework.boot.test.context.SpringBootTest;
-import org.springframework.boot.test.web.client.TestRestTemplate;
 import org.springframework.core.ParameterizedTypeReference;
 import org.springframework.data.domain.Pageable;
+import org.springframework.http.HttpEntity;
 import org.springframework.http.HttpMethod;
 import org.springframework.http.HttpStatus;
-import org.springframework.http.HttpEntity;
-import org.springframework.http.HttpHeaders;
 import org.springframework.http.ResponseEntity;
 
 import java.time.LocalDate;
@@ -59,6 +56,8 @@ public class PromotionFlowIntegrationTest extends BaseAuthenticatedIntegrationTe
     private SchoolClassRepository schoolClassRepository;
     @Autowired
     private SchoolRepository schoolRepository;
+    @Autowired
+    private UserRepository userRepository;
 
     private Long schoolId;
     private Long feeTypeId;
@@ -70,6 +69,8 @@ public class PromotionFlowIntegrationTest extends BaseAuthenticatedIntegrationTe
     @BeforeEach
     void setup() {
         this.schoolId = createSchool("Test School");
+        // LOGIN AS SCHOOL ADMIN NOW
+        loginAsSchoolAdmin(schoolId);
         this.fromClassId = createClass(schoolId, "Class 1", "A", "2024-25");
         this.toClassId = createClass(schoolId, "Class 2", "B", "2025-26");
         this.studentId = createStudent(schoolId, "Amit Kumar");
@@ -106,7 +107,6 @@ public class PromotionFlowIntegrationTest extends BaseAuthenticatedIntegrationTe
         // Create FeeStructure
         FeeStructureCreateRequest fsReq = new FeeStructureCreateRequest();
 
-        fsReq.setSchoolId(schoolId);
         fsReq.setClassId(toClassId);
         fsReq.setSession("2025-26");
         fsReq.setFeeTypeId(feeTypeId);
@@ -301,7 +301,6 @@ public class PromotionFlowIntegrationTest extends BaseAuthenticatedIntegrationTe
                 new StudentCreateRequest();
 
         req.setFirstName(name);
-        req.setSchoolId(schoolId);
         req.setDob(LocalDate.of(2015, 1, 1));
         req.setGender(MALE);
         req.setAdmissionNumber("name" + System.currentTimeMillis());
@@ -407,7 +406,18 @@ public class PromotionFlowIntegrationTest extends BaseAuthenticatedIntegrationTe
             schoolClassRepository.deleteById(fromClassId);
         }
 
-        // 9. School
+        // 9. Users (IMPORTANT)
+        if (schoolId != null) {
+            userRepository
+                    .findAll()
+                    .stream()
+                    .filter(u ->
+                            u.getSchool() != null &&
+                                    u.getSchool().getId().equals(schoolId)
+                    )
+                    .forEach(userRepository::delete);
+        }
+        // 10. School
         if (schoolId != null) {
             schoolRepository.deleteById(schoolId);
         }

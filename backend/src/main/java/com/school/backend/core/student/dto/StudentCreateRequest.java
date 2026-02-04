@@ -31,8 +31,6 @@ public class StudentCreateRequest {
     private String bloodGroup;
     private String photoUrl;
     private LocalDate dateOfAdmission;
-    @NotNull
-    private Long schoolId;
     private String remarks;
     // Previous School Details
     private String previousSchoolName;

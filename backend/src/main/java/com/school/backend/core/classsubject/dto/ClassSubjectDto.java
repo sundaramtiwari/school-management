@@ -12,7 +12,5 @@ public class ClassSubjectDto {
     private Long subjectId;
     private Long teacherId;
     private Integer displayOrder;
-    @NotNull
-    private Long schoolId;
     private boolean active = true;
 }

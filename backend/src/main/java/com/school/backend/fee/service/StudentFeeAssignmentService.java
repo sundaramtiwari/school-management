@@ -1,6 +1,7 @@
 package com.school.backend.fee.service;
 
 import com.school.backend.common.exception.ResourceNotFoundException;
+import com.school.backend.common.tenant.TenantContext;
 import com.school.backend.core.student.repository.StudentRepository;
 import com.school.backend.fee.dto.StudentFeeAssignRequest;
 import com.school.backend.fee.dto.StudentFeeAssignmentDto;
@@ -49,6 +50,7 @@ public class StudentFeeAssignmentService {
                 .studentId(req.getStudentId())
                 .feeStructureId(fs.getId())
                 .session(req.getSession())
+                .schoolId(TenantContext.getSchoolId())
                 .active(true)
                 .build();
 

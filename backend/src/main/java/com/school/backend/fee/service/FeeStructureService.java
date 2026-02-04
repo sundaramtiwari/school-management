@@ -1,6 +1,7 @@
 package com.school.backend.fee.service;
 
 import com.school.backend.common.exception.ResourceNotFoundException;
+import com.school.backend.common.tenant.TenantContext;
 import com.school.backend.fee.dto.FeeStructureCreateRequest;
 import com.school.backend.fee.dto.FeeStructureDto;
 import com.school.backend.fee.entity.FeeStructure;
@@ -29,7 +30,7 @@ public class FeeStructureService {
                         new ResourceNotFoundException("FeeType not found: " + req.getFeeTypeId()));
 
         FeeStructure fs = FeeStructure.builder()
-                .schoolId(req.getSchoolId())
+                .schoolId(TenantContext.getSchoolId())
                 .classId(req.getClassId())
                 .session(req.getSession())
                 .feeType(feeType)

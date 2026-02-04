@@ -1,7 +1,6 @@
 package com.school.backend.core.classsubject;
 
 import com.school.backend.common.BaseAuthenticatedIntegrationTest;
-import com.school.backend.common.TestAuthHelper;
 import com.school.backend.common.dto.PageResponse;
 import com.school.backend.core.classsubject.dto.ClassSubjectDto;
 import com.school.backend.core.classsubject.dto.SchoolClassDto;
@@ -11,19 +10,16 @@ import com.school.backend.core.classsubject.repository.SchoolClassRepository;
 import com.school.backend.core.classsubject.repository.SubjectRepository;
 import com.school.backend.school.dto.SchoolDto;
 import com.school.backend.school.repository.SchoolRepository;
+import com.school.backend.user.repository.UserRepository;
 import org.assertj.core.api.Assertions;
 import org.junit.jupiter.api.AfterEach;
-import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
-import org.springframework.boot.test.context.SpringBootTest;
-import org.springframework.boot.test.web.client.TestRestTemplate;
 import org.springframework.core.ParameterizedTypeReference;
 import org.springframework.http.HttpEntity;
 import org.springframework.http.HttpMethod;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
-import org.springframework.test.context.ActiveProfiles;
 
 import java.util.Map;
 
@@ -37,6 +33,8 @@ public class ClassSubjectFlowIntegrationTest extends BaseAuthenticatedIntegratio
     private SubjectRepository subjectRepository;
     @Autowired
     private SchoolRepository schoolRepository;
+    @Autowired
+    private UserRepository userRepository;
 
     private Long schoolId;
     private Long classId;
@@ -72,6 +70,10 @@ public class ClassSubjectFlowIntegrationTest extends BaseAuthenticatedIntegratio
         Assertions.assertThat(schoolResp.getStatusCode()).isEqualTo(HttpStatus.CREATED);
         schoolId = schoolResp.getBody().getId();
 
+        // LOGIN AS SCHOOL ADMIN NOW
+        loginAsSchoolAdmin(schoolId);
+        headers = authHelper.authHeaders(token);
+
         // 2) Create Subject
         SubjectDto subjectReq = new SubjectDto();
         subjectReq.setName("Mathematics");
@@ -93,7 +95,6 @@ public class ClassSubjectFlowIntegrationTest extends BaseAuthenticatedIntegratio
         SchoolClassDto classReq = new SchoolClassDto();
         classReq.setName("1");
         classReq.setSession("2025-26");
-        classReq.setSchoolId(schoolId);
 
         var classEntity = new HttpEntity<>(classReq, headers);
 
@@ -112,7 +113,6 @@ public class ClassSubjectFlowIntegrationTest extends BaseAuthenticatedIntegratio
         ClassSubjectDto assignReq = new ClassSubjectDto();
         assignReq.setClassId(classId);
         assignReq.setSubjectId(subjectId);
-        assignReq.setSchoolId(schoolId);
 
         var assignEntity = new HttpEntity<>(assignReq, headers);
 
@@ -168,6 +168,18 @@ public class ClassSubjectFlowIntegrationTest extends BaseAuthenticatedIntegratio
 
         if (subjectId != null) {
             subjectRepository.deleteById(subjectId);
+        }
+
+        // 6. Users (IMPORTANT)
+        if (schoolId != null) {
+            userRepository
+                    .findAll()
+                    .stream()
+                    .filter(u ->
+                            u.getSchool() != null &&
+                                    u.getSchool().getId().equals(schoolId)
+                    )
+                    .forEach(userRepository::delete);
         }
 
         if (schoolId != null) {

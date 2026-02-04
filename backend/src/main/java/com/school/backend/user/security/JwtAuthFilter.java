@@ -1,5 +1,6 @@
 package com.school.backend.user.security;
 
+import com.school.backend.common.tenant.TenantContext;
 import com.school.backend.user.entity.User;
 import com.school.backend.user.repository.UserRepository;
 import io.jsonwebtoken.Claims;
@@ -21,9 +22,7 @@ public class JwtAuthFilter extends OncePerRequestFilter {
     private final JwtUtil jwtUtil;
     private final UserRepository userRepository;
 
-    public JwtAuthFilter(JwtUtil jwtUtil,
-                         UserRepository userRepository) {
-
+    public JwtAuthFilter(JwtUtil jwtUtil, UserRepository userRepository) {
         this.jwtUtil = jwtUtil;
         this.userRepository = userRepository;
     }
@@ -37,12 +36,19 @@ public class JwtAuthFilter extends OncePerRequestFilter {
 
         String header = request.getHeader("Authorization");
 
-        if (header != null && header.startsWith("Bearer ")) {
+        try {
+            if (header != null && header.startsWith("Bearer ")) {
 
-            String token = header.substring(7);
+                String token = header.substring(7);
 
-            try {
+
                 Claims claims = jwtUtil.parse(token);
+
+                Long schoolId = claims.get("schoolId", Long.class);
+
+                if (schoolId != null) {
+                    TenantContext.setSchoolId(schoolId);
+                }
 
                 String email = claims.getSubject();
 
@@ -52,31 +58,25 @@ public class JwtAuthFilter extends OncePerRequestFilter {
 
                 if (user != null) {
 
-                    CustomUserDetails details =
-                            new CustomUserDetails(user);
+                    CustomUserDetails details = new CustomUserDetails(user);
 
                     UsernamePasswordAuthenticationToken auth =
-                            new UsernamePasswordAuthenticationToken(
-                                    details,
-                                    null,
-                                    details.getAuthorities()
-                            );
+                            new UsernamePasswordAuthenticationToken(details, null, details.getAuthorities());
 
-                    auth.setDetails(
-                            new WebAuthenticationDetailsSource()
-                                    .buildDetails(request)
-                    );
+                    auth.setDetails(new WebAuthenticationDetailsSource().buildDetails(request));
 
-                    SecurityContextHolder
-                            .getContext()
-                            .setAuthentication(auth);
+                    SecurityContextHolder.getContext().setAuthentication(auth);
                 }
 
-            } catch (Exception e) {
-                // Invalid token → ignore, user unauthenticated
             }
-        }
 
-        chain.doFilter(request, response);
+            chain.doFilter(request, response);
+
+        } catch (Exception e) {
+            // Invalid token → ignore, user unauthenticated
+            
+        } finally {
+            TenantContext.clear();
+        }
     }
 }

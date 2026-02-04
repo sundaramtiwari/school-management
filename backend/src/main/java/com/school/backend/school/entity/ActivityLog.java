@@ -1,6 +1,6 @@
 package com.school.backend.school.entity;
 
-import com.school.backend.common.entity.BaseEntity;
+import com.school.backend.common.entity.TenantEntity;
 import jakarta.persistence.*;
 import lombok.*;
 
@@ -13,13 +13,12 @@ import java.time.LocalDateTime;
 @AllArgsConstructor
 @Builder
 @EqualsAndHashCode(callSuper = false, onlyExplicitlyIncluded = true)
-public class ActivityLog extends BaseEntity {
+public class ActivityLog extends TenantEntity {
 
     @Id
     @GeneratedValue(strategy = GenerationType.IDENTITY)
     private Long id;
 
-    private Long schoolId;
     private Long userId;
 
     private String action;      // e.g. "Created Student"

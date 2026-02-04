@@ -1,6 +1,7 @@
 package com.school.backend.fee.service;
 
 import com.school.backend.common.exception.ResourceNotFoundException;
+import com.school.backend.common.tenant.TenantContext;
 import com.school.backend.core.student.repository.StudentRepository;
 import com.school.backend.fee.dto.FeePaymentDto;
 import com.school.backend.fee.dto.FeePaymentRequest;
@@ -38,6 +39,7 @@ public class FeePaymentService {
                 )
                 .mode(req.getMode())
                 .remarks(req.getRemarks())
+                .schoolId(TenantContext.getSchoolId())
                 .build();
 
         return toDto(paymentRepository.save(payment));

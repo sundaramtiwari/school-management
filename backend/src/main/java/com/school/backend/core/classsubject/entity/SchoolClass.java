@@ -1,10 +1,11 @@
 package com.school.backend.core.classsubject.entity;
 
-import com.school.backend.common.entity.BaseEntity;
+import com.school.backend.common.entity.TenantEntity;
 import com.school.backend.core.teacher.entity.Teacher;
 import com.school.backend.school.entity.School;
 import jakarta.persistence.*;
 import lombok.*;
+import lombok.experimental.SuperBuilder;
 
 @Entity
 @Table(name = "school_classes", indexes = {
@@ -14,9 +15,9 @@ import lombok.*;
 @Setter
 @NoArgsConstructor
 @AllArgsConstructor
-@Builder
+@SuperBuilder
 @EqualsAndHashCode(callSuper = false, onlyExplicitlyIncluded = true)
-public class SchoolClass extends BaseEntity {
+public class SchoolClass extends TenantEntity {
 
     @Id
     @GeneratedValue(strategy = GenerationType.IDENTITY)
@@ -56,7 +57,7 @@ public class SchoolClass extends BaseEntity {
      * Many classes belong to a School (multi-tenant)
      */
     @ManyToOne(fetch = FetchType.LAZY)
-    @JoinColumn(name = "school_id", nullable = false)
+    @JoinColumn(name = "school_id", insertable = false, updatable = false)
     private School school;
 
     @Builder.Default

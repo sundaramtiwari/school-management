@@ -1,6 +1,7 @@
 package com.school.backend.core.classsubject.service;
 
 import com.school.backend.common.exception.ResourceNotFoundException;
+import com.school.backend.common.tenant.TenantContext;
 import com.school.backend.core.classsubject.dto.ClassSubjectDto;
 import com.school.backend.core.classsubject.entity.ClassSubject;
 import com.school.backend.core.classsubject.entity.SchoolClass;
@@ -10,7 +11,6 @@ import com.school.backend.core.classsubject.repository.ClassSubjectRepository;
 import com.school.backend.core.classsubject.repository.SchoolClassRepository;
 import com.school.backend.core.classsubject.repository.SubjectRepository;
 import com.school.backend.core.teacher.entity.Teacher;
-import com.school.backend.school.entity.School;
 import lombok.RequiredArgsConstructor;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
@@ -26,6 +26,7 @@ public class ClassSubjectService {
     private final ClassSubjectMapper mapper;
 
     public ClassSubjectDto create(ClassSubjectDto dto) {
+
         if (repository.existsBySchoolClassIdAndSubjectId(dto.getClassId(), dto.getSubjectId())) {
             throw new IllegalArgumentException("Subject already assigned to class.");
         }
@@ -36,20 +37,19 @@ public class ClassSubjectService {
         Subject s = subjectRepo.findById(dto.getSubjectId())
                 .orElseThrow(() -> new ResourceNotFoundException("Subject not found: " + dto.getSubjectId()));
 
+        Long schoolId = TenantContext.getSchoolId();
+
         ClassSubject entity = mapper.toEntity(dto);
+        entity.setSchoolId(schoolId);
         entity.setSchoolClass(sc);
         entity.setSubject(s);
 
         if (dto.getTeacherId() != null) {
             Teacher t = new Teacher();
             t.setId(dto.getTeacherId());
-            t.setSchoolId(dto.getSchoolId());
+            t.setSchoolId(schoolId);
             entity.setTeacher(t);
         }
-
-        School school = new School();
-        school.setId(dto.getSchoolId());
-        entity.setSchool(school);
 
         return mapper.toDto(repository.save(entity));
     }

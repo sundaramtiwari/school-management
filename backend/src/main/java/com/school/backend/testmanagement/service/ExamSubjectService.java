@@ -1,5 +1,6 @@
 package com.school.backend.testmanagement.service;
 
+import com.school.backend.common.tenant.TenantContext;
 import com.school.backend.testmanagement.dto.ExamSubjectCreateRequest;
 import com.school.backend.testmanagement.entity.ExamSubject;
 import com.school.backend.testmanagement.repository.ExamSubjectRepository;
@@ -26,6 +27,7 @@ public class ExamSubjectService {
                 .examId(req.getExamId())
                 .subjectId(req.getSubjectId())
                 .maxMarks(req.getMaxMarks())
+                .schoolId(TenantContext.getSchoolId())
                 .active(true)
                 .build();
 

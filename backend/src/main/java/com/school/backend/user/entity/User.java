@@ -1,20 +1,20 @@
 package com.school.backend.user.entity;
 
 import com.school.backend.common.entity.BaseEntity;
-import com.school.backend.school.entity.School;
 import com.school.backend.common.enums.UserRole;
+import com.school.backend.school.entity.School;
 import jakarta.persistence.*;
 import lombok.*;
 
 @Entity
 @Table(
-    name = "users",
-    uniqueConstraints = {
-        @UniqueConstraint(
-            name = "uk_users_email",
-            columnNames = "email"
-        )
-    }
+        name = "users",
+        uniqueConstraints = {
+                @UniqueConstraint(
+                        name = "uk_users_email",
+                        columnNames = "email"
+                )
+        }
 )
 @Getter
 @Setter
@@ -22,8 +22,8 @@ import lombok.*;
 @AllArgsConstructor
 @Builder
 @EqualsAndHashCode(
-    callSuper = false,
-    onlyExplicitlyIncluded = true
+        callSuper = false,
+        onlyExplicitlyIncluded = true
 )
 public class User extends BaseEntity {
 
@@ -32,7 +32,7 @@ public class User extends BaseEntity {
     @EqualsAndHashCode.Include
     private Long id;
 
-    @Column(nullable = false, length = 255)
+    @Column(nullable = false)
     private String email;
 
     @Column(name = "password_hash", nullable = false)

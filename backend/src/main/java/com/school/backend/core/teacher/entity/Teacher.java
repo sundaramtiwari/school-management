@@ -1,6 +1,6 @@
 package com.school.backend.core.teacher.entity;
 
-import com.school.backend.common.entity.BaseEntity;
+import com.school.backend.common.entity.TenantEntity;
 import jakarta.persistence.*;
 import lombok.*;
 
@@ -12,14 +12,11 @@ import lombok.*;
 @AllArgsConstructor
 @Builder
 @EqualsAndHashCode(callSuper = false, onlyExplicitlyIncluded = true)
-public class Teacher extends BaseEntity {
+public class Teacher extends TenantEntity {
 
     @Id
     @GeneratedValue(strategy = GenerationType.IDENTITY)
     @EqualsAndHashCode.Include
     private Long id;
 
-    // Minimal stub for linking, full details later
-    @Column(name = "school_id", nullable = false)
-    private Long schoolId;
 }

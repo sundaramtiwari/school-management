@@ -1,8 +1,9 @@
 package com.school.backend.testmanagement.entity;
 
-import com.school.backend.common.entity.BaseEntity;
+import com.school.backend.common.entity.TenantEntity;
 import jakarta.persistence.*;
 import lombok.*;
+import lombok.experimental.SuperBuilder;
 
 @Entity
 @Table(name = "exams", indexes = {
@@ -12,17 +13,14 @@ import lombok.*;
 @Setter
 @NoArgsConstructor
 @AllArgsConstructor
-@Builder
+@SuperBuilder
 @EqualsAndHashCode(callSuper = false, onlyExplicitlyIncluded = true)
-public class Exam extends BaseEntity {
+public class Exam extends TenantEntity {
 
     @Id
     @GeneratedValue(strategy = GenerationType.IDENTITY)
     @EqualsAndHashCode.Include
     private Long id;
-
-    @Column(name = "school_id", nullable = false)
-    private Long schoolId;
 
     @Column(name = "class_id", nullable = false)
     private Long classId;

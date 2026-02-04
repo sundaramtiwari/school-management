@@ -19,9 +19,6 @@ public class SchoolClassMapperImpl implements SchoolClassMapper {
         dto.setRemarks(entity.getRemarks());
         dto.setActive(entity.isActive());
 
-        if (entity.getSchool() != null) {
-            dto.setSchoolId(entity.getSchool().getId());
-        }
         if (entity.getClassTeacher() != null) {
             dto.setClassTeacherId(entity.getClassTeacher().getId());
         }

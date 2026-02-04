@@ -1,5 +1,6 @@
 package com.school.backend.core.student.mapper;
 
+import com.school.backend.common.tenant.TenantContext;
 import com.school.backend.core.student.dto.StudentEnrollmentDto;
 import com.school.backend.core.student.dto.StudentEnrollmentRequest;
 import com.school.backend.core.student.entity.StudentEnrollment;
@@ -36,6 +37,7 @@ public class StudentEnrollmentMapperImpl implements StudentEnrollmentMapper {
         e.setEnrollmentDate(r.getEnrollmentDate());
         e.setActive(true);
         e.setRemarks(r.getRemarks());
+        e.setSchoolId(TenantContext.getSchoolId());
         return e;
     }
 }

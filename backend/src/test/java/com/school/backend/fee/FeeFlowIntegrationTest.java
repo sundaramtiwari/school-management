@@ -1,7 +1,6 @@
 package com.school.backend.fee;
 
 import com.school.backend.common.BaseAuthenticatedIntegrationTest;
-import com.school.backend.common.TestAuthHelper;
 import com.school.backend.common.enums.Gender;
 import com.school.backend.core.classsubject.repository.SchoolClassRepository;
 import com.school.backend.core.student.dto.StudentCreateRequest;
@@ -15,16 +14,15 @@ import com.school.backend.fee.repository.FeeTypeRepository;
 import com.school.backend.fee.repository.StudentFeeAssignmentRepository;
 import com.school.backend.school.entity.School;
 import com.school.backend.school.repository.SchoolRepository;
+import com.school.backend.user.repository.UserRepository;
 import org.assertj.core.api.Assertions;
 import org.junit.jupiter.api.AfterEach;
-import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
-import org.springframework.boot.test.context.SpringBootTest;
-import org.springframework.boot.test.web.client.TestRestTemplate;
-import org.springframework.core.ParameterizedTypeReference;
-import org.springframework.http.*;
-import org.springframework.test.context.ActiveProfiles;
+import org.springframework.http.HttpEntity;
+import org.springframework.http.HttpMethod;
+import org.springframework.http.HttpStatus;
+import org.springframework.http.ResponseEntity;
 
 import java.util.Map;
 
@@ -43,6 +41,8 @@ public class FeeFlowIntegrationTest extends BaseAuthenticatedIntegrationTest {
     private SchoolClassRepository classRepository;
     @Autowired
     private SchoolRepository schoolRepository;
+    @Autowired
+    private UserRepository userRepository;
 
     private Long schoolId;
     private Long classId;
@@ -79,7 +79,8 @@ public class FeeFlowIntegrationTest extends BaseAuthenticatedIntegrationTest {
                 .isEqualTo(HttpStatus.CREATED);
 
         schoolId = schoolResp.getBody().getId();
-
+        // LOGIN AS SCHOOL ADMIN NOW
+        loginAsSchoolAdmin(schoolId);
 
         /* ----------------- 2. Create Class ----------------- */
 
@@ -116,7 +117,6 @@ public class FeeFlowIntegrationTest extends BaseAuthenticatedIntegrationTest {
         sreq.setAdmissionNumber("ADM-FEE-1");
         sreq.setFirstName("Fee");
         sreq.setGender(Gender.MALE);
-        sreq.setSchoolId(schoolId);
 
         HttpEntity<StudentCreateRequest> studentEntity =
                 new HttpEntity<>(sreq, headers);
@@ -162,7 +162,6 @@ public class FeeFlowIntegrationTest extends BaseAuthenticatedIntegrationTest {
         FeeStructureCreateRequest fsReq =
                 new FeeStructureCreateRequest();
 
-        fsReq.setSchoolId(schoolId);
         fsReq.setClassId(classId);
         fsReq.setSession("2025-26");
         fsReq.setFeeTypeId(feeTypeId);
@@ -288,6 +287,17 @@ public class FeeFlowIntegrationTest extends BaseAuthenticatedIntegrationTest {
 
         if (classId != null) {
             classRepository.deleteById(classId);
+        }
+
+        if (schoolId != null) {
+            userRepository
+                    .findAll()
+                    .stream()
+                    .filter(u ->
+                            u.getSchool() != null &&
+                                    u.getSchool().getId().equals(schoolId)
+                    )
+                    .forEach(userRepository::delete);
         }
 
         if (schoolId != null) {

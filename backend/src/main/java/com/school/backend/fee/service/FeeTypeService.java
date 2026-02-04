@@ -1,6 +1,7 @@
 package com.school.backend.fee.service;
 
 import com.school.backend.common.exception.ResourceNotFoundException;
+import com.school.backend.common.tenant.TenantContext;
 import com.school.backend.fee.entity.FeeType;
 import com.school.backend.fee.repository.FeeTypeRepository;
 import lombok.RequiredArgsConstructor;
@@ -24,6 +25,7 @@ public class FeeTypeService {
         }
 
         type.setActive(true);
+        type.setSchoolId(TenantContext.getSchoolId());
 
         return repository.save(type);
     }
