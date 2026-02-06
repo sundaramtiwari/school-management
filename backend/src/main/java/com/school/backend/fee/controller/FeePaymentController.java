@@ -15,6 +15,7 @@ import java.util.List;
 public class FeePaymentController {
 
     private final FeePaymentService service;
+    private final com.school.backend.fee.service.FeeReceiptService receiptService;
 
     // Make payment
     @PostMapping
@@ -26,5 +27,17 @@ public class FeePaymentController {
     @GetMapping("/students/{studentId}")
     public List<FeePaymentDto> history(@PathVariable Long studentId) {
         return service.getHistory(studentId);
+    }
+
+    // Download Receipt
+    @GetMapping("/{id}/receipt")
+    public org.springframework.http.ResponseEntity<byte[]> downloadReceipt(@PathVariable Long id) {
+        byte[] pdf = receiptService.generateReceipt(id);
+
+        return org.springframework.http.ResponseEntity.ok()
+                .header(org.springframework.http.HttpHeaders.CONTENT_DISPOSITION,
+                        "attachment; filename=receipt_" + id + ".pdf")
+                .contentType(org.springframework.http.MediaType.APPLICATION_PDF)
+                .body(pdf);
     }
 }

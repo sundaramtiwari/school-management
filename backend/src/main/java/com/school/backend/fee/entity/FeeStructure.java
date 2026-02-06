@@ -1,14 +1,14 @@
 package com.school.backend.fee.entity;
 
 import com.school.backend.common.entity.TenantEntity;
+import com.school.backend.fee.enums.FeeFrequency;
 import jakarta.persistence.*;
 import lombok.*;
 import lombok.experimental.SuperBuilder;
 
 @Entity
 @Table(name = "fee_structures", indexes = {
-        @Index(name = "idx_fee_structure_school_class_session",
-                columnList = "school_id,class_id,session")
+        @Index(name = "idx_fee_structure_school_class_session", columnList = "school_id,class_id,session")
 })
 @Getter
 @Setter
@@ -35,6 +35,11 @@ public class FeeStructure extends TenantEntity {
 
     @Column(nullable = false)
     private Integer amount; // in INR
+
+    @Enumerated(EnumType.STRING)
+    @Column(nullable = false, length = 20)
+    @Builder.Default
+    private FeeFrequency frequency = FeeFrequency.ONE_TIME;
 
     @Builder.Default
     private boolean active = true;

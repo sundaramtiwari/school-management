@@ -6,6 +6,7 @@ import com.school.backend.fee.dto.FeeSummaryDto;
 import com.school.backend.fee.entity.FeePayment;
 import com.school.backend.fee.entity.FeeStructure;
 import com.school.backend.fee.entity.StudentFeeAssignment;
+import com.school.backend.fee.enums.FeeFrequency;
 import com.school.backend.fee.repository.FeePaymentRepository;
 import com.school.backend.fee.repository.FeeStructureRepository;
 import com.school.backend.fee.repository.StudentFeeAssignmentRepository;
@@ -13,59 +14,106 @@ import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
+import java.time.LocalDate;
+import java.time.Month;
 import java.util.List;
 
 @Service
 @RequiredArgsConstructor
 public class FeeSummaryService {
 
-    private final StudentRepository studentRepository;
-    private final FeeStructureRepository feeStructureRepository;
-    private final StudentFeeAssignmentRepository assignmentRepository;
-    private final FeePaymentRepository paymentRepository;
+        private final StudentRepository studentRepository;
+        private final FeeStructureRepository feeStructureRepository;
+        private final StudentFeeAssignmentRepository assignmentRepository;
+        private final FeePaymentRepository paymentRepository;
 
-    @Transactional(readOnly = true)
-    public FeeSummaryDto getStudentFeeSummary(Long studentId, String session) {
+        @Transactional(readOnly = true)
+        public FeeSummaryDto getStudentFeeSummary(Long studentId, String session) {
 
-        if (!studentRepository.existsById(studentId)) {
-            throw new ResourceNotFoundException("Student not found: " + studentId);
+                if (!studentRepository.existsById(studentId)) {
+                        throw new ResourceNotFoundException("Student not found: " + studentId);
+                }
+
+                // 1. Fetch assigned fee structures
+                List<StudentFeeAssignment> assignments = assignmentRepository.findByStudentIdAndSession(studentId,
+                                session);
+
+                // 2. Calculate Total Accrued Fee (How much *should* have been paid by today)
+                long totalFeeAccrued = 0;
+
+                for (StudentFeeAssignment assignment : assignments) {
+                        FeeStructure structure = feeStructureRepository.findById(assignment.getFeeStructureId())
+                                        .orElse(null);
+
+                        if (structure != null) {
+                                int multiplier = calculateMultiplier(structure.getFrequency(), session);
+                                totalFeeAccrued += (long) structure.getAmount() * multiplier;
+                        }
+                }
+
+                // 3. Calculate total paid
+                long totalPaid = paymentRepository.findByStudentId(studentId)
+                                .stream()
+                                .mapToLong(FeePayment::getAmountPaid)
+                                .sum();
+
+                // 4. Pending
+                long pending = Math.max(totalFeeAccrued - totalPaid, 0);
+
+                // 5. Build response
+                FeeSummaryDto dto = new FeeSummaryDto();
+                dto.setStudentId(studentId);
+                dto.setSession(session);
+                dto.setTotalFee((int) totalFeeAccrued);
+                dto.setTotalPaid((int) totalPaid);
+                dto.setPendingFee((int) pending);
+                dto.setFeePending(pending > 0);
+
+                return dto;
         }
 
-        // 1. Fetch assigned fee structures
-        List<StudentFeeAssignment> assignments =
-                assignmentRepository.findByStudentIdAndSession(studentId, session);
+        /**
+         * Calculates how many times the fee is due based on current date.
+         * Assumes Session starts in APRIL.
+         */
+        private int calculateMultiplier(FeeFrequency frequency, String session) {
+                if (frequency == FeeFrequency.ONE_TIME || frequency == FeeFrequency.ANNUALLY) {
+                        return 1;
+                }
 
-        if (assignments.isEmpty()) {
-            throw new ResourceNotFoundException(
-                    "No fee structure assigned for student " + studentId + " in session " + session);
+                // Parse session year "2025-26" -> 2025
+                int startYear = Integer.parseInt(session.split("-")[0]);
+                LocalDate sessionStart = LocalDate.of(startYear, Month.APRIL, 1);
+                LocalDate now = LocalDate.now();
+
+                if (now.isBefore(sessionStart)) {
+                        return 0; // Session hasn't started
+                }
+
+                // Calculate months passed
+                // e.g., April (start) -> April (now) = 1 month due
+                // April -> May = 2 months due
+                long monthsPassed = java.time.temporal.ChronoUnit.MONTHS.between(sessionStart, now) + 1;
+
+                if (monthsPassed < 1)
+                        monthsPassed = 1;
+                if (monthsPassed > 12)
+                        monthsPassed = 12; // Cap at 12 months
+
+                if (frequency == FeeFrequency.MONTHLY) {
+                        return (int) monthsPassed;
+                }
+
+                if (frequency == FeeFrequency.QUARTERLY) {
+                        // 1-3 months = 1 quarter
+                        // 4-6 months = 2 quarters
+                        return (int) Math.ceil((double) monthsPassed / 3);
+                }
+
+                if (frequency == FeeFrequency.HALF_YEARLY) {
+                        return (int) Math.ceil((double) monthsPassed / 6);
+                }
+
+                return 1;
         }
-
-        // 2. Calculate total fee
-        int totalFee = assignments.stream()
-                .map(a -> feeStructureRepository.findById(a.getFeeStructureId())
-                        .orElseThrow(() -> new ResourceNotFoundException(
-                                "FeeStructure not found: " + a.getFeeStructureId())))
-                .mapToInt(FeeStructure::getAmount)
-                .sum();
-
-        // 3. Calculate total paid
-        int totalPaid = paymentRepository.findByStudentId(studentId)
-                .stream()
-                .mapToInt(FeePayment::getAmountPaid)
-                .sum();
-
-        // 4. Pending
-        int pending = Math.max(totalFee - totalPaid, 0);
-
-        // 5. Build response
-        FeeSummaryDto dto = new FeeSummaryDto();
-        dto.setStudentId(studentId);
-        dto.setSession(session);
-        dto.setTotalFee(totalFee);
-        dto.setTotalPaid(totalPaid);
-        dto.setPendingFee(pending);
-        dto.setFeePending(pending > 0);
-
-        return dto;
-    }
 }
