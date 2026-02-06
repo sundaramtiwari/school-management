@@ -53,25 +53,24 @@ com.school.backend
 ## ✅ Current Features
 
 ### Implemented
-- School Management
+- School Management (Role-based CRUD)
+- Academic Session Management (Standarized years)
 - Class & Subject Management
-- Student Registration
+- Student Registration & Bulk Attendance
 - Enrollment & Promotion
 - Guardian Module (basic)
-- Fee Management (partial)
+- Fee Management (Collection, Receipt PDFs)
 - REST APIs
-- Integration Tests
-- Pagination Support
+- Integration Tests (Multi-tenant)
+- Pagination Support (50 students/page)
 - DTO Mapping
 - Global Exception Handling
 
 ### In Progress
-- Frontend Admin Panel
 - Student Dashboard
 - Fee Reports
-- Marksheet Generation
-- Authentication & Authorization
-- Role Management
+- Marksheet Generation (UI Ready)
+- Authentication (Basic)
 
 ---
 
@@ -146,13 +145,11 @@ Commit stable code frequently
 📈 Roadmap
 Planned Features:
 
-Authentication (JWT)
+Authentication (JWT / Session-based)
 
-Multi-tenant SaaS support
+Multi-tenant SaaS support (Backend Verified)
 
 School-wise grading system
-
-Attendance module
 
 Timetable
 
