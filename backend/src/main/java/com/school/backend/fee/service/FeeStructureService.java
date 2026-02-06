@@ -26,8 +26,7 @@ public class FeeStructureService {
     public FeeStructureDto create(FeeStructureCreateRequest req) {
 
         FeeType feeType = feeTypeRepository.findById(req.getFeeTypeId())
-                .orElseThrow(() ->
-                        new ResourceNotFoundException("FeeType not found: " + req.getFeeTypeId()));
+                .orElseThrow(() -> new ResourceNotFoundException("FeeType not found: " + req.getFeeTypeId()));
 
         FeeStructure fs = FeeStructure.builder()
                 .schoolId(TenantContext.getSchoolId())
@@ -35,6 +34,8 @@ public class FeeStructureService {
                 .session(req.getSession())
                 .feeType(feeType)
                 .amount(req.getAmount())
+                .frequency(req.getFrequency() != null ? req.getFrequency()
+                        : com.school.backend.fee.enums.FeeFrequency.ONE_TIME)
                 .active(true)
                 .build();
 
@@ -66,6 +67,7 @@ public class FeeStructureService {
         dto.setFeeTypeName(fs.getFeeType().getName());
 
         dto.setAmount(fs.getAmount());
+        dto.setFrequency(fs.getFrequency());
         dto.setActive(fs.isActive());
 
         return dto;

@@ -15,6 +15,7 @@ public class FeeStructureDto {
     private String feeTypeName;
 
     private Integer amount;
+    private com.school.backend.fee.enums.FeeFrequency frequency;
 
     private boolean active;
 }

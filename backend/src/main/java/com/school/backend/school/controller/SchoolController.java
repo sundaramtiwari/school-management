@@ -36,6 +36,16 @@ public class SchoolController {
     }
 
     /**
+     * Onboard School + Admin
+     */
+    @PostMapping("/onboard")
+    public ResponseEntity<SchoolDto> onboard(
+            @RequestBody @jakarta.validation.Valid com.school.backend.school.dto.SchoolOnboardingRequest req) {
+        SchoolDto created = schoolService.createSchoolWithAdmin(req);
+        return ResponseEntity.status(org.springframework.http.HttpStatus.CREATED).body(created);
+    }
+
+    /**
      * Paginated list
      */
     @GetMapping
@@ -54,7 +64,8 @@ public class SchoolController {
     }
 
     /**
-     * PUT - full replace. Client should send full DTO (fields missing will be overwritten).
+     * PUT - full replace. Client should send full DTO (fields missing will be
+     * overwritten).
      */
     @PutMapping("/{code}")
     public ResponseEntity<SchoolDto> replace(@PathVariable String code, @RequestBody SchoolDto schoolDto) {

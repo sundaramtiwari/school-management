@@ -58,6 +58,9 @@ export default function SchoolsPage() {
     pincode: "",
     website: "",
     description: "",
+    adminName: "",
+    adminEmail: "",
+    adminPassword: "",
   });
 
   /* ---------------- Load ---------------- */
@@ -102,6 +105,9 @@ export default function SchoolsPage() {
       pincode: "",
       website: "",
       description: "",
+      adminName: "",
+      adminEmail: "",
+      adminPassword: "",
     });
   }
 
@@ -142,6 +148,12 @@ export default function SchoolsPage() {
     if (form.description.length > 500)
       return "Description max 500 chars";
 
+    if (!editId) {
+      if (!form.adminEmail || !EMAIL_REGEX.test(form.adminEmail)) return "Valid Admin Email required";
+      if (!form.adminPassword || form.adminPassword.length < 6) return "Admin Password required (min 6 chars)";
+      if (!form.adminName) return "Admin Name required";
+    }
+
     return null;
   }
 
@@ -161,7 +173,12 @@ export default function SchoolsPage() {
       if (editId) {
         await schoolApi.update(form.schoolCode, form);
       } else {
-        await schoolApi.create(form);
+        // Create Mode - Use Onboard
+        if (!form.adminEmail || !form.adminPassword) {
+          alert("Admin Email and Password are required for new schools");
+          return;
+        }
+        await schoolApi.onboard(form);
       }
 
       setShowForm(false);
@@ -170,8 +187,8 @@ export default function SchoolsPage() {
       resetForm();
       loadSchools();
 
-    } catch {
-      alert("Save failed");
+    } catch (e: any) {
+      alert("Save failed: " + (e.response?.data?.message || e.message));
     }
   }
 
@@ -199,6 +216,9 @@ export default function SchoolsPage() {
       pincode: s.pincode || "",
       website: s.website || "",
       description: s.description || "",
+      adminName: "",
+      adminEmail: "",
+      adminPassword: "",
     });
 
     setEditId(s.id);
@@ -321,7 +341,42 @@ export default function SchoolsPage() {
 
             {/* Form */}
 
+            {/* Form */}
+
             <div className="grid grid-cols-2 gap-4">
+
+              {/* Admin Details (Only for New Schools) */}
+              {!editId && (
+                <div className="col-span-2 grid grid-cols-2 gap-4 border-b pb-4 mb-4">
+                  <h3 className="col-span-2 font-semibold text-gray-700">Initial Admin User</h3>
+
+                  <input
+                    name="adminName"
+                    placeholder="Admin Name"
+                    value={form.adminName}
+                    onChange={updateField}
+                    className="input"
+                  />
+                  <input
+                    name="adminEmail"
+                    type="email"
+                    placeholder="Admin Email *"
+                    value={form.adminEmail}
+                    onChange={updateField}
+                    className="input"
+                  />
+                  <input
+                    name="adminPassword"
+                    type="password"
+                    placeholder="Admin Password *"
+                    value={form.adminPassword}
+                    onChange={updateField}
+                    className="input"
+                  />
+                </div>
+              )}
+
+              <h3 className="col-span-2 font-semibold text-gray-700">School Details</h3>
 
               <input
                 name="name"
@@ -393,7 +448,7 @@ export default function SchoolsPage() {
                 name="contactEmail"
                 type="email"
                 maxLength={100}
-                placeholder="Email *"
+                placeholder="School Email *"
                 value={form.contactEmail}
                 onChange={updateField}
                 className="input"
@@ -454,7 +509,7 @@ export default function SchoolsPage() {
                 onClick={saveSchool}
                 className="bg-blue-600 text-white px-6 py-2 rounded"
               >
-                {editId ? "Update School" : "Create School"}
+                {editId ? "Update School" : "Create & Onboard"}
               </button>
 
             </div>

@@ -7,6 +7,7 @@ import lombok.Data;
 public class UserDto {
     private Long id;
     private String email;
+    private String fullName;
     private String password; // Only for creation/update
     private UserRole role;
     private boolean active;

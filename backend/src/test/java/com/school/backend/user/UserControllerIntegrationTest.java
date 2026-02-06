@@ -6,7 +6,6 @@ import com.school.backend.common.enums.UserRole;
 import com.school.backend.school.entity.School;
 import com.school.backend.school.repository.SchoolRepository;
 import com.school.backend.user.dto.UserDto;
-import com.school.backend.user.dto.UserRequest;
 import com.school.backend.user.repository.UserRepository;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
@@ -57,7 +56,7 @@ public class UserControllerIntegrationTest extends BaseAuthenticatedIntegrationT
         loginAsSchoolAdmin(schoolA.getId());
 
         // 2. Create User in School A
-        UserRequest reqA = new UserRequest();
+        UserDto reqA = new UserDto();
         reqA.setEmail("teacher@schoola.com");
         reqA.setPassword("pass123");
         reqA.setRole(UserRole.TEACHER);
@@ -91,7 +90,7 @@ public class UserControllerIntegrationTest extends BaseAuthenticatedIntegrationT
         assertFalse(hasTeacherA, "School B should not see School A's users");
 
         // 5. Create User in School B
-        UserRequest reqB = new UserRequest();
+        UserDto reqB = new UserDto();
         reqB.setEmail("teacher@schoolb.com");
         reqB.setPassword("pass123");
         reqB.setRole(UserRole.TEACHER);

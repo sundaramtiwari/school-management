@@ -7,48 +7,43 @@ import jakarta.persistence.*;
 import lombok.*;
 
 @Entity
-@Table(
-        name = "users",
-        uniqueConstraints = {
-                @UniqueConstraint(
-                        name = "uk_users_email",
-                        columnNames = "email"
-                )
-        }
-)
+@Table(name = "users", uniqueConstraints = {
+                @UniqueConstraint(name = "uk_users_email", columnNames = "email")
+})
 @Getter
 @Setter
 @NoArgsConstructor
 @AllArgsConstructor
 @Builder
-@EqualsAndHashCode(
-        callSuper = false,
-        onlyExplicitlyIncluded = true
-)
+@EqualsAndHashCode(callSuper = false, onlyExplicitlyIncluded = true)
+@org.hibernate.annotations.Filter(name = "tenantFilter", condition = "school_id = :schoolId")
 public class User extends BaseEntity {
 
-    @Id
-    @GeneratedValue(strategy = GenerationType.IDENTITY)
-    @EqualsAndHashCode.Include
-    private Long id;
+        @Id
+        @GeneratedValue(strategy = GenerationType.IDENTITY)
+        @EqualsAndHashCode.Include
+        private Long id;
 
-    @Column(nullable = false)
-    private String email;
+        @Column(nullable = false)
+        private String email;
 
-    @Column(name = "password_hash", nullable = false)
-    private String passwordHash;
+        @Column(name = "full_name")
+        private String fullName;
 
-    @Enumerated(EnumType.STRING)
-    @Column(nullable = false, length = 50)
-    private UserRole role;
+        @Column(name = "password_hash", nullable = false)
+        private String passwordHash;
 
-    /**
-     * Null for SUPER_ADMIN
-     */
-    @ManyToOne(fetch = FetchType.LAZY)
-    @JoinColumn(name = "school_id")
-    private School school;
+        @Enumerated(EnumType.STRING)
+        @Column(nullable = false, length = 50)
+        private UserRole role;
 
-    @Builder.Default
-    private boolean active = true;
+        /**
+         * Null for SUPER_ADMIN
+         */
+        @ManyToOne(fetch = FetchType.LAZY)
+        @JoinColumn(name = "school_id")
+        private School school;
+
+        @Builder.Default
+        private boolean active = true;
 }

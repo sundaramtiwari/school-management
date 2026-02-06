@@ -12,6 +12,9 @@ public class SchoolOnboardingRequest {
     @NotBlank(message = "School name is required")
     private String name;
 
+    @NotBlank(message = "School code is required")
+    private String schoolCode;
+
     private String displayName;
 
     @NotBlank(message = "Board is required")
