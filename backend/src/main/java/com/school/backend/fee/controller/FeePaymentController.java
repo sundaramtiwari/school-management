@@ -17,6 +17,13 @@ public class FeePaymentController {
     private final FeePaymentService service;
     private final com.school.backend.fee.service.FeeReceiptService receiptService;
 
+    // Recent payments (global for school)
+    @GetMapping("/recent")
+    @org.springframework.security.access.prepost.PreAuthorize("hasAnyRole('SCHOOL_ADMIN', 'ACCOUNTANT', 'SUPER_ADMIN')")
+    public List<FeePaymentDto> recent() {
+        return service.getRecentPayments();
+    }
+
     // Make payment
     @PostMapping
     public FeePaymentDto pay(@Valid @RequestBody FeePaymentRequest req) {

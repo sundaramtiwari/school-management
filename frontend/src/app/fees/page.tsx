@@ -10,27 +10,22 @@ export default function FeesDashboard() {
         pendingDues: 0,
         totalStudents: 0
     });
+    const [recentPayments, setRecentPayments] = useState<any[]>([]);
     const [loading, setLoading] = useState(true);
 
     useEffect(() => {
         async function loadStats() {
             try {
                 setLoading(true);
-                // Placeholder for real stats API if available
-                // const res = await api.get("/api/fees/stats/summary");
-                // setStats(res.data);
-
-                // For now simulation
-                setTimeout(() => {
-                    setStats({
-                        todayCollection: 12500,
-                        pendingDues: 450000,
-                        totalStudents: 245
-                    });
-                    setLoading(false);
-                }, 800);
+                const [statsRes, paymentsRes] = await Promise.all([
+                    api.get("/api/fees/summary/stats?session=2024-25"),
+                    api.get("/api/fees/payments/recent")
+                ]);
+                setStats(statsRes.data);
+                setRecentPayments(paymentsRes.data || []);
             } catch (err) {
                 console.error(err);
+            } finally {
                 setLoading(false);
             }
         }
@@ -82,16 +77,22 @@ export default function FeesDashboard() {
                 <div className="bg-white p-8 rounded-2xl border shadow-sm space-y-4">
                     <h3 className="text-xl font-bold text-gray-800">Recent Collections</h3>
                     <div className="space-y-3">
-                        {/* Placeholder for real list */}
-                        {[1, 2, 3].map(i => (
-                            <div key={i} className="flex justify-between items-center p-4 bg-gray-50 rounded-xl border border-transparent hover:border-blue-200 hover:bg-white transition-all">
+                        {recentPayments.map(p => (
+                            <div key={p.id} className="flex justify-between items-center p-4 bg-gray-50 rounded-xl border border-transparent hover:border-blue-200 hover:bg-white transition-all">
                                 <div>
-                                    <p className="font-bold text-gray-800">Student ID #10{i}42</p>
-                                    <p className="text-xs text-gray-400 font-medium uppercase tracking-tighter">CASH • 10:4{i} AM</p>
+                                    <p className="font-bold text-gray-800">Student ID #{p.studentId}</p>
+                                    <p className="text-xs text-gray-400 font-medium uppercase tracking-tighter">
+                                        {p.mode} • {new Date(p.paymentDate).toLocaleDateString()}
+                                    </p>
                                 </div>
-                                <p className="font-black text-green-600">₹ 2,500</p>
+                                <p className="font-black text-green-600">₹ {p.amountPaid.toLocaleString("en-IN")}</p>
                             </div>
                         ))}
+                        {recentPayments.length === 0 && !loading && (
+                            <div className="p-8 text-center text-gray-400 italic bg-gray-50 rounded-xl border border-dashed">
+                                No recent transactions recorded.
+                            </div>
+                        )}
                     </div>
                     <button className="w-full py-2 text-sm font-bold text-blue-600 hover:underline">View All Transactions</button>
                 </div>

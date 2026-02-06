@@ -2,6 +2,7 @@ package com.school.backend.fee.service;
 
 import com.school.backend.common.exception.ResourceNotFoundException;
 import com.school.backend.core.student.repository.StudentRepository;
+import com.school.backend.fee.dto.FeeStatsDto;
 import com.school.backend.fee.dto.FeeSummaryDto;
 import com.school.backend.fee.entity.FeePayment;
 import com.school.backend.fee.entity.FeeStructure;
@@ -10,6 +11,7 @@ import com.school.backend.fee.enums.FeeFrequency;
 import com.school.backend.fee.repository.FeePaymentRepository;
 import com.school.backend.fee.repository.FeeStructureRepository;
 import com.school.backend.fee.repository.StudentFeeAssignmentRepository;
+import com.school.backend.user.security.SecurityUtil;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
@@ -26,6 +28,41 @@ public class FeeSummaryService {
         private final FeeStructureRepository feeStructureRepository;
         private final StudentFeeAssignmentRepository assignmentRepository;
         private final FeePaymentRepository paymentRepository;
+
+        @Transactional(readOnly = true)
+        public FeeStatsDto getDashboardStats(String session) {
+                Long schoolId = SecurityUtil.schoolId();
+
+                // 1. Today's Collection
+                Long todayPaid = paymentRepository.sumAmountPaidBySchoolIdAndPaymentDate(schoolId, LocalDate.now());
+                if (todayPaid == null)
+                        todayPaid = 0L;
+
+                // 2. Total Students
+                long totalStudents = studentRepository.countBySchoolId(schoolId);
+
+                // 3. Pending Dues (Institutional)
+                // Naive implementation: iterate all students and sum their pending
+                // In a production app, this would be a specialized aggregation table or a batch
+                // job
+                long totalPending = 0;
+                // Get all students for the school
+                // We use a simple list fetch for now, assuming institution size is manageable
+                // (< 2000 students)
+                List<com.school.backend.core.student.entity.Student> students = studentRepository
+                                .findBySchoolId(schoolId, org.springframework.data.domain.Pageable.unpaged())
+                                .getContent();
+
+                for (com.school.backend.core.student.entity.Student student : students) {
+                        totalPending += getStudentFeeSummary(student.getId(), session).getPendingFee();
+                }
+
+                return FeeStatsDto.builder()
+                                .todayCollection(todayPaid)
+                                .totalStudents(totalStudents)
+                                .pendingDues(totalPending)
+                                .build();
+        }
 
         @Transactional(readOnly = true)
         public FeeSummaryDto getStudentFeeSummary(Long studentId, String session) {

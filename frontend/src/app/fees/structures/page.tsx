@@ -33,7 +33,10 @@ export default function FeeStructuresPage() {
     const [isSaving, setIsSaving] = useState(false);
 
     const [showModal, setShowModal] = useState(false);
+    const [showHeadModal, setShowHeadModal] = useState(false);
     const [feeTypes, setFeeTypes] = useState<any[]>([]);
+    const [newHeadName, setNewHeadName] = useState("");
+    const [isSavingHead, setIsSavingHead] = useState(false);
 
     const [form, setForm] = useState({
         feeTypeId: "",
@@ -65,6 +68,28 @@ export default function FeeStructuresPage() {
             setFeeTypes(res.data || []);
         } catch {
             // Optional fallback
+        }
+    }
+
+    async function saveFeeHead() {
+        if (!newHeadName.trim()) {
+            showToast("Fee head name is required", "warning");
+            return;
+        }
+
+        try {
+            setIsSavingHead(true);
+            await api.post("/api/fees/types", {
+                name: newHeadName.trim(),
+                description: newHeadName.trim()
+            });
+            showToast("Fee head added!", "success");
+            setNewHeadName("");
+            loadFeeTypes();
+        } catch (e: any) {
+            showToast("Failed to add head: " + (e.response?.data?.message || e.message), "error");
+        } finally {
+            setIsSavingHead(false);
         }
     }
 
@@ -124,13 +149,21 @@ export default function FeeStructuresPage() {
                     <h1 className="text-3xl font-bold text-gray-800">Fee Structures</h1>
                     <p className="text-gray-500">Configure fee heads and amounts for specific academic classes.</p>
                 </div>
-                <button
-                    disabled={!selectedClass}
-                    onClick={() => setShowModal(true)}
-                    className="bg-blue-600 text-white px-6 py-2.5 rounded-xl font-bold shadow-lg hover:bg-blue-700 transition-all flex items-center gap-2 disabled:bg-gray-400"
-                >
-                    <span className="text-xl">+</span> Add Fee Head
-                </button>
+                <div className="flex gap-3">
+                    <button
+                        onClick={() => setShowHeadModal(true)}
+                        className="bg-white text-gray-700 px-6 py-2.5 rounded-xl font-bold border border-gray-200 shadow-sm hover:bg-gray-50 transition-all flex items-center gap-2"
+                    >
+                        <span className="text-xl">⚙️</span> Manage Heads
+                    </button>
+                    <button
+                        disabled={!selectedClass}
+                        onClick={() => setShowModal(true)}
+                        className="bg-blue-600 text-white px-6 py-2.5 rounded-xl font-bold shadow-lg hover:bg-blue-700 transition-all flex items-center gap-2 disabled:bg-gray-400"
+                    >
+                        <span className="text-xl">+</span> Add Fee Configuration
+                    </button>
+                </div>
             </div>
 
             <div className="bg-white p-6 border rounded-2xl shadow-sm flex flex-wrap gap-4 items-end">
@@ -266,6 +299,58 @@ export default function FeeStructuresPage() {
                                 onChange={(e) => setForm({ ...form, amount: e.target.value })}
                                 placeholder="0.00"
                             />
+                        </div>
+                    </div>
+                </div>
+            </Modal>
+
+            {/* Manage Fee Heads Modal */}
+            <Modal
+                isOpen={showHeadModal}
+                onClose={() => setShowHeadModal(false)}
+                title="Manage Institutional Fee Heads"
+                maxWidth="max-w-md"
+                footer={
+                    <button
+                        onClick={() => setShowHeadModal(false)}
+                        className="px-6 py-2 rounded-xl bg-gray-900 text-white font-bold shadow-lg"
+                    >
+                        Done
+                    </button>
+                }
+            >
+                <div className="space-y-6">
+                    <div>
+                        <label className="block text-xs font-bold text-gray-400 uppercase mb-2 ml-1">Add New Ledger Head</label>
+                        <div className="flex gap-2">
+                            <input
+                                className="input-ref flex-1 font-bold"
+                                placeholder="e.g., Library Fee, Sports Fund"
+                                value={newHeadName}
+                                onChange={(e) => setNewHeadName(e.target.value)}
+                            />
+                            <button
+                                onClick={saveFeeHead}
+                                disabled={isSavingHead}
+                                className="bg-blue-600 text-white px-4 rounded-xl font-bold hover:bg-blue-700 disabled:bg-gray-400"
+                            >
+                                {isSavingHead ? "..." : "Add"}
+                            </button>
+                        </div>
+                    </div>
+
+                    <div className="border-t pt-4">
+                        <label className="block text-xs font-bold text-gray-400 uppercase mb-3 ml-1">Existing Heads</label>
+                        <div className="space-y-2 max-h-[200px] overflow-y-auto pr-2">
+                            {feeTypes.map(t => (
+                                <div key={t.id} className="flex justify-between items-center p-3 bg-gray-50 rounded-xl border border-gray-100">
+                                    <span className="font-bold text-gray-700">{t.name}</span>
+                                    <span className="text-[10px] bg-gray-200 text-gray-500 px-2 py-0.5 rounded font-black uppercase">Active</span>
+                                </div>
+                            ))}
+                            {feeTypes.length === 0 && (
+                                <p className="text-center text-gray-400 py-4 italic">No ledger heads defined.</p>
+                            )}
                         </div>
                     </div>
                 </div>

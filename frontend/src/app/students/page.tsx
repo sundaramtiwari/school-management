@@ -110,7 +110,7 @@ export default function StudentsPage() {
   }
 
   async function saveStudent() {
-    if (!studentForm.firstName || !studentForm.gender || !studentForm.classId || !studentForm.session) {
+    if (!studentForm.firstName || !studentForm.gender || !studentForm.classId || !studentForm.session || !studentForm.admissionNumber) {
       showToast("Please fill all required fields", "warning");
       return;
     }
@@ -219,8 +219,8 @@ export default function StudentsPage() {
                   <td className="p-4 text-center font-mono text-gray-600">{s.admissionNumber || "-"}</td>
                   <td className="p-4 text-center">
                     <span className={`px-2 py-0.5 rounded-full text-[10px] font-bold uppercase border ${s.gender === "MALE" ? "bg-blue-50 text-blue-600 border-blue-100" :
-                        s.gender === "FEMALE" ? "bg-pink-50 text-pink-600 border-pink-100" :
-                          "bg-gray-50 text-gray-600 border-gray-100"
+                      s.gender === "FEMALE" ? "bg-pink-50 text-pink-600 border-pink-100" :
+                        "bg-gray-50 text-gray-600 border-gray-100"
                       }`}>
                       {s.gender}
                     </span>
@@ -311,7 +311,7 @@ export default function StudentsPage() {
 
           <input
             name="admissionNumber"
-            placeholder="Admission No (Optional)"
+            placeholder="Admission No *"
             value={studentForm.admissionNumber}
             onChange={updateStudentField}
             className="input-ref"

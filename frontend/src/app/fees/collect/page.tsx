@@ -178,7 +178,7 @@ export default function FeeCollectPage() {
                 <div className="bg-white p-12 rounded-2xl border text-center text-gray-400 italic">
                     Syncing financial data with ledger...
                 </div>
-            ) : selectedStudent && summary && (
+            ) : (selectedStudent && summary) ? (
                 <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
                     {/* Summary Card */}
                     <div className="lg:col-span-1 space-y-6">
@@ -299,16 +299,16 @@ export default function FeeCollectPage() {
                     </div>
                 </div>
             ) : (
-            <div className="p-32 text-center bg-gray-50 rounded-3xl border border-dashed border-gray-300 text-gray-400 italic">
-                <div className="max-w-xs mx-auto space-y-4">
-                    <p>Initialize billing by selecting a classroom and student from the registry above.</p>
-                    <div className="flex justify-center gap-2 opacity-30">
-                        <span className="w-2 h-2 rounded-full bg-gray-400"></span>
-                        <span className="w-2 h-2 rounded-full bg-gray-400"></span>
-                        <span className="w-2 h-2 rounded-full bg-gray-400"></span>
+                <div className="p-32 text-center bg-gray-50 rounded-3xl border border-dashed border-gray-300 text-gray-400 italic">
+                    <div className="max-w-xs mx-auto space-y-4">
+                        <p>Initialize billing by selecting a classroom and student from the registry above.</p>
+                        <div className="flex justify-center gap-2 opacity-30">
+                            <span className="w-2 h-2 rounded-full bg-gray-400"></span>
+                            <span className="w-2 h-2 rounded-full bg-gray-400"></span>
+                            <span className="w-2 h-2 rounded-full bg-gray-400"></span>
+                        </div>
                     </div>
                 </div>
-            </div>
             )}
         </div>
     );

@@ -35,8 +35,7 @@ public class FeePaymentService {
                 .paymentDate(
                         req.getPaymentDate() != null
                                 ? req.getPaymentDate()
-                                : LocalDate.now()
-                )
+                                : LocalDate.now())
                 .mode(req.getMode())
                 .remarks(req.getRemarks())
                 .schoolId(TenantContext.getSchoolId())
@@ -54,6 +53,14 @@ public class FeePaymentService {
         }
 
         return paymentRepository.findByStudentId(studentId)
+                .stream()
+                .map(this::toDto)
+                .toList();
+    }
+
+    @Transactional(readOnly = true)
+    public List<FeePaymentDto> getRecentPayments() {
+        return paymentRepository.findTop10BySchoolIdOrderByPaymentDateDesc(TenantContext.getSchoolId())
                 .stream()
                 .map(this::toDto)
                 .toList();
