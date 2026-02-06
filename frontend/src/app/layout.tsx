@@ -1,5 +1,5 @@
 import "./globals.css";
-import Sidebar from "@/components/Sidebar";
+import ClientLayout from "@/components/ClientLayout";
 
 export default function RootLayout({
   children,
@@ -9,19 +9,9 @@ export default function RootLayout({
   return (
     <html lang="en">
       <body className="bg-gray-100">
-
-        <div className="flex min-h-screen">
-
-          {/* Sidebar */}
-          <Sidebar />
-
-          {/* Main Area */}
-          <main className="flex-1 p-6 overflow-auto">
-            {children}
-          </main>
-
-        </div>
-
+        <ClientLayout>
+          {children}
+        </ClientLayout>
       </body>
     </html>
   );
