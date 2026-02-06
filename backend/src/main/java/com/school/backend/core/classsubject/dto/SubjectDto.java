@@ -14,4 +14,5 @@ public class SubjectDto {
     private Integer minMarks;
     private boolean active = true;
     private String remarks;
+    private Long schoolId;
 }

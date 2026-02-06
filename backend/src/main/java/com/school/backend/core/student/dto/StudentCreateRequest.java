@@ -42,4 +42,5 @@ public class StudentCreateRequest {
     private String previousSchoolContact;
     private String reasonForLeavingPreviousSchool;
 
+    private Long schoolId;
 }

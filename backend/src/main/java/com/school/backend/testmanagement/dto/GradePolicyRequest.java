@@ -7,7 +7,6 @@ import lombok.Data;
 @Data
 public class GradePolicyRequest {
 
-    @NotNull
     private Long schoolId;
 
     @NotNull

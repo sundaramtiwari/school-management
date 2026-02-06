@@ -3,7 +3,9 @@ package com.school.backend.school.controller;
 import com.school.backend.school.entity.AcademicSession;
 import com.school.backend.school.service.AcademicSessionService;
 import lombok.RequiredArgsConstructor;
+import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.web.bind.annotation.*;
+import com.school.backend.user.security.SecurityUtil;
 
 import java.util.List;
 
@@ -15,16 +17,20 @@ public class AcademicSessionController {
     private final AcademicSessionService service;
 
     @GetMapping
-    public List<AcademicSession> getSessions(@RequestParam Long schoolId) {
-        return service.getSessions(schoolId);
+    @PreAuthorize("hasAnyRole('SCHOOL_ADMIN', 'TEACHER', 'ACCOUNTANT', 'SUPER_ADMIN')")
+    public List<AcademicSession> getSessions() {
+        return service.getSessions(SecurityUtil.schoolId());
     }
 
     @PostMapping
+    @PreAuthorize("hasRole('SCHOOL_ADMIN')")
     public AcademicSession createSession(@RequestBody AcademicSession session) {
+        session.setSchoolId(SecurityUtil.schoolId());
         return service.createSession(session);
     }
 
     @PutMapping("/{id}")
+    @PreAuthorize("hasRole('SCHOOL_ADMIN')")
     public AcademicSession updateSession(@PathVariable Long id, @RequestBody AcademicSession session) {
         return service.updateSession(id, session);
     }

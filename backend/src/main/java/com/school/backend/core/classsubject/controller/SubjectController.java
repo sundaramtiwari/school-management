@@ -7,7 +7,9 @@ import org.springframework.data.domain.Page;
 import org.springframework.data.domain.PageRequest;
 import org.springframework.data.domain.Pageable;
 import org.springframework.http.ResponseEntity;
+import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.web.bind.annotation.*;
+import com.school.backend.user.security.SecurityUtil;
 
 @RestController
 @RequestMapping("/api/subjects")
@@ -17,11 +19,14 @@ public class SubjectController {
     private final SubjectService service;
 
     @PostMapping
+    @PreAuthorize("hasAnyRole('SCHOOL_ADMIN', 'SUPER_ADMIN')")
     public ResponseEntity<SubjectDto> create(@RequestBody SubjectDto dto) {
+        dto.setSchoolId(SecurityUtil.schoolId());
         return ResponseEntity.ok(service.create(dto));
     }
 
     @PutMapping("/{id}")
+    @PreAuthorize("hasAnyRole('SCHOOL_ADMIN', 'SUPER_ADMIN')")
     public ResponseEntity<SubjectDto> update(@PathVariable Long id, @RequestBody SubjectDto dto) {
         return ResponseEntity.ok(service.update(id, dto));
     }
@@ -31,8 +36,19 @@ public class SubjectController {
         return ResponseEntity.ok(service.getById(id));
     }
 
-    @GetMapping
+    @GetMapping("/mine")
+    @PreAuthorize("hasAnyRole('SCHOOL_ADMIN', 'TEACHER', 'ACCOUNTANT', 'SUPER_ADMIN')")
     public ResponseEntity<Page<SubjectDto>> list(
+            @RequestParam(defaultValue = "0") int page,
+            @RequestParam(defaultValue = "20") int size) {
+
+        Pageable pageable = PageRequest.of(page, size);
+        return ResponseEntity.ok(service.getBySchool(SecurityUtil.schoolId(), pageable));
+    }
+
+    @GetMapping
+    @PreAuthorize("hasRole('SUPER_ADMIN')")
+    public ResponseEntity<Page<SubjectDto>> listAll(
             @RequestParam(defaultValue = "0") int page,
             @RequestParam(defaultValue = "20") int size) {
 

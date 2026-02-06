@@ -8,7 +8,9 @@ import org.springframework.data.domain.PageRequest;
 import org.springframework.data.domain.Pageable;
 import org.springframework.data.domain.Sort;
 import org.springframework.http.ResponseEntity;
+import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.web.bind.annotation.*;
+import com.school.backend.user.security.SecurityUtil;
 
 @RestController
 @RequestMapping("/api/classes")
@@ -18,11 +20,14 @@ public class SchoolClassController {
     private final SchoolClassService service;
 
     @PostMapping
+    @PreAuthorize("hasAnyRole('SCHOOL_ADMIN', 'SUPER_ADMIN')")
     public ResponseEntity<SchoolClassDto> create(@RequestBody SchoolClassDto dto) {
+        dto.setSchoolId(SecurityUtil.schoolId());
         return ResponseEntity.ok(service.create(dto));
     }
 
     @PutMapping("/{id}")
+    @PreAuthorize("hasAnyRole('SCHOOL_ADMIN', 'SUPER_ADMIN')")
     public ResponseEntity<SchoolClassDto> update(@PathVariable Long id, @RequestBody SchoolClassDto dto) {
         return ResponseEntity.ok(service.update(id, dto));
     }
@@ -32,25 +37,25 @@ public class SchoolClassController {
         return ResponseEntity.ok(service.getById(id));
     }
 
-    @GetMapping("/by-school/{schoolId}")
+    @GetMapping("/mine")
+    @PreAuthorize("hasAnyRole('SCHOOL_ADMIN', 'TEACHER', 'ACCOUNTANT', 'SUPER_ADMIN')")
     public ResponseEntity<Page<SchoolClassDto>> getBySchool(
-            @PathVariable Long schoolId,
             @RequestParam(defaultValue = "0") int page,
             @RequestParam(defaultValue = "20") int size) {
 
         Pageable pageable = PageRequest.of(page, size);
-        return ResponseEntity.ok(service.getBySchool(schoolId, pageable));
+        return ResponseEntity.ok(service.getBySchool(SecurityUtil.schoolId(), pageable));
     }
 
-    @GetMapping("/by-school/{schoolId}/session/{session}")
+    @GetMapping("/mine/session/{session}")
+    @PreAuthorize("hasAnyRole('SCHOOL_ADMIN', 'TEACHER', 'ACCOUNTANT', 'SUPER_ADMIN')")
     public ResponseEntity<Page<SchoolClassDto>> getBySchoolAndSession(
-            @PathVariable Long schoolId,
             @PathVariable String session,
             @RequestParam(defaultValue = "0") int page,
             @RequestParam(defaultValue = "20") int size) {
 
         Pageable pageable = PageRequest.of(page, size);
-        return ResponseEntity.ok(service.getBySchoolAndSession(schoolId, session, pageable));
+        return ResponseEntity.ok(service.getBySchoolAndSession(SecurityUtil.schoolId(), session, pageable));
     }
 
     @GetMapping

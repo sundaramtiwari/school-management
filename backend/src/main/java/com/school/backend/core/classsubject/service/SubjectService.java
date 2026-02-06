@@ -18,7 +18,7 @@ public class SubjectService {
     private final SubjectMapper mapper;
 
     public SubjectDto create(SubjectDto dto) {
-        if (repository.existsByNameIgnoreCase(dto.getName())) {
+        if (repository.existsByNameIgnoreCaseAndSchoolId(dto.getName(), dto.getSchoolId())) {
             throw new IllegalArgumentException("Subject already exists: " + dto.getName());
         }
         Subject entity = mapper.toEntity(dto);
@@ -45,8 +45,12 @@ public class SubjectService {
                 .orElseThrow(() -> new ResourceNotFoundException("Subject not found: " + id)));
     }
 
+    public Page<SubjectDto> getBySchool(Long schoolId, Pageable pageable) {
+        return repository.findBySchoolIdAndActiveTrue(schoolId, pageable).map(mapper::toDto);
+    }
+
     public Page<SubjectDto> getAll(Pageable pageable) {
-        return repository.findByActiveTrue(pageable).map(mapper::toDto);
+        return repository.findAll(pageable).map(mapper::toDto);
     }
 
     public void delete(Long id) {

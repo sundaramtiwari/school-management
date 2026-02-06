@@ -13,4 +13,5 @@ public class ClassSubjectDto {
     private Long teacherId;
     private Integer displayOrder;
     private boolean active = true;
+    private Long schoolId;
 }

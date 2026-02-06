@@ -15,4 +15,5 @@ public class SchoolClassDto {
     private Long classTeacherId;
     private boolean active = true;
     private String remarks;
+    private Long schoolId;
 }

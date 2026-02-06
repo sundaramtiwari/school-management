@@ -41,11 +41,15 @@ public class FeeChallanService {
     private static final int GRACE_PERIOD_DAYS = 7;
 
     @Transactional(readOnly = true)
-    public byte[] generateChallan(Long studentId, String session) {
+    public byte[] generateChallan(Long studentId, String session, Long schoolId) {
         Student student = studentRepository.findById(studentId)
                 .orElseThrow(() -> new ResourceNotFoundException("Student not found: " + studentId));
 
-        School school = schoolRepository.findById(student.getSchoolId())
+        if (!student.getSchoolId().equals(schoolId)) {
+            throw new SecurityException("Access denied: Student does not belong to your school");
+        }
+
+        School school = schoolRepository.findById(schoolId)
                 .orElseThrow(() -> new ResourceNotFoundException("School not found"));
 
         // Get all fee assignments for this student and session

@@ -2,6 +2,7 @@ package com.school.backend.fee.service;
 
 import com.school.backend.common.exception.ResourceNotFoundException;
 import com.school.backend.common.tenant.TenantContext;
+import com.school.backend.user.security.SecurityUtil;
 import com.school.backend.fee.dto.FeeStructureCreateRequest;
 import com.school.backend.fee.dto.FeeStructureDto;
 import com.school.backend.fee.entity.FeeStructure;
@@ -29,7 +30,7 @@ public class FeeStructureService {
                 .orElseThrow(() -> new ResourceNotFoundException("FeeType not found: " + req.getFeeTypeId()));
 
         FeeStructure fs = FeeStructure.builder()
-                .schoolId(TenantContext.getSchoolId())
+                .schoolId(SecurityUtil.schoolId())
                 .classId(req.getClassId())
                 .session(req.getSession())
                 .feeType(feeType)
@@ -44,10 +45,10 @@ public class FeeStructureService {
 
     // ---------------- LIST ----------------
     @Transactional(readOnly = true)
-    public List<FeeStructureDto> listByClass(Long classId, String session) {
+    public List<FeeStructureDto> listByClass(Long classId, String session, Long schoolId) {
 
         return feeStructureRepository
-                .findByClassIdAndSession(classId, session)
+                .findByClassIdAndSessionAndSchoolId(classId, session, schoolId)
                 .stream()
                 .map(this::toDto)
                 .toList();

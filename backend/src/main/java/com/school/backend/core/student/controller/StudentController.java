@@ -12,7 +12,9 @@ import org.springframework.data.domain.Page;
 import org.springframework.data.domain.PageRequest;
 import org.springframework.data.domain.Pageable;
 import org.springframework.http.ResponseEntity;
+import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.web.bind.annotation.*;
+import com.school.backend.user.security.SecurityUtil;
 
 @RestController
 @RequestMapping("/api/students")
@@ -22,7 +24,9 @@ public class StudentController {
     private final StudentService service;
 
     @PostMapping
+    @PreAuthorize("hasAnyRole('SCHOOL_ADMIN', 'TEACHER', 'SUPER_ADMIN')")
     public ResponseEntity<StudentDto> register(@Valid @RequestBody StudentCreateRequest req) {
+        req.setSchoolId(SecurityUtil.schoolId());
         return ResponseEntity.ok(service.register(req));
     }
 
@@ -31,14 +35,14 @@ public class StudentController {
         return ResponseEntity.ok(service.getById(id));
     }
 
-    @GetMapping("/by-school/{schoolId}")
+    @GetMapping("/mine")
+    @PreAuthorize("hasAnyRole('SCHOOL_ADMIN', 'TEACHER', 'ACCOUNTANT', 'SUPER_ADMIN')")
     public ResponseEntity<PageResponse<StudentDto>> bySchool(
-            @PathVariable Long schoolId,
             @RequestParam(defaultValue = "0") int page,
             @RequestParam(defaultValue = "20") int size) {
 
         Pageable pageable = PageRequest.of(page, size);
-        Page<StudentDto> p = service.listBySchool(schoolId, pageable);
+        Page<StudentDto> p = service.listBySchool(SecurityUtil.schoolId(), pageable);
         return ResponseEntity.ok(PageResponseMapper.fromPage(p));
     }
 
@@ -56,11 +60,11 @@ public class StudentController {
     }
 
     @GetMapping("/by-class/{classId}")
+    @PreAuthorize("hasAnyRole('SCHOOL_ADMIN', 'TEACHER', 'ACCOUNTANT', 'SUPER_ADMIN')")
     public ResponseEntity<PageResponse<StudentDto>> byClass(
             @PathVariable Long classId,
             @RequestParam(defaultValue = "0") int page,
-            @RequestParam(defaultValue = "20") int size
-    ) {
+            @RequestParam(defaultValue = "20") int size) {
 
         Pageable pageable = PageRequest.of(page, size);
         Page<StudentDto> p = service.listByClass(classId, pageable);

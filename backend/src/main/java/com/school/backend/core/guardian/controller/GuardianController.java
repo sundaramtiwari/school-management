@@ -11,7 +11,9 @@ import org.springframework.data.domain.Page;
 import org.springframework.data.domain.PageRequest;
 import org.springframework.data.domain.Pageable;
 import org.springframework.http.ResponseEntity;
+import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.web.bind.annotation.*;
+import com.school.backend.user.security.SecurityUtil;
 
 @RestController
 @RequestMapping("/api/guardians")
@@ -21,18 +23,20 @@ public class GuardianController {
     private final GuardianService service;
 
     @PostMapping
+    @PreAuthorize("hasAnyRole('SCHOOL_ADMIN', 'TEACHER', 'SUPER_ADMIN')")
     public ResponseEntity<GuardianDto> create(@Valid @RequestBody GuardianCreateRequest req) {
+        req.setSchoolId(SecurityUtil.schoolId());
         return ResponseEntity.ok(service.create(req));
     }
 
-    @GetMapping("/by-school/{schoolId}")
+    @GetMapping("/mine")
+    @PreAuthorize("hasAnyRole('SCHOOL_ADMIN', 'TEACHER', 'ACCOUNTANT', 'SUPER_ADMIN')")
     public ResponseEntity<PageResponse<GuardianDto>> bySchool(
-            @PathVariable Long schoolId,
             @RequestParam(defaultValue = "0") int page,
             @RequestParam(defaultValue = "20") int size) {
 
         Pageable pageable = PageRequest.of(page, size);
-        Page<GuardianDto> p = service.listBySchool(schoolId, pageable);
+        Page<GuardianDto> p = service.listBySchool(SecurityUtil.schoolId(), pageable);
         return ResponseEntity.ok(PageResponseMapper.fromPage(p));
     }
 }

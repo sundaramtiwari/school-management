@@ -7,7 +7,9 @@ import org.springframework.data.jpa.repository.JpaRepository;
 
 public interface SubjectRepository extends JpaRepository<Subject, Long> {
 
-    Page<Subject> findByActiveTrue(Pageable pageable);
+    Page<Subject> findBySchoolId(Long schoolId, Pageable pageable);
 
-    boolean existsByNameIgnoreCase(String name);
+    Page<Subject> findBySchoolIdAndActiveTrue(Long schoolId, Pageable pageable);
+
+    boolean existsByNameIgnoreCaseAndSchoolId(String name, Long schoolId);
 }

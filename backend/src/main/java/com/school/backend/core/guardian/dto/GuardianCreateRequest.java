@@ -13,4 +13,5 @@ public class GuardianCreateRequest {
     private String email;
     private String address;
     private String photoUrl;
+    private Long schoolId;
 }
