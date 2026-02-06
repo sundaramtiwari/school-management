@@ -3,6 +3,9 @@
 import { useEffect, useState } from "react";
 import { sessionApi } from "@/lib/sessionApi";
 import { useAuth } from "@/context/AuthContext";
+import { useToast } from "@/components/ui/Toast";
+import Modal from "@/components/ui/Modal";
+import { TableSkeleton } from "@/components/ui/Skeleton";
 
 type Session = {
     id: number;
@@ -15,9 +18,10 @@ type Session = {
 
 export default function SessionsPage() {
     const { user } = useAuth();
+    const { showToast } = useToast();
     const [sessions, setSessions] = useState<Session[]>([]);
     const [loading, setLoading] = useState(true);
-    const [error, setError] = useState("");
+    const [isSaving, setIsSaving] = useState(false);
     const [showForm, setShowForm] = useState(false);
 
     const [form, setForm] = useState({
@@ -28,18 +32,16 @@ export default function SessionsPage() {
     });
 
     useEffect(() => {
-        if (user?.schoolId) {
-            loadSessions();
-        }
-    }, [user?.schoolId]);
+        loadSessions();
+    }, []);
 
     async function loadSessions() {
         try {
             setLoading(true);
-            const res = await sessionApi.list(user!.schoolId!);
+            const res = await sessionApi.list();
             setSessions(res.data);
         } catch {
-            setError("Failed to load sessions");
+            showToast("Failed to load sessions", "error");
         } finally {
             setLoading(false);
         }
@@ -47,133 +49,162 @@ export default function SessionsPage() {
 
     async function saveSession() {
         if (!form.name || !form.startDate || !form.endDate) {
-            alert("Please fill all required fields");
+            showToast("Please fill all required fields", "warning");
             return;
         }
 
         try {
-            const payload = { ...form, schoolId: user?.schoolId };
+            setIsSaving(true);
+            const payload = { ...form };
             await sessionApi.create(payload);
+            showToast("Academic session created!", "success");
             setShowForm(false);
             setForm({ name: "", startDate: "", endDate: "", isCurrent: false });
             loadSessions();
         } catch (e: any) {
-            alert("Save failed: " + (e.response?.data?.message || e.message));
+            showToast("Save failed: " + (e.response?.data?.message || e.message), "error");
+        } finally {
+            setIsSaving(false);
         }
     }
 
     return (
         <div className="space-y-6">
             <div className="flex justify-between items-center">
-                <h1 className="text-2xl font-bold">Academic Sessions</h1>
+                <div>
+                    <h1 className="text-3xl font-bold text-gray-800">Academic Sessions</h1>
+                    <p className="text-gray-500">Manage school years and current active session.</p>
+                </div>
                 <button
                     onClick={() => setShowForm(true)}
-                    className="bg-blue-600 text-white px-4 py-2 rounded"
+                    className="bg-blue-600 text-white px-6 py-2.5 rounded-xl font-bold shadow-lg hover:bg-blue-700 transition-all flex items-center gap-2"
                 >
-                    + Add Session
+                    <span className="text-xl">+</span> Add Session
                 </button>
             </div>
 
-            {loading && <p>Loading...</p>}
-            {error && <p className="text-red-500">{error}</p>}
-
-            {!loading && (
-                <div className="bg-white border rounded">
-                    <table className="w-full text-sm text-left">
-                        <thead className="bg-gray-100">
+            {loading ? (
+                <div className="bg-white p-8 rounded-2xl border">
+                    <TableSkeleton rows={5} cols={4} />
+                </div>
+            ) : (
+                <div className="bg-white border rounded-2xl shadow-sm overflow-hidden">
+                    <table className="w-full text-sm">
+                        <thead className="bg-gray-50 text-gray-600 font-bold border-b">
                             <tr>
-                                <th className="p-3">Name</th>
-                                <th className="p-3">Start Date</th>
-                                <th className="p-3">End Date</th>
-                                <th className="p-3">Status</th>
+                                <th className="p-4 text-left">Academic Year</th>
+                                <th className="p-4 text-center">Duration</th>
+                                <th className="p-4 text-center">Status Flag</th>
+                                <th className="p-4 text-center w-32">Visibility</th>
                             </tr>
                         </thead>
-                        <tbody>
+                        <tbody className="divide-y divide-gray-100">
                             {sessions.map((s) => (
-                                <tr key={s.id} className="border-t">
-                                    <td className="p-3 font-medium">
-                                        {s.name} {s.isCurrent && <span className="ml-2 text-xs bg-green-100 text-green-700 px-2 py-0.5 rounded">Current</span>}
+                                <tr key={s.id} className="hover:bg-gray-50/50 transition-colors">
+                                    <td className="p-4">
+                                        <div className="flex items-center gap-3">
+                                            <span className="font-bold text-gray-800">{s.name}</span>
+                                            {s.isCurrent && (
+                                                <span className="px-2 py-0.5 bg-green-100 text-green-700 text-[10px] font-black uppercase rounded-full border border-green-200">
+                                                    Current
+                                                </span>
+                                            )}
+                                        </div>
                                     </td>
-                                    <td className="p-3">{s.startDate}</td>
-                                    <td className="p-3">{s.endDate}</td>
-                                    <td className="p-3">
-                                        {s.active ? (
-                                            <span className="text-green-600">Active</span>
-                                        ) : (
-                                            <span className="text-gray-400">Inactive</span>
-                                        )}
+                                    <td className="p-4 text-center text-gray-500 font-medium">
+                                        {s.startDate} <span className="mx-2 text-gray-300">→</span> {s.endDate}
+                                    </td>
+                                    <td className="p-4 text-center">
+                                        <span className={`px-3 py-1 rounded-full text-[10px] font-bold uppercase border ${s.active ? "bg-blue-50 text-blue-600 border-blue-100" : "bg-gray-50 text-gray-400 border-gray-200"
+                                            }`}>
+                                            {s.active ? "Active" : "Archived"}
+                                        </span>
+                                    </td>
+                                    <td className="p-4 text-center">
+                                        <button className="text-blue-600 hover:underline font-bold text-xs uppercase tracking-tighter">
+                                            Configure
+                                        </button>
                                     </td>
                                 </tr>
                             ))}
+                            {sessions.length === 0 && (
+                                <tr>
+                                    <td colSpan={4} className="p-20 text-center text-gray-400 italic bg-gray-50/30">
+                                        No academic sessions recorded.
+                                    </td>
+                                </tr>
+                            )}
                         </tbody>
                     </table>
                 </div>
             )}
 
-            {showForm && (
-                <div className="fixed inset-0 bg-black/40 flex items-center justify-center z-50">
-                    <div className="bg-white p-6 rounded w-[400px] space-y-4 shadow-xl">
-                        <h2 className="font-semibold text-lg border-b pb-2">Add New Session</h2>
+            <Modal
+                isOpen={showForm}
+                onClose={() => setShowForm(false)}
+                title="Initialize New Session"
+                maxWidth="max-w-md"
+                footer={
+                    <div className="flex gap-2">
+                        <button
+                            onClick={() => setShowForm(false)}
+                            className="px-6 py-2 rounded-xl border font-medium text-gray-600 hover:bg-gray-50 transition-all"
+                        >
+                            Cancel
+                        </button>
+                        <button
+                            onClick={saveSession}
+                            disabled={isSaving}
+                            className="px-8 py-2 rounded-xl bg-blue-600 text-white font-bold shadow-lg hover:bg-blue-700 disabled:bg-gray-400 transition-all"
+                        >
+                            {isSaving ? "Creating..." : "Start Session"}
+                        </button>
+                    </div>
+                }
+            >
+                <div className="space-y-5">
+                    <div>
+                        <label className="block text-xs font-bold text-gray-400 uppercase mb-2 ml-1">Session Name *</label>
+                        <input
+                            value={form.name}
+                            onChange={(e) => setForm({ ...form, name: e.target.value })}
+                            placeholder="e.g. 2025-2026"
+                            className="input-ref font-bold"
+                        />
+                    </div>
 
-                        <div className="space-y-3">
-                            <div>
-                                <label className="block text-xs font-medium text-gray-500 mb-1">Session Name</label>
-                                <input
-                                    value={form.name}
-                                    onChange={(e) => setForm({ ...form, name: e.target.value })}
-                                    placeholder="e.g. 2024-25"
-                                    className="w-full border p-2 rounded"
-                                />
-                            </div>
-
-                            <div className="grid grid-cols-2 gap-3">
-                                <div>
-                                    <label className="block text-xs font-medium text-gray-500 mb-1">Start Date</label>
-                                    <input
-                                        type="date"
-                                        value={form.startDate}
-                                        onChange={(e) => setForm({ ...form, startDate: e.target.value })}
-                                        className="w-full border p-2 rounded"
-                                    />
-                                </div>
-                                <div>
-                                    <label className="block text-xs font-medium text-gray-500 mb-1">End Date</label>
-                                    <input
-                                        type="date"
-                                        value={form.endDate}
-                                        onChange={(e) => setForm({ ...form, endDate: e.target.value })}
-                                        className="w-full border p-2 rounded"
-                                    />
-                                </div>
-                            </div>
-
-                            <label className="flex items-center gap-2 cursor-pointer pt-2">
-                                <input
-                                    type="checkbox"
-                                    checked={form.isCurrent}
-                                    onChange={(e) => setForm({ ...form, isCurrent: e.target.checked })}
-                                />
-                                <span className="text-sm">Set as Current Session</span>
-                            </label>
+                    <div className="grid grid-cols-2 gap-4">
+                        <div>
+                            <label className="block text-xs font-bold text-gray-400 uppercase mb-2 ml-1">Start Date *</label>
+                            <input
+                                type="date"
+                                value={form.startDate}
+                                onChange={(e) => setForm({ ...form, startDate: e.target.value })}
+                                className="input-ref"
+                            />
                         </div>
-
-                        <div className="flex justify-end gap-2 pt-4 border-t">
-                            <button
-                                onClick={() => setShowForm(false)}
-                                className="px-4 py-2 text-gray-500"
-                            >
-                                Cancel
-                            </button>
-                            <button
-                                onClick={saveSession}
-                                className="bg-blue-600 text-white px-6 py-2 rounded font-medium"
-                            >
-                                Save Session
-                            </button>
+                        <div>
+                            <label className="block text-xs font-bold text-gray-400 uppercase mb-2 ml-1">End Date *</label>
+                            <input
+                                type="date"
+                                value={form.endDate}
+                                onChange={(e) => setForm({ ...form, endDate: e.target.value })}
+                                className="input-ref"
+                            />
                         </div>
                     </div>
+
+                    <label className="flex items-center gap-3 cursor-pointer p-3 bg-blue-50 rounded-xl border border-dashed border-blue-200">
+                        <input
+                            type="checkbox"
+                            checked={form.isCurrent}
+                            onChange={(e) => setForm({ ...form, isCurrent: e.target.checked })}
+                            className="w-5 h-5 text-blue-600 rounded shadow-sm"
+                        />
+                        <span className="text-sm font-bold text-blue-800">Designate as Primary Session</span>
+                    </label>
                 </div>
-            )}
+            </Modal>
         </div>
     );
 }

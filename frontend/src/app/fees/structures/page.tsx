@@ -2,6 +2,9 @@
 
 import { useEffect, useState } from "react";
 import { api } from "@/lib/api";
+import { useToast } from "@/components/ui/Toast";
+import Modal from "@/components/ui/Modal";
+import { TableSkeleton } from "@/components/ui/Skeleton";
 
 type FeeStructure = {
     id: number;
@@ -21,25 +24,23 @@ type SchoolClass = {
 const FREQUENCIES = ["ONE_TIME", "MONTHLY", "ANNUALLY"];
 
 export default function FeeStructuresPage() {
-
-    /* -------- State -------- */
+    const { showToast } = useToast();
     const [classes, setClasses] = useState<SchoolClass[]>([]);
     const [selectedClass, setSelectedClass] = useState<number | "">("");
     const [structures, setStructures] = useState<FeeStructure[]>([]);
     const [loading, setLoading] = useState(false);
     const [loadingClasses, setLoadingClasses] = useState(true);
+    const [isSaving, setIsSaving] = useState(false);
 
     const [showModal, setShowModal] = useState(false);
-    const [feeTypes, setFeeTypes] = useState<any[]>([]); // Need to load fee types
+    const [feeTypes, setFeeTypes] = useState<any[]>([]);
 
     const [form, setForm] = useState({
         feeTypeId: "",
         amount: "",
         frequency: "ONE_TIME",
-        session: "2024-25", // Should match Class Session
+        session: "2024-25",
     });
-
-    /* -------- Loaders -------- */
 
     useEffect(() => {
         loadClasses();
@@ -51,32 +52,26 @@ export default function FeeStructuresPage() {
             setLoadingClasses(true);
             const res = await api.get("/api/classes?size=100");
             setClasses(res.data.content || []);
-        } catch (e) {
-            console.error(e);
+        } catch {
+            showToast("Failed to load classes", "error");
         } finally {
             setLoadingClasses(false);
         }
     }
 
     async function loadFeeTypes() {
-        // Assuming we have an endpoint for fee types. If not, we might need to create one or hardcode
-        // For now, let's assume /api/fees/types exists ?
-        // Wait, check Backend. FeeTypeController exists?
         try {
             const res = await api.get("/api/fees/types");
             setFeeTypes(res.data || []);
         } catch {
-            // Fallback or empty
+            // Optional fallback
         }
     }
-
-    /* -------- Handlers -------- */
 
     async function onClassChange(e: any) {
         const classId = e.target.value;
         setSelectedClass(classId);
         setStructures([]);
-
         if (classId) {
             loadStructures(classId);
         }
@@ -87,26 +82,24 @@ export default function FeeStructuresPage() {
             setLoading(true);
             const cls = classes.find(c => c.id == classId);
             const session = cls ? cls.session : "2024-25";
-
-            // Endpoint: /api/fees/structures/by-class/{id}?session={session}
             const res = await api.get(`/api/fees/structures/by-class/${classId}?session=${session}`);
             setStructures(res.data || []);
-            setForm(f => ({ ...f, session })); // Sync session
-        } catch (e) {
-            alert("Failed to load structures");
+            setForm(f => ({ ...f, session }));
+        } catch {
+            showToast("Failed to load fee structures", "error");
         } finally {
             setLoading(false);
         }
     }
 
     async function saveStructure() {
-        if (!selectedClass) return;
-        if (!form.feeTypeId || !form.amount) {
-            alert("All fields required");
+        if (!selectedClass || !form.feeTypeId || !form.amount) {
+            showToast("All fields required", "warning");
             return;
         }
 
         try {
+            setIsSaving(true);
             await api.post("/api/fees/structures", {
                 classId: selectedClass,
                 session: form.session,
@@ -114,134 +107,169 @@ export default function FeeStructuresPage() {
                 amount: Number(form.amount),
                 frequency: form.frequency
             });
+            showToast("Fee configuration saved!", "success");
             setShowModal(false);
             loadStructures(Number(selectedClass));
         } catch (e: any) {
-            alert("Save failed: " + (e.response?.data?.message || e.message));
+            showToast("Save failed: " + (e.response?.data?.message || e.message), "error");
+        } finally {
+            setIsSaving(false);
         }
     }
 
-    /* -------- UI -------- */
-
     return (
         <div className="space-y-6">
-            <div className="flex justify-between items-center">
-                <h2 className="text-xl font-bold">Fee Structures</h2>
+            <div className="flex justify-between items-center text-wrap">
+                <div>
+                    <h1 className="text-3xl font-bold text-gray-800">Fee Structures</h1>
+                    <p className="text-gray-500">Configure fee heads and amounts for specific academic classes.</p>
+                </div>
                 <button
                     disabled={!selectedClass}
                     onClick={() => setShowModal(true)}
-                    className="bg-blue-600 text-white px-4 py-2 rounded disabled:bg-gray-300"
+                    className="bg-blue-600 text-white px-6 py-2.5 rounded-xl font-bold shadow-lg hover:bg-blue-700 transition-all flex items-center gap-2 disabled:bg-gray-400"
                 >
-                    + Add Fee
+                    <span className="text-xl">+</span> Add Fee Head
                 </button>
             </div>
 
-            {/* Class Selector */}
-            <div className="w-1/3">
-                <label className="block text-sm font-medium mb-1">Select Class</label>
-                <select
-                    className="input w-full"
-                    value={selectedClass}
-                    onChange={onClassChange}
-                    disabled={loadingClasses}
-                >
-                    <option value="">Select...</option>
-                    {classes.map(c => (
-                        <option key={c.id} value={c.id}>{c.name} {c.section} ({c.session})</option>
-                    ))}
-                </select>
+            <div className="bg-white p-6 border rounded-2xl shadow-sm flex flex-wrap gap-4 items-end">
+                <div className="flex-1 min-w-[300px]">
+                    <label className="block text-xs font-bold uppercase text-gray-400 mb-2 ml-1">Academic Target</label>
+                    <select
+                        className="input-ref"
+                        value={selectedClass}
+                        onChange={onClassChange}
+                        disabled={loadingClasses}
+                    >
+                        <option value="">Select Academic Class</option>
+                        {classes.map(c => (
+                            <option key={c.id} value={c.id}>{c.name} {c.section} ({c.session})</option>
+                        ))}
+                    </select>
+                </div>
             </div>
 
-            {loading && <p>Loading structures...</p>}
-
-            {selectedClass && !loading && (
-                <div className="bg-white border rounded">
+            {loading ? (
+                <div className="bg-white p-8 rounded-2xl border">
+                    <TableSkeleton rows={8} cols={4} />
+                </div>
+            ) : selectedClass ? (
+                <div className="bg-white border rounded-2xl shadow-sm overflow-hidden">
                     <table className="w-full text-sm">
-                        <thead className="bg-gray-100">
+                        <thead className="bg-gray-50 text-gray-600 font-bold border-b">
                             <tr>
-                                <th className="p-3 text-left">Fee Head</th>
-                                <th className="p-3 text-center">Frequency</th>
-                                <th className="p-3 text-right">Amount (₹)</th>
-                                <th className="p-3 text-center">Status</th>
+                                <th className="p-4 text-left">Fee Category</th>
+                                <th className="p-4 text-center">Frequency</th>
+                                <th className="p-4 text-right">Amount Value</th>
+                                <th className="p-4 text-center w-32">Status Flag</th>
                             </tr>
                         </thead>
-                        <tbody>
+                        <tbody className="divide-y divide-gray-100">
                             {structures.map(fs => (
-                                <tr key={fs.id} className="border-t">
-                                    <td className="p-3 font-medium">{fs.feeTypeName}</td>
-                                    <td className="p-3 text-center">
-                                        <span className="px-2 py-1 bg-gray-100 rounded text-xs">
-                                            {fs.frequency}
+                                <tr key={fs.id} className="hover:bg-gray-50/50 transition-colors">
+                                    <td className="p-4 font-bold text-gray-800">{fs.feeTypeName}</td>
+                                    <td className="p-4 text-center">
+                                        <span className="px-3 py-1 bg-blue-50 text-blue-600 rounded-lg text-[10px] font-black uppercase border border-blue-100">
+                                            {fs.frequency.replace('_', ' ')}
                                         </span>
                                     </td>
-                                    <td className="p-3 text-right font-mono">
-                                        {fs.amount.toLocaleString("en-IN")}
+                                    <td className="p-4 text-right font-black text-gray-900">
+                                        ₹ {fs.amount.toLocaleString("en-IN")}
                                     </td>
-                                    <td className="p-3 text-center text-green-600">
-                                        {fs.active ? "Active" : "Inactive"}
+                                    <td className="p-4 text-center">
+                                        <span className={`px-2 py-0.5 rounded-full text-[10px] font-bold uppercase ${fs.active ? "bg-green-100 text-green-700" : "bg-gray-100 text-gray-400"
+                                            }`}>
+                                            {fs.active ? "Active" : "Disabled"}
+                                        </span>
                                     </td>
                                 </tr>
                             ))}
                             {structures.length === 0 && (
-                                <tr><td colSpan={4} className="p-4 text-center text-gray-400">No fees defined</td></tr>
+                                <tr>
+                                    <td colSpan={4} className="p-20 text-center text-gray-400 italic bg-gray-50/30">
+                                        No fee heads configured for this class year.
+                                    </td>
+                                </tr>
                             )}
                         </tbody>
                     </table>
                 </div>
-            )}
-
-            {/* Modal */}
-            {showModal && (
-                <div className="fixed inset-0 bg-black/40 flex items-center justify-center z-50">
-                    <div className="bg-white p-6 rounded w-[450px] space-y-4">
-                        <h3 className="font-bold text-lg">Add Fee Structure</h3>
-
-                        <div>
-                            <label className="block text-sm mb-1">Fee Head</label>
-                            <select
-                                className="input w-full"
-                                value={form.feeTypeId}
-                                onChange={(e) => setForm({ ...form, feeTypeId: e.target.value })}
-                            >
-                                <option value="">Select Head...</option>
-                                {feeTypes.map(t => (
-                                    <option key={t.id} value={t.id}>{t.name}</option>
-                                ))}
-                            </select>
-                            <p className="text-xs text-gray-500 mt-1">
-                                (If empty, add Fee Types in backend or request feature)
-                            </p>
-                        </div>
-
-                        <div>
-                            <label className="block text-sm mb-1">Frequency</label>
-                            <select
-                                className="input w-full"
-                                value={form.frequency}
-                                onChange={(e) => setForm({ ...form, frequency: e.target.value })}
-                            >
-                                {FREQUENCIES.map(f => <option key={f} value={f}>{f}</option>)}
-                            </select>
-                        </div>
-
-                        <div>
-                            <label className="block text-sm mb-1">Amount (₹)</label>
-                            <input
-                                type="number"
-                                className="input w-full"
-                                value={form.amount}
-                                onChange={(e) => setForm({ ...form, amount: e.target.value })}
-                            />
-                        </div>
-
-                        <div className="flex justify-end gap-2 pt-2">
-                            <button onClick={() => setShowModal(false)} className="text-gray-500 px-3">Cancel</button>
-                            <button onClick={saveStructure} className="bg-blue-600 text-white px-4 py-2 rounded">Save</button>
-                        </div>
-                    </div>
+            ) : (
+                <div className="p-20 text-center bg-gray-50 rounded-2xl border border-dashed border-gray-300 text-gray-400 italic">
+                    Configure institutional fees by selecting a primary class above.
                 </div>
             )}
 
+            <Modal
+                isOpen={showModal}
+                onClose={() => setShowModal(false)}
+                title="Append Fee Configuration"
+                maxWidth="max-w-md"
+                footer={
+                    <div className="flex gap-2">
+                        <button
+                            onClick={() => setShowModal(false)}
+                            className="px-6 py-2 rounded-xl border font-medium text-gray-600 hover:bg-gray-50 transition-all"
+                        >
+                            Cancel
+                        </button>
+                        <button
+                            onClick={saveStructure}
+                            disabled={isSaving}
+                            className="px-8 py-2 rounded-xl bg-blue-600 text-white font-bold shadow-lg hover:bg-blue-700 disabled:bg-gray-400 transition-all"
+                        >
+                            {isSaving ? "Saving..." : "Commit Structure"}
+                        </button>
+                    </div>
+                }
+            >
+                <div className="space-y-5">
+                    <div>
+                        <label className="block text-xs font-bold text-gray-400 uppercase mb-2 ml-1">Fee Type Category *</label>
+                        <select
+                            className="input-ref font-bold"
+                            value={form.feeTypeId}
+                            onChange={(e) => setForm({ ...form, feeTypeId: e.target.value })}
+                        >
+                            <option value="">Select Ledger Head</option>
+                            {feeTypes.map(t => (
+                                <option key={t.id} value={t.id}>{t.name}</option>
+                            ))}
+                        </select>
+                        {feeTypes.length === 0 && (
+                            <p className="text-[10px] text-orange-600 mt-1 font-bold italic animate-pulse">
+                                UI NOTE: No fee types detected. Please seed the database first.
+                            </p>
+                        )}
+                    </div>
+
+                    <div>
+                        <label className="block text-xs font-bold text-gray-400 uppercase mb-2 ml-1">Recurrence Frequency *</label>
+                        <select
+                            className="input-ref"
+                            value={form.frequency}
+                            onChange={(e) => setForm({ ...form, frequency: e.target.value })}
+                        >
+                            {FREQUENCIES.map(f => <option key={f} value={f}>{f.replace('_', ' ')}</option>)}
+                        </select>
+                    </div>
+
+                    <div>
+                        <label className="block text-xs font-bold text-gray-400 uppercase mb-2 ml-1">Currency Amount (INR) *</label>
+                        <div className="relative">
+                            <span className="absolute left-4 top-1/2 -translate-y-1/2 font-bold text-gray-400">₹</span>
+                            <input
+                                type="number"
+                                className="input-ref pl-10 font-bold text-lg"
+                                value={form.amount}
+                                onChange={(e) => setForm({ ...form, amount: e.target.value })}
+                                placeholder="0.00"
+                            />
+                        </div>
+                    </div>
+                </div>
+            </Modal>
         </div>
     );
 }

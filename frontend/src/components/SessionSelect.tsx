@@ -31,7 +31,7 @@ export default function SessionSelect({ value, onChange, className, placeholder 
     async function loadSessions() {
         try {
             setLoading(true);
-            const res = await sessionApi.list(user!.schoolId!);
+            const res = await sessionApi.list();
             setSessions(res.data);
 
             // Auto-select current session if value is empty

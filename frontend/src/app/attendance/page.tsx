@@ -1,17 +1,12 @@
 "use client";
 
 import { useEffect, useState } from "react";
-import SessionSelect from "@/components/SessionSelect";
-import { schoolApi } from "@/lib/schoolApi";
 import { studentApi } from "@/lib/studentApi";
 import { api } from "@/lib/api";
+import { useToast } from "@/components/ui/Toast";
+import { TableSkeleton } from "@/components/ui/Skeleton";
 
 /* ---------------- Types ---------------- */
-
-type School = {
-    id: number;
-    name: string;
-};
 
 type SchoolClass = {
     id: number;
@@ -32,13 +27,11 @@ type AttendanceStatus = "PRESENT" | "ABSENT" | "LATE" | "HALF_DAY";
 /* ---------------- Page ---------------- */
 
 export default function AttendancePage() {
+    const { showToast } = useToast();
 
     /* ---------- Filters ---------- */
 
-    const [schools, setSchools] = useState<School[]>([]);
     const [classes, setClasses] = useState<SchoolClass[]>([]);
-
-    const [selectedSchool, setSelectedSchool] = useState<number | "">("");
     const [selectedClass, setSelectedClass] = useState<number | "">("");
     const [selectedDate, setSelectedDate] = useState<string>(new Date().toISOString().split('T')[0]);
 
@@ -54,8 +47,7 @@ export default function AttendancePage() {
     const PAGE_SIZE = 50;
 
     const [loading, setLoading] = useState({
-        schools: true,
-        classes: false,
+        classes: true,
         students: false,
         saving: false,
     });
@@ -65,36 +57,16 @@ export default function AttendancePage() {
     /* ---------------- Init ---------------- */
 
     useEffect(() => {
-        loadSchools();
+        loadClasses();
     }, []);
 
-    async function loadSchools() {
-        try {
-            setLoading(prev => ({ ...prev, schools: true }));
-            const res = await schoolApi.list(0, 100);
-            setSchools(res.data.content || []);
-        } catch {
-            setError("Failed to load schools");
-        } finally {
-            setLoading(prev => ({ ...prev, schools: false }));
-        }
-    }
-
-    /* ---------------- Load Classes ---------------- */
-
-    async function loadClasses(schoolId: number) {
+    async function loadClasses() {
         try {
             setLoading(prev => ({ ...prev, classes: true }));
-            setClasses([]);
-            setSelectedClass("");
-            setStudents([]);
-            setAttendanceMap({});
-            setCurrentPage(0);
-
-            const res = await api.get(`/api/classes/by-school/${schoolId}`);
+            const res = await api.get("/api/classes/mine");
             setClasses(res.data.content || []);
         } catch {
-            setError("Failed to load classes");
+            showToast("Failed to load classes", "error");
         } finally {
             setLoading(prev => ({ ...prev, classes: false }));
         }
@@ -138,19 +110,13 @@ export default function AttendancePage() {
             setAttendanceMap(newMap);
 
         } catch {
-            setError("Failed to load students or attendance records");
+            showToast("Failed to load attendance records", "error");
         } finally {
             setLoading(prev => ({ ...prev, students: false }));
         }
     }
 
     /* ---------------- Handlers ---------------- */
-
-    function onSchoolChange(e: any) {
-        const value = e.target.value;
-        setSelectedSchool(value);
-        if (value) loadClasses(Number(value));
-    }
 
     function onClassChange(e: any) {
         const classId = e.target.value;
@@ -197,19 +163,20 @@ export default function AttendancePage() {
             newMap[s.id] = "PRESENT";
         });
         setAttendanceMap(newMap);
+        showToast("Marked current page as PRESENT", "info");
     }
 
     /* ---------------- Save ---------------- */
 
     async function saveAttendance() {
-        if (!selectedClass || !selectedDate || !selectedSchool) return;
+        if (!selectedClass || !selectedDate) return;
 
         try {
             setLoading(prev => ({ ...prev, saving: true }));
-            await api.post(`/api/attendance/bulk?date=${selectedDate}&schoolId=${selectedSchool}`, attendanceMap);
-            alert("Attendance saved successfully!");
+            await api.post(`/api/attendance/bulk?date=${selectedDate}`, attendanceMap);
+            showToast("Attendance records saved successfully!", "success");
         } catch {
-            alert("Failed to save attendance");
+            showToast("Failed to save attendance", "error");
         } finally {
             setLoading(prev => ({ ...prev, saving: false }));
         }
@@ -219,10 +186,10 @@ export default function AttendancePage() {
 
     return (
         <div className="space-y-6">
-            <div className="flex justify-between items-center">
+            <div className="flex justify-between items-center text-wrap">
                 <div>
-                    <h1 className="text-2xl font-bold text-gray-800">Student Attendance</h1>
-                    {selectedClass && <p className="text-gray-500 text-sm">Total Students: {totalStudents}</p>}
+                    <h1 className="text-3xl font-bold text-gray-800">Student Attendance</h1>
+                    <p className="text-gray-500">Track and record daily student presence.</p>
                 </div>
 
                 <div className="flex gap-3">
@@ -230,16 +197,16 @@ export default function AttendancePage() {
                         <>
                             <button
                                 onClick={markAllPresent}
-                                className="bg-green-50 text-green-700 px-4 py-2 rounded-lg hover:bg-green-100 transition-all font-medium border border-green-200"
+                                className="bg-green-50 text-green-700 px-5 py-2.5 rounded-xl hover:bg-green-100 transition-all font-bold border border-green-200 shadow-sm"
                             >
-                                Mark Current Page as Present
+                                Mark Page Present
                             </button>
                             <button
                                 onClick={saveAttendance}
                                 disabled={loading.saving}
-                                className="bg-blue-600 text-white px-6 py-2 rounded-lg hover:bg-blue-700 transition-all font-semibold shadow-sm disabled:bg-gray-400"
+                                className="bg-blue-600 text-white px-8 py-2.5 rounded-xl hover:bg-blue-700 transition-all font-bold shadow-lg disabled:bg-gray-400"
                             >
-                                {loading.saving ? "Saving..." : "Save All Marked"}
+                                {loading.saving ? "Saving..." : "Commit Attendance"}
                             </button>
                         </>
                     )}
@@ -247,28 +214,16 @@ export default function AttendancePage() {
             </div>
 
             {/* ---------------- Filters ---------------- */}
-            <div className="bg-white p-6 border rounded-xl shadow-sm flex flex-wrap gap-4 items-end">
-                <div className="flex-1 min-w-[200px]">
-                    <label className="block text-xs font-semibold uppercase text-gray-500 mb-2">School</label>
-                    <select
-                        value={selectedSchool}
-                        onChange={onSchoolChange}
-                        className="w-full border-gray-200 rounded-lg px-4 py-2 focus:ring-2 focus:ring-blue-500"
-                    >
-                        <option value="">Select School</option>
-                        {schools.map(s => <option key={s.id} value={s.id}>{s.name}</option>)}
-                    </select>
-                </div>
-
-                <div className="flex-1 min-w-[200px]">
-                    <label className="block text-xs font-semibold uppercase text-gray-500 mb-2">Class</label>
+            <div className="bg-white p-6 border rounded-2xl shadow-sm flex flex-wrap gap-6 items-end">
+                <div className="flex-1 min-w-[250px]">
+                    <label className="block text-xs font-bold uppercase text-gray-400 mb-2 ml-1">Class Selection</label>
                     <select
                         value={selectedClass}
                         onChange={onClassChange}
-                        disabled={!selectedSchool || loading.classes}
-                        className="w-full border-gray-200 rounded-lg px-4 py-2 disabled:bg-gray-100 disabled:text-gray-400"
+                        disabled={loading.classes}
+                        className="input-ref"
                     >
-                        <option value="">Select Class</option>
+                        <option value="">Select Academic Class</option>
                         {classes.map(c => (
                             <option key={c.id} value={c.id}>
                                 {c.name} {c.section} ({c.session})
@@ -277,45 +232,51 @@ export default function AttendancePage() {
                     </select>
                 </div>
 
-                <div className="flex-1 min-w-[200px]">
-                    <label className="block text-xs font-semibold uppercase text-gray-500 mb-2">Date</label>
+                <div className="flex-1 min-w-[250px]">
+                    <label className="block text-xs font-bold uppercase text-gray-400 mb-2 ml-1">Attendance Date</label>
                     <input
                         type="date"
                         value={selectedDate}
                         onChange={onDateChange}
-                        className="w-full border-gray-200 rounded-lg px-4 py-2"
+                        className="input-ref"
                     />
                 </div>
             </div>
 
-            {error && <div className="bg-red-50 text-red-600 p-4 rounded-lg border border-red-100">{error}</div>}
-
             {/* ---------------- Attendance Table ---------------- */}
-            {selectedClass && !loading.students ? (
+            {selectedClass && loading.students ? (
+                <div className="bg-white p-8 rounded-2xl border">
+                    <TableSkeleton rows={12} cols={4} />
+                </div>
+            ) : selectedClass ? (
                 <div className="space-y-4">
-                    <div className="bg-white border rounded-xl shadow-sm overflow-hidden">
+                    <div className="bg-white border rounded-2xl shadow-sm overflow-hidden">
                         <table className="w-full text-sm">
-                            <thead className="bg-gray-50 text-gray-600 font-medium border-b border-gray-100">
+                            <thead className="bg-gray-50 text-gray-600 font-bold border-b">
                                 <tr>
-                                    <th className="p-4 text-center w-20">Present</th>
-                                    <th className="p-4 text-left w-1/4">Admission No</th>
-                                    <th className="p-4 text-left w-1/3">Student Name</th>
-                                    <th className="p-4 text-center">Other Status</th>
+                                    <th className="p-4 text-center w-24">Presence</th>
+                                    <th className="p-4 text-left">Student Info</th>
+                                    <th className="p-4 text-center">Admission No</th>
+                                    <th className="p-4 text-center">Status Flag</th>
                                 </tr>
                             </thead>
                             <tbody className="divide-y divide-gray-100">
                                 {students.map((s) => (
-                                    <tr key={s.id} className="hover:bg-gray-50 transition-colors">
+                                    <tr key={s.id} className="hover:bg-gray-50/50 transition-colors">
                                         <td className="p-4 text-center">
-                                            <input
-                                                type="checkbox"
-                                                checked={attendanceMap[s.id] === "PRESENT"}
-                                                onChange={() => togglePresence(s.id)}
-                                                className="w-5 h-5 text-blue-600 border-gray-300 rounded focus:ring-blue-500 cursor-pointer"
-                                            />
+                                            <div className="flex justify-center">
+                                                <input
+                                                    type="checkbox"
+                                                    checked={attendanceMap[s.id] === "PRESENT"}
+                                                    onChange={() => togglePresence(s.id)}
+                                                    className="w-6 h-6 text-blue-600 border-gray-300 rounded-lg focus:ring-blue-500 cursor-pointer shadow-sm transition-all"
+                                                />
+                                            </div>
                                         </td>
-                                        <td className="p-4 font-medium text-gray-700">{s.admissionNumber}</td>
-                                        <td className="p-4 text-gray-600">{s.firstName} {s.lastName}</td>
+                                        <td className="p-4">
+                                            <span className="font-bold text-gray-800">{s.firstName} {s.lastName}</span>
+                                        </td>
+                                        <td className="p-4 text-center font-mono text-gray-600">{s.admissionNumber}</td>
                                         <td className="p-4 text-center">
                                             <div className="flex justify-center gap-2">
                                                 {(["LATE", "HALF_DAY"] as AttendanceStatus[]).map(status => (
@@ -323,7 +284,7 @@ export default function AttendancePage() {
                                                         key={status}
                                                         onClick={() => updateStatus(s.id, status)}
                                                         className={`
-                                                px-3 py-1 text-xs rounded-full font-semibold transition-all border
+                                                px-3 py-1.5 text-[10px] rounded-full font-bold transition-all border
                                                 ${attendanceMap[s.id] === status
                                                                 ? status === "LATE" ? "bg-yellow-100 text-yellow-700 border-yellow-200" :
                                                                     "bg-orange-100 text-orange-700 border-orange-200"
@@ -334,7 +295,7 @@ export default function AttendancePage() {
                                                     </button>
                                                 ))}
                                                 {attendanceMap[s.id] === "ABSENT" && (
-                                                    <span className="bg-red-100 text-red-700 border border-red-200 px-3 py-1 text-xs rounded-full font-semibold">
+                                                    <span className="bg-red-50 text-red-600 border border-red-100 px-3 py-1.5 text-[10px] rounded-full font-bold uppercase tracking-wider">
                                                         ABSENT
                                                     </span>
                                                 )}
@@ -344,8 +305,8 @@ export default function AttendancePage() {
                                 ))}
                                 {students.length === 0 && (
                                     <tr>
-                                        <td colSpan={4} className="p-12 text-center text-gray-400 italic">
-                                            No students found in this class
+                                        <td colSpan={4} className="p-20 text-center text-gray-400 italic">
+                                            No students found in this class record.
                                         </td>
                                     </tr>
                                 )}
@@ -355,22 +316,22 @@ export default function AttendancePage() {
 
                     {/* ---------- Pagination Controls ---------- */}
                     {totalPages > 1 && (
-                        <div className="flex justify-between items-center bg-white p-4 border rounded-xl shadow-sm">
-                            <span className="text-sm text-gray-500">
-                                Page {currentPage + 1} of {totalPages}
+                        <div className="flex justify-between items-center bg-white px-6 py-4 border rounded-2xl shadow-sm">
+                            <span className="text-sm font-medium text-gray-500">
+                                Page <span className="text-blue-600 font-bold">{currentPage + 1}</span> of <span className="font-bold">{totalPages}</span>
                             </span>
                             <div className="flex gap-2">
                                 <button
                                     disabled={currentPage === 0}
                                     onClick={() => changePage(currentPage - 1)}
-                                    className="px-4 py-2 border rounded hover:bg-gray-50 disabled:bg-gray-50 disabled:text-gray-300 transition-colors"
+                                    className="px-4 py-2 border rounded-xl hover:bg-gray-50 disabled:opacity-50 transition-all font-semibold"
                                 >
                                     Previous
                                 </button>
                                 <button
                                     disabled={currentPage === totalPages - 1}
                                     onClick={() => changePage(currentPage + 1)}
-                                    className="px-4 py-2 border rounded hover:bg-gray-50 disabled:bg-gray-50 disabled:text-gray-300 transition-colors"
+                                    className="px-4 py-2 border rounded-xl hover:bg-gray-50 disabled:opacity-50 transition-all font-semibold"
                                 >
                                     Next
                                 </button>
@@ -379,11 +340,9 @@ export default function AttendancePage() {
                     )}
                 </div>
             ) : (
-                selectedClass && loading.students && (
-                    <div className="text-center p-12 bg-gray-50 rounded-xl border border-gray-100 text-gray-400 italic">
-                        Fetching student roster...
-                    </div>
-                )
+                <div className="p-20 text-center bg-gray-50 rounded-2xl border border-dashed border-gray-300 text-gray-400 italic">
+                    Select a class and date to manage attendance records.
+                </div>
             )}
         </div>
     );

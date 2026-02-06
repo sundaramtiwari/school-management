@@ -1,5 +1,6 @@
 import "./globals.css";
 import ClientLayout from "@/components/ClientLayout";
+import { ToastProvider } from "@/components/ui/Toast";
 
 export default function RootLayout({
   children,
@@ -9,9 +10,11 @@ export default function RootLayout({
   return (
     <html lang="en">
       <body className="bg-gray-100">
-        <ClientLayout>
-          {children}
-        </ClientLayout>
+        <ToastProvider>
+          <ClientLayout>
+            {children}
+          </ClientLayout>
+        </ToastProvider>
       </body>
     </html>
   );

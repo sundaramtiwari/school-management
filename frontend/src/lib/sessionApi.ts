@@ -1,8 +1,8 @@
 import { api } from "./api";
 
 export const sessionApi = {
-    list: (schoolId: number) =>
-        api.get(`/api/academic-sessions?schoolId=${schoolId}`),
+    list: () =>
+        api.get("/api/academic-sessions"),
 
     create: (data: any) =>
         api.post("/api/academic-sessions", data),

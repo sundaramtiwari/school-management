@@ -2,6 +2,8 @@
 
 import { useEffect, useState } from "react";
 import { api } from "@/lib/api";
+import { useToast } from "@/components/ui/Toast";
+import { Skeleton, TableSkeleton } from "@/components/ui/Skeleton";
 
 type SchoolClass = { id: number; name: string; section: string; session: string };
 type Student = { id: number; firstName: string; lastName: string; admissionNumber: string };
@@ -9,6 +11,7 @@ type FeeSummary = { totalFee: number; totalPaid: number; balance: number; status
 type Payment = { id: number; amount: number; paymentDate: string; paymentMode: string; remarks: string };
 
 export default function FeeCollectPage() {
+    const { showToast } = useToast();
 
     /* -------- State -------- */
     const [classes, setClasses] = useState<SchoolClass[]>([]);
@@ -21,6 +24,8 @@ export default function FeeCollectPage() {
     const [history, setHistory] = useState<Payment[]>([]);
 
     const [loading, setLoading] = useState(false);
+    const [isProcessing, setIsProcessing] = useState(false);
+
     const [paymentAmount, setPaymentAmount] = useState("");
     const [paymentMode, setPaymentMode] = useState("CASH");
     const [remarks, setRemarks] = useState("");
@@ -34,7 +39,9 @@ export default function FeeCollectPage() {
         try {
             const res = await api.get("/api/classes?size=100");
             setClasses(res.data.content || []);
-        } catch (e) { console.error(e); }
+        } catch {
+            showToast("Failed to initialize billing classes", "error");
+        }
     }
 
     /* -------- Handlers -------- */
@@ -48,11 +55,11 @@ export default function FeeCollectPage() {
 
         if (clsId) {
             try {
-                // Using existing student endpoints. Assuming /api/students/by-class/{id} works or similar
-                // Actually StudentApi uses: /api/students/by-class/{classId}
                 const res = await api.get(`/api/students/by-class/${clsId}?size=100`);
                 setStudents(res.data.content || []);
-            } catch (e) { console.error(e); }
+            } catch {
+                showToast("Failed to pull student ledger", "error");
+            }
         }
     }
 
@@ -61,30 +68,24 @@ export default function FeeCollectPage() {
         setSelectedStudent(stdId);
         setSummary(null);
         setHistory([]);
-
-        if (stdId) {
-            loadStudentData(stdId);
-        }
+        if (stdId) loadStudentData(stdId);
     }
 
     async function loadStudentData(stdId: number) {
         try {
             setLoading(true);
-            // 1. Get Summary
-            // Need to know session? Usually defaults to current or we pass it.
-            // Let's assume passed session from Class or fixed. 
             const cls = classes.find(c => c.id == selectedClass);
             const session = cls ? cls.session : "2024-25";
 
-            const sumRes = await api.get(`/api/fees/summary/students/${stdId}?session=${session}`);
+            const [sumRes, histRes] = await Promise.all([
+                api.get(`/api/fees/summary/students/${stdId}?session=${session}`),
+                api.get(`/api/fees/payments/students/${stdId}`)
+            ]);
+
             setSummary(sumRes.data);
-
-            // 2. Get History
-            const histRes = await api.get(`/api/fees/payments/students/${stdId}`);
             setHistory(histRes.data || []);
-
-        } catch (e) {
-            console.error("Failed to load fee data", e);
+        } catch {
+            showToast("Billing synchronization failed", "error");
         } finally {
             setLoading(false);
         }
@@ -94,20 +95,23 @@ export default function FeeCollectPage() {
         if (!selectedStudent || !paymentAmount) return;
 
         try {
+            setIsProcessing(true);
             await api.post("/api/fees/payments", {
                 studentId: selectedStudent,
                 amount: Number(paymentAmount),
                 paymentMode,
                 remarks,
-                paymentDate: new Date().toISOString().split('T')[0] // today
+                paymentDate: new Date().toISOString().split('T')[0]
             });
 
-            alert("Payment Successful");
+            showToast("Payment Processed Successfully!", "success");
             setPaymentAmount("");
             setRemarks("");
-            loadStudentData(Number(selectedStudent)); // Refresh
+            loadStudentData(Number(selectedStudent));
         } catch (e: any) {
-            alert("Payment failed: " + (e.response?.data?.message || e.message));
+            showToast("Processing failed: " + (e.response?.data?.message || e.message), "error");
+        } finally {
+            setIsProcessing(false);
         }
     }
 
@@ -117,25 +121,22 @@ export default function FeeCollectPage() {
             const url = window.URL.createObjectURL(new Blob([res.data]));
             const link = document.createElement('a');
             link.href = url;
-            link.setAttribute('download', `receipt_${pid}.pdf`);
+            link.setAttribute('download', `receipt_transaction_${pid}.pdf`);
             document.body.appendChild(link);
             link.click();
-        } catch (e) {
-            alert("Failed to download receipt");
+            document.body.removeChild(link);
+            showToast("Downloading receipt...", "info");
+        } catch {
+            showToast("Receipt generation failed", "error");
         }
     }
 
     async function downloadChallan() {
         if (!selectedStudent || !selectedClass) return;
-
         try {
             const cls = classes.find(c => c.id == selectedClass);
             const session = cls ? cls.session : "2024-25";
-
-            const res = await api.get(`/api/fees/challan/student/${selectedStudent}?session=${session}`, {
-                responseType: 'blob'
-            });
-
+            const res = await api.get(`/api/fees/challan/student/${selectedStudent}?session=${session}`, { responseType: 'blob' });
             const url = window.URL.createObjectURL(new Blob([res.data]));
             const link = document.createElement('a');
             link.href = url;
@@ -143,135 +144,172 @@ export default function FeeCollectPage() {
             document.body.appendChild(link);
             link.click();
             document.body.removeChild(link);
-            window.URL.revokeObjectURL(url);
-        } catch (e) {
-            alert("Failed to download challan");
+            showToast("Downloading challan...", "info");
+        } catch {
+            showToast("Challan generation failed", "error");
         }
     }
 
-    /* -------- UI -------- */
     return (
         <div className="space-y-6">
-            <h2 className="text-xl font-bold">Collect Fees</h2>
+            <header>
+                <h1 className="text-3xl font-bold text-gray-800">Billing & Collections</h1>
+                <p className="text-gray-500 mt-1">Settle student dues and manage transactional records.</p>
+            </header>
 
-            {/* Selection Panel */}
-            <div className="bg-white p-4 border rounded shadow-sm flex gap-4">
-                <div className="w-1/3">
-                    <label className="block text-sm font-medium mb-1">Class</label>
-                    <select className="input w-full" value={selectedClass} onChange={onClassChange}>
-                        <option value="">Select Class...</option>
+            <div className="bg-white p-6 border rounded-2xl shadow-sm flex flex-wrap gap-6 items-end">
+                <div className="flex-1 min-w-[250px]">
+                    <label className="block text-xs font-bold uppercase text-gray-400 mb-2 ml-1">Class Registry</label>
+                    <select className="input-ref" value={selectedClass} onChange={onClassChange}>
+                        <option value="">Select Billing Target Class</option>
                         {classes.map(c => <option key={c.id} value={c.id}>{c.name} {c.section}</option>)}
                     </select>
                 </div>
-                <div className="w-1/3">
-                    <label className="block text-sm font-medium mb-1">Student</label>
-                    <select className="input w-full" value={selectedStudent} onChange={onStudentChange} disabled={!selectedClass}>
-                        <option value="">Select Student...</option>
+                <div className="flex-1 min-w-[250px]">
+                    <label className="block text-xs font-bold uppercase text-gray-400 mb-2 ml-1">Student Account</label>
+                    <select className="input-ref font-bold" value={selectedStudent} onChange={onStudentChange} disabled={!selectedClass}>
+                        <option value="">Select Student to Settle</option>
                         {students.map(s => <option key={s.id} value={s.id}>{s.firstName} {s.lastName} ({s.admissionNumber})</option>)}
                     </select>
                 </div>
             </div>
 
-            {loading && <p>Loading data...</p>}
-
-            {selectedStudent && summary && !loading && (
-                <div className="grid grid-cols-3 gap-6">
-
+            {loading ? (
+                <div className="bg-white p-12 rounded-2xl border text-center text-gray-400 italic">
+                    Syncing financial data with ledger...
+                </div>
+            ) : selectedStudent && summary && (
+                <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
                     {/* Summary Card */}
-                    <div className="col-span-1 space-y-4">
-                        <div className="bg-blue-50 border border-blue-100 p-4 rounded text-center">
-                            <h3 className="text-blue-800 font-semibold mb-2">Total Dues</h3>
-                            <p className="text-3xl font-bold text-blue-900">₹ {summary.balance}</p>
-                            <div className="text-xs text-blue-600 mt-1 flex justify-between px-4">
-                                <span>Total: {summary.totalFee}</span>
-                                <span>Paid: {summary.totalPaid}</span>
+                    <div className="lg:col-span-1 space-y-6">
+                        <div className="bg-gray-900 text-white rounded-2xl p-8 shadow-2xl relative overflow-hidden">
+                            <div className="absolute top-0 right-0 p-4 opacity-10 text-6xl">₹</div>
+                            <h3 className="text-xs font-black uppercase tracking-widest text-gray-400 mb-2">Outstanding Balance</h3>
+                            <p className="text-5xl font-black">₹ {summary.balance.toLocaleString()}</p>
+
+                            <div className="mt-8 pt-6 border-t border-white/10 flex justify-between text-xs font-bold uppercase tracking-tight">
+                                <div className="text-gray-400">Total Dues: <span className="text-white ml-1">₹ {summary.totalFee}</span></div>
+                                <div className="text-gray-400">Paid: <span className="text-green-400 ml-1">₹ {summary.totalPaid}</span></div>
                             </div>
 
                             <button
                                 onClick={downloadChallan}
-                                className="mt-4 w-full bg-blue-600 text-white text-sm py-2 rounded hover:bg-blue-700 transition flex items-center justify-center gap-2"
+                                className="mt-8 w-full bg-white/10 hover:bg-white/20 text-white py-3 rounded-xl font-bold transition-all flex items-center justify-center gap-2 border border-white/5"
                             >
-                                📄 Download Challan
+                                📄 Generate Academic Challan
                             </button>
                         </div>
 
-                        {/* Payment Form */}
-                        <div className="bg-white border p-4 rounded">
-                            <h3 className="font-semibold mb-3 border-b pb-2">Record Payment</h3>
-                            <div className="space-y-3">
-                                <input
-                                    type="number"
-                                    placeholder="Amount *"
-                                    className="input w-full"
-                                    value={paymentAmount}
-                                    onChange={e => setPaymentAmount(e.target.value)}
-                                />
-                                <select
-                                    className="input w-full"
-                                    value={paymentMode}
-                                    onChange={e => setPaymentMode(e.target.value)}
-                                >
-                                    <option value="CASH">Cash</option>
-                                    <option value="ONLINE">Online/UPI</option>
-                                    <option value="CHEQUE">Cheque</option>
-                                </select>
-                                <textarea
-                                    placeholder="Remarks"
-                                    className="input w-full"
-                                    value={remarks}
-                                    onChange={e => setRemarks(e.target.value)}
-                                />
+                        {/* Payment Entry */}
+                        <div className="bg-white border rounded-2xl p-6 shadow-sm space-y-5">
+                            <h3 className="font-black text-gray-800 border-b pb-4 text-xs uppercase tracking-widest">Post Payment Transaction</h3>
+                            <div className="space-y-4">
+                                <div>
+                                    <label className="block text-[10px] font-black uppercase text-gray-400 mb-1 ml-1">Collection Amount *</label>
+                                    <div className="relative">
+                                        <span className="absolute left-4 top-1/2 -translate-y-1/2 font-bold text-gray-400">₹</span>
+                                        <input
+                                            type="number"
+                                            placeholder="0.00"
+                                            className="input-ref pl-10 text-xl font-black"
+                                            value={paymentAmount}
+                                            onChange={e => setPaymentAmount(e.target.value)}
+                                        />
+                                    </div>
+                                </div>
+                                <div className="grid grid-cols-2 gap-3">
+                                    <div className="col-span-2">
+                                        <label className="block text-[10px] font-black uppercase text-gray-400 mb-1 ml-1">Payment Channel</label>
+                                        <select className="input-ref font-bold" value={paymentMode} onChange={e => setPaymentMode(e.target.value)}>
+                                            <option value="CASH">Liquid Cash</option>
+                                            <option value="ONLINE">Digital/UPI</option>
+                                            <option value="BANK_TRANSFER">Bank Transfer</option>
+                                            <option value="CHEQUE">Banker's Cheque</option>
+                                        </select>
+                                    </div>
+                                </div>
+                                <div>
+                                    <label className="block text-[10px] font-black uppercase text-gray-400 mb-1 ml-1">Internal Remarks</label>
+                                    <textarea
+                                        placeholder="Reference or narration..."
+                                        className="input-ref h-20 text-sm"
+                                        value={remarks}
+                                        onChange={e => setRemarks(e.target.value)}
+                                    />
+                                </div>
                                 <button
                                     onClick={makePayment}
-                                    disabled={!paymentAmount}
-                                    className="w-full bg-green-600 text-white py-2 rounded font-medium disabled:opacity-50"
+                                    disabled={!paymentAmount || isProcessing}
+                                    className="w-full bg-green-600 hover:bg-green-700 text-white py-4 rounded-xl font-black shadow-lg shadow-green-200 transition-all disabled:opacity-50 uppercase text-xs tracking-widest"
                                 >
-                                    Collect Payment
+                                    {isProcessing ? "Transacting..." : "Commit Transaction"}
                                 </button>
                             </div>
                         </div>
                     </div>
 
-                    {/* History */}
-                    <div className="col-span-2 bg-white border rounded">
-                        <div className="p-3 border-b font-semibold bg-gray-50">Payment History</div>
-                        <table className="w-full text-sm">
-                            <thead>
-                                <tr className="border-b">
-                                    <th className="p-3 text-left">Date</th>
-                                    <th className="p-3 text-left">Mode</th>
-                                    <th className="p-3 text-left">Remarks</th>
-                                    <th className="p-3 text-right">Amount</th>
-                                    <th className="p-3 text-center">Receipt</th>
-                                </tr>
-                            </thead>
-                            <tbody>
-                                {history.map(p => (
-                                    <tr key={p.id} className="border-b last:border-0 hover:bg-gray-50">
-                                        <td className="p-3">{p.paymentDate}</td>
-                                        <td className="p-3"><span className="bg-gray-100 px-2 py-1 rounded text-xs">{p.paymentMode}</span></td>
-                                        <td className="p-3 text-gray-500">{p.remarks || "-"}</td>
-                                        <td className="p-3 text-right font-medium">₹ {p.amount}</td>
-                                        <td className="p-3 text-center">
-                                            <button
-                                                onClick={() => downloadReceipt(p.id)}
-                                                className="text-blue-600 hover:text-blue-800 text-xs"
-                                            >
-                                                Download
-                                            </button>
-                                        </td>
+                    {/* History Table */}
+                    <div className="lg:col-span-2 bg-white border rounded-2xl shadow-sm overflow-hidden flex flex-col">
+                        <div className="p-6 border-b font-black text-xs uppercase tracking-widest text-gray-400 bg-gray-50/50">Transaction Audit log</div>
+                        <div className="overflow-auto">
+                            <table className="w-full text-sm">
+                                <thead className="bg-gray-50 text-gray-400 font-black text-[10px] uppercase tracking-wider border-b">
+                                    <tr>
+                                        <th className="p-4 text-left">Processing Date</th>
+                                        <th className="p-4 text-center">Channel</th>
+                                        <th className="p-4 text-left">Narration</th>
+                                        <th className="p-4 text-right">Amount</th>
+                                        <th className="p-4 text-center w-24">Voucher</th>
                                     </tr>
-                                ))}
-                                {history.length === 0 && (
-                                    <tr><td colSpan={5} className="p-6 text-center text-gray-400">No payments recorded</td></tr>
-                                )}
-                            </tbody>
-                        </table>
+                                </thead>
+                                <tbody className="divide-y divide-gray-100">
+                                    {history.map(p => (
+                                        <tr key={p.id} className="hover:bg-gray-50/50 transition-colors">
+                                            <td className="p-4 font-bold text-gray-700">{p.paymentDate}</td>
+                                            <td className="p-4 text-center">
+                                                <span className="px-2 py-0.5 bg-gray-100 rounded-lg text-[10px] font-black uppercase text-gray-500 border">
+                                                    {p.paymentMode}
+                                                </span>
+                                            </td>
+                                            <td className="p-4 text-gray-400 text-xs italic">{p.remarks || "Regular collection"}</td>
+                                            <td className="p-4 text-right font-black text-gray-900">₹ {p.amount.toLocaleString()}</td>
+                                            <td className="p-4 text-center">
+                                                <button
+                                                    onClick={() => downloadReceipt(p.id)}
+                                                    className="p-2 text-blue-600 hover:bg-blue-50 rounded-lg transition-all"
+                                                    title="Download Voucher"
+                                                >
+                                                    <svg className="w-5 h-5 mx-auto" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                                                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 16v1a2 2 0 002 2h12a2 2 0 002-2v-1m-4-4l-4 4m0 0l-4-4m4 4V4" />
+                                                    </svg>
+                                                </button>
+                                            </td>
+                                        </tr>
+                                    ))}
+                                    {history.length === 0 && (
+                                        <tr>
+                                            <td colSpan={5} className="p-20 text-center text-gray-300 italic font-medium">
+                                                No historical transactions found for this account.
+                                            </td>
+                                        </tr>
+                                    )}
+                                </tbody>
+                            </table>
+                        </div>
                     </div>
-
                 </div>
+            ) : (
+            <div className="p-32 text-center bg-gray-50 rounded-3xl border border-dashed border-gray-300 text-gray-400 italic">
+                <div className="max-w-xs mx-auto space-y-4">
+                    <p>Initialize billing by selecting a classroom and student from the registry above.</p>
+                    <div className="flex justify-center gap-2 opacity-30">
+                        <span className="w-2 h-2 rounded-full bg-gray-400"></span>
+                        <span className="w-2 h-2 rounded-full bg-gray-400"></span>
+                        <span className="w-2 h-2 rounded-full bg-gray-400"></span>
+                    </div>
+                </div>
+            </div>
             )}
-
         </div>
     );
 }

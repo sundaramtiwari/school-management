@@ -1,16 +1,13 @@
 "use client";
 
 import { useEffect, useState } from "react";
-import { schoolApi } from "@/lib/schoolApi";
 import { studentApi } from "@/lib/studentApi";
 import { api } from "@/lib/api";
+import { useToast } from "@/components/ui/Toast";
+import Modal from "@/components/ui/Modal";
+import { Skeleton, TableSkeleton } from "@/components/ui/Skeleton";
 
 /* ---------------- Types ---------------- */
-
-type School = {
-  id: number;
-  name: string;
-};
 
 type SchoolClass = {
   id: number;
@@ -31,13 +28,11 @@ type Student = {
 /* ---------------- Page ---------------- */
 
 export default function StudentsPage() {
+  const { showToast } = useToast();
 
   /* ---------- Filters ---------- */
 
-  const [schools, setSchools] = useState<School[]>([]);
   const [classes, setClasses] = useState<SchoolClass[]>([]);
-
-  const [selectedSchool, setSelectedSchool] = useState<number | "">("");
   const [selectedClass, setSelectedClass] = useState<number | "">("");
 
   /* ---------- Students ---------- */
@@ -47,15 +42,13 @@ export default function StudentsPage() {
 
   /* ---------- Loading ---------- */
 
-  const [loadingSchools, setLoadingSchools] = useState(true);
-  const [loadingClasses, setLoadingClasses] = useState(false);
-
+  const [loadingClasses, setLoadingClasses] = useState(true);
   const [error, setError] = useState("");
 
-  /* ---------- Add Modal ---------- */
+  /* ---------- Form State ---------- */
 
   const [showAddModal, setShowAddModal] = useState(false);
-
+  const [isSaving, setIsSaving] = useState(false);
   const [studentForm, setStudentForm] = useState({
     admissionNumber: "",
     firstName: "",
@@ -67,58 +60,32 @@ export default function StudentsPage() {
     session: "",
   });
 
-  /* ---------------- Load Schools ---------------- */
+  /* ---------------- Init ---------------- */
 
   useEffect(() => {
-    loadSchools();
+    loadClasses();
   }, []);
 
-  async function loadSchools() {
-    try {
-      setLoadingSchools(true);
-
-      const res = await schoolApi.list(0, 100);
-      setSchools(res.data.content || []);
-
-    } catch {
-      setError("Failed to load schools");
-    } finally {
-      setLoadingSchools(false);
-    }
-  }
-
-  /* ---------------- Load Classes ---------------- */
-
-  async function loadClasses(schoolId: number) {
+  async function loadClasses() {
     try {
       setLoadingClasses(true);
-      setClasses([]);
-      setSelectedClass("");
-      setStudents([]);
-
-      const res = await api.get(`/api/classes/by-school/${schoolId}`);
-
+      const res = await api.get("/api/classes/mine");
       setClasses(res.data.content || []);
-
     } catch {
       setError("Failed to load classes");
+      showToast("Error loading classes", "error");
     } finally {
       setLoadingClasses(false);
     }
   }
 
-  /* ---------------- Load Students ---------------- */
-
   async function loadStudents(classId: number) {
     try {
       setLoadingStudents(true);
-
-      const res = await studentApi.byClass(classId, 0, 20);
-
+      const res = await studentApi.byClass(classId, 0, 50);
       setStudents(res.data.content || []);
-
     } catch {
-      setError("Failed to load students");
+      showToast("Failed to load students", "error");
     } finally {
       setLoadingStudents(false);
     }
@@ -126,81 +93,30 @@ export default function StudentsPage() {
 
   /* ---------------- Handlers ---------------- */
 
-  function onSchoolChange(e: any) {
-
-    const value = e.target.value;
-
-    setSelectedSchool(value);
-    setSelectedClass("");
-    setClasses([]);
-    setStudents([]);
-
-    if (value) {
-      loadClasses(Number(value));
-    }
-  }
-
   function onClassChange(e: any) {
-
     const value = e.target.value;
-
     setSelectedClass(value);
     setStudents([]);
-
     if (value) {
       loadStudents(Number(value));
     }
   }
 
   function updateStudentField(e: any) {
-
     setStudentForm({
       ...studentForm,
       [e.target.name]: e.target.value,
     });
   }
 
-  function resetStudentForm() {
-
-    setStudentForm({
-      admissionNumber: "",
-      firstName: "",
-      lastName: "",
-      gender: "",
-      contactNumber: "",
-      email: "",
-      classId: "",
-      session: "",
-    });
-  }
-
-  /* ---------------- Save Student ---------------- */
-
   async function saveStudent() {
-
-    if (!studentForm.firstName) {
-      alert("First name required");
-      return;
-    }
-
-    if (!studentForm.gender) {
-      alert("Gender required");
-      return;
-    }
-
-    if (!studentForm.classId) {
-      alert("Select class");
-      return;
-    }
-
-    if (!studentForm.session) {
-      alert("Session required");
+    if (!studentForm.firstName || !studentForm.gender || !studentForm.classId || !studentForm.session) {
+      showToast("Please fill all required fields", "warning");
       return;
     }
 
     try {
-
-      // 1. Create student
+      setIsSaving(true);
       const res = await studentApi.create({
         admissionNumber: studentForm.admissionNumber,
         firstName: studentForm.firstName,
@@ -208,29 +124,36 @@ export default function StudentsPage() {
         gender: studentForm.gender,
         contactNumber: studentForm.contactNumber,
         email: studentForm.email,
-        schoolId: selectedSchool,
       });
 
       const studentId = res.data.id;
-
-      // 2. Enroll student
       await studentApi.enroll({
         studentId,
         classId: studentForm.classId,
         session: studentForm.session,
       });
 
-      alert("Student added successfully");
-
+      showToast("Student enrolled successfully!", "success");
       setShowAddModal(false);
-      resetStudentForm();
 
-      if (selectedClass) {
+      setStudentForm({
+        admissionNumber: "",
+        firstName: "",
+        lastName: "",
+        gender: "",
+        contactNumber: "",
+        email: "",
+        classId: "",
+        session: "",
+      });
+
+      if (Number(studentForm.classId) === Number(selectedClass)) {
         loadStudents(Number(selectedClass));
       }
-
-    } catch {
-      alert("Failed to save student");
+    } catch (err: any) {
+      showToast("Failed to save student: " + (err.response?.data?.message || err.message), "error");
+    } finally {
+      setIsSaving(false);
     }
   }
 
@@ -238,258 +161,205 @@ export default function StudentsPage() {
 
   return (
     <div className="space-y-6">
-
-      {/* ---------------- Header ---------------- */}
-
       <div className="flex justify-between items-center">
-
-        <h1 className="text-2xl font-bold">Students</h1>
-
-        <button
-          disabled={!selectedClass}
-          onClick={() => setShowAddModal(true)}
-          className="bg-blue-600 text-white px-4 py-2 rounded disabled:bg-gray-400"
-        >
-          + Add Student
-        </button>
-
-      </div>
-
-      {/* ---------------- Filters ---------------- */}
-
-      <div className="bg-white p-4 border rounded flex gap-4 items-center">
-
-        {/* School */}
-
-        <div className="w-1/3">
-
-          <label className="block text-sm mb-1">School</label>
-
-          <select
-            value={selectedSchool}
-            onChange={onSchoolChange}
-            className="w-full border rounded px-3 py-2"
-          >
-            <option value="">Select School</option>
-
-            {schools.map((s) => (
-              <option key={s.id} value={s.id}>
-                {s.name}
-              </option>
-            ))}
-          </select>
-
+        <div>
+          <h1 className="text-3xl font-bold text-gray-800">Student Directory</h1>
+          <p className="text-gray-500">Manage student enrollments and records by class.</p>
         </div>
 
-        {/* Class */}
+        <button
+          onClick={() => setShowAddModal(true)}
+          className="bg-blue-600 text-white px-6 py-2.5 rounded-xl font-bold shadow-lg hover:bg-blue-700 transition-all flex items-center gap-2"
+        >
+          <span className="text-xl">+</span> Add Student
+        </button>
+      </div>
 
-        <div className="w-1/3">
-
-          <label className="block text-sm mb-1">Class</label>
-
+      <div className="bg-white p-6 border rounded-2xl shadow-sm flex flex-wrap gap-4 items-end">
+        <div className="flex-1 min-w-[300px]">
+          <label className="block text-xs font-bold uppercase text-gray-400 mb-2 ml-1">Filter by Class</label>
           <select
             value={selectedClass}
             onChange={onClassChange}
-            disabled={!selectedSchool || loadingClasses}
-            className="w-full border rounded px-3 py-2 disabled:bg-gray-100"
+            disabled={loadingClasses}
+            className="input-ref"
           >
             <option value="">Select Class</option>
-
             {classes.map((c) => (
               <option key={c.id} value={c.id}>
                 {c.name} {c.section} ({c.session})
               </option>
             ))}
           </select>
-
         </div>
-
       </div>
 
-      {/* ---------------- Status ---------------- */}
-
-      {loadingSchools && <p>Loading schools...</p>}
-      {loadingClasses && <p>Loading classes...</p>}
-      {loadingStudents && <p>Loading students...</p>}
-
-      {error && <p className="text-red-600">{error}</p>}
-
-      {/* ---------------- Students Table ---------------- */}
-
-      {selectedClass && !loadingStudents && (
-
-        <div className="bg-white border rounded">
-
+      {loadingStudents ? (
+        <div className="bg-white p-8 rounded-2xl border">
+          <TableSkeleton rows={10} cols={4} />
+        </div>
+      ) : selectedClass ? (
+        <div className="bg-white border rounded-2xl shadow-sm overflow-hidden">
           <table className="w-full text-sm">
-
-            <thead className="bg-gray-100">
+            <thead className="bg-gray-50 text-gray-600 font-bold border-b">
               <tr>
-                <th className="p-3 text-left">Name</th>
-                <th className="p-3">Admission No</th>
-                <th className="p-3">Gender</th>
-                <th className="p-3">Phone</th>
+                <th className="p-4 text-left">Student Name</th>
+                <th className="p-4 text-center">Admission No</th>
+                <th className="p-4 text-center">Gender</th>
+                <th className="p-4 text-center">Contact</th>
+                <th className="p-4 text-center w-24">Actions</th>
               </tr>
             </thead>
-
-            <tbody>
-
+            <tbody className="divide-y divide-gray-100">
               {students.map((s) => (
-
-                <tr key={s.id} className="border-t">
-
-                  <td className="p-3">
+                <tr key={s.id} className="hover:bg-gray-50/50 transition-colors">
+                  <td className="p-4 text-gray-800 font-bold">
                     {s.firstName} {s.lastName}
                   </td>
-
-                  <td className="p-3 text-center">
-                    {s.admissionNumber}
+                  <td className="p-4 text-center font-mono text-gray-600">{s.admissionNumber || "-"}</td>
+                  <td className="p-4 text-center">
+                    <span className={`px-2 py-0.5 rounded-full text-[10px] font-bold uppercase border ${s.gender === "MALE" ? "bg-blue-50 text-blue-600 border-blue-100" :
+                        s.gender === "FEMALE" ? "bg-pink-50 text-pink-600 border-pink-100" :
+                          "bg-gray-50 text-gray-600 border-gray-100"
+                      }`}>
+                      {s.gender}
+                    </span>
                   </td>
-
-                  <td className="p-3 text-center">
-                    {s.gender}
+                  <td className="p-4 text-center text-gray-500 text-xs italic">{s.contactNumber || "No info"}</td>
+                  <td className="p-4 text-center">
+                    <button className="text-gray-400 hover:text-blue-600 p-1">
+                      <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 12a3 3 0 11-6 0 3 3 0 016 0z" />
+                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M2.458 12C3.732 7.943 7.523 5 12 5c4.478 0 8.268 2.943 9.542 7-1.274 4.057-5.064 7-9.542 7-4.477 0-8.268-2.943-9.542-7z" />
+                      </svg>
+                    </button>
                   </td>
-
-                  <td className="p-3 text-center">
-                    {s.contactNumber}
-                  </td>
-
                 </tr>
-
               ))}
-
               {students.length === 0 && (
-
                 <tr>
-                  <td colSpan={4} className="p-4 text-center text-gray-500">
-                    No students found
+                  <td colSpan={5} className="p-20 text-center text-gray-400 italic">
+                    <div className="flex flex-col items-center gap-2">
+                      <span className="text-4xl">📂</span>
+                      No students enrolled in this class yet.
+                    </div>
                   </td>
                 </tr>
-
               )}
-
             </tbody>
-
           </table>
-
+        </div>
+      ) : (
+        <div className="p-20 text-center bg-gray-50 rounded-2xl border border-dashed border-gray-300 text-gray-400 italic">
+          Please select a class to view and manage students.
         </div>
       )}
 
-      {/* ---------------- Add Student Modal ---------------- */}
-
-      {showAddModal && (
-
-        <div className="fixed inset-0 bg-black/40 flex items-center justify-center z-50">
-
-          <div className="bg-white p-6 rounded w-[600px] space-y-4">
-
-            <h2 className="font-semibold text-lg">Add Student</h2>
-
-            <div className="grid grid-cols-2 gap-4">
-
-              <input
-                name="admissionNumber"
-                placeholder="Admission No"
-                value={studentForm.admissionNumber}
-                onChange={updateStudentField}
-                className="input"
-              />
-
-              <input
-                name="firstName"
-                placeholder="First Name *"
-                value={studentForm.firstName}
-                onChange={updateStudentField}
-                className="input"
-              />
-
-              <input
-                name="lastName"
-                placeholder="Last Name"
-                value={studentForm.lastName}
-                onChange={updateStudentField}
-                className="input"
-              />
-
-              <select
-                name="gender"
-                value={studentForm.gender}
-                onChange={updateStudentField}
-                className="input"
-              >
-                <option value="">Gender *</option>
-                <option value="MALE">Male</option>
-                <option value="FEMALE">Female</option>
-                <option value="OTHER">Other</option>
-              </select>
-
-              <input
-                name="contactNumber"
-                placeholder="Phone"
-                value={studentForm.contactNumber}
-                onChange={updateStudentField}
-                className="input"
-              />
-
-              <input
-                name="email"
-                placeholder="Email"
-                value={studentForm.email}
-                onChange={updateStudentField}
-                className="input"
-              />
-
-              <select
-                name="classId"
-                value={studentForm.classId}
-                onChange={updateStudentField}
-                className="input col-span-2"
-              >
-                <option value="">Select Class *</option>
-
-                {classes.map((c) => (
-                  <option key={c.id} value={c.id}>
-                    {c.name} {c.section}
-                  </option>
-                ))}
-
-              </select>
-
-              <input
-                name="session"
-                placeholder="Session (2025-26) *"
-                value={studentForm.session}
-                onChange={updateStudentField}
-                className="input col-span-2"
-              />
-
-            </div>
-
-            <div className="flex justify-end gap-3 pt-4">
-
-              <button
-                onClick={() => {
-                  setShowAddModal(false);
-                  resetStudentForm();
-                }}
-                className="px-4 py-2 border rounded"
-              >
-                Cancel
-              </button>
-
-              <button
-                onClick={saveStudent}
-                className="bg-blue-600 text-white px-5 py-2 rounded"
-              >
-                Save
-              </button>
-
-            </div>
-
+      {/* Add Modal */}
+      <Modal
+        isOpen={showAddModal}
+        onClose={() => setShowAddModal(false)}
+        title="Add New Student"
+        maxWidth="max-w-2xl"
+        footer={
+          <div className="flex gap-2">
+            <button
+              onClick={() => setShowAddModal(false)}
+              className="px-6 py-2 rounded-xl border font-medium text-gray-600 hover:bg-gray-50 transition-all"
+            >
+              Cancel
+            </button>
+            <button
+              onClick={saveStudent}
+              disabled={isSaving}
+              className="px-8 py-2 rounded-xl bg-blue-600 text-white font-bold shadow-lg hover:bg-blue-700 disabled:bg-gray-400 transition-all"
+            >
+              {isSaving ? "Enrolling..." : "Enroll Student"}
+            </button>
           </div>
+        }
+      >
+        <div className="grid grid-cols-2 gap-5">
+          <h3 className="col-span-2 font-bold text-gray-700 border-b pb-2">Personal Information</h3>
 
+          <input
+            name="firstName"
+            placeholder="First Name *"
+            value={studentForm.firstName}
+            onChange={updateStudentField}
+            className="input-ref"
+          />
+          <input
+            name="lastName"
+            placeholder="Last Name"
+            value={studentForm.lastName}
+            onChange={updateStudentField}
+            className="input-ref"
+          />
+
+          <select
+            name="gender"
+            value={studentForm.gender}
+            onChange={updateStudentField}
+            className="input-ref"
+          >
+            <option value="">Select Gender *</option>
+            <option value="MALE">Male</option>
+            <option value="FEMALE">Female</option>
+            <option value="OTHER">Other</option>
+          </select>
+
+          <input
+            name="admissionNumber"
+            placeholder="Admission No (Optional)"
+            value={studentForm.admissionNumber}
+            onChange={updateStudentField}
+            className="input-ref"
+          />
+
+          <h3 className="col-span-2 font-bold text-gray-700 border-b pb-2 mt-4">Enrollment Details</h3>
+
+          <select
+            name="classId"
+            value={studentForm.classId}
+            onChange={updateStudentField}
+            className="input-ref"
+          >
+            <option value="">Enroll in Class *</option>
+            {classes.map((c) => (
+              <option key={c.id} value={c.id}>
+                {c.name} {c.section}
+              </option>
+            ))}
+          </select>
+
+          <input
+            name="session"
+            placeholder="Academic Session (e.g. 2025-26) *"
+            value={studentForm.session}
+            onChange={updateStudentField}
+            className="input-ref"
+          />
+
+          <h3 className="col-span-2 font-bold text-gray-700 border-b pb-2 mt-4">Contact Information</h3>
+
+          <input
+            name="contactNumber"
+            placeholder="Phone Number"
+            value={studentForm.contactNumber}
+            onChange={updateStudentField}
+            className="input-ref"
+          />
+          <input
+            name="email"
+            type="email"
+            placeholder="Email Address"
+            value={studentForm.email}
+            onChange={updateStudentField}
+            className="input-ref"
+          />
         </div>
-      )}
-
+      </Modal>
     </div>
   );
 }

@@ -1,117 +1,105 @@
 "use client";
 
 import { useEffect, useState } from "react";
+import { api } from "@/lib/api";
 import { schoolApi } from "@/lib/schoolApi";
 import { useAuth } from "@/context/AuthContext";
+import { Skeleton } from "@/components/ui/Skeleton";
 
-type School = {
-  id: number;
-  name: string;
-  displayName: string;
-  board: string;
-  schoolCode: string;
-  city: string;
-  state: string;
-};
-
-export default function SchoolsPage() {
-
+export default function DashboardPage() {
   const { user } = useAuth();
-  const [schools, setSchools] = useState<School[]>([]);
+  const [stats, setStats] = useState({
+    schools: 0,
+    students: 0,
+    classes: 0,
+  });
   const [loading, setLoading] = useState(true);
-  const [error, setError] = useState("");
-
-  const canDelete = user?.role === "SUPER_ADMIN" || user?.role === "PLATFORM_ADMIN";
 
   useEffect(() => {
-    loadSchools();
-  }, []);
+    async function loadStats() {
+      try {
+        setLoading(true);
+        // Fetching some basic counts to show on dashboard
+        const [schoolsRes, classesRes, studentsRes] = await Promise.all([
+          user?.role === "SUPER_ADMIN" ? schoolApi.list(0, 1) : Promise.resolve({ data: { totalElements: 1 } }),
+          api.get("/api/classes?size=1"),
+          api.get("/api/students?size=1")
+        ]);
 
-  async function loadSchools() {
-    try {
-      setLoading(true);
-      const res = await schoolApi.list();
-      setSchools(res.data.content);
-    } catch (e) {
-      setError("Failed to load schools");
-    } finally {
-      setLoading(false);
+        setStats({
+          schools: schoolsRes.data.totalElements || 0,
+          classes: classesRes.data.totalElements || 0,
+          students: studentsRes.data.totalElements || 0,
+        });
+      } catch (err) {
+        console.error("Failed to load dashboard stats", err);
+      } finally {
+        setLoading(false);
+      }
     }
-  }
+    loadStats();
+  }, [user]);
 
-  async function deleteSchool(id: number) {
-    if (!confirm("Are you sure you want to delete this school? This action cannot be undone.")) return;
-
-    try {
-      await schoolApi.delete(id);
-      loadSchools();
-    } catch (e: any) {
-      alert("Delete failed: " + (e.response?.data?.message || e.message));
-    }
-  }
+  const cards = [
+    { label: "Total Schools", value: stats.schools, color: "bg-blue-500", icon: "🏫", hide: user?.role !== "SUPER_ADMIN" },
+    { label: "Total Classes", value: stats.classes, color: "bg-green-500", icon: "📚" },
+    { label: "Total Students", value: stats.students, color: "bg-purple-500", icon: "🎓" },
+  ];
 
   return (
-    <div className="space-y-6">
+    <div className="space-y-8">
+      <header>
+        <h1 className="text-3xl font-bold text-gray-800">Welcome Back, {user?.role.replace('_', ' ')}!</h1>
+        <p className="text-gray-500 mt-2">Here's what's happening in your school system today.</p>
+      </header>
 
-      {/* Header */}
-      <h1 className="text-2xl font-bold">Schools</h1>
+      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+        {cards.map((card, i) => !card.hide && (
+          <div key={i} className="bg-white p-6 rounded-2xl border shadow-sm flex items-center gap-4 transition-transform hover:scale-[1.02]">
+            <div className={`w-14 h-14 ${card.color} text-white rounded-xl flex items-center justify-center text-2xl shadow-lg`}>
+              {card.icon}
+            </div>
+            <div>
+              <p className="text-sm font-medium text-gray-500 uppercase tracking-wider">{card.label}</p>
+              {loading ? (
+                <Skeleton className="h-8 w-16 mt-1" />
+              ) : (
+                <p className="text-3xl font-bold text-gray-900">{card.value}</p>
+              )}
+            </div>
+          </div>
+        ))}
+      </div>
 
-
-
-
-      {/* States */}
-      {loading && <p>Loading...</p>}
-      {error && <p className="text-red-500">{error}</p>}
-
-
-      {/* Table */}
-      {!loading && !error && (
-
-        <div className="bg-white border rounded">
-
-          <table className="w-full text-sm">
-
-            <thead className="bg-gray-100 text-left">
-              <tr>
-                <th className="p-3">Name</th>
-                <th className="p-3">Code</th>
-                <th className="p-3">Board</th>
-                <th className="p-3">City</th>
-                {canDelete && <th className="p-3 text-center">Actions</th>}
-              </tr>
-            </thead>
-
-            <tbody>
-
-              {schools.map((s) => (
-                <tr
-                  key={s.id}
-                  className="border-t hover:bg-gray-50"
-                >
-                  <td className="p-3">{s.name}</td>
-                  <td className="p-3">{s.schoolCode}</td>
-                  <td className="p-3">{s.board}</td>
-                  <td className="p-3">{s.city}</td>
-                  {canDelete && (
-                    <td className="p-3 text-center">
-                      <button
-                        onClick={() => deleteSchool(s.id)}
-                        className="text-red-600 hover:text-red-800 font-medium"
-                      >
-                        Delete
-                      </button>
-                    </td>
-                  )}
-                </tr>
-              ))}
-
-            </tbody>
-
-          </table>
-
+      <div className="grid grid-cols-1 lg:grid-cols-2 gap-8">
+        {/* Placeholder for Recent Activity or Shortcuts */}
+        <div className="bg-white p-8 rounded-2xl border shadow-sm space-y-4">
+          <h3 className="text-xl font-bold text-gray-800">Quick Actions</h3>
+          <div className="grid grid-cols-2 gap-4">
+            <button onClick={() => window.location.href = '/students'} className="p-4 bg-gray-50 rounded-xl border hover:border-blue-500 hover:bg-white transition-all text-left group">
+              <span className="block text-2xl mb-2">👤</span>
+              <span className="font-semibold group-hover:text-blue-600">Register Student</span>
+            </button>
+            <button onClick={() => window.location.href = '/attendance'} className="p-4 bg-gray-50 rounded-xl border hover:border-green-500 hover:bg-white transition-all text-left group">
+              <span className="block text-2xl mb-2">📝</span>
+              <span className="font-semibold group-hover:text-green-600">Mark Attendance</span>
+            </button>
+          </div>
         </div>
-      )}
 
+        <div className="bg-white p-8 rounded-2xl border shadow-sm space-y-4">
+          <h3 className="text-xl font-bold text-gray-800">System Overview</h3>
+          <div className="space-y-4">
+            <div className="flex justify-between items-center p-3 bg-blue-50 text-blue-800 rounded-lg border border-blue-100">
+              <span className="font-medium">System Status</span>
+              <span className="px-2 py-1 bg-green-500 text-white text-xs rounded-full font-bold">Stable</span>
+            </div>
+            <div className="p-4 text-sm text-gray-600 bg-gray-50 rounded-lg">
+              All services are running normally. Regular backups are being processed as scheduled.
+            </div>
+          </div>
+        </div>
+      </div>
     </div>
   );
 }

@@ -1,5 +1,6 @@
 "use client";
 
+import React from "react";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 
@@ -10,7 +11,7 @@ export default function Breadcrumbs() {
     if (paths.length === 0) return null;
 
     return (
-        <nav className="flex items-center space-x-2 text-sm text-gray-500 mb-6 bg-white py-2 px-4 rounded-lg border shadow-sm">
+        <nav className="flex items-center space-x-2 text-sm text-gray-500 mb-6 bg-white py-2 px-4 rounded-lg border shadow-sm w-fit">
             <Link href="/" className="hover:text-blue-600 transition-colors">
                 Dashboard
             </Link>
@@ -37,5 +38,3 @@ export default function Breadcrumbs() {
         </nav>
     );
 }
-
-import React from "react";

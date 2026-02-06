@@ -2,6 +2,7 @@
 
 import { AuthProvider, useAuth } from "@/context/AuthContext";
 import Sidebar from "@/components/Sidebar";
+import Breadcrumbs from "@/components/Breadcrumbs";
 import { usePathname } from "next/navigation";
 
 function LayoutContent({ children }: { children: React.ReactNode }) {
@@ -17,7 +18,8 @@ function LayoutContent({ children }: { children: React.ReactNode }) {
     return (
         <div className="flex min-h-screen">
             {!isLoginPage && user && <Sidebar />}
-            <main className={`flex-1 p-6 overflow-auto ${!user ? "w-full" : ""}`}>
+            <main className={`flex-1 p-8 overflow-auto ${!user ? "w-full" : ""}`}>
+                {!isLoginPage && user && <Breadcrumbs />}
                 {children}
             </main>
         </div>
