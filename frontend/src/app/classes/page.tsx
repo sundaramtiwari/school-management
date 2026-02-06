@@ -1,11 +1,11 @@
 "use client";
 
-import { useEffect, useState } from "react";
 import { api } from "@/lib/api";
+import SessionSelect from "@/components/SessionSelect";
 
 type SchoolClass = {
     id: number;
-    className: string;
+    name: string;
     section: string;
     stream?: string;
     session: string;
@@ -60,7 +60,7 @@ export default function ClassesPage() {
 
     function openEdit(c: SchoolClass) {
         setForm({
-            className: c.className,
+            className: c.name,
             section: c.section,
             stream: c.stream || "",
             session: c.session,
@@ -77,10 +77,19 @@ export default function ClassesPage() {
         }
 
         try {
+            // Map frontend field 'className' to backend field 'name'
+            const payload = {
+                name: form.className,
+                section: form.section,
+                stream: form.stream || null,
+                session: form.session,
+                active: form.active,
+            };
+
             if (editId) {
-                await api.put(`/api/classes/${editId}`, form);
+                await api.put(`/api/classes/${editId}`, payload);
             } else {
-                await api.post("/api/classes", form);
+                await api.post("/api/classes", payload);
             }
             setShowForm(false);
             setEditId(null);
@@ -135,7 +144,7 @@ export default function ClassesPage() {
                         <tbody>
                             {classes.map((c) => (
                                 <tr key={c.id} className="border-t hover:bg-gray-50">
-                                    <td className="p-3">{c.className}</td>
+                                    <td className="p-3">{c.name}</td>
                                     <td className="p-3 text-center">{c.section}</td>
                                     <td className="p-3 text-center">{c.stream || "-"}</td>
                                     <td className="p-3 text-center">{c.session}</td>
@@ -192,13 +201,15 @@ export default function ClassesPage() {
                                 className="input"
                             />
 
-                            <input
-                                name="session"
-                                placeholder="Session (2024-25) *"
-                                value={form.session}
-                                onChange={updateField}
-                                className="input"
-                            />
+                            <div className="flex flex-col gap-1">
+                                <label className="text-xs text-gray-500 font-medium">Session *</label>
+                                <SessionSelect
+                                    value={form.session}
+                                    onChange={(val) => setForm({ ...form, session: val })}
+                                    className="input"
+                                    placeholder="Select Year"
+                                />
+                            </div>
                         </div>
 
                         <div className="pt-4 flex justify-end gap-2">

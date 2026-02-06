@@ -2,6 +2,7 @@
 
 import { useEffect, useState } from "react";
 import { schoolApi } from "@/lib/schoolApi";
+import { useAuth } from "@/context/AuthContext";
 
 /* ---------------- Types ---------------- */
 
@@ -12,6 +13,7 @@ type School = {
   board: string;
   medium: string;
   schoolCode: string;
+  affiliationCode?: string;
   city: string;
   state: string;
   contactEmail: string;
@@ -30,6 +32,7 @@ const URL_REGEX = /^(https?:\/\/)?([\w\d-]+\.)+[\w-]{2,}(\/.*)?$/;
 /* ---------------- Page ---------------- */
 
 export default function SchoolsPage() {
+  const { user } = useAuth();
 
   /* -------- UI State -------- */
 
@@ -96,7 +99,8 @@ export default function SchoolsPage() {
       displayName: "",
       board: "",
       medium: "",
-      schoolCode: "",
+      schoolCode: "", // Optional: auto-generated if not provided
+      affiliationCode: "", // CBSE/Board affiliation number
       city: "",
       state: "",
       contactEmail: "",
@@ -236,16 +240,19 @@ export default function SchoolsPage() {
 
         <h1 className="text-2xl font-bold">Schools</h1>
 
-        <button
-          onClick={() => {
-            resetForm();
-            setEditId(null);
-            setShowForm(true);
-          }}
-          className="bg-blue-600 text-white px-4 py-2 rounded"
-        >
-          + Add School
-        </button>
+        {/* Only SUPER_ADMIN can add schools */}
+        {user?.role === "SUPER_ADMIN" && (
+          <button
+            onClick={() => {
+              resetForm();
+              setEditId(null);
+              setShowForm(true);
+            }}
+            className="bg-blue-600 text-white px-4 py-2 rounded"
+          >
+            + Add School
+          </button>
+        )}
 
       </div>
 
@@ -424,6 +431,15 @@ export default function SchoolsPage() {
                 value={form.medium}
                 onChange={updateField}
                 className="input"
+              />
+
+              <input
+                name="affiliationCode"
+                maxLength={50}
+                placeholder="CBSE/Board Affiliation Code (Optional)"
+                value={form.affiliationCode || ""}
+                onChange={updateField}
+                className="input col-span-2"
               />
 
               <input

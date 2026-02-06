@@ -2,6 +2,7 @@
 
 import { useEffect, useState } from "react";
 import { schoolApi } from "@/lib/schoolApi";
+import { useAuth } from "@/context/AuthContext";
 
 type School = {
   id: number;
@@ -15,10 +16,12 @@ type School = {
 
 export default function SchoolsPage() {
 
+  const { user } = useAuth();
   const [schools, setSchools] = useState<School[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState("");
-  const [name, setName] = useState("");
+
+  const canDelete = user?.role === "SUPER_ADMIN" || user?.role === "PLATFORM_ADMIN";
 
   useEffect(() => {
     loadSchools();
@@ -36,24 +39,14 @@ export default function SchoolsPage() {
     }
   }
 
-  async function createSchool() {
-    if (!name) return;
+  async function deleteSchool(id: number) {
+    if (!confirm("Are you sure you want to delete this school? This action cannot be undone.")) return;
 
     try {
-      await schoolApi.create({
-        name,
-        displayName: name,
-        board: "CBSE",
-        schoolCode: "AUTO-" + Date.now(),
-        city: "Varanasi",
-        state: "UP",
-      });
-
-      setName("");
+      await schoolApi.delete(id);
       loadSchools();
-
-    } catch {
-      alert("Failed to create school");
+    } catch (e: any) {
+      alert("Delete failed: " + (e.response?.data?.message || e.message));
     }
   }
 
@@ -64,24 +57,6 @@ export default function SchoolsPage() {
       <h1 className="text-2xl font-bold">Schools</h1>
 
 
-      {/* Create */}
-      <div className="flex gap-2">
-
-        <input
-          value={name}
-          onChange={(e) => setName(e.target.value)}
-          placeholder="School name"
-          className="border px-3 py-2 rounded w-64"
-        />
-
-        <button
-          onClick={createSchool}
-          className="bg-blue-600 text-white px-4 py-2 rounded"
-        >
-          Add
-        </button>
-
-      </div>
 
 
       {/* States */}
@@ -102,6 +77,7 @@ export default function SchoolsPage() {
                 <th className="p-3">Code</th>
                 <th className="p-3">Board</th>
                 <th className="p-3">City</th>
+                {canDelete && <th className="p-3 text-center">Actions</th>}
               </tr>
             </thead>
 
@@ -116,6 +92,16 @@ export default function SchoolsPage() {
                   <td className="p-3">{s.schoolCode}</td>
                   <td className="p-3">{s.board}</td>
                   <td className="p-3">{s.city}</td>
+                  {canDelete && (
+                    <td className="p-3 text-center">
+                      <button
+                        onClick={() => deleteSchool(s.id)}
+                        className="text-red-600 hover:text-red-800 font-medium"
+                      >
+                        Delete
+                      </button>
+                    </td>
+                  )}
                 </tr>
               ))}
 

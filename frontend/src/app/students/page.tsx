@@ -417,8 +417,9 @@ export default function StudentsPage() {
                 className="input"
               >
                 <option value="">Gender *</option>
-                <option>Male</option>
-                <option>Female</option>
+                <option value="MALE">Male</option>
+                <option value="FEMALE">Female</option>
+                <option value="OTHER">Other</option>
               </select>
 
               <input

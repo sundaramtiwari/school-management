@@ -9,6 +9,9 @@ const menu = [
   { name: "Students", path: "/students" },
   { name: "Classes", path: "/classes" },
   { name: "Fees", path: "/fees" },
+  { name: "Marksheets", path: "/marksheets" },
+  { name: "Attendance", path: "/attendance" },
+  { name: "Sessions", path: "/sessions" },
 ];
 
 export default function Sidebar() {
@@ -34,10 +37,9 @@ export default function Sidebar() {
               href={item.path}
               className={`
                 block px-4 py-2 rounded
-                ${
-                  active
-                    ? "bg-blue-100 text-blue-700 font-semibold"
-                    : "text-gray-700 hover:bg-gray-100"
+                ${active
+                  ? "bg-blue-100 text-blue-700 font-semibold"
+                  : "text-gray-700 hover:bg-gray-100"
                 }
               `}
             >

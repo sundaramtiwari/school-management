@@ -2,6 +2,7 @@
 
 import { useEffect, useState } from "react";
 import { api } from "@/lib/api";
+import { useAuth } from "@/context/AuthContext";
 
 type User = {
     id: number;
@@ -14,6 +15,7 @@ type User = {
 const ROLES = ["SCHOOL_ADMIN", "TEACHER", "ACCOUNTANT", "STUDENT", "PARENT"];
 
 export default function StaffPage() {
+    const { user: currentUser } = useAuth();
     const [users, setUsers] = useState<User[]>([]);
     const [loading, setLoading] = useState(true);
     const [error, setError] = useState("");
@@ -27,6 +29,10 @@ export default function StaffPage() {
         role: "TEACHER",
         active: true,
     });
+
+    const roles = currentUser?.role === "SUPER_ADMIN"
+        ? ["PLATFORM_ADMIN", ...ROLES]
+        : ROLES;
 
     useEffect(() => {
         loadUsers();
@@ -198,7 +204,7 @@ export default function StaffPage() {
                             onChange={updateField}
                             className="input w-full"
                         >
-                            {ROLES.map(r => (
+                            {roles.map(r => (
                                 <option key={r} value={r}>{r}</option>
                             ))}
                         </select>

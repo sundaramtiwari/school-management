@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect, useState } from "react";
+import SessionSelect from "@/components/SessionSelect";
 import { schoolApi } from "@/lib/schoolApi";
 import { studentApi } from "@/lib/studentApi";
 import { api } from "@/lib/api";
@@ -28,12 +29,6 @@ type Student = {
 
 type AttendanceStatus = "PRESENT" | "ABSENT" | "LATE" | "HALF_DAY";
 
-type AttendanceRecord = {
-    studentId: number;
-    status: AttendanceStatus;
-    remarks?: string;
-};
-
 /* ---------------- Page ---------------- */
 
 export default function AttendancePage() {
@@ -51,6 +46,12 @@ export default function AttendancePage() {
 
     const [students, setStudents] = useState<Student[]>([]);
     const [attendanceMap, setAttendanceMap] = useState<Record<number, AttendanceStatus>>({});
+
+    /* ---------- Pagination ---------- */
+    const [currentPage, setCurrentPage] = useState(0);
+    const [totalPages, setTotalPages] = useState(0);
+    const [totalStudents, setTotalStudents] = useState(0);
+    const PAGE_SIZE = 50;
 
     const [loading, setLoading] = useState({
         schools: true,
@@ -88,6 +89,7 @@ export default function AttendancePage() {
             setSelectedClass("");
             setStudents([]);
             setAttendanceMap({});
+            setCurrentPage(0);
 
             const res = await api.get(`/api/classes/by-school/${schoolId}`);
             setClasses(res.data.content || []);
@@ -100,7 +102,7 @@ export default function AttendancePage() {
 
     /* ---------------- Load Students & Attendance ---------------- */
 
-    async function loadStudentsAndAttendance(classId: number, date: string) {
+    async function loadStudentsAndAttendance(classId: number, date: string, page: number) {
         try {
             setLoading(prev => ({ ...prev, students: true }));
             setError("");
@@ -108,28 +110,32 @@ export default function AttendancePage() {
             const cls = classes.find(c => c.id === classId);
             if (!cls) return;
 
-            // 1. Load Students
-            const studentRes = await studentApi.byClass(classId, 0, 100);
+            // 1. Load Students (Paginated)
+            const studentRes = await studentApi.byClass(classId, page, PAGE_SIZE);
             const studentList = studentRes.data.content || [];
             setStudents(studentList);
+            setTotalPages(studentRes.data.totalPages || 0);
+            setTotalStudents(studentRes.data.totalElements || 0);
 
-            // 2. Load Existing Attendance
+            // 2. Load Existing Attendance for the Class on this Date
             const attendanceRes = await api.get(`/api/attendance/class/${classId}?session=${cls.session}&date=${date}`);
             const existingAttendance: any[] = attendanceRes.data || [];
 
-            const map: Record<number, AttendanceStatus> = {};
+            const newMap = { ...attendanceMap };
 
-            // Default everyone to PRESENT if no attendance recorded yet
+            // Default students on current page to PRESENT if not already in map
             studentList.forEach((s: Student) => {
-                map[s.id] = "PRESENT";
+                if (!(s.id in newMap)) {
+                    newMap[s.id] = "PRESENT";
+                }
             });
 
-            // Override with existing records
+            // Override with existing records from DB
             existingAttendance.forEach(record => {
-                map[record.studentId] = record.status;
+                newMap[record.studentId] = record.status;
             });
 
-            setAttendanceMap(map);
+            setAttendanceMap(newMap);
 
         } catch {
             setError("Failed to load students or attendance records");
@@ -149,8 +155,9 @@ export default function AttendancePage() {
     function onClassChange(e: any) {
         const classId = e.target.value;
         setSelectedClass(classId);
+        setCurrentPage(0);
         if (classId && selectedDate) {
-            loadStudentsAndAttendance(Number(classId), selectedDate);
+            loadStudentsAndAttendance(Number(classId), selectedDate, 0);
         }
     }
 
@@ -158,8 +165,23 @@ export default function AttendancePage() {
         const date = e.target.value;
         setSelectedDate(date);
         if (selectedClass && date) {
-            loadStudentsAndAttendance(Number(selectedClass), date);
+            loadStudentsAndAttendance(Number(selectedClass), date, currentPage);
         }
+    }
+
+    function changePage(newPage: number) {
+        if (newPage < 0 || newPage >= totalPages) return;
+        setCurrentPage(newPage);
+        if (selectedClass && selectedDate) {
+            loadStudentsAndAttendance(Number(selectedClass), selectedDate, newPage);
+        }
+    }
+
+    function togglePresence(studentId: number) {
+        setAttendanceMap(prev => ({
+            ...prev,
+            [studentId]: prev[studentId] === "PRESENT" ? "ABSENT" : "PRESENT"
+        }));
     }
 
     function updateStatus(studentId: number, status: AttendanceStatus) {
@@ -167,6 +189,14 @@ export default function AttendancePage() {
             ...prev,
             [studentId]: status
         }));
+    }
+
+    function markAllPresent() {
+        const newMap = { ...attendanceMap };
+        students.forEach(s => {
+            newMap[s.id] = "PRESENT";
+        });
+        setAttendanceMap(newMap);
     }
 
     /* ---------------- Save ---------------- */
@@ -190,16 +220,30 @@ export default function AttendancePage() {
     return (
         <div className="space-y-6">
             <div className="flex justify-between items-center">
-                <h1 className="text-2xl font-bold text-gray-800">Student Attendance</h1>
-                {selectedClass && students.length > 0 && (
-                    <button
-                        onClick={saveAttendance}
-                        disabled={loading.saving}
-                        className="bg-blue-600 text-white px-6 py-2 rounded-lg hover:bg-blue-700 transition-all font-semibold disabled:bg-gray-400"
-                    >
-                        {loading.saving ? "Saving..." : "Save Attendance"}
-                    </button>
-                )}
+                <div>
+                    <h1 className="text-2xl font-bold text-gray-800">Student Attendance</h1>
+                    {selectedClass && <p className="text-gray-500 text-sm">Total Students: {totalStudents}</p>}
+                </div>
+
+                <div className="flex gap-3">
+                    {selectedClass && students.length > 0 && (
+                        <>
+                            <button
+                                onClick={markAllPresent}
+                                className="bg-green-50 text-green-700 px-4 py-2 rounded-lg hover:bg-green-100 transition-all font-medium border border-green-200"
+                            >
+                                Mark Current Page as Present
+                            </button>
+                            <button
+                                onClick={saveAttendance}
+                                disabled={loading.saving}
+                                className="bg-blue-600 text-white px-6 py-2 rounded-lg hover:bg-blue-700 transition-all font-semibold shadow-sm disabled:bg-gray-400"
+                            >
+                                {loading.saving ? "Saving..." : "Save All Marked"}
+                            </button>
+                        </>
+                    )}
+                </div>
             </div>
 
             {/* ---------------- Filters ---------------- */}
@@ -222,7 +266,7 @@ export default function AttendancePage() {
                         value={selectedClass}
                         onChange={onClassChange}
                         disabled={!selectedSchool || loading.classes}
-                        className="w-full border-gray-200 rounded-lg px-4 py-2 disabled:bg-gray-50 disabled:text-gray-400"
+                        className="w-full border-gray-200 rounded-lg px-4 py-2 disabled:bg-gray-100 disabled:text-gray-400"
                     >
                         <option value="">Select Class</option>
                         {classes.map(c => (
@@ -248,57 +292,96 @@ export default function AttendancePage() {
 
             {/* ---------------- Attendance Table ---------------- */}
             {selectedClass && !loading.students ? (
-                <div className="bg-white border rounded-xl shadow-sm overflow-hidden">
-                    <table className="w-full text-sm">
-                        <thead className="bg-gray-50 text-gray-600 font-medium">
-                            <tr>
-                                <th className="p-4 text-left">Admission No</th>
-                                <th className="p-4 text-left">Student Name</th>
-                                <th className="p-4 text-center">Status</th>
-                            </tr>
-                        </thead>
-                        <tbody className="divide-y divide-gray-100">
-                            {students.map((s) => (
-                                <tr key={s.id} className="hover:bg-gray-50 transition-colors">
-                                    <td className="p-4 font-medium text-gray-700">{s.admissionNumber}</td>
-                                    <td className="p-4 text-gray-600">{s.firstName} {s.lastName}</td>
-                                    <td className="p-4 text-center">
-                                        <div className="flex justify-center gap-2">
-                                            {(["PRESENT", "ABSENT", "LATE", "HALF_DAY"] as AttendanceStatus[]).map(status => (
-                                                <button
-                                                    key={status}
-                                                    onClick={() => updateStatus(s.id, status)}
-                                                    className={`
-                            px-3 py-1 text-xs rounded-full font-semibold transition-all border
-                            ${attendanceMap[s.id] === status
-                                                            ? status === "PRESENT" ? "bg-green-100 text-green-700 border-green-200" :
-                                                                status === "ABSENT" ? "bg-red-100 text-red-700 border-red-200" :
-                                                                    status === "LATE" ? "bg-yellow-100 text-yellow-700 border-yellow-200" :
-                                                                        "bg-orange-100 text-orange-700 border-orange-200"
-                                                            : "bg-white text-gray-400 border-gray-100 hover:bg-gray-50"}
-                          `}
-                                                >
-                                                    {status.replace('_', ' ')}
-                                                </button>
-                                            ))}
-                                        </div>
-                                    </td>
-                                </tr>
-                            ))}
-                            {students.length === 0 && (
+                <div className="space-y-4">
+                    <div className="bg-white border rounded-xl shadow-sm overflow-hidden">
+                        <table className="w-full text-sm">
+                            <thead className="bg-gray-50 text-gray-600 font-medium border-b border-gray-100">
                                 <tr>
-                                    <td colSpan={3} className="p-12 text-center text-gray-400 italic">
-                                        No students found in this class
-                                    </td>
+                                    <th className="p-4 text-center w-20">Present</th>
+                                    <th className="p-4 text-left w-1/4">Admission No</th>
+                                    <th className="p-4 text-left w-1/3">Student Name</th>
+                                    <th className="p-4 text-center">Other Status</th>
                                 </tr>
-                            )}
-                        </tbody>
-                    </table>
+                            </thead>
+                            <tbody className="divide-y divide-gray-100">
+                                {students.map((s) => (
+                                    <tr key={s.id} className="hover:bg-gray-50 transition-colors">
+                                        <td className="p-4 text-center">
+                                            <input
+                                                type="checkbox"
+                                                checked={attendanceMap[s.id] === "PRESENT"}
+                                                onChange={() => togglePresence(s.id)}
+                                                className="w-5 h-5 text-blue-600 border-gray-300 rounded focus:ring-blue-500 cursor-pointer"
+                                            />
+                                        </td>
+                                        <td className="p-4 font-medium text-gray-700">{s.admissionNumber}</td>
+                                        <td className="p-4 text-gray-600">{s.firstName} {s.lastName}</td>
+                                        <td className="p-4 text-center">
+                                            <div className="flex justify-center gap-2">
+                                                {(["LATE", "HALF_DAY"] as AttendanceStatus[]).map(status => (
+                                                    <button
+                                                        key={status}
+                                                        onClick={() => updateStatus(s.id, status)}
+                                                        className={`
+                                                px-3 py-1 text-xs rounded-full font-semibold transition-all border
+                                                ${attendanceMap[s.id] === status
+                                                                ? status === "LATE" ? "bg-yellow-100 text-yellow-700 border-yellow-200" :
+                                                                    "bg-orange-100 text-orange-700 border-orange-200"
+                                                                : "bg-white text-gray-400 border-gray-100 hover:bg-gray-50"}
+                                            `}
+                                                    >
+                                                        {status.replace('_', ' ')}
+                                                    </button>
+                                                ))}
+                                                {attendanceMap[s.id] === "ABSENT" && (
+                                                    <span className="bg-red-100 text-red-700 border border-red-200 px-3 py-1 text-xs rounded-full font-semibold">
+                                                        ABSENT
+                                                    </span>
+                                                )}
+                                            </div>
+                                        </td>
+                                    </tr>
+                                ))}
+                                {students.length === 0 && (
+                                    <tr>
+                                        <td colSpan={4} className="p-12 text-center text-gray-400 italic">
+                                            No students found in this class
+                                        </td>
+                                    </tr>
+                                )}
+                            </tbody>
+                        </table>
+                    </div>
+
+                    {/* ---------- Pagination Controls ---------- */}
+                    {totalPages > 1 && (
+                        <div className="flex justify-between items-center bg-white p-4 border rounded-xl shadow-sm">
+                            <span className="text-sm text-gray-500">
+                                Page {currentPage + 1} of {totalPages}
+                            </span>
+                            <div className="flex gap-2">
+                                <button
+                                    disabled={currentPage === 0}
+                                    onClick={() => changePage(currentPage - 1)}
+                                    className="px-4 py-2 border rounded hover:bg-gray-50 disabled:bg-gray-50 disabled:text-gray-300 transition-colors"
+                                >
+                                    Previous
+                                </button>
+                                <button
+                                    disabled={currentPage === totalPages - 1}
+                                    onClick={() => changePage(currentPage + 1)}
+                                    className="px-4 py-2 border rounded hover:bg-gray-50 disabled:bg-gray-50 disabled:text-gray-300 transition-colors"
+                                >
+                                    Next
+                                </button>
+                            </div>
+                        </div>
+                    )}
                 </div>
             ) : (
                 selectedClass && loading.students && (
-                    <div className="text-center p-12 bg-gray-50 rounded-xl border border-gray-100 text-gray-400">
-                        Loading students...
+                    <div className="text-center p-12 bg-gray-50 rounded-xl border border-gray-100 text-gray-400 italic">
+                        Fetching student roster...
                     </div>
                 )
             )}

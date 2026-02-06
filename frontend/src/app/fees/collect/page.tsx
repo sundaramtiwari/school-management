@@ -125,6 +125,30 @@ export default function FeeCollectPage() {
         }
     }
 
+    async function downloadChallan() {
+        if (!selectedStudent || !selectedClass) return;
+
+        try {
+            const cls = classes.find(c => c.id == selectedClass);
+            const session = cls ? cls.session : "2024-25";
+
+            const res = await api.get(`/api/fees/challan/student/${selectedStudent}?session=${session}`, {
+                responseType: 'blob'
+            });
+
+            const url = window.URL.createObjectURL(new Blob([res.data]));
+            const link = document.createElement('a');
+            link.href = url;
+            link.setAttribute('download', `fee_challan_${selectedStudent}.pdf`);
+            document.body.appendChild(link);
+            link.click();
+            document.body.removeChild(link);
+            window.URL.revokeObjectURL(url);
+        } catch (e) {
+            alert("Failed to download challan");
+        }
+    }
+
     /* -------- UI -------- */
     return (
         <div className="space-y-6">
@@ -162,6 +186,13 @@ export default function FeeCollectPage() {
                                 <span>Total: {summary.totalFee}</span>
                                 <span>Paid: {summary.totalPaid}</span>
                             </div>
+
+                            <button
+                                onClick={downloadChallan}
+                                className="mt-4 w-full bg-blue-600 text-white text-sm py-2 rounded hover:bg-blue-700 transition flex items-center justify-center gap-2"
+                            >
+                                📄 Download Challan
+                            </button>
                         </div>
 
                         {/* Payment Form */}
