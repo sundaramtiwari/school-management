@@ -1,6 +1,6 @@
 # School Management System — Project Context
 
-Last Updated: Jan 2026
+Last Updated: Feb 2026
 
 ---
 
@@ -11,7 +11,7 @@ Build a SaaS School Management System where:
 - Super Admin onboards schools
 - Schools manage students, teachers, fees, academics
 - Multi-tenant system (school-based isolation)
-- Future: role-based auth
+- Role-based Auth (SUPER_ADMIN, PLATFORM_ADMIN, etc.)
 
 ---
 
@@ -19,10 +19,10 @@ Build a SaaS School Management System where:
 
 ### Backend
 - Java 17
-- Spring Boot 3.3+ / 3.5+
+- Spring Boot 3.x
 - Spring Data JPA
 - PostgreSQL (prod), H2 (test)
-- JWT (planned)
+- Tenant Isolation (Hibernate Filter + AOP)
 - Swagger (springdoc)
 
 ### Frontend
@@ -42,239 +42,84 @@ Build a SaaS School Management System where:
 Controller → Service → Repository → Entity
 
 ### Modules:
-- school
-- student
-- classsubject
-- fee
-- guardian
-- teacher
-- common
-- auth (planned)
+- **school**: Schools, Academic Sessions
+- **user**: Staff, Roles
+- **core**: Students, Enrollment, Attendance
+- **fee**: Fee structures, Collection, Challans
+- **common**: Tenant filters, Base entities
 
-
-All major entities link to `school_id`.
+All major entities link to `school_id` and are filtered automatically.
 
 ---
 
 ## 4. BaseEntity
-
-All entities extend:
-
-- createdAt
-- updatedAt
-- createdBy
-- updatedBy
+All entities extend `TenantEntity` or `BaseEntity`:
+- createdAt / updatedAt
+- schoolId (Multi-tenancy)
 
 ---
 
 ## 5. Core Entities
 
-### School
-- name
-- displayName
-- board
-- medium
-- schoolCode (unique)
-- address, city, state, pincode
-- contactEmail, contactNumber
-- website, logoUrl
-- active
+### AcademicSession [NEW]
+- name (e.g., "2024-25")
+- startDate / endDate
+- isCurrent (Boolean flag)
 
 ### Student
-- admissionNumber
-- firstName, lastName
-- dob, gender
-- aadhar, pen
-- address, contact
-- previousSchoolDetails
+- admissionNumber, firstName, lastName
 - currentClass (ManyToOne)
 - school (ManyToOne)
-- status, active
 
 ### SchoolClass
-- name
-- section
-- session
-- capacity
+- name, section, session (Linked to AcademicSession)
+
+### Attendance [NEW]
+- studentId
+- date
+- status (PRESENT, ABSENT, etc.)
 - schoolId
-
-### StudentEnrollment
-- studentId
-- classId
-- session
-- rollNumber
-- active
-
-### PromotionRecord
-- studentId
-- fromClassId
-- toClassId
-- fromSection
-- toSection
-- session
-- promotedOn
-- feePending
-
-### Fee System
-- FeeType
-- FeeStructure
-- StudentFeeAssignment
-- FeePayment
-
----
-
-## 6. Academic Flow
-
-1. Student registered
-2. Student enrolled (StudentEnrollment)
-3. Promotion creates:
-   - PromotionRecord
-   - New Enrollment
-4. History preserved
 
 ---
 
 ## 7. Current API Structure
 
-### Schools
-GET /api/schools
-POST /api/schools
-PATCH /api/schools/{code}
-DELETE /api/schools/{id}
+### Sessions
+/api/academic-sessions (CRUD)
 
-### Students
-POST /api/students
-GET /api/students/{id}
-GET /api/students/by-school/{schoolId}
-PUT /api/students/{id}
-DELETE /api/students/{id}
-
-
-### Classes
-GET /api/classes/by-school/{schoolId}
-
-
-### Enrollments
-POST /api/enrollments
-GET /api/enrollments/by-class/{classId}
+### Attendance
+/api/attendance/bulk (Batch marking)
+/api/attendance/class/{id}
 
 ### Fees
-/api/fees/types
-/api/fees/structures
-/api/fees/assignments
-/api/fees/payments
-
+- Receipt PDF generation via `FeeReceiptService`
 
 ---
 
 ## 8. Frontend Status
 
 ### Implemented
-
-- Sidebar layout
-- Schools page (list/create/edit modal)
-- Students page:
-  - Select school
-  - Select class
-  - List students
-
-### In Progress
-
-- Student create + auto enroll
-- Student edit UI
-- Pagination
-- Better validation
-
-### Pending
-
-- Auth UI
-- Role-based menus
-- Teacher dashboard
-- Reports
-
----
-
-## 9. Authentication (Planned)
-
-Roles:
-
-- SUPER_ADMIN
-- SCHOOL_ADMIN
-- TEACHER
-- ACCOUNTANT
-
-JWT token will include:
-
-userId
-schoolId
-role
-
-School isolation via token.
-
----
-
-## 10. Testing
-
-Integration tests:
-
-- StudentFlowIntegrationTest
-- PromotionFlowIntegrationTest
-- FeeFlowIntegrationTest
-
-Each test:
-- Creates data
-- Runs flow
-- Cleans DB
+- **Sessions**: Management page + reusable `SessionSelect`.
+- **Attendance**: Paginated roster (50/page), bulk present/absent marking.
+- **Staff**: Role-based creation (SUPER_ADMIN can create PLATFORM_ADMIN).
+- **Schools**: Dashboard with deletion support for admins.
 
 ---
 
 ## 11. Key Design Decisions
-
-- No table-per-school (single DB, school_id filter)
-- History via enrollment + promotion tables
-- No auth in MVP (temporarily)
-- Backend-first design
-- Pagination everywhere
+- **Tenant Isolation**: Implemented via `@Filter` and `TenantFilterAspect`.
+- **Standardized Sessions**: Replaced manual text inputs with selected session IDs to prevent data corruption.
+- **Attendance Persistence**: Uses a global `attendanceMap` to handle state across paginated views.
 
 ---
 
 ## 12. Known Issues / Tech Debt
-
-- Auth not implemented yet
-- Swagger instability (version conflicts)
-- No tenant filter yet
-- No Redis cache
-- No analytics pipeline
-
----
-
-## 13. Current Phase
-
-Phase: MVP + Frontend
-
-Focus:
-
-- Student flows
-- Admin usability
-- Reduce manual backend work
-- Prepare for auth
+- **FeeChallanService.java**: Unresolved `com.lowagie` imports causing lint errors.
+- **Auth**: Frontend auth guards are basic; JWT session persistence needs work.
 
 ---
 
 ## 14. Next Planned Steps
-
-1. Finish Students UI
-2. Add Teacher module UI
-3. Add Auth backend
-4. Add User management
-5. Lock school context
-6. Remove school dropdown
-
----
-
-## 15. Repository
-
-Main repo contains full code.
-All decisions documented here.
-
-This file is the source of truth.
+1. Resolve PDF service lint errors.
+2. Implement Marksheet calculation logic.
+3. Enhance Reports module.
