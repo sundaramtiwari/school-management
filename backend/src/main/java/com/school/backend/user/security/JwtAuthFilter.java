@@ -74,7 +74,7 @@ public class JwtAuthFilter extends OncePerRequestFilter {
 
         } catch (Exception e) {
             // Invalid token → ignore, user unauthenticated
-            
+
         } finally {
             TenantContext.clear();
         }
