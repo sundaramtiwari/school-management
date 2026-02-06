@@ -33,6 +33,9 @@ public class FeePayment extends TenantEntity {
     @Column(nullable = false)
     private LocalDate paymentDate;
 
+    @Column(name = "transaction_reference", length = 100)
+    private String transactionReference; // For UPI/online payments
+
     private String mode;   // CASH / UPI / BANK
     private String remarks;
 }

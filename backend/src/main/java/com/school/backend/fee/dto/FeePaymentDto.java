@@ -15,6 +15,8 @@ public class FeePaymentDto {
 
     private LocalDate paymentDate;
 
+    private String transactionReference; // Optional field
+
     private String mode;
 
     private String remarks;

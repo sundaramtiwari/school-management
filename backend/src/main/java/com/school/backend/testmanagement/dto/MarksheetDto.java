@@ -23,6 +23,7 @@ public class MarksheetDto {
     public static class SubjectMark {
 
         private Long subjectId;
+        private String subjectName;
         private Integer marksObtained;
         private Integer maxMarks;
     }

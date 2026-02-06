@@ -17,9 +17,12 @@ public class MarksheetQueryRepository {
 
         String jpql = """
                     SELECT es.subjectId,
+                           sub.name,
                            es.maxMarks,
                            sm.marksObtained
                     FROM ExamSubject es
+                    JOIN com.school.backend.core.classsubject.entity.Subject sub
+                         ON es.subjectId = sub.id
                     LEFT JOIN StudentMark sm
                          ON sm.examSubjectId = es.id
                         AND sm.studentId = :studentId

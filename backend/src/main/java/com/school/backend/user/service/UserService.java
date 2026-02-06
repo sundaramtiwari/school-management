@@ -49,6 +49,7 @@ public class UserService {
         user.setRole(dto.getRole());
         user.setSchool(school);
         user.setActive(true);
+        user.setFullName(dto.getFullName());
 
         return toDto(userRepository.save(user));
     }

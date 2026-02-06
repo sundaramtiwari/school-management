@@ -4,6 +4,10 @@ import com.school.backend.common.BaseAuthenticatedIntegrationTest;
 import com.school.backend.common.dto.PageResponse;
 import com.school.backend.school.dto.SchoolDto;
 import com.school.backend.school.repository.SchoolRepository;
+import com.school.backend.core.classsubject.repository.SchoolClassRepository;
+import com.school.backend.core.attendance.repository.AttendanceRepository;
+import com.school.backend.core.student.repository.StudentEnrollmentRepository;
+import com.school.backend.core.student.repository.StudentRepository;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -23,11 +27,27 @@ public class SchoolControllerIntegrationTest extends BaseAuthenticatedIntegratio
         @Autowired
         private com.school.backend.user.repository.UserRepository userRepository;
 
+        @Autowired
+        private SchoolClassRepository schoolClassRepository;
+
+        @Autowired
+        private AttendanceRepository attendanceRepository;
+
+        @Autowired
+        private StudentEnrollmentRepository studentEnrollmentRepository;
+
+        @Autowired
+        private StudentRepository studentRepository;
+
         private static final String BASE = "/api/schools";
 
         @BeforeEach
         void setup() {
                 userRepository.deleteAll();
+                attendanceRepository.deleteAll();
+                studentEnrollmentRepository.deleteAll();
+                studentRepository.deleteAll();
+                schoolClassRepository.deleteAll();
                 schoolRepository.deleteAll();
                 loginAsSuperAdmin();
         }

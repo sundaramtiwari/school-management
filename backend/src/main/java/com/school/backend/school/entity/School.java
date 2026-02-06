@@ -29,6 +29,9 @@ public class School extends BaseEntity {
     @Column(unique = true, nullable = false)
     private String schoolCode;
 
+    @Column(name = "affiliation_code")
+    private String affiliationCode; // CBSE/Board affiliation number
+
     private String address;
     private String city;
     private String state;

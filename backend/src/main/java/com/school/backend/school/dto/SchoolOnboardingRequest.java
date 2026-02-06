@@ -12,7 +12,7 @@ public class SchoolOnboardingRequest {
     @NotBlank(message = "School name is required")
     private String name;
 
-    @NotBlank(message = "School code is required")
+    // Optional: If not provided, will be auto-generated (e.g., SCH001)
     private String schoolCode;
 
     private String displayName;

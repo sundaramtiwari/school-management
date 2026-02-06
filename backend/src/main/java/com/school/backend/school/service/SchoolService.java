@@ -55,13 +55,13 @@ public class SchoolService {
         school.setPincode(req.getPincode());
         school.setWebsite(req.getWebsite());
         school.setDescription(req.getDescription());
-        school.setSchoolCode(req.getSchoolCode());
 
-        // Generate code if needed (or let DB/PrePersist handle it if we have logical
-        // generation)
-        // For now, assuming standard generation or manual input not supported in this
-        // request
-        // school.setSchoolCode(...) -> usually generated automatically
+        // Auto-generate schoolCode if not provided
+        if (req.getSchoolCode() == null || req.getSchoolCode().isBlank()) {
+            school.setSchoolCode(generateSchoolCode());
+        } else {
+            school.setSchoolCode(req.getSchoolCode());
+        }
 
         school = schoolRepository.save(school);
 
@@ -126,5 +126,23 @@ public class SchoolService {
         // Save replacement (this will act as update since id is present)
         School saved = schoolRepository.save(replacement);
         return SchoolMapper.toDto(saved);
+    }
+
+    /**
+     * Generates a unique school code in format SCH001, SCH002, etc.
+     */
+    private String generateSchoolCode() {
+        long count = schoolRepository.count();
+        String code;
+        int attempts = 0;
+        do {
+            code = String.format("SCH%03d", count + 1 + attempts);
+            attempts++;
+        } while (schoolRepository.findBySchoolCode(code).isPresent() && attempts < 1000);
+
+        if (attempts >= 1000) {
+            throw new IllegalStateException("Unable to generate unique school code");
+        }
+        return code;
     }
 }

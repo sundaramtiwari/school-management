@@ -7,7 +7,8 @@ import lombok.NoArgsConstructor;
 
 /**
  * DTO for School entity.
- * Includes id and relevant public fields. Does not include internal audit timestamps.
+ * Includes id and relevant public fields. Does not include internal audit
+ * timestamps.
  * If you want createdAt/updatedAt later, we can add them.
  */
 @Data
@@ -19,9 +20,10 @@ public class SchoolDto {
 
     private String name;
     private String displayName;
-    private String board;       // CBSE, ICSE, State, etc.
-    private String medium;      // English, Hindi, etc.
+    private String board; // CBSE, ICSE, State, etc.
+    private String medium; // English, Hindi, etc.
     private String schoolCode;
+    private String affiliationCode; // CBSE/Board affiliation number
 
     private String address;
     private String city;

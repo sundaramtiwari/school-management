@@ -73,8 +73,9 @@ public class JwtAuthFilter extends OncePerRequestFilter {
             chain.doFilter(request, response);
 
         } catch (Exception e) {
-            // Invalid token → ignore, user unauthenticated
-
+            response.setStatus(HttpServletResponse.SC_UNAUTHORIZED);
+            response.getWriter().write("{\"error\":\"Invalid or expired token\"}");
+            return; // Don't continue chain
         } finally {
             TenantContext.clear();
         }
