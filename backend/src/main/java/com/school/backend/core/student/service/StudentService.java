@@ -96,13 +96,19 @@ public class StudentService {
 
     @Transactional(readOnly = true)
     public StudentDto getById(Long id) {
-        Student s = repository.findById(id).orElseThrow(() -> new ResourceNotFoundException("Student not found: " + id));
+        Student s = repository.findById(id)
+                .orElseThrow(() -> new ResourceNotFoundException("Student not found: " + id));
         return mapper.toDto(s);
     }
 
     @Transactional(readOnly = true)
     public Page<StudentDto> listBySchool(Long schoolId, Pageable pageable) {
         return repository.findBySchoolId(schoolId, pageable).map(mapper::toDto);
+    }
+
+    @Transactional(readOnly = true)
+    public Page<StudentDto> listAll(Pageable pageable) {
+        return repository.findAll(pageable).map(mapper::toDto);
     }
 
     @Transactional
@@ -118,7 +124,8 @@ public class StudentService {
 
     @Transactional
     public void delete(Long id) {
-        if (!repository.existsById(id)) throw new ResourceNotFoundException("Student not found: " + id);
+        if (!repository.existsById(id))
+            throw new ResourceNotFoundException("Student not found: " + id);
         // soft delete: mark active=false
         Student s = repository.findById(id).get();
         s.setActive(false);

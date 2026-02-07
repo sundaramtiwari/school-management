@@ -4,6 +4,7 @@ import { useEffect, useState } from "react";
 import { api } from "@/lib/api";
 import SessionSelect from "@/components/SessionSelect";
 import { useToast } from "@/components/ui/Toast";
+import { useAuth } from "@/context/AuthContext";
 import Modal from "@/components/ui/Modal";
 import { TableSkeleton } from "@/components/ui/Skeleton";
 
@@ -17,6 +18,7 @@ type SchoolClass = {
 };
 
 export default function ClassesPage() {
+    const { user } = useAuth();
     const { showToast } = useToast();
     const [classes, setClasses] = useState<SchoolClass[]>([]);
     const [loading, setLoading] = useState(true);
@@ -37,9 +39,14 @@ export default function ClassesPage() {
     }, []);
 
     async function loadClasses() {
+        if (!user) return;
         try {
             setLoading(true);
-            const res = await api.get("/api/classes?size=100");
+            const currentRole = user?.role?.toUpperCase();
+            const isHighLevelAdmin = currentRole === "SUPER_ADMIN" || currentRole === "PLATFORM_ADMIN";
+            const endpoint = isHighLevelAdmin ? "/api/classes" : "/api/classes/mine";
+
+            const res = await api.get(`${endpoint}?size=100`);
             setClasses(res.data.content || []);
         } catch {
             showToast("Failed to load classes", "error");

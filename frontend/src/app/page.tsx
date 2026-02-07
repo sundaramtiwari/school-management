@@ -16,20 +16,25 @@ export default function DashboardPage() {
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
+    if (!user) return; // Wait for user info
+
     async function loadStats() {
       try {
         setLoading(true);
+        const currentRole = user?.role?.toUpperCase();
+        const isHighLevelAdmin = currentRole === "SUPER_ADMIN" || currentRole === "PLATFORM_ADMIN";
+
         // Fetching some basic counts to show on dashboard
         const [schoolsRes, classesRes, studentsRes] = await Promise.all([
-          user?.role === "SUPER_ADMIN" ? schoolApi.list(0, 1) : Promise.resolve({ data: { totalElements: 1 } }),
-          api.get("/api/classes?size=1"),
-          api.get("/api/students?size=1")
+          isHighLevelAdmin ? schoolApi.list(0, 1) : Promise.resolve({ data: { totalElements: 1 } }),
+          api.get(`/api/classes${isHighLevelAdmin ? "" : "/mine"}?size=1`),
+          api.get(`/api/students${isHighLevelAdmin ? "" : "/mine"}?size=1`)
         ]);
 
         setStats({
-          schools: schoolsRes.data.totalElements || 0,
-          classes: classesRes.data.totalElements || 0,
-          students: studentsRes.data.totalElements || 0,
+          schools: schoolsRes.data?.totalElements || 0,
+          classes: classesRes.data?.totalElements || 0,
+          students: studentsRes.data?.totalElements || 0,
         });
       } catch (err) {
         console.error("Failed to load dashboard stats", err);
@@ -40,8 +45,11 @@ export default function DashboardPage() {
     loadStats();
   }, [user]);
 
+  const currentRole = user?.role?.toUpperCase();
+  const isHighLevelAdmin = currentRole === "SUPER_ADMIN" || currentRole === "PLATFORM_ADMIN";
+
   const cards = [
-    { label: "Total Schools", value: stats.schools, color: "bg-blue-500", icon: "🏫", hide: user?.role !== "SUPER_ADMIN" },
+    { label: "Total Schools", value: stats.schools, color: "bg-blue-500", icon: "🏫", hide: !isHighLevelAdmin },
     { label: "Total Classes", value: stats.classes, color: "bg-green-500", icon: "📚" },
     { label: "Total Students", value: stats.students, color: "bg-purple-500", icon: "🎓" },
   ];
@@ -49,7 +57,7 @@ export default function DashboardPage() {
   return (
     <div className="space-y-8">
       <header>
-        <h1 className="text-3xl font-bold text-gray-800">Welcome Back, {user?.role.replace('_', ' ')}!</h1>
+        <h1 className="text-3xl font-bold text-gray-800">Welcome Back, {user?.role?.replace('_', ' ') || "User"}!</h1>
         <p className="text-gray-500 mt-2">Here's what's happening in your school system today.</p>
       </header>
 

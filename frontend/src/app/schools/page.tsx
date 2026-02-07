@@ -44,6 +44,13 @@ export default function SchoolsPage() {
   const [editId, setEditId] = useState<number | null>(null);
   const [isSaving, setIsSaving] = useState(false);
 
+  useEffect(() => {
+    const currentRole = user?.role?.toUpperCase();
+    if (user && currentRole !== "SUPER_ADMIN" && currentRole !== "PLATFORM_ADMIN") {
+      window.location.href = "/";
+    }
+  }, [user]);
+
   /* -------- Data State -------- */
 
   const [schools, setSchools] = useState<School[]>([]);
@@ -211,7 +218,7 @@ export default function SchoolsPage() {
           <p className="text-gray-500">Manage school institutions and their configurations.</p>
         </div>
 
-        {user?.role === "SUPER_ADMIN" && (
+        {(user?.role === "SUPER_ADMIN" || user?.role === "PLATFORM_ADMIN") && (
           <button
             onClick={() => {
               resetForm();

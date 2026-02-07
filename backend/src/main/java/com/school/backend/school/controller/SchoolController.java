@@ -8,6 +8,7 @@ import lombok.RequiredArgsConstructor;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
 import org.springframework.http.ResponseEntity;
+import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.web.bind.annotation.*;
 import org.springframework.web.servlet.support.ServletUriComponentsBuilder;
 
@@ -24,6 +25,7 @@ public class SchoolController {
      * Create - returns 201 Created with Location header
      */
     @PostMapping
+    @PreAuthorize("hasAnyRole('SUPER_ADMIN', 'PLATFORM_ADMIN')")
     public ResponseEntity<SchoolDto> create(@RequestBody SchoolDto schoolDto) {
         SchoolDto created = schoolService.create(schoolDto);
 
@@ -39,6 +41,7 @@ public class SchoolController {
      * Onboard School + Admin
      */
     @PostMapping("/onboard")
+    @PreAuthorize("hasAnyRole('SUPER_ADMIN', 'PLATFORM_ADMIN')")
     public ResponseEntity<SchoolDto> onboard(
             @RequestBody @jakarta.validation.Valid com.school.backend.school.dto.SchoolOnboardingRequest req) {
         SchoolDto created = schoolService.createSchoolWithAdmin(req);
@@ -49,6 +52,7 @@ public class SchoolController {
      * Paginated list
      */
     @GetMapping
+    @PreAuthorize("hasAnyRole('SUPER_ADMIN', 'PLATFORM_ADMIN')")
     public ResponseEntity<PageResponse<SchoolDto>> getAll(Pageable pageable) {
         Page<SchoolDto> page = schoolService.listSchools(pageable);
         PageResponse<SchoolDto> response = PageResponseMapper.fromPage(page);
@@ -59,6 +63,7 @@ public class SchoolController {
      * Get by schoolCode
      */
     @GetMapping("/{code}")
+    @PreAuthorize("hasAnyRole('SUPER_ADMIN', 'PLATFORM_ADMIN')")
     public ResponseEntity<SchoolDto> getByCode(@PathVariable String code) {
         return ResponseEntity.ok(schoolService.getByCode(code));
     }
@@ -68,6 +73,7 @@ public class SchoolController {
      * overwritten).
      */
     @PutMapping("/{code}")
+    @PreAuthorize("hasAnyRole('SUPER_ADMIN', 'PLATFORM_ADMIN')")
     public ResponseEntity<SchoolDto> replace(@PathVariable String code, @RequestBody SchoolDto schoolDto) {
         SchoolDto replaced = schoolService.replaceByCode(code, schoolDto);
         return ResponseEntity.ok(replaced);
@@ -77,6 +83,7 @@ public class SchoolController {
      * PATCH - partial update. Only non-null fields in DTO are applied.
      */
     @PatchMapping("/{code}")
+    @PreAuthorize("hasAnyRole('SUPER_ADMIN', 'PLATFORM_ADMIN')")
     public ResponseEntity<SchoolDto> update(@PathVariable String code, @RequestBody SchoolDto schoolDto) {
         SchoolDto updated = schoolService.updateByCode(code, schoolDto);
         return ResponseEntity.ok(updated);

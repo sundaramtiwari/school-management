@@ -5,15 +5,15 @@ import { usePathname } from "next/navigation";
 import { useAuth } from "@/context/AuthContext";
 
 const menu = [
-  { name: "Dashboard", path: "/" },
-  { name: "Schools", path: "/schools" },
-  { name: "Students", path: "/students" },
-  { name: "Classes", path: "/classes" },
-  { name: "Staff", path: "/staff" },
-  { name: "Fees", path: "/fees" },
-  { name: "Attendance", path: "/attendance" },
-  { name: "Marksheets", path: "/marksheets" },
-  { name: "Sessions", path: "/sessions" },
+  { name: "Dashboard", path: "/", roles: ["SUPER_ADMIN", "PLATFORM_ADMIN", "SCHOOL_ADMIN", "TEACHER", "ACCOUNTANT"] },
+  { name: "Schools", path: "/schools", roles: ["SUPER_ADMIN", "PLATFORM_ADMIN"] },
+  { name: "Students", path: "/students", roles: ["SUPER_ADMIN", "PLATFORM_ADMIN", "SCHOOL_ADMIN", "TEACHER", "ACCOUNTANT"] },
+  { name: "Classes", path: "/classes", roles: ["SUPER_ADMIN", "PLATFORM_ADMIN", "SCHOOL_ADMIN", "TEACHER"] },
+  { name: "Staff", path: "/staff", roles: ["SUPER_ADMIN", "PLATFORM_ADMIN", "SCHOOL_ADMIN"] },
+  { name: "Fees", path: "/fees", roles: ["SUPER_ADMIN", "PLATFORM_ADMIN", "SCHOOL_ADMIN", "ACCOUNTANT"] },
+  { name: "Attendance", path: "/attendance", roles: ["SUPER_ADMIN", "PLATFORM_ADMIN", "SCHOOL_ADMIN", "TEACHER"] },
+  { name: "Marksheets", path: "/marksheets", roles: ["SUPER_ADMIN", "PLATFORM_ADMIN", "SCHOOL_ADMIN", "TEACHER"] },
+  { name: "Sessions", path: "/sessions", roles: ["SUPER_ADMIN", "PLATFORM_ADMIN", "SCHOOL_ADMIN"] },
 ];
 
 export default function Sidebar() {
@@ -24,8 +24,9 @@ export default function Sidebar() {
     <aside className="w-64 bg-white border-r flex flex-col h-screen">
 
       {/* Header */}
-      <div className="p-4 text-xl font-bold border-b">
-        School Admin
+      <div className="p-4 text-xl font-bold border-b text-blue-600">
+        {user?.role?.toUpperCase() === "SUPER_ADMIN" ? "Super Admin" :
+          user?.role?.toUpperCase() === "PLATFORM_ADMIN" ? "Platform Admin" : "School Admin"}
       </div>
 
       {/* Menu */}
@@ -33,6 +34,10 @@ export default function Sidebar() {
 
         {menu.map((item) => {
           const active = pathname === item.path;
+          const userRole = user?.role?.toUpperCase();
+          const hasAccess = item.roles.includes(userRole as string);
+
+          if (!hasAccess) return null;
 
           return (
             <Link

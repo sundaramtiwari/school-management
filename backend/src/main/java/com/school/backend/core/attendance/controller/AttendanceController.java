@@ -22,7 +22,7 @@ public class AttendanceController {
     private final AttendanceService attendanceService;
 
     @PostMapping("/bulk")
-    @PreAuthorize("hasAnyRole('SCHOOL_ADMIN', 'TEACHER')")
+    @PreAuthorize("hasAnyRole('SCHOOL_ADMIN', 'TEACHER', 'SUPER_ADMIN', 'PLATFORM_ADMIN')")
     public void markAttendanceBulk(
             @RequestParam @DateTimeFormat(iso = DateTimeFormat.ISO.DATE) LocalDate date,
             @RequestBody Map<Long, AttendanceStatus> attendanceMap) {
@@ -31,7 +31,7 @@ public class AttendanceController {
     }
 
     @GetMapping("/class/{classId}")
-    @PreAuthorize("hasAnyRole('SCHOOL_ADMIN', 'TEACHER')")
+    @PreAuthorize("hasAnyRole('SCHOOL_ADMIN', 'TEACHER', 'SUPER_ADMIN', 'PLATFORM_ADMIN')")
     public List<StudentAttendance> getAttendanceByClassAndDate(
             @PathVariable Long classId,
             @RequestParam String session,

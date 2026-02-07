@@ -34,7 +34,10 @@ export default function StaffPage() {
         active: true,
     });
 
-    const roles = currentUser?.role === "SUPER_ADMIN"
+    const currentRole = currentUser?.role?.toUpperCase();
+    const isHighLevelAdmin = currentRole === "SUPER_ADMIN" || currentRole === "PLATFORM_ADMIN";
+
+    const roles = isHighLevelAdmin
         ? ["PLATFORM_ADMIN", ...ROLES]
         : ROLES;
 
