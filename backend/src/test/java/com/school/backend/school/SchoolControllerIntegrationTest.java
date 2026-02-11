@@ -192,4 +192,31 @@ public class SchoolControllerIntegrationTest extends BaseAuthenticatedIntegratio
                 // login?
                 // Let's rely on success for now, or we can inject UserRepository to verify.
         }
+
+        @Test
+        void testSchoolAdmin_canAccessOwnSchool_viaGetAll() {
+                // 1. Create a school (will be done by super admin)
+                SchoolDto s = createSample("My Admin School", "MAS001", "Delhi");
+
+                // 2. Login as School Admin for this school
+                loginAsSchoolAdmin(s.getId());
+
+                // 3. Call GET /api/schools
+                ParameterizedTypeReference<PageResponse<SchoolDto>> ptr = new ParameterizedTypeReference<>() {
+                };
+                ResponseEntity<PageResponse<SchoolDto>> response = restTemplate.exchange(
+                                BASE,
+                                HttpMethod.GET,
+                                new HttpEntity<>(headers),
+                                ptr);
+
+                // 4. Verify Success and Content
+                assertEquals(HttpStatus.OK, response.getStatusCode());
+                PageResponse<SchoolDto> page = Objects.requireNonNull(response.getBody());
+
+                assertNotNull(page);
+                assertEquals(1, page.totalElements(), "School Admin should see exactly 1 school");
+                assertEquals(1, page.content().size());
+                assertEquals("MAS001", page.content().get(0).getSchoolCode());
+        }
 }

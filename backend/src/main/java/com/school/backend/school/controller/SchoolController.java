@@ -54,7 +54,7 @@ public class SchoolController {
      * Paginated list
      */
     @GetMapping
-    @PreAuthorize("hasAnyRole('SUPER_ADMIN', 'PLATFORM_ADMIN')")
+    @PreAuthorize("hasAnyRole('SUPER_ADMIN', 'PLATFORM_ADMIN', 'SCHOOL_ADMIN')")
     public ResponseEntity<PageResponse<SchoolDto>> getAll(Pageable pageable) {
         Page<SchoolDto> page = schoolService.listSchools(pageable);
         PageResponse<SchoolDto> response = PageResponseMapper.fromPage(page);

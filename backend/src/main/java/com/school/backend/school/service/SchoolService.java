@@ -16,6 +16,7 @@ import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
+import com.school.backend.user.security.SecurityUtil;
 import java.util.List;
 
 @Service
@@ -87,6 +88,12 @@ public class SchoolService {
      * Paginated listing returning Page<SchoolDto>
      */
     public Page<SchoolDto> listSchools(Pageable pageable) {
+        if (SecurityUtil.role() == UserRole.SCHOOL_ADMIN) {
+            Long schoolId = SecurityUtil.schoolId();
+            School school = schoolRepository.findById(schoolId)
+                    .orElseThrow(() -> new ResourceNotFoundException("School not found for current user"));
+            return new org.springframework.data.domain.PageImpl<>(List.of(SchoolMapper.toDto(school)), pageable, 1);
+        }
         return schoolRepository.findAll(pageable)
                 .map(SchoolMapper::toDto);
     }
