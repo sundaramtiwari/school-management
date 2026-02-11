@@ -65,13 +65,13 @@ public class SchoolController {
      * Get by schoolCode
      */
     @GetMapping("/{code}")
-    @PreAuthorize("hasAnyRole('SUPER_ADMIN', 'PLATFORM_ADMIN')")
+    @PreAuthorize("hasAnyRole('SUPER_ADMIN', 'PLATFORM_ADMIN', 'SCHOOL_ADMIN')")
     public ResponseEntity<SchoolDto> getByCode(@PathVariable String code) {
         return ResponseEntity.ok(schoolService.getByCode(code));
     }
 
     @GetMapping("/id/{id}")
-    @PreAuthorize("hasAnyRole('SUPER_ADMIN', 'PLATFORM_ADMIN')")
+    @PreAuthorize("hasAnyRole('SUPER_ADMIN', 'PLATFORM_ADMIN', 'SCHOOL_ADMIN')")
     public ResponseEntity<SchoolDto> getById(@PathVariable Long id) {
         return ResponseEntity.ok(schoolService.getById(id));
     }

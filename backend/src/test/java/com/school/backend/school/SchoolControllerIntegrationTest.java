@@ -219,4 +219,71 @@ public class SchoolControllerIntegrationTest extends BaseAuthenticatedIntegratio
                 assertEquals(1, page.content().size());
                 assertEquals("MAS001", page.content().get(0).getSchoolCode());
         }
+
+        @Test
+        void testSchoolAdmin_canAccessOwnSchool_viaGetById() {
+                SchoolDto s = createSample("My School", "MYS001", "Mumbai");
+                loginAsSchoolAdmin(s.getId());
+
+                ResponseEntity<SchoolDto> response = restTemplate.exchange(
+                                BASE + "/id/" + s.getId(),
+                                HttpMethod.GET,
+                                new HttpEntity<>(headers),
+                                SchoolDto.class);
+
+                assertEquals(HttpStatus.OK, response.getStatusCode());
+                SchoolDto body = Objects.requireNonNull(response.getBody());
+                assertEquals(s.getId(), body.getId());
+        }
+
+        @Test
+        void testSchoolAdmin_cannotAccessOtherSchool_viaGetById() {
+                SchoolDto s1 = createSample("School One", "SCH001", "City1");
+                SchoolDto s2 = createSample("School Two", "SCH002", "City2");
+
+                loginAsSchoolAdmin(s1.getId());
+
+                ResponseEntity<String> response = restTemplate.exchange(
+                                BASE + "/id/" + s2.getId(),
+                                HttpMethod.GET,
+                                new HttpEntity<>(headers),
+                                String.class);
+
+                // Expect 403 Forbidden (or 500 if AccessDeniedException is not handled
+                // globally, but usually 403)
+                // Spring Boot default error mapping for AccessDeniedException is 403
+                assertEquals(HttpStatus.FORBIDDEN, response.getStatusCode());
+        }
+
+        @Test
+        void testSchoolAdmin_canAccessOwnSchool_viaGetByCode() {
+                SchoolDto s = createSample("My Code School", "MCS001", "Pune");
+                loginAsSchoolAdmin(s.getId());
+
+                ResponseEntity<SchoolDto> response = restTemplate.exchange(
+                                BASE + "/" + s.getSchoolCode(),
+                                HttpMethod.GET,
+                                new HttpEntity<>(headers),
+                                SchoolDto.class);
+
+                assertEquals(HttpStatus.OK, response.getStatusCode());
+                SchoolDto body = Objects.requireNonNull(response.getBody());
+                assertEquals(s.getSchoolCode(), body.getSchoolCode());
+        }
+
+        @Test
+        void testSchoolAdmin_cannotAccessOtherSchool_viaGetByCode() {
+                SchoolDto s1 = createSample("Code School One", "CS100", "CityA");
+                SchoolDto s2 = createSample("Code School Two", "CS200", "CityB");
+
+                loginAsSchoolAdmin(s1.getId());
+
+                ResponseEntity<String> response = restTemplate.exchange(
+                                BASE + "/" + s2.getSchoolCode(),
+                                HttpMethod.GET,
+                                new HttpEntity<>(headers),
+                                String.class);
+
+                assertEquals(HttpStatus.FORBIDDEN, response.getStatusCode());
+        }
 }

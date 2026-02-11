@@ -33,7 +33,7 @@ export default function SchoolAdminDashboard() {
 
       // Load school info
       if (user?.schoolId) {
-        const schoolRes = await api.get(`/api/schools/${user.schoolId}`);
+        const schoolRes = await api.get(`/api/schools/id/${user.schoolId}`);
         setSchoolName(schoolRes.data.name || "Your School");
       }
 

@@ -108,11 +108,29 @@ public class SchoolService {
     public SchoolDto getByCode(String code) {
         School school = schoolRepository.findBySchoolCode(code)
                 .orElseThrow(() -> new ResourceNotFoundException("School not found with code: " + code));
-        return SchoolMapper.toDto(school);
 
+        if (SecurityUtil.role() == UserRole.SCHOOL_ADMIN) {
+            Long mySchoolId = SecurityUtil.schoolId();
+            if (!school.getId().equals(mySchoolId)) {
+                // For security, strictly forbid or just return as if not found/unauthorized
+                // Spring Security usually handles 403 if we threw AccessDeniedException
+                // but here we are in service layer.
+                throw new org.springframework.security.access.AccessDeniedException("Access denied to other school");
+            }
+        }
+
+        return SchoolMapper.toDto(school);
     }
 
     public SchoolDto getById(Long id) {
+        // Security check for SCHOOL_ADMIN
+        if (SecurityUtil.role() == UserRole.SCHOOL_ADMIN) {
+            Long mySchoolId = SecurityUtil.schoolId();
+            if (!id.equals(mySchoolId)) {
+                throw new org.springframework.security.access.AccessDeniedException("Access denied to other school");
+            }
+        }
+
         School school = schoolRepository.findById(id)
                 .orElseThrow(() -> new ResourceNotFoundException("School not found with id: " + id));
         return SchoolMapper.toDto(school);
