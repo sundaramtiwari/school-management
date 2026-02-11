@@ -8,7 +8,7 @@ export const transportApi = {
 
     // Pickup Points
     getPickupsByRoute: (routeId: number) =>
-        api.get(`/api/transport/pickup-points/by-route/${routeId}`),
+        api.get(`/api/transport/pickup-points/route/${routeId}`),
     createPickup: (data: {
         name: string;
         amount: number;

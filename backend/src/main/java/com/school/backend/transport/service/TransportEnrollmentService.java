@@ -134,4 +134,10 @@ public class TransportEnrollmentService {
                                 .active(e.isActive())
                                 .build();
         }
+
+        @Transactional(readOnly = true)
+        public java.util.Optional<TransportEnrollmentDto> getStudentEnrollment(Long studentId, String session) {
+                return enrollmentRepository.findByStudentIdAndSession(studentId, session)
+                                .map(this::mapToDto);
+        }
 }

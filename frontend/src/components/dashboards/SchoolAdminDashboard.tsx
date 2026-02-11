@@ -4,9 +4,11 @@ import { useEffect, useState } from "react";
 import { api } from "@/lib/api";
 import { useAuth } from "@/context/AuthContext";
 import { Skeleton } from "@/components/ui/Skeleton";
+import { useActiveSession } from "@/hooks/useActiveSession";
 
 export default function SchoolAdminDashboard() {
   const { user } = useAuth();
+  const { session: activeSession, loading: sessionLoading } = useActiveSession();
   const [stats, setStats] = useState({
     students: 0,
     classes: 0,
@@ -19,41 +21,37 @@ export default function SchoolAdminDashboard() {
   const [schoolName, setSchoolName] = useState("Your School");
 
   useEffect(() => {
-    loadDashboardData();
-  }, []);
+    if (!sessionLoading && activeSession) loadDashboardData();
+  }, [sessionLoading, activeSession]);
 
   async function loadDashboardData() {
     try {
       setLoading(true);
-      
+
       // Load school info
       if (user?.schoolId) {
         const schoolRes = await api.get(`/api/schools/${user.schoolId}`);
         setSchoolName(schoolRes.data.name || "Your School");
       }
 
-      // Load stats (parallel requests)
-      const [studentsRes, classesRes, teachersRes, attendanceRes, feesRes] = await Promise.all([
+      // Load stats (parallel requests — allSettled so one failure doesn't break all)
+      const results = await Promise.allSettled([
         api.get('/api/students?size=1'),
         api.get('/api/classes?size=1'),
         api.get('/api/users?role=TEACHER&size=1'),
         api.get('/api/attendance/stats/today'),
-        api.get('/api/fees/summary/stats'),
-      ]).catch(() => [
-        { data: { totalElements: 0 } },
-        { data: { totalElements: 0 } },
-        { data: { totalElements: 0 } },
-        { data: { percentage: 0 } },
-        { data: { pending: 0, collected: 0 } },
+        api.get(`/api/fees/summary/stats?session=${activeSession}`),
       ]);
 
+      const val = (idx: number) => results[idx].status === 'fulfilled' ? (results[idx] as any).value.data : null;
+
       setStats({
-        students: studentsRes.data?.totalElements || 0,
-        classes: classesRes.data?.totalElements || 0,
-        teachers: teachersRes.data?.totalElements || 0,
-        attendance: attendanceRes.data?.percentage || 0,
-        feesPending: feesRes.data?.pending || 0,
-        feesCollected: feesRes.data?.collected || 0,
+        students: val(0)?.totalElements || 0,
+        classes: val(1)?.totalElements || 0,
+        teachers: val(2)?.totalElements || 0,
+        attendance: val(3)?.percentage || 0,
+        feesPending: val(4)?.pending || 0,
+        feesCollected: val(4)?.collected || 0,
       });
     } catch (err) {
       console.error("Failed to load dashboard", err);
@@ -63,86 +61,98 @@ export default function SchoolAdminDashboard() {
   }
 
   const cards = [
-    { 
-      label: "Total Students", 
-      value: stats.students, 
-      color: "bg-blue-500", 
+    {
+      label: "Total Students",
+      value: stats.students,
+      color: "bg-blue-500",
       icon: "👨‍🎓",
       description: "Enrolled students"
     },
-    { 
-      label: "Classes", 
-      value: stats.classes, 
-      color: "bg-green-500", 
+    {
+      label: "Classes",
+      value: stats.classes,
+      color: "bg-green-500",
       icon: "📚",
       description: "Active classes"
     },
-    { 
-      label: "Teachers", 
-      value: stats.teachers, 
-      color: "bg-purple-500", 
+    {
+      label: "Teachers",
+      value: stats.teachers,
+      color: "bg-purple-500",
       icon: "👨‍🏫",
       description: "Teaching staff"
     },
-    { 
-      label: "Today's Attendance", 
-      value: `${stats.attendance}%`, 
-      color: "bg-yellow-500", 
+    {
+      label: "Today's Attendance",
+      value: `${stats.attendance}%`,
+      color: "bg-yellow-500",
       icon: "✓",
       description: "Present today"
     },
-    { 
-      label: "Fees Collected", 
-      value: `₹ ${stats.feesCollected.toLocaleString('en-IN')}`, 
-      color: "bg-emerald-500", 
+    {
+      label: "Fees Collected",
+      value: `₹ ${stats.feesCollected.toLocaleString('en-IN')}`,
+      color: "bg-emerald-500",
       icon: "💰",
       description: "This month"
     },
-    { 
-      label: "Pending Dues", 
-      value: `₹ ${stats.feesPending.toLocaleString('en-IN')}`, 
-      color: "bg-red-500", 
+    {
+      label: "Pending Dues",
+      value: `₹ ${stats.feesPending.toLocaleString('en-IN')}`,
+      color: "bg-red-500",
       icon: "⏰",
       description: "Outstanding"
     },
   ];
 
   const quickActions = [
-    { 
-      title: "Enroll Student", 
-      icon: "➕", 
-      color: "blue",
+    {
+      title: "Enroll Student",
+      icon: "➕",
+      hoverBorder: "hover:border-blue-500",
+      hoverBg: "hover:bg-blue-50",
+      hoverText: "group-hover:text-blue-600",
       href: "/students"
     },
-    { 
-      title: "Create Teacher", 
-      icon: "👥", 
-      color: "purple",
+    {
+      title: "Create Teacher",
+      icon: "👥",
+      hoverBorder: "hover:border-purple-500",
+      hoverBg: "hover:bg-purple-50",
+      hoverText: "group-hover:text-purple-600",
       href: "/staff"
     },
-    { 
-      title: "Collect Fee", 
-      icon: "💵", 
-      color: "green",
+    {
+      title: "Collect Fee",
+      icon: "💵",
+      hoverBorder: "hover:border-green-500",
+      hoverBg: "hover:bg-green-50",
+      hoverText: "group-hover:text-green-600",
       href: "/fees/collect"
     },
-    { 
-      title: "Mark Attendance", 
-      icon: "✓", 
-      color: "yellow",
+    {
+      title: "Mark Attendance",
+      icon: "✓",
+      hoverBorder: "hover:border-yellow-500",
+      hoverBg: "hover:bg-yellow-50",
+      hoverText: "group-hover:text-yellow-600",
       href: "/attendance"
     },
-    { 
-      title: "View Defaulters", 
-      icon: "⚠️", 
-      color: "red",
-      href: "/fees/defaulters"
+    {
+      title: "Manage Transport",
+      icon: "🚌",
+      hoverBorder: "hover:border-orange-500",
+      hoverBg: "hover:bg-orange-50",
+      hoverText: "group-hover:text-orange-600",
+      href: "/transport"
     },
-    { 
-      title: "Generate Report", 
-      icon: "📊", 
-      color: "indigo",
-      href: "/reports"
+    {
+      title: "Fee Structures",
+      icon: "📊",
+      hoverBorder: "hover:border-indigo-500",
+      hoverBg: "hover:bg-indigo-50",
+      hoverText: "group-hover:text-indigo-600",
+      href: "/fees/structures"
     },
   ];
 
@@ -157,7 +167,7 @@ export default function SchoolAdminDashboard() {
           <div>
             <h1 className="text-3xl font-bold">{schoolName}</h1>
             <p className="text-blue-100 mt-1">School Administration Dashboard</p>
-            <p className="text-blue-200 text-sm mt-1">Session: 2024-25</p>
+            <p className="text-blue-200 text-sm mt-1">Session: {activeSession || "Loading..."}</p>
           </div>
         </div>
       </header>
@@ -198,13 +208,13 @@ export default function SchoolAdminDashboard() {
                 key={i}
                 onClick={() => window.location.href = action.href}
                 className={`
-                  p-4 rounded-xl border-2 hover:border-${action.color}-500 
-                  hover:bg-${action.color}-50 transition-all text-left group
+                  p-4 rounded-xl border-2 ${action.hoverBorder} 
+                  ${action.hoverBg} transition-all text-left group
                   bg-gray-50 hover:shadow-md
                 `}
               >
                 <span className="block text-2xl mb-2">{action.icon}</span>
-                <span className={`font-semibold text-gray-700 group-hover:text-${action.color}-600`}>
+                <span className={`font-semibold text-gray-700 ${action.hoverText}`}>
                   {action.title}
                 </span>
               </button>
@@ -227,7 +237,7 @@ export default function SchoolAdminDashboard() {
                 </div>
               </div>
             )}
-            
+
             {stats.attendance < 80 && (
               <div className="flex gap-3 p-4 bg-yellow-50 text-yellow-800 rounded-lg border border-yellow-100">
                 <span className="text-xl">📉</span>

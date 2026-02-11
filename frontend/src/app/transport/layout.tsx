@@ -3,7 +3,7 @@
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 
-export default function FeesLayout({
+export default function TransportLayout({
     children,
 }: {
     children: React.ReactNode;
@@ -11,9 +11,8 @@ export default function FeesLayout({
     const pathname = usePathname();
 
     const tabs = [
-        { name: "Dashboard", path: "/fees" },
-        { name: "Structures", path: "/fees/structures" },
-        { name: "Collect Fees", path: "/fees/collect" },
+        { name: "Routes & Stops", path: "/transport" },
+        { name: "Student Enrollment", path: "/transport/enrollment" },
     ];
 
     return (

@@ -19,4 +19,14 @@ public class TransportEnrollmentController {
     public ResponseEntity<TransportEnrollmentDto> enroll(@RequestBody TransportEnrollmentDto dto) {
         return ResponseEntity.ok(enrollmentService.enrollStudent(dto));
     }
+
+    @GetMapping("/student/{studentId}")
+    @PreAuthorize("hasAnyRole('SUPER_ADMIN', 'PLATFORM_ADMIN', 'SCHOOL_ADMIN', 'ACCOUNTANT', 'TEACHER')")
+    public ResponseEntity<TransportEnrollmentDto> getByStudent(
+            @PathVariable Long studentId,
+            @RequestParam String session) {
+        return enrollmentService.getStudentEnrollment(studentId, session)
+                .map(ResponseEntity::ok)
+                .orElse(ResponseEntity.noContent().build());
+    }
 }

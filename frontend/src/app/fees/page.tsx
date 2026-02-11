@@ -3,8 +3,10 @@
 import { useEffect, useState } from "react";
 import { api } from "@/lib/api";
 import { Skeleton } from "@/components/ui/Skeleton";
+import { useActiveSession } from "@/hooks/useActiveSession";
 
 export default function FeesDashboard() {
+    const { session: activeSession, loading: sessionLoading } = useActiveSession();
     const [stats, setStats] = useState({
         todayCollection: 0,
         pendingDues: 0,
@@ -14,11 +16,14 @@ export default function FeesDashboard() {
     const [loading, setLoading] = useState(true);
 
     useEffect(() => {
+        if (!sessionLoading && activeSession) {
+            loadStats();
+        }
         async function loadStats() {
             try {
                 setLoading(true);
                 const [statsRes, paymentsRes] = await Promise.all([
-                    api.get("/api/fees/summary/stats?session=2024-25"),
+                    api.get(`/api/fees/summary/stats?session=${activeSession}`),
                     api.get("/api/fees/payments/recent")
                 ]);
                 setStats(statsRes.data);

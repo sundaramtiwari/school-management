@@ -221,7 +221,7 @@ export default function TransportEnrollmentPage() {
                                 <select
                                     className="input-ref font-bold border-blue-200 bg-blue-50/20"
                                     value={selectedPickupId}
-                                    onChange={e => setSelectedPickupId(e.target.value)}
+                                    onChange={e => setSelectedPickupId(e.target.value ? Number(e.target.value) : "")}
                                 >
                                     <option value="">Select Stop & Fee</option>
                                     {pickups.map(p => (
