@@ -23,7 +23,7 @@ public class FeeStructure extends TenantEntity {
     @EqualsAndHashCode.Include
     private Long id;
 
-    @Column(name = "class_id", nullable = false)
+    @Column(name = "class_id")
     private Long classId;
 
     @Column(nullable = false)

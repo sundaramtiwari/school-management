@@ -53,12 +53,7 @@ public class FeeIntegrationTest extends BaseAuthenticatedIntegrationTest {
 
         @BeforeEach
         void setupFeeTest() {
-                feePaymentRepository.deleteAllInBatch();
-                assignmentRepository.deleteAllInBatch();
-                feeStructureRepository.deleteAllInBatch();
-                feeTypeRepository.deleteAllInBatch();
-                studentRepository.deleteAllInBatch();
-                classRepository.deleteAllInBatch();
+                cleanup();
 
                 // Ensure we are logged in as a school admin
                 testSchool = schoolRepository.findBySchoolCode("SPS001")
@@ -275,5 +270,19 @@ public class FeeIntegrationTest extends BaseAuthenticatedIntegrationTest {
                 assertNotNull(body2);
                 assertEquals(1, body2.length);
                 assertEquals(777, body2[0].getAmountPaid());
+        }
+
+        private void cleanup() {
+                feePaymentRepository.deleteAllInBatch();
+                assignmentRepository.deleteAllInBatch();
+                feeStructureRepository.deleteAllInBatch();
+                feeTypeRepository.deleteAllInBatch();
+                studentRepository.deleteAllInBatch();
+                classRepository.deleteAllInBatch();
+        }
+
+        @org.junit.jupiter.api.AfterEach
+        void tearDown() {
+                cleanup();
         }
 }

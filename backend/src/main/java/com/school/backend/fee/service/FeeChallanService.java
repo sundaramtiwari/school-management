@@ -41,7 +41,7 @@ public class FeeChallanService {
     private static final int GRACE_PERIOD_DAYS = 7;
 
     @Transactional(readOnly = true)
-    public byte[] generateChallan(Long studentId, String session, Long schoolId) {
+    public byte[] generateChallan(Long studentId, String session, Long schoolId, int months) {
         Student student = studentRepository.findById(studentId)
                 .orElseThrow(() -> new ResourceNotFoundException("Student not found: " + studentId));
 
@@ -67,9 +67,9 @@ public class FeeChallanService {
 
             // Build the challan
             addSchoolHeader(document, school);
-            addChallanTitle(document, session);
+            addChallanTitle(document, session, months);
             addStudentDetails(document, student);
-            int totalAmount = addFeeBreakdown(document, assignments);
+            int totalAmount = addFeeBreakdown(document, assignments, months);
             addPaymentDetails(document, session, totalAmount);
             addFooter(document, school);
 
@@ -125,9 +125,13 @@ public class FeeChallanService {
         document.add(new Paragraph(" "));
     }
 
-    private void addChallanTitle(Document document, String session) throws DocumentException {
+    private void addChallanTitle(Document document, String session, int months) throws DocumentException {
         Font titleFont = FontFactory.getFont(FontFactory.HELVETICA_BOLD, 14, Color.BLACK);
-        Paragraph title = new Paragraph("FEE PAYMENT CHALLAN", titleFont);
+        String titleStr = "FEE PAYMENT CHALLAN";
+        if (months > 1) {
+            titleStr += " - ADVANCE (" + months + " MONTHS)";
+        }
+        Paragraph title = new Paragraph(titleStr, titleFont);
         title.setAlignment(Element.ALIGN_CENTER);
         document.add(title);
 
@@ -171,32 +175,38 @@ public class FeeChallanService {
         document.add(new Paragraph(" "));
     }
 
-    private int addFeeBreakdown(Document document, List<StudentFeeAssignment> assignments) throws DocumentException {
+    private int addFeeBreakdown(Document document, List<StudentFeeAssignment> assignments, int monthsToPay)
+            throws DocumentException {
         Font headerFont = FontFactory.getFont(FontFactory.HELVETICA_BOLD, 11, Color.WHITE);
         Font contentFont = FontFactory.getFont(FontFactory.HELVETICA, 10);
 
-        PdfPTable table = new PdfPTable(3);
+        PdfPTable table = new PdfPTable(4);
         table.setWidthPercentage(100);
-        table.setWidths(new float[] { 3f, 1.5f, 1.5f });
+        table.setWidths(new float[] { 3f, 1.2f, 0.8f, 1.5f });
 
         // Header Row
         PdfPCell headerCell1 = new PdfPCell(new Phrase("Fee Type", headerFont));
-        headerCell1.setBackgroundColor(new Color(41, 128, 185)); // Professional blue
+        headerCell1.setBackgroundColor(new Color(41, 128, 185));
         headerCell1.setPadding(8);
-        headerCell1.setHorizontalAlignment(Element.ALIGN_LEFT);
         table.addCell(headerCell1);
 
         PdfPCell headerCell2 = new PdfPCell(new Phrase("Frequency", headerFont));
         headerCell2.setBackgroundColor(new Color(41, 128, 185));
-        headerCell2.setPadding(8);
         headerCell2.setHorizontalAlignment(Element.ALIGN_CENTER);
+        headerCell2.setPadding(8);
         table.addCell(headerCell2);
 
-        PdfPCell headerCell3 = new PdfPCell(new Phrase("Amount (₹)", headerFont));
+        PdfPCell headerCell3 = new PdfPCell(new Phrase("Qty", headerFont));
         headerCell3.setBackgroundColor(new Color(41, 128, 185));
+        headerCell3.setHorizontalAlignment(Element.ALIGN_CENTER);
         headerCell3.setPadding(8);
-        headerCell3.setHorizontalAlignment(Element.ALIGN_RIGHT);
         table.addCell(headerCell3);
+
+        PdfPCell headerCell4 = new PdfPCell(new Phrase("Subtotal (₹)", headerFont));
+        headerCell4.setBackgroundColor(new Color(41, 128, 185));
+        headerCell4.setHorizontalAlignment(Element.ALIGN_RIGHT);
+        headerCell4.setPadding(8);
+        table.addCell(headerCell4);
 
         // Fee Rows
         int totalAmount = 0;
@@ -205,40 +215,35 @@ public class FeeChallanService {
                     .orElse(null);
 
             if (structure != null && structure.isActive()) {
+                int multiplier = 1;
+                if (structure.getFrequency() == FeeFrequency.MONTHLY) {
+                    multiplier = monthsToPay;
+                } else if (structure.getFrequency() == FeeFrequency.QUARTERLY) {
+                    multiplier = (int) Math.ceil((double) monthsToPay / 3);
+                } else if (structure.getFrequency() == FeeFrequency.HALF_YEARLY) {
+                    multiplier = (int) Math.ceil((double) monthsToPay / 6);
+                }
+
+                int subtotal = structure.getAmount() * multiplier;
+
                 // Fee Type
-                PdfPCell cell1 = new PdfPCell(new Phrase(structure.getFeeType().getName(), contentFont));
-                cell1.setPadding(6);
-                cell1.setBorder(Rectangle.NO_BORDER);
-                cell1.setBorderWidthBottom(0.5f);
-                cell1.setBorderColorBottom(Color.LIGHT_GRAY);
-                table.addCell(cell1);
-
+                table.addCell(createTableCell(structure.getFeeType().getName(), contentFont, Element.ALIGN_LEFT));
                 // Frequency
-                PdfPCell cell2 = new PdfPCell(new Phrase(formatFrequency(structure.getFrequency()), contentFont));
-                cell2.setPadding(6);
-                cell2.setHorizontalAlignment(Element.ALIGN_CENTER);
-                cell2.setBorder(Rectangle.NO_BORDER);
-                cell2.setBorderWidthBottom(0.5f);
-                cell2.setBorderColorBottom(Color.LIGHT_GRAY);
-                table.addCell(cell2);
-
+                table.addCell(
+                        createTableCell(formatFrequency(structure.getFrequency()), contentFont, Element.ALIGN_CENTER));
+                // Qty (Months/Units)
+                table.addCell(createTableCell(String.valueOf(multiplier), contentFont, Element.ALIGN_CENTER));
                 // Amount
-                PdfPCell cell3 = new PdfPCell(new Phrase(formatIndianRupees(structure.getAmount()), contentFont));
-                cell3.setPadding(6);
-                cell3.setHorizontalAlignment(Element.ALIGN_RIGHT);
-                cell3.setBorder(Rectangle.NO_BORDER);
-                cell3.setBorderWidthBottom(0.5f);
-                cell3.setBorderColorBottom(Color.LIGHT_GRAY);
-                table.addCell(cell3);
+                table.addCell(createTableCell(formatIndianRupees(subtotal), contentFont, Element.ALIGN_RIGHT));
 
-                totalAmount += structure.getAmount();
+                totalAmount += subtotal;
             }
         }
 
         // Total Row
         Font totalFont = FontFactory.getFont(FontFactory.HELVETICA_BOLD, 11);
-        PdfPCell totalLabelCell = new PdfPCell(new Phrase("Total Amount", totalFont));
-        totalLabelCell.setColspan(2);
+        PdfPCell totalLabelCell = new PdfPCell(new Phrase("Grand Total", totalFont));
+        totalLabelCell.setColspan(3);
         totalLabelCell.setPadding(8);
         totalLabelCell.setBackgroundColor(new Color(236, 240, 241));
         totalLabelCell.setHorizontalAlignment(Element.ALIGN_RIGHT);
@@ -254,6 +259,16 @@ public class FeeChallanService {
         document.add(new Paragraph(" "));
 
         return totalAmount;
+    }
+
+    private PdfPCell createTableCell(String text, Font font, int alignment) {
+        PdfPCell cell = new PdfPCell(new Phrase(text, font));
+        cell.setPadding(6);
+        cell.setHorizontalAlignment(alignment);
+        cell.setBorder(Rectangle.NO_BORDER);
+        cell.setBorderWidthBottom(0.5f);
+        cell.setBorderColorBottom(Color.LIGHT_GRAY);
+        return cell;
     }
 
     private void addPaymentDetails(Document document, String session, int totalAmount) throws DocumentException {

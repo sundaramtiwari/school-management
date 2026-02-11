@@ -29,6 +29,7 @@ export default function FeeCollectPage() {
     const [paymentAmount, setPaymentAmount] = useState("");
     const [paymentMode, setPaymentMode] = useState("CASH");
     const [remarks, setRemarks] = useState("");
+    const [months, setMonths] = useState(1);
 
     /* -------- Initial Load -------- */
     useEffect(() => {
@@ -136,11 +137,11 @@ export default function FeeCollectPage() {
         try {
             const cls = classes.find(c => c.id == selectedClass);
             const session = cls ? cls.session : "2024-25";
-            const res = await api.get(`/api/fees/challan/student/${selectedStudent}?session=${session}`, { responseType: 'blob' });
+            const res = await api.get(`/api/fees/challan/student/${selectedStudent}?session=${session}&months=${months}`, { responseType: 'blob' });
             const url = window.URL.createObjectURL(new Blob([res.data]));
             const link = document.createElement('a');
             link.href = url;
-            link.setAttribute('download', `fee_challan_${selectedStudent}.pdf`);
+            link.setAttribute('download', `fee_challan_${selectedStudent}_${months}m.pdf`);
             document.body.appendChild(link);
             link.click();
             document.body.removeChild(link);
@@ -192,12 +193,26 @@ export default function FeeCollectPage() {
                                 <div className="text-gray-400">Paid: <span className="text-green-400 ml-1">₹ {summary.totalPaid}</span></div>
                             </div>
 
-                            <button
-                                onClick={downloadChallan}
-                                className="mt-8 w-full bg-white/10 hover:bg-white/20 text-white py-3 rounded-xl font-bold transition-all flex items-center justify-center gap-2 border border-white/5"
-                            >
-                                📄 Generate Academic Challan
-                            </button>
+                            <div className="mt-8 pt-6 border-t border-white/10 space-y-4">
+                                <div>
+                                    <label className="block text-[10px] font-black uppercase text-gray-400 mb-1.5 ml-1">Billing Duration (Months)</label>
+                                    <select
+                                        className="w-full bg-white/5 border border-white/10 rounded-xl px-4 py-2 text-sm font-bold text-white focus:outline-none focus:ring-1 focus:ring-blue-500"
+                                        value={months}
+                                        onChange={e => setMonths(Number(e.target.value))}
+                                    >
+                                        {[1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12].map(m => (
+                                            <option key={m} value={m} className="bg-gray-900 text-white">{m} Month{m > 1 ? 's' : ''}</option>
+                                        ))}
+                                    </select>
+                                </div>
+                                <button
+                                    onClick={downloadChallan}
+                                    className="w-full bg-white/10 hover:bg-white/20 text-white py-3 rounded-xl font-bold transition-all flex items-center justify-center gap-2 border border-white/5"
+                                >
+                                    📄 Generate Academic Challan
+                                </button>
+                            </div>
                         </div>
 
                         {/* Payment Entry */}

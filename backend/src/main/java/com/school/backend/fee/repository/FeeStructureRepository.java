@@ -7,4 +7,6 @@ import java.util.List;
 
 public interface FeeStructureRepository extends JpaRepository<FeeStructure, Long> {
     List<FeeStructure> findByClassIdAndSessionAndSchoolId(Long classId, String session, Long schoolId);
+
+    List<FeeStructure> findByFeeTypeIdAndSessionAndClassIdIsNull(Long feeTypeId, String session);
 }

@@ -1,0 +1,137 @@
+package com.school.backend.transport.service;
+
+import com.school.backend.common.tenant.TenantContext;
+import com.school.backend.common.exception.ResourceNotFoundException;
+import com.school.backend.core.student.entity.Student;
+import com.school.backend.core.student.repository.StudentRepository;
+import com.school.backend.fee.entity.FeeStructure;
+import com.school.backend.fee.entity.FeeType;
+import com.school.backend.fee.entity.StudentFeeAssignment;
+import com.school.backend.fee.repository.FeeStructureRepository;
+import com.school.backend.fee.repository.FeeTypeRepository;
+import com.school.backend.fee.repository.StudentFeeAssignmentRepository;
+import com.school.backend.transport.dto.TransportEnrollmentDto;
+import com.school.backend.transport.entity.PickupPoint;
+import com.school.backend.transport.entity.TransportEnrollment;
+import com.school.backend.transport.repository.PickupPointRepository;
+import com.school.backend.transport.repository.TransportEnrollmentRepository;
+import lombok.RequiredArgsConstructor;
+import org.springframework.stereotype.Service;
+import org.springframework.transaction.annotation.Transactional;
+
+@Service
+@RequiredArgsConstructor
+public class TransportEnrollmentService {
+
+        private final TransportEnrollmentRepository enrollmentRepository;
+        private final PickupPointRepository pickupPointRepository;
+        private final StudentRepository studentRepository;
+        private final FeeTypeRepository feeTypeRepository;
+        private final FeeStructureRepository feeStructureRepository;
+        private final StudentFeeAssignmentRepository assignmentRepository;
+
+        @Transactional
+        public TransportEnrollmentDto enrollStudent(TransportEnrollmentDto dto) {
+                // 1. Validate Student & Class Enrollment
+                Student student = studentRepository.findById(dto.getStudentId())
+                                .orElseThrow(() -> new ResourceNotFoundException(
+                                                "Student not found: " + dto.getStudentId()));
+
+                if (student.getCurrentClass() == null) {
+                        throw new IllegalStateException(
+                                        "Student must be assigned to a class before transport enrollment.");
+                }
+
+                PickupPoint pickupPoint = pickupPointRepository.findById(dto.getPickupPointId())
+                                .orElseThrow(() -> new ResourceNotFoundException(
+                                                "Pickup point not found: " + dto.getPickupPointId()));
+
+                // 2. Create/Update Enrollment
+                TransportEnrollment enrollment = enrollmentRepository
+                                .findByStudentIdAndSession(dto.getStudentId(), dto.getSession())
+                                .orElse(new TransportEnrollment());
+
+                enrollment.setStudentId(dto.getStudentId());
+                enrollment.setPickupPoint(pickupPoint);
+                enrollment.setSession(dto.getSession());
+                enrollment.setActive(true);
+                enrollment.setSchoolId(TenantContext.getSchoolId());
+                enrollment = enrollmentRepository.save(enrollment);
+
+                // 3. Fee Integration
+                ensureFeeAssigned(student, pickupPoint, dto.getSession());
+
+                return mapToDto(enrollment);
+        }
+
+        private void ensureFeeAssigned(Student student, PickupPoint pp, String session) {
+                // Get or Create TRANSPORT FeeType
+                FeeType transportType = getOrCreateTransportFeeType();
+
+                // Get or Create FeeStructure for this PickupPoint
+                // We use the pickupPointId in a hidden way or just name match?
+                // Better to use a specific convention: "Transport - [RouteName] - [PointName]"
+
+                // Find existing structure for this specific pickup point in this session
+                // Since we refactored classId to be nullable, we can find a structure where
+                // classId IS NULL
+                FeeStructure structure = feeStructureRepository
+                                .findByFeeTypeIdAndSessionAndClassIdIsNull(transportType.getId(), session)
+                                .stream()
+                                .filter(fs -> fs.getAmount().equals(pp.getAmount())
+                                                && fs.getFrequency().equals(pp.getFrequency()))
+                                .findFirst()
+                                .orElseGet(() -> {
+                                        FeeStructure fs = FeeStructure.builder()
+                                                        .feeType(transportType)
+                                                        .session(session)
+                                                        .amount(pp.getAmount())
+                                                        .frequency(pp.getFrequency())
+                                                        .classId(null) // Global fee
+                                                        .active(true)
+                                                        .schoolId(TenantContext.getSchoolId())
+                                                        .build();
+                                        return feeStructureRepository.save(fs);
+                                });
+
+                // Assign to student if not already assigned
+                boolean alreadyAssigned = assignmentRepository.existsByStudentIdAndFeeStructureIdAndSession(
+                                student.getId(), structure.getId(), session);
+
+                if (!alreadyAssigned) {
+                        StudentFeeAssignment assignment = StudentFeeAssignment.builder()
+                                        .studentId(student.getId())
+                                        .feeStructureId(structure.getId())
+                                        .session(session)
+                                        .active(true)
+                                        .schoolId(TenantContext.getSchoolId())
+                                        .build();
+                        assignmentRepository.save(assignment);
+                }
+        }
+
+        private FeeType getOrCreateTransportFeeType() {
+                return feeTypeRepository.findAll().stream()
+                                .filter(t -> t.getName().equalsIgnoreCase("TRANSPORT"))
+                                .findFirst()
+                                .orElseGet(() -> {
+                                        FeeType t = FeeType.builder()
+                                                        .name("TRANSPORT")
+                                                        .description("Transport / Bus Fees")
+                                                        .active(true)
+                                                        .schoolId(TenantContext.getSchoolId())
+                                                        .build();
+                                        return feeTypeRepository.save(t);
+                                });
+        }
+
+        private TransportEnrollmentDto mapToDto(TransportEnrollment e) {
+                return TransportEnrollmentDto.builder()
+                                .id(e.getId())
+                                .studentId(e.getStudentId())
+                                .pickupPointId(e.getPickupPoint().getId())
+                                .session(e.getSession())
+                                .active(e.isActive())
+                                .build();
+        }
+}

@@ -27,9 +27,10 @@ public class FeeChallanController {
         @PreAuthorize("hasAnyRole('SCHOOL_ADMIN', 'ACCOUNTANT', 'SUPER_ADMIN')")
         public ResponseEntity<byte[]> downloadChallan(
                         @PathVariable Long studentId,
-                        @RequestParam String session) {
+                        @RequestParam String session,
+                        @RequestParam(defaultValue = "1") Integer months) {
 
-                byte[] pdf = challanService.generateChallan(studentId, session, SecurityUtil.schoolId());
+                byte[] pdf = challanService.generateChallan(studentId, session, SecurityUtil.schoolId(), months);
 
                 return ResponseEntity.ok()
                                 .header(HttpHeaders.CONTENT_DISPOSITION,

@@ -166,13 +166,17 @@ public class FeeSummaryService {
                 }
 
                 if (frequency == FeeFrequency.QUARTERLY) {
-                        // 1-3 months = 1 quarter
-                        // 4-6 months = 2 quarters
+                        // 1-3 months = 1 quarter, 4-6 = 2, etc.
                         return (int) Math.ceil((double) monthsPassed / 3);
                 }
 
                 if (frequency == FeeFrequency.HALF_YEARLY) {
+                        // 1-6 months = 1, 7-12 = 2
                         return (int) Math.ceil((double) monthsPassed / 6);
+                }
+
+                if (frequency == FeeFrequency.ANNUALLY) {
+                        return 1;
                 }
 
                 return 1;
