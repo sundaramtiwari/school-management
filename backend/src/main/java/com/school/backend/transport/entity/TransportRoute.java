@@ -22,4 +22,15 @@ public class TransportRoute extends TenantEntity {
     private String name;
 
     private String description;
+
+    @Column(nullable = false)
+    @Builder.Default
+    private Integer capacity = 30;
+
+    @Column(nullable = false)
+    @Builder.Default
+    private Integer currentStrength = 0;
+
+    @Builder.Default
+    private boolean active = true;
 }

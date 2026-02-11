@@ -23,6 +23,7 @@ public class TransportRouteService {
         TransportRoute route = TransportRoute.builder()
                 .name(dto.getName())
                 .description(dto.getDescription())
+                .capacity(dto.getCapacity() != null ? dto.getCapacity() : 30)
                 .schoolId(TenantContext.getSchoolId())
                 .build();
         route = routeRepository.save(route);
@@ -32,8 +33,19 @@ public class TransportRouteService {
     @Transactional(readOnly = true)
     public List<TransportRouteDto> getAllRoutes() {
         return routeRepository.findAll().stream()
+                .filter(TransportRoute::isActive)
                 .map(this::mapToDto)
                 .collect(Collectors.toList());
+    }
+
+    @Transactional
+    public void deleteRoute(Long id) {
+        TransportRoute route = routeRepository.findById(id)
+                .orElseThrow(() -> new ResourceNotFoundException("Route not found"));
+
+        // Soft delete
+        route.setActive(false);
+        routeRepository.save(route);
     }
 
     private TransportRouteDto mapToDto(TransportRoute route) {
@@ -41,6 +53,8 @@ public class TransportRouteService {
                 .id(route.getId())
                 .name(route.getName())
                 .description(route.getDescription())
+                .capacity(route.getCapacity())
+                .currentStrength(route.getCurrentStrength())
                 .build();
     }
 }

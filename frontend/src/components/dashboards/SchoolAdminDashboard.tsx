@@ -16,6 +16,9 @@ export default function SchoolAdminDashboard() {
     attendance: 0,
     feesPending: 0,
     feesCollected: 0,
+    transportCount: 0,
+    feePendingCount: 0,
+    upcomingExams: [] as any[],
   });
   const [loading, setLoading] = useState(true);
   const [schoolName, setSchoolName] = useState("Your School");
@@ -34,24 +37,25 @@ export default function SchoolAdminDashboard() {
         setSchoolName(schoolRes.data.name || "Your School");
       }
 
-      // Load stats (parallel requests — allSettled so one failure doesn't break all)
-      const results = await Promise.allSettled([
-        api.get('/api/students?size=1'),
-        api.get('/api/classes?size=1'),
-        api.get('/api/users?role=TEACHER&size=1'),
-        api.get('/api/attendance/stats/today'),
-        api.get(`/api/fees/summary/stats?session=${activeSession}`),
+      // Load stats via new dedicated endpoint
+      const [results, classCountRes] = await Promise.all([
+        api.get(`/api/dashboard/school-admin/stats?session=${activeSession}`),
+        api.get('/api/classes?size=1'), // Classes still separate as they are global-ish
       ]);
 
-      const val = (idx: number) => results[idx].status === 'fulfilled' ? (results[idx] as any).value.data : null;
+      const data = results.data;
+      const classData = classCountRes.data;
 
       setStats({
-        students: val(0)?.totalElements || 0,
-        classes: val(1)?.totalElements || 0,
-        teachers: val(2)?.totalElements || 0,
-        attendance: val(3)?.percentage || 0,
-        feesPending: val(4)?.pending || 0,
-        feesCollected: val(4)?.collected || 0,
+        students: data.totalStudents || 0,
+        classes: classData?.totalElements || 0,
+        teachers: data.totalTeachers || 0,
+        attendance: data.attendancePercentage || 0,
+        feesPending: data.totalFeesPending || 0, // Should be amount or adapted
+        feesCollected: data.totalFeesCollected || 0,
+        transportCount: data.transportCount || 0,
+        feePendingCount: data.feePendingCount || 0,
+        upcomingExams: data.upcomingExams || [],
       });
     } catch (err) {
       console.error("Failed to load dashboard", err);
@@ -69,11 +73,11 @@ export default function SchoolAdminDashboard() {
       description: "Enrolled students"
     },
     {
-      label: "Classes",
-      value: stats.classes,
-      color: "bg-green-500",
-      icon: "📚",
-      description: "Active classes"
+      label: "Transport Users",
+      value: stats.transportCount,
+      color: "bg-orange-500",
+      icon: "🚌",
+      description: "Active enrollments"
     },
     {
       label: "Teachers",
@@ -90,18 +94,18 @@ export default function SchoolAdminDashboard() {
       description: "Present today"
     },
     {
-      label: "Fees Collected",
-      value: `₹ ${stats.feesCollected.toLocaleString('en-IN')}`,
-      color: "bg-emerald-500",
-      icon: "💰",
-      description: "This month"
+      label: "Fee Defaulters",
+      value: stats.feePendingCount,
+      color: "bg-red-500",
+      icon: "📉",
+      description: "Students with dues"
     },
     {
-      label: "Pending Dues",
-      value: `₹ ${stats.feesPending.toLocaleString('en-IN')}`,
-      color: "bg-red-500",
-      icon: "⏰",
-      description: "Outstanding"
+      label: "Classes",
+      value: stats.classes,
+      color: "bg-green-500",
+      icon: "📚",
+      description: "Active sections"
     },
   ];
 
@@ -222,17 +226,36 @@ export default function SchoolAdminDashboard() {
           </div>
         </div>
 
-        {/* Recent Activity / Alerts */}
+        {/* Recent Activity / Alerts / Exams */}
         <div className="bg-white p-8 rounded-2xl border shadow-sm">
-          <h3 className="text-xl font-bold text-gray-800 mb-6">Alerts & Notifications</h3>
+          <h3 className="text-xl font-bold text-gray-800 mb-6">Upcoming Exams & Alerts</h3>
           <div className="space-y-4">
-            {stats.feesPending > 0 && (
+            {stats.upcomingExams.length > 0 && (
+              <div className="mb-6">
+                <p className="text-sm font-semibold text-gray-500 uppercase mb-3">Next 5 Exams</p>
+                <div className="space-y-2">
+                  {stats.upcomingExams.map((exam, idx) => (
+                    <div key={idx} className="flex items-center justify-between p-3 bg-indigo-50 rounded-lg border border-indigo-100">
+                      <div>
+                        <p className="font-semibold text-indigo-900">{exam.name}</p>
+                        <p className="text-xs text-indigo-700">{exam.className}</p>
+                      </div>
+                      <div className="text-right">
+                        <p className="font-mono text-sm font-bold text-indigo-800">{exam.date}</p>
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              </div>
+            )}
+
+            {stats.feePendingCount > 0 && (
               <div className="flex gap-3 p-4 bg-red-50 text-red-800 rounded-lg border border-red-100">
                 <span className="text-xl">⚠️</span>
                 <div>
                   <p className="font-semibold">Fee Defaulters</p>
                   <p className="text-sm text-red-600">
-                    ₹ {stats.feesPending.toLocaleString('en-IN')} pending from students
+                    {stats.feePendingCount} students have outstanding dues in {activeSession}
                   </p>
                 </div>
               </div>
@@ -249,16 +272,6 @@ export default function SchoolAdminDashboard() {
                 </div>
               </div>
             )}
-
-            <div className="flex gap-3 p-4 bg-green-50 text-green-800 rounded-lg border border-green-100">
-              <span className="text-xl">✓</span>
-              <div>
-                <p className="font-semibold">System Status</p>
-                <p className="text-sm text-green-600">
-                  All systems operational
-                </p>
-              </div>
-            </div>
           </div>
         </div>
       </div>

@@ -10,4 +10,6 @@ import java.util.List;
 public interface ExamRepository extends JpaRepository<Exam, Long> {
 
     List<Exam> findByClassIdAndSession(Long classId, String session);
+
+    List<Exam> findBySchoolIdAndStartDateAfter(Long schoolId, java.time.LocalDate date);
 }

@@ -6,7 +6,9 @@ import lombok.*;
 import lombok.experimental.SuperBuilder;
 
 @Entity
-@Table(name = "transport_enrollments", indexes = {
+@Table(name = "transport_enrollments", uniqueConstraints = {
+        @UniqueConstraint(columnNames = { "student_id", "session" })
+}, indexes = {
         @Index(name = "idx_transport_enrollment_student", columnList = "student_id,session")
 })
 @Getter

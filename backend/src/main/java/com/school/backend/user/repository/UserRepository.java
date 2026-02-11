@@ -17,4 +17,5 @@ public interface UserRepository
 
         Page<User> findByRole(UserRole role, Pageable pageable);
 
+        long countBySchoolIdAndRole(Long schoolId, UserRole role);
 }

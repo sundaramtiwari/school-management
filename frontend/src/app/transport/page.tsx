@@ -10,6 +10,8 @@ type Route = {
     id: number;
     name: string;
     description: string;
+    capacity: number;
+    currentStrength: number;
 };
 
 type PickupPoint = {
@@ -33,8 +35,9 @@ export default function TransportPage() {
 
     const [showRouteModal, setShowRouteModal] = useState(false);
     const [showPickupModal, setShowPickupModal] = useState(false);
+    const [routeToDelete, setRouteToDelete] = useState<number | null>(null);
 
-    const [routeForm, setRouteForm] = useState({ name: "", description: "" });
+    const [routeForm, setRouteForm] = useState({ name: "", description: "", capacity: "30" });
     const [pickupForm, setPickupForm] = useState({
         name: "",
         amount: "",
@@ -77,13 +80,31 @@ export default function TransportPage() {
         if (!routeForm.name) return;
         try {
             setIsSaving(true);
-            const res = await transportApi.createRoute(routeForm);
+            const res = await transportApi.createRoute({
+                ...routeForm,
+                capacity: Number(routeForm.capacity)
+            });
             setRoutes([...routes, res.data]);
             setShowRouteModal(false);
-            setRouteForm({ name: "", description: "" });
+            setRouteForm({ name: "", description: "", capacity: "30" });
             showToast("Route created successfully", "success");
         } catch (e: any) {
             showToast("Failed to create route: " + (e.response?.data?.message || e.message), "error");
+        } finally {
+            setIsSaving(false);
+        }
+    }
+
+    async function deleteRoute(id: number) {
+        try {
+            setIsSaving(true);
+            await transportApi.deleteRoute(id);
+            setRoutes(routes.filter(r => r.id !== id));
+            if (selectedRoute?.id === id) setSelectedRoute(null);
+            setRouteToDelete(null);
+            showToast("Route deleted successfully", "success");
+        } catch (e: any) {
+            showToast("Failed to delete route: " + (e.response?.data?.message || e.message), "error");
         } finally {
             setIsSaving(false);
         }
@@ -138,21 +159,68 @@ export default function TransportPage() {
                                 <Skeleton className="h-12 w-full" />
                             </div>
                         ) : routes.map(r => (
-                            <button
+                            <div
                                 key={r.id}
-                                onClick={() => onSelectRoute(r)}
-                                className={`w-full text-left p-6 hover:bg-blue-50/50 transition-all group ${selectedRoute?.id === r.id ? "bg-blue-50 border-r-4 border-blue-600" : ""
-                                    }`}
+                                className={`group relative border-b last:border-b-0 ${selectedRoute?.id === r.id ? "bg-blue-50/80" : "hover:bg-gray-50"}`}
                             >
-                                <div className="font-bold text-gray-800 group-hover:text-blue-700">{r.name}</div>
-                                <div className="text-xs text-gray-400 mt-1 italic">{r.description || "No description"}</div>
-                            </button>
+                                <button
+                                    onClick={() => onSelectRoute(r)}
+                                    className="w-full text-left p-6 transition-all"
+                                >
+                                    <div className="flex justify-between items-start">
+                                        <div className="font-bold text-gray-800 group-hover:text-blue-700">{r.name}</div>
+                                        <div className="text-[10px] font-black uppercase px-2 py-0.5 rounded bg-gray-100 text-gray-500">
+                                            {r.currentStrength} / {r.capacity}
+                                        </div>
+                                    </div>
+                                    <div className="text-xs text-gray-400 mt-1 italic">{r.description || "No description"}</div>
+
+                                    {/* Capacity indicator */}
+                                    <div className="mt-3 h-1.5 w-full bg-gray-200 rounded-full overflow-hidden">
+                                        <div
+                                            className={`h-full rounded-full transition-all ${(r.currentStrength / r.capacity) > 0.9 ? 'bg-red-500' : 'bg-blue-500'
+                                                }`}
+                                            style={{ width: `${Math.min(100, (r.currentStrength / r.capacity) * 100)}%` }}
+                                        />
+                                    </div>
+                                </button>
+                                <button
+                                    onClick={(e) => {
+                                        e.stopPropagation();
+                                        setRouteToDelete(r.id);
+                                    }}
+                                    className="absolute top-4 right-4 p-2 text-gray-400 hover:text-red-600 opacity-0 group-hover:opacity-100 transition-opacity"
+                                >
+                                    🗑️
+                                </button>
+                            </div>
                         ))}
                         {!loadingRoutes && routes.length === 0 && (
                             <div className="p-12 text-center text-gray-400 italic text-sm">No routes defined yet.</div>
                         )}
                     </div>
                 </div>
+
+                {/* Delete Confirmation Modal */}
+                <Modal
+                    isOpen={routeToDelete !== null}
+                    onClose={() => setRouteToDelete(null)}
+                    title="Confirm Deletion"
+                    footer={
+                        <div className="flex gap-2">
+                            <button onClick={() => setRouteToDelete(null)} className="btn-secondary">Cancel</button>
+                            <button
+                                onClick={() => routeToDelete && deleteRoute(routeToDelete)}
+                                disabled={isSaving}
+                                className="bg-red-600 text-white px-6 py-2 rounded-xl font-bold hover:bg-red-700"
+                            >
+                                {isSaving ? "Deleting..." : "Delete Route"}
+                            </button>
+                        </div>
+                    }
+                >
+                    <p className="text-gray-600">Are you sure you want to delete this route? This action cannot be undone if there are no active enrollments.</p>
+                </Modal>
 
                 {/* Pickup Points */}
                 <div className="lg:col-span-2 space-y-6">
@@ -243,6 +311,16 @@ export default function TransportPage() {
                         />
                     </div>
                     <div>
+                        <label className="label-ref">Capacity (Seats) *</label>
+                        <input
+                            type="number"
+                            className="input-ref"
+                            placeholder="30"
+                            value={routeForm.capacity}
+                            onChange={e => setRouteForm({ ...routeForm, capacity: e.target.value })}
+                        />
+                    </div>
+                    <div>
                         <label className="label-ref">Description</label>
                         <textarea
                             className="input-ref h-24"
@@ -251,6 +329,7 @@ export default function TransportPage() {
                             onChange={e => setRouteForm({ ...routeForm, description: e.target.value })}
                         />
                     </div>
+
                 </div>
             </Modal>
 

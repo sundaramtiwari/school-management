@@ -10,7 +10,7 @@ import { Skeleton, TableSkeleton } from "@/components/ui/Skeleton";
 
 type SchoolClass = { id: number; name: string; section: string; session: string };
 type Student = { id: number; firstName: string; lastName: string; admissionNumber: string };
-type Route = { id: number; name: string };
+type Route = { id: number; name: string; capacity: number; currentStrength: number };
 type PickupPoint = { id: number; name: string; amount: number; frequency: string };
 
 export default function TransportEnrollmentPage() {
@@ -211,7 +211,15 @@ export default function TransportEnrollmentPage() {
                                 onChange={onRouteSelectChange}
                             >
                                 <option value="">Select Transport Route</option>
-                                {routes.map(r => <option key={r.id} value={r.id}>{r.name}</option>)}
+                                {routes.map(r => (
+                                    <option
+                                        key={r.id}
+                                        value={r.id}
+                                        disabled={r.currentStrength >= r.capacity}
+                                    >
+                                        {r.name} ({r.currentStrength}/{r.capacity} seats filled) {r.currentStrength >= r.capacity ? "- FULL" : ""}
+                                    </option>
+                                ))}
                             </select>
                         </div>
 

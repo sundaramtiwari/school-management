@@ -13,6 +13,7 @@ import com.school.backend.fee.repository.StudentFeeAssignmentRepository;
 import com.school.backend.transport.dto.TransportEnrollmentDto;
 import com.school.backend.transport.entity.PickupPoint;
 import com.school.backend.transport.entity.TransportEnrollment;
+import com.school.backend.transport.entity.TransportRoute;
 import com.school.backend.transport.repository.PickupPointRepository;
 import com.school.backend.transport.repository.TransportEnrollmentRepository;
 import lombok.RequiredArgsConstructor;
@@ -46,10 +47,35 @@ public class TransportEnrollmentService {
                                 .orElseThrow(() -> new ResourceNotFoundException(
                                                 "Pickup point not found: " + dto.getPickupPointId()));
 
+                TransportRoute route = pickupPoint.getRoute();
+
                 // 2. Create/Update Enrollment
                 TransportEnrollment enrollment = enrollmentRepository
                                 .findByStudentIdAndSession(dto.getStudentId(), dto.getSession())
-                                .orElse(new TransportEnrollment());
+                                .orElse(null);
+
+                if (enrollment == null) {
+                        // New Enrollment - check capacity
+                        if (route.getCurrentStrength() >= route.getCapacity()) {
+                                throw new IllegalStateException(
+                                                "Transport route " + route.getName() + " is at full capacity.");
+                        }
+                        enrollment = new TransportEnrollment();
+                        route.setCurrentStrength(route.getCurrentStrength() + 1);
+                } else {
+                        // Moving to a different point/route
+                        if (!enrollment.getPickupPoint().getRoute().getId().equals(route.getId())) {
+                                // Decrement old route, check/increment new route
+                                TransportRoute oldRoute = enrollment.getPickupPoint().getRoute();
+                                oldRoute.setCurrentStrength(Math.max(0, oldRoute.getCurrentStrength() - 1));
+
+                                if (route.getCurrentStrength() >= route.getCapacity()) {
+                                        throw new IllegalStateException(
+                                                        "Transport route " + route.getName() + " is at full capacity.");
+                                }
+                                route.setCurrentStrength(route.getCurrentStrength() + 1);
+                        }
+                }
 
                 enrollment.setStudentId(dto.getStudentId());
                 enrollment.setPickupPoint(pickupPoint);

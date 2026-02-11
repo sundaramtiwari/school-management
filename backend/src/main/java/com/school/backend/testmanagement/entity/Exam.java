@@ -26,13 +26,17 @@ public class Exam extends TenantEntity {
     private Long classId;
 
     @Column(nullable = false)
-    private String session;   // 2025-26
+    private String session; // 2025-26
 
     @Column(nullable = false)
-    private String name;      // Unit Test, Half Yearly, Annual
+    private String name; // Unit Test, Half Yearly, Annual
 
-    private String examType;  // UT / MID / FINAL
+    private String examType; // UT / MID / FINAL
+
+    private java.time.LocalDate startDate;
+    private java.time.LocalDate endDate;
 
     @Builder.Default
     private boolean active = true;
+
 }

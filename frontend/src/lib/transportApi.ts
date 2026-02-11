@@ -3,8 +3,9 @@ import { api } from "./api";
 export const transportApi = {
     // Routes
     getAllRoutes: () => api.get("/api/transport/routes"),
-    createRoute: (data: { name: string; description?: string }) =>
+    createRoute: (data: { name: string; description?: string; capacity?: number }) =>
         api.post("/api/transport/routes", data),
+    deleteRoute: (id: number) => api.delete(`/api/transport/routes/${id}`),
 
     // Pickup Points
     getPickupsByRoute: (routeId: number) =>

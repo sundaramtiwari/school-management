@@ -11,4 +11,6 @@ public class TransportRouteDto {
     private Long id;
     private String name;
     private String description;
+    private Integer capacity;
+    private Integer currentStrength;
 }

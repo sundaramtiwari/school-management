@@ -12,4 +12,6 @@ public interface TransportEnrollmentRepository extends JpaRepository<TransportEn
     Optional<TransportEnrollment> findByStudentIdAndSession(Long studentId, String session);
 
     List<TransportEnrollment> findByPickupPointRouteId(Long routeId);
+
+    long countBySchoolId(Long schoolId);
 }
