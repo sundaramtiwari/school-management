@@ -109,8 +109,9 @@ export default function AttendancePage() {
 
             setAttendanceMap(newMap);
 
-        } catch {
-            showToast("Failed to load attendance records", "error");
+        } catch (e: any) {
+            const msg = e.response?.data?.message || e.message;
+            showToast("Failed to load attendance: " + msg, "error");
         } finally {
             setLoading(prev => ({ ...prev, students: false }));
         }
@@ -175,8 +176,9 @@ export default function AttendancePage() {
             setLoading(prev => ({ ...prev, saving: true }));
             await api.post(`/api/attendance/bulk?date=${selectedDate}`, attendanceMap);
             showToast("Attendance records saved successfully!", "success");
-        } catch {
-            showToast("Failed to save attendance", "error");
+        } catch (e: any) {
+            const msg = e.response?.data?.message || e.message;
+            showToast("Save failed: " + msg, "error");
         } finally {
             setLoading(prev => ({ ...prev, saving: false }));
         }

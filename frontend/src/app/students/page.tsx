@@ -151,7 +151,8 @@ export default function StudentsPage() {
         loadStudents(Number(selectedClass));
       }
     } catch (err: any) {
-      showToast("Failed to save student: " + (err.response?.data?.message || err.message), "error");
+      const msg = err.response?.data?.message || err.response?.data || err.message;
+      showToast("Failed to save student: " + msg, "error");
     } finally {
       setIsSaving(false);
     }
@@ -168,7 +169,15 @@ export default function StudentsPage() {
         </div>
 
         <button
-          onClick={() => setShowAddModal(true)}
+          onClick={() => {
+            if (selectedClass) {
+              const cls = classes.find(c => c.id == selectedClass);
+              if (cls) {
+                setStudentForm(prev => ({ ...prev, classId: selectedClass.toString(), session: cls.session }));
+              }
+            }
+            setShowAddModal(true);
+          }}
           className="bg-blue-600 text-white px-6 py-2.5 rounded-xl font-bold shadow-lg hover:bg-blue-700 transition-all flex items-center gap-2"
         >
           <span className="text-xl">+</span> Add Student

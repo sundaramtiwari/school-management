@@ -24,7 +24,9 @@ export default function FeeCollectPage() {
     const [history, setHistory] = useState<Payment[]>([]);
 
     const [loading, setLoading] = useState(false);
+    const [loadingStudents, setLoadingStudents] = useState(false);
     const [isProcessing, setIsProcessing] = useState(false);
+    const [isDownloading, setIsDownloading] = useState(false);
 
     const [paymentAmount, setPaymentAmount] = useState("");
     const [paymentMode, setPaymentMode] = useState("CASH");
@@ -56,10 +58,13 @@ export default function FeeCollectPage() {
 
         if (clsId) {
             try {
+                setLoadingStudents(true);
                 const res = await api.get(`/api/students/by-class/${clsId}?size=100`);
                 setStudents(res.data.content || []);
             } catch {
                 showToast("Failed to pull student ledger", "error");
+            } finally {
+                setLoadingStudents(false);
             }
         }
     }
@@ -118,6 +123,8 @@ export default function FeeCollectPage() {
 
     async function downloadReceipt(pid: number) {
         try {
+            setIsDownloading(true);
+            showToast("Generating receipt...", "info");
             const res = await api.get(`/api/fees/payments/${pid}/receipt`, { responseType: 'blob' });
             const url = window.URL.createObjectURL(new Blob([res.data]));
             const link = document.createElement('a');
@@ -126,15 +133,19 @@ export default function FeeCollectPage() {
             document.body.appendChild(link);
             link.click();
             document.body.removeChild(link);
-            showToast("Downloading receipt...", "info");
+            showToast("Download complete", "success");
         } catch {
             showToast("Receipt generation failed", "error");
+        } finally {
+            setIsDownloading(false);
         }
     }
 
     async function downloadChallan() {
         if (!selectedStudent || !selectedClass) return;
         try {
+            setIsDownloading(true);
+            showToast("Generating challan...", "info");
             const cls = classes.find(c => c.id == selectedClass);
             const session = cls ? cls.session : "2024-25";
             const res = await api.get(`/api/fees/challan/student/${selectedStudent}?session=${session}&months=${months}`, { responseType: 'blob' });
@@ -145,9 +156,11 @@ export default function FeeCollectPage() {
             document.body.appendChild(link);
             link.click();
             document.body.removeChild(link);
-            showToast("Downloading challan...", "info");
+            showToast("Download complete", "success");
         } catch {
             showToast("Challan generation failed", "error");
+        } finally {
+            setIsDownloading(false);
         }
     }
 
@@ -168,8 +181,13 @@ export default function FeeCollectPage() {
                 </div>
                 <div className="flex-1 min-w-[250px]">
                     <label className="block text-xs font-bold uppercase text-gray-400 mb-2 ml-1">Student Account</label>
-                    <select className="input-ref font-bold" value={selectedStudent} onChange={onStudentChange} disabled={!selectedClass}>
-                        <option value="">Select Student to Settle</option>
+                    <select
+                        className="input-ref font-bold"
+                        value={selectedStudent}
+                        onChange={onStudentChange}
+                        disabled={!selectedClass || loadingStudents}
+                    >
+                        <option value="">{loadingStudents ? "Syncing Students..." : "Select Student to Settle"}</option>
                         {students.map(s => <option key={s.id} value={s.id}>{s.firstName} {s.lastName} ({s.admissionNumber})</option>)}
                     </select>
                 </div>
@@ -208,9 +226,10 @@ export default function FeeCollectPage() {
                                 </div>
                                 <button
                                     onClick={downloadChallan}
-                                    className="w-full bg-white/10 hover:bg-white/20 text-white py-3 rounded-xl font-bold transition-all flex items-center justify-center gap-2 border border-white/5"
+                                    disabled={isDownloading}
+                                    className="w-full bg-white/10 hover:bg-white/20 text-white py-3 rounded-xl font-bold transition-all flex items-center justify-center gap-2 border border-white/5 disabled:opacity-50"
                                 >
-                                    📄 Generate Academic Challan
+                                    {isDownloading ? "⏳ Generating..." : "📄 Generate Academic Challan"}
                                 </button>
                             </div>
                         </div>
@@ -291,7 +310,8 @@ export default function FeeCollectPage() {
                                             <td className="p-4 text-center">
                                                 <button
                                                     onClick={() => downloadReceipt(p.id)}
-                                                    className="p-2 text-blue-600 hover:bg-blue-50 rounded-lg transition-all"
+                                                    disabled={isDownloading}
+                                                    className="p-2 text-blue-600 hover:bg-blue-50 rounded-lg transition-all disabled:opacity-30"
                                                     title="Download Voucher"
                                                 >
                                                     <svg className="w-5 h-5 mx-auto" fill="none" viewBox="0 0 24 24" stroke="currentColor">

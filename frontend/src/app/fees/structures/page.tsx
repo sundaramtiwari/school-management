@@ -55,8 +55,9 @@ export default function FeeStructuresPage() {
             setLoadingClasses(true);
             const res = await api.get("/api/classes?size=100");
             setClasses(res.data.content || []);
-        } catch {
-            showToast("Failed to load classes", "error");
+        } catch (e: any) {
+            const msg = e.response?.data?.message || e.message;
+            showToast("Failed to load classes: " + msg, "error");
         } finally {
             setLoadingClasses(false);
         }
@@ -110,8 +111,9 @@ export default function FeeStructuresPage() {
             const res = await api.get(`/api/fees/structures/by-class/${classId}?session=${session}`);
             setStructures(res.data || []);
             setForm(f => ({ ...f, session }));
-        } catch {
-            showToast("Failed to load fee structures", "error");
+        } catch (e: any) {
+            const msg = e.response?.data?.message || e.message;
+            showToast("Failed to load configurations: " + msg, "error");
         } finally {
             setLoading(false);
         }

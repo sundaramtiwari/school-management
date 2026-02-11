@@ -50,8 +50,9 @@ export default function StaffPage() {
             setLoading(true);
             const res = await api.get("/api/users?size=100");
             setUsers(res.data.content || []);
-        } catch {
-            showToast("Failed to load staff records", "error");
+        } catch (e: any) {
+            const msg = e.response?.data?.message || e.message;
+            showToast("Failed to load staff: " + msg, "error");
         } finally {
             setLoading(false);
         }

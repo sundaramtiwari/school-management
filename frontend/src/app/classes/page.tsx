@@ -23,6 +23,7 @@ export default function ClassesPage() {
     const [classes, setClasses] = useState<SchoolClass[]>([]);
     const [loading, setLoading] = useState(true);
     const [isSaving, setIsSaving] = useState(false);
+    const [isDeleting, setIsDeleting] = useState(false);
     const [showForm, setShowForm] = useState(false);
     const [editId, setEditId] = useState<number | null>(null);
 
@@ -117,15 +118,18 @@ export default function ClassesPage() {
     }
 
     async function deleteClass(id: number) {
-        // Confirmation modal would be better, but keeping it simple for now or using native if needed.
-        // Actually I should use a custom confirmation flow if I have time, but let's stick to the plan.
         if (!confirm("Are you sure? This might affect students linked to this class.")) return;
         try {
+            setIsDeleting(true);
+            showToast("Deleting class...", "info");
             await api.delete(`/api/classes/${id}`);
             showToast("Class deleted successfully", "success");
             loadClasses();
         } catch (e: any) {
-            showToast("Delete failed", "error");
+            const msg = e.response?.data?.message || e.message;
+            showToast("Delete failed: " + msg, "error");
+        } finally {
+            setIsDeleting(false);
         }
     }
 
@@ -185,7 +189,8 @@ export default function ClassesPage() {
                                             </button>
                                             <button
                                                 onClick={() => deleteClass(c.id)}
-                                                className="p-2 text-red-600 hover:bg-red-50 rounded-lg transition-all"
+                                                disabled={isDeleting}
+                                                className="p-2 text-red-600 hover:bg-red-50 rounded-lg transition-all disabled:opacity-30"
                                             >
                                                 <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                                                     <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" />
