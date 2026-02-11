@@ -4,6 +4,7 @@ import { useEffect, useState } from "react";
 import { schoolApi } from "@/lib/schoolApi";
 import { studentApi } from "@/lib/studentApi";
 import { api } from "@/lib/api";
+import { useAuth } from "@/context/AuthContext";
 import { useToast } from "@/components/ui/Toast";
 import { TableSkeleton } from "@/components/ui/Skeleton";
 
@@ -17,6 +18,7 @@ type Student = { id: number; firstName: string; lastName: string; admissionNumbe
 /* ---------------- Page ---------------- */
 
 export default function MarksheetsPage() {
+    const { user } = useAuth();
     const { showToast } = useToast();
 
     /* ---------- State ---------- */
@@ -47,7 +49,20 @@ export default function MarksheetsPage() {
         try {
             setLoading(prev => ({ ...prev, schools: true }));
             const res = await schoolApi.list(0, 100);
-            setSchools(res.data.content || []);
+            const loadedSchools = res.data.content || [];
+            setSchools(loadedSchools);
+            
+            // Auto-select for School Admin or SINGLE school
+            if (user?.schoolId) {
+                const userSchool = loadedSchools.find((s: School) => s.id === user.schoolId);
+                if (userSchool) {
+                    setSelectedSchool(userSchool.id);
+                    loadClasses(userSchool.id);
+                }
+            } else if (loadedSchools.length === 1) {
+                 setSelectedSchool(loadedSchools[0].id);
+                 loadClasses(loadedSchools[0].id);
+            }
         } catch {
             showToast("Failed to pull school list", "error");
         } finally {
@@ -152,7 +167,12 @@ export default function MarksheetsPage() {
             <div className="bg-white p-6 border rounded-2xl shadow-sm grid grid-cols-1 md:grid-cols-3 gap-6 items-end">
                 <div>
                     <label className="block text-[10px] font-black uppercase text-gray-400 mb-2 ml-1 tracking-widest">Institution Scope</label>
-                    <select value={selectedSchool} onChange={onSchoolChange} className="input-ref font-bold">
+                    <select 
+                        value={selectedSchool} 
+                        onChange={onSchoolChange} 
+                        className="input-ref font-bold"
+                        disabled={!!user?.schoolId} // Lock for School Admin
+                    >
                         <option value="">Select Target School</option>
                         {schools.map(s => <option key={s.id} value={s.id}>{s.name}</option>)}
                     </select>
