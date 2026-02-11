@@ -3,6 +3,7 @@ package com.school.backend.fee.service;
 import com.school.backend.common.exception.ResourceNotFoundException;
 import com.school.backend.core.student.entity.Student;
 import com.school.backend.core.student.repository.StudentRepository;
+import com.school.backend.fee.dto.DefaulterDto;
 import com.school.backend.fee.dto.FeeStatsDto;
 import com.school.backend.fee.dto.FeeSummaryDto;
 import com.school.backend.fee.entity.FeePayment;
@@ -12,6 +13,8 @@ import com.school.backend.fee.enums.FeeFrequency;
 import com.school.backend.fee.repository.FeePaymentRepository;
 import com.school.backend.fee.repository.FeeStructureRepository;
 import com.school.backend.fee.repository.StudentFeeAssignmentRepository;
+import com.school.backend.school.entity.AcademicSession;
+import com.school.backend.school.repository.AcademicSessionRepository;
 import com.school.backend.user.security.SecurityUtil;
 import lombok.RequiredArgsConstructor;
 import org.springframework.data.domain.Pageable;
@@ -21,6 +24,8 @@ import org.springframework.transaction.annotation.Transactional;
 import java.time.LocalDate;
 import java.time.Month;
 import java.time.temporal.ChronoUnit;
+import java.util.ArrayList;
+import java.util.Comparator;
 import java.util.List;
 
 @Service
@@ -31,6 +36,7 @@ public class FeeSummaryService {
         private final FeeStructureRepository feeStructureRepository;
         private final StudentFeeAssignmentRepository assignmentRepository;
         private final FeePaymentRepository paymentRepository;
+        private final AcademicSessionRepository sessionRepository;
 
         @Transactional(readOnly = true)
         public FeeStatsDto getDashboardStats(String session) {
@@ -131,6 +137,77 @@ public class FeeSummaryService {
                                 .sorted((a, b) -> Integer.compare(b.getPendingFee(), a.getPendingFee()))
                                 .limit(limit)
                                 .toList();
+        }
+
+        /**
+         * Returns all students with outstanding fee balance for the current session.
+         * Enriches data with class info, days overdue, and parent contact.
+         */
+        @Transactional(readOnly = true)
+        public List<DefaulterDto> getAllDefaulters() {
+                Long schoolId = SecurityUtil.schoolId();
+
+                // Auto-detect the current session
+                AcademicSession currentSession = sessionRepository.findBySchoolIdAndCurrentTrue(schoolId)
+                                .orElse(null);
+                if (currentSession == null) {
+                        return List.of();
+                }
+                String session = currentSession.getName();
+
+                // Parse session start for overdue calculation
+                int startYear = Integer.parseInt(session.split("-")[0]);
+                LocalDate sessionStart = LocalDate.of(startYear, Month.APRIL, 1);
+                LocalDate today = LocalDate.now();
+
+                List<Student> students = studentRepository
+                                .findBySchoolId(schoolId, Pageable.unpaged())
+                                .getContent();
+
+                List<DefaulterDto> defaulters = new ArrayList<>();
+
+                for (Student student : students) {
+                        FeeSummaryDto summary = getStudentFeeSummary(student.getId(), session);
+                        if (summary.getPendingFee() <= 0) {
+                                continue;
+                        }
+
+                        // Last payment date
+                        LocalDate lastPaymentDate = paymentRepository
+                                        .findTopByStudentIdOrderByPaymentDateDesc(student.getId())
+                                        .map(FeePayment::getPaymentDate)
+                                        .orElse(null);
+
+                        // Days overdue: from last payment or session start
+                        LocalDate overdueFrom = lastPaymentDate != null ? lastPaymentDate : sessionStart;
+                        long daysOverdue = Math.max(ChronoUnit.DAYS.between(overdueFrom, today), 0);
+
+                        // Class info
+                        String className = "";
+                        String classSection = "";
+                        if (student.getCurrentClass() != null) {
+                                className = student.getCurrentClass().getName();
+                                classSection = student.getCurrentClass().getSection();
+                        }
+
+                        defaulters.add(DefaulterDto.builder()
+                                        .studentId(student.getId())
+                                        .studentName(student.getFirstName() + " "
+                                                        + (student.getLastName() != null ? student.getLastName() : ""))
+                                        .admissionNumber(student.getAdmissionNumber())
+                                        .className(className)
+                                        .classSection(classSection != null ? classSection : "")
+                                        .amountDue(summary.getPendingFee())
+                                        .lastPaymentDate(lastPaymentDate)
+                                        .daysOverdue(daysOverdue)
+                                        .parentContact(student.getContactNumber() != null ? student.getContactNumber()
+                                                        : "")
+                                        .build());
+                }
+
+                // Sort by amount due descending
+                defaulters.sort(Comparator.comparingLong(DefaulterDto::getAmountDue).reversed());
+                return defaulters;
         }
 
         /**

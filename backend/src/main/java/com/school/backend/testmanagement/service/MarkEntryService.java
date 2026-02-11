@@ -11,6 +11,8 @@ import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
+import java.util.List;
+
 @Service
 @RequiredArgsConstructor
 public class MarkEntryService {
@@ -28,20 +30,27 @@ public class MarkEntryService {
             throw new IllegalArgumentException("Marks exceed max marks");
         }
 
-        if (markRepository.existsByExamSubjectIdAndStudentId(
-                req.getExamSubjectId(), req.getStudentId())) {
+        StudentMark mark = markRepository.findByExamSubjectIdAndStudentId(
+                        req.getExamSubjectId(), req.getStudentId())
+                .orElseGet(() -> StudentMark.builder()
+                        .examSubjectId(req.getExamSubjectId())
+                        .studentId(req.getStudentId())
+                        .schoolId(TenantContext.getSchoolId()) // Ensure schoolId is set for new entries
+                        .build());
 
-            throw new IllegalStateException("Marks already entered");
-        }
-
-        StudentMark mark = StudentMark.builder()
-                .examSubjectId(req.getExamSubjectId())
-                .studentId(req.getStudentId())
-                .marksObtained(req.getMarksObtained())
-                .remarks(req.getRemarks())
-                .schoolId(TenantContext.getSchoolId())
-                .build();
+        mark.setMarksObtained(req.getMarksObtained());
+        mark.setRemarks(req.getRemarks());
 
         return markRepository.save(mark);
+    }
+
+    @Transactional(readOnly = true)
+    public List<StudentMark> getMarksByExam(Long examId) {
+        List<Long> subjectIds = subjectRepository.findByExamId(examId)
+                .stream()
+                .map(ExamSubject::getId)
+                .toList();
+
+        return markRepository.findByExamSubjectIdIn(subjectIds);
     }
 }

@@ -14,7 +14,9 @@ export default function FeesLayout({
         { name: "Dashboard", path: "/fees" },
         { name: "Structures", path: "/fees/structures" },
         { name: "Collect Fees", path: "/fees/collect" },
+        { name: "Defaulters", path: "/fees/defaulters" },
     ];
+
 
     return (
         <div className="space-y-6">

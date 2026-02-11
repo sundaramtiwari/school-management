@@ -30,7 +30,9 @@ public class AcademicSession extends TenantEntity {
     private LocalDate endDate;
 
     @Builder.Default
-    private boolean isCurrent = false;
+    private boolean current = false;
 
+    @Builder.Default
     private boolean active = true;
+
 }

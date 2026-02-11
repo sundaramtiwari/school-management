@@ -8,6 +8,8 @@ import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
+import java.util.List;
+
 @Service
 @RequiredArgsConstructor
 public class ExamSubjectService {
@@ -32,5 +34,10 @@ public class ExamSubjectService {
                 .build();
 
         return repository.save(es);
+    }
+
+    @Transactional(readOnly = true)
+    public List<ExamSubject> listByExam(Long examId) {
+        return repository.findByExamId(examId);
     }
 }

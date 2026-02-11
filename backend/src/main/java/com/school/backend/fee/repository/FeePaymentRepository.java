@@ -7,9 +7,12 @@ import org.springframework.data.jpa.repository.Query;
 import org.springframework.data.repository.query.Param;
 import java.time.LocalDate;
 import java.util.List;
+import java.util.Optional;
 
 public interface FeePaymentRepository extends JpaRepository<FeePayment, Long> {
     List<FeePayment> findByStudentId(Long studentId);
+
+    Optional<FeePayment> findTopByStudentIdOrderByPaymentDateDesc(Long studentId);
 
     @Query("SELECT SUM(f.amountPaid) FROM FeePayment f WHERE f.schoolId = :schoolId AND f.paymentDate = :date")
     Long sumAmountPaidBySchoolIdAndPaymentDate(@Param("schoolId") Long schoolId, @Param("date") LocalDate date);
