@@ -8,6 +8,8 @@ import com.school.backend.fee.dto.FeePaymentRequest;
 import com.school.backend.fee.entity.FeePayment;
 import com.school.backend.fee.repository.FeePaymentRepository;
 import lombok.RequiredArgsConstructor;
+import org.springframework.data.domain.PageRequest;
+import org.springframework.data.domain.Pageable;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -59,8 +61,9 @@ public class FeePaymentService {
     }
 
     @Transactional(readOnly = true)
-    public List<FeePaymentDto> getRecentPayments() {
-        return paymentRepository.findTop10BySchoolIdOrderByPaymentDateDesc(TenantContext.getSchoolId())
+    public List<FeePaymentDto> getRecentPayments(int limit) {
+        Pageable pageable = PageRequest.of(0, limit);
+        return paymentRepository.findRecentPayments(TenantContext.getSchoolId(), pageable)
                 .stream()
                 .map(this::toDto)
                 .toList();

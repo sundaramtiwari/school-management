@@ -48,6 +48,16 @@ public class SchoolClassController {
         return ResponseEntity.ok(service.getBySchool(SecurityUtil.schoolId(), pageable));
     }
 
+    @GetMapping("/my-classes")
+    @PreAuthorize("hasAnyRole('SCHOOL_ADMIN', 'TEACHER', 'SUPER_ADMIN', 'PLATFORM_ADMIN')")
+    public ResponseEntity<Page<SchoolClassDto>> getMyClasses(
+            @RequestParam(defaultValue = "0") int page,
+            @RequestParam(defaultValue = "20") int size) {
+        Pageable pageable = PageRequest.of(page, size);
+        return ResponseEntity
+                .ok(service.getMyClasses(SecurityUtil.current().getUserId(), SecurityUtil.schoolId(), pageable));
+    }
+
     @GetMapping("/mine/session/{session}")
     @PreAuthorize("hasAnyRole('SCHOOL_ADMIN', 'TEACHER', 'ACCOUNTANT', 'SUPER_ADMIN', 'PLATFORM_ADMIN')")
     public ResponseEntity<Page<SchoolClassDto>> getBySchoolAndSession(

@@ -13,9 +13,11 @@ import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.core.ParameterizedTypeReference;
 import org.springframework.http.*;
+import com.school.backend.user.repository.UserRepository;
 import org.springframework.web.util.UriComponentsBuilder;
 
 import java.util.List;
+import java.util.Objects;
 
 import static org.junit.jupiter.api.Assertions.*;
 
@@ -25,7 +27,7 @@ public class SchoolControllerIntegrationTest extends BaseAuthenticatedIntegratio
         private SchoolRepository schoolRepository;
 
         @Autowired
-        private com.school.backend.user.repository.UserRepository userRepository;
+        private UserRepository userRepository;
 
         @Autowired
         private SchoolClassRepository schoolClassRepository;
@@ -86,7 +88,7 @@ public class SchoolControllerIntegrationTest extends BaseAuthenticatedIntegratio
                                 resp.getStatusCode(),
                                 "Expected 201 Created on POST");
 
-                SchoolDto created = resp.getBody();
+                SchoolDto created = Objects.requireNonNull(resp.getBody());
 
                 assertNotNull(created);
                 assertNotNull(
@@ -128,7 +130,7 @@ public class SchoolControllerIntegrationTest extends BaseAuthenticatedIntegratio
 
                 assertEquals(HttpStatus.OK, response.getStatusCode());
 
-                PageResponse<SchoolDto> page = response.getBody();
+                PageResponse<SchoolDto> page = Objects.requireNonNull(response.getBody());
 
                 assertNotNull(page, "PageResponse must not be null");
 
@@ -183,8 +185,8 @@ public class SchoolControllerIntegrationTest extends BaseAuthenticatedIntegratio
 
                 // Assert
                 assertEquals(HttpStatus.CREATED, resp.getStatusCode());
-                assertNotNull(resp.getBody());
-                assertEquals("ONB100", resp.getBody().getSchoolCode());
+                SchoolDto resultBody = Objects.requireNonNull(resp.getBody());
+                assertEquals("ONB100", resultBody.getSchoolCode());
 
                 // Verify Admin User Creation? We might need UserRepository injected or check
                 // login?

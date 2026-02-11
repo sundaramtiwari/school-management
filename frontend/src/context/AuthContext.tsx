@@ -44,7 +44,27 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     localStorage.setItem("user", JSON.stringify(newUser));
     setToken(newToken);
     setUser(newUser);
-    router.push("/schools"); // Default redirect
+    
+    // ✅ FIXED: Role-based redirect
+    const role = newUser.role?.toUpperCase();
+    
+    switch(role) {
+      case "SUPER_ADMIN":
+      case "PLATFORM_ADMIN":
+        router.push("/schools"); // Platform admins manage schools
+        break;
+      case "SCHOOL_ADMIN":
+        router.push("/"); // Dashboard with school overview
+        break;
+      case "TEACHER":
+        router.push("/attendance"); // Teachers mark attendance first
+        break;
+      case "ACCOUNTANT":
+        router.push("/fees/collect"); // Accountants collect fees
+        break;
+      default:
+        router.push("/"); // Fallback to dashboard
+    }
   }
 
   function logout() {

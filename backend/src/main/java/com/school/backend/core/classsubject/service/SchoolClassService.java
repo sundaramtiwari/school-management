@@ -7,6 +7,7 @@ import com.school.backend.core.classsubject.entity.SchoolClass;
 import com.school.backend.core.classsubject.mapper.SchoolClassMapper;
 import com.school.backend.core.classsubject.repository.SchoolClassRepository;
 import com.school.backend.core.teacher.entity.Teacher;
+import com.school.backend.core.teacher.repository.TeacherRepository;
 import lombok.RequiredArgsConstructor;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
@@ -18,6 +19,7 @@ public class SchoolClassService {
 
     private final SchoolClassRepository repository;
     private final SchoolClassMapper mapper;
+    private final TeacherRepository teacherRepository;
 
     public SchoolClassDto create(SchoolClassDto dto) {
         Long schoolId = TenantContext.getSchoolId();
@@ -82,6 +84,15 @@ public class SchoolClassService {
 
     public Page<SchoolClassDto> getBySchool(Long schoolId, Pageable pageable) {
         return repository.findBySchoolId(schoolId, pageable).map(mapper::toDto);
+    }
+
+    public Page<SchoolClassDto> getMyClasses(Long userId, Long schoolId, Pageable pageable) {
+        // Find teacher profile for user
+        Teacher teacher = teacherRepository.findByUserId(userId)
+                .orElseThrow(() -> new ResourceNotFoundException("Teacher profile not found for user: " + userId));
+
+        return repository.findByClassTeacherIdAndSchoolId(teacher.getId(), schoolId, pageable)
+                .map(mapper::toDto);
     }
 
     public Page<SchoolClassDto> getBySchoolAndSession(Long schoolId, String session, Pageable pageable) {

@@ -4,6 +4,7 @@ import com.school.backend.common.entity.BaseEntity;
 import com.school.backend.common.enums.UserRole;
 import com.school.backend.school.entity.School;
 import jakarta.persistence.*;
+import org.hibernate.annotations.Filter;
 import lombok.*;
 
 @Entity
@@ -16,7 +17,7 @@ import lombok.*;
 @AllArgsConstructor
 @Builder
 @EqualsAndHashCode(callSuper = false, onlyExplicitlyIncluded = true)
-@org.hibernate.annotations.Filter(name = "tenantFilter", condition = "school_id = :schoolId")
+@Filter(name = "tenantFilter", condition = "school_id = :schoolId")
 public class User extends BaseEntity {
 
         @Id

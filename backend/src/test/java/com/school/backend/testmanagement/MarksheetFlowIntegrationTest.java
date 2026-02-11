@@ -31,6 +31,8 @@ import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 
 import java.util.Map;
+import java.util.Objects;
+import org.springframework.core.ParameterizedTypeReference;
 
 public class MarksheetFlowIntegrationTest extends BaseAuthenticatedIntegrationTest {
         @Autowired
@@ -78,7 +80,7 @@ public class MarksheetFlowIntegrationTest extends BaseAuthenticatedIntegrationTe
                                 schoolEntity,
                                 School.class);
 
-                schoolId = schoolResp.getBody().getId();
+                schoolId = Objects.requireNonNull(schoolResp.getBody()).getId();
 
                 // LOGIN AS SCHOOL ADMIN NOW
                 loginAsSchoolAdmin(schoolId);
@@ -92,14 +94,15 @@ public class MarksheetFlowIntegrationTest extends BaseAuthenticatedIntegrationTe
 
                 HttpEntity<Map<String, Object>> classEntity = new HttpEntity<>(classReq, headers);
 
-                ResponseEntity<Map> classResp = restTemplate.exchange(
+                ResponseEntity<Map<String, Object>> classResp = restTemplate.exchange(
                                 "/api/classes",
                                 HttpMethod.POST,
                                 classEntity,
-                                Map.class);
+                                new ParameterizedTypeReference<Map<String, Object>>() {
+                                });
 
                 classId = Long.valueOf(
-                                classResp.getBody().get("id").toString());
+                                Objects.requireNonNull(classResp.getBody()).get("id").toString());
 
                 /* ---------- Student ---------- */
 
@@ -117,7 +120,7 @@ public class MarksheetFlowIntegrationTest extends BaseAuthenticatedIntegrationTe
                                 studentEntity,
                                 StudentDto.class);
 
-                studentId = studentResp.getBody().getId();
+                studentId = Objects.requireNonNull(studentResp.getBody()).getId();
 
                 /* ---------- Exam ---------- */
 
@@ -137,7 +140,7 @@ public class MarksheetFlowIntegrationTest extends BaseAuthenticatedIntegrationTe
                                 examEntity,
                                 Exam.class);
 
-                examId = examResp.getBody().getId();
+                examId = Objects.requireNonNull(examResp.getBody()).getId();
 
                 /* ---------- Subject ---------- */
 
@@ -166,7 +169,7 @@ public class MarksheetFlowIntegrationTest extends BaseAuthenticatedIntegrationTe
                                 esEntity,
                                 ExamSubject.class);
 
-                examSubjectId = esResp.getBody().getId();
+                examSubjectId = Objects.requireNonNull(esResp.getBody()).getId();
 
                 /* ---------- Marks Entry ---------- */
 
@@ -199,7 +202,7 @@ public class MarksheetFlowIntegrationTest extends BaseAuthenticatedIntegrationTe
                 Assertions.assertThat(msResp.getStatusCode())
                                 .isEqualTo(HttpStatus.OK);
 
-                MarksheetDto ms = msResp.getBody();
+                MarksheetDto ms = Objects.requireNonNull(msResp.getBody());
 
                 Assertions.assertThat(ms).isNotNull();
 

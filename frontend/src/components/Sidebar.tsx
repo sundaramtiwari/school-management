@@ -5,16 +5,29 @@ import { usePathname } from "next/navigation";
 import { useAuth } from "@/context/AuthContext";
 
 const menu = [
-  { name: "Dashboard", path: "/", roles: ["SUPER_ADMIN", "PLATFORM_ADMIN", "SCHOOL_ADMIN", "TEACHER", "ACCOUNTANT"] },
-  { name: "Schools", path: "/schools", roles: ["SUPER_ADMIN", "PLATFORM_ADMIN"] },
-  { name: "Students", path: "/students", roles: ["SUPER_ADMIN", "PLATFORM_ADMIN", "SCHOOL_ADMIN", "TEACHER", "ACCOUNTANT"] },
-  { name: "Classes", path: "/classes", roles: ["SUPER_ADMIN", "PLATFORM_ADMIN", "SCHOOL_ADMIN", "TEACHER"] },
-  { name: "Staff", path: "/staff", roles: ["SUPER_ADMIN", "PLATFORM_ADMIN", "SCHOOL_ADMIN"] },
-  { name: "Fees", path: "/fees", roles: ["SUPER_ADMIN", "PLATFORM_ADMIN", "SCHOOL_ADMIN", "ACCOUNTANT"] },
-  { name: "Attendance", path: "/attendance", roles: ["SUPER_ADMIN", "PLATFORM_ADMIN", "SCHOOL_ADMIN", "TEACHER"] },
-  { name: "Marksheets", path: "/marksheets", roles: ["SUPER_ADMIN", "PLATFORM_ADMIN", "SCHOOL_ADMIN", "TEACHER"] },
-  { name: "Sessions", path: "/sessions", roles: ["SUPER_ADMIN", "PLATFORM_ADMIN", "SCHOOL_ADMIN"] },
+  { name: "Dashboard", path: "/", icon: "📊", roles: ["SUPER_ADMIN", "PLATFORM_ADMIN", "SCHOOL_ADMIN", "TEACHER", "ACCOUNTANT"] },
+  { name: "Schools", path: "/schools", icon: "🏫", roles: ["SUPER_ADMIN", "PLATFORM_ADMIN"] },
+  { name: "Students", path: "/students", icon: "👨‍🎓", roles: ["SUPER_ADMIN", "PLATFORM_ADMIN", "SCHOOL_ADMIN", "TEACHER", "ACCOUNTANT"] },
+  { name: "Classes", path: "/classes", icon: "📚", roles: ["SUPER_ADMIN", "PLATFORM_ADMIN", "SCHOOL_ADMIN", "TEACHER"] },
+  { name: "Staff", path: "/staff", icon: "👥", roles: ["SUPER_ADMIN", "PLATFORM_ADMIN", "SCHOOL_ADMIN"] },
+  { name: "Fees", path: "/fees", icon: "💰", roles: ["SUPER_ADMIN", "PLATFORM_ADMIN", "SCHOOL_ADMIN", "ACCOUNTANT"] },
+  { name: "Attendance", path: "/attendance", icon: "✓", roles: ["SUPER_ADMIN", "PLATFORM_ADMIN", "SCHOOL_ADMIN", "TEACHER"] },
+  { name: "Marksheets", path: "/marksheets", icon: "📝", roles: ["SUPER_ADMIN", "PLATFORM_ADMIN", "SCHOOL_ADMIN", "TEACHER"] },
+  { name: "Sessions", path: "/sessions", icon: "📅", roles: ["SUPER_ADMIN", "PLATFORM_ADMIN", "SCHOOL_ADMIN"] },
 ];
+
+// ✅ FIXED: Proper role display mapping
+const getRoleDisplay = (role: string | undefined): string => {
+  const displays: Record<string, string> = {
+    SUPER_ADMIN: "Platform Owner",
+    PLATFORM_ADMIN: "Platform Admin",
+    SCHOOL_ADMIN: "School Admin",
+    TEACHER: "Teacher Portal",
+    ACCOUNTANT: "Finance Portal",
+    PARENT: "Parent Portal"
+  };
+  return displays[role?.toUpperCase() || ""] || "User Portal";
+};
 
 export default function Sidebar() {
   const pathname = usePathname();
@@ -23,13 +36,12 @@ export default function Sidebar() {
   return (
     <aside className="w-64 bg-white border-r flex flex-col h-screen">
 
-      {/* Header */}
+      {/* Header - FIXED */}
       <div className="p-4 text-xl font-bold border-b text-blue-600">
-        {user?.role?.toUpperCase() === "SUPER_ADMIN" ? "Super Admin" :
-          user?.role?.toUpperCase() === "PLATFORM_ADMIN" ? "Platform Admin" : "School Admin"}
+        {getRoleDisplay(user?.role)}
       </div>
 
-      {/* Menu */}
+      {/* Menu - ADDED ICONS */}
       <nav className="p-2 space-y-1 flex-1 overflow-y-auto">
 
         {menu.map((item) => {
@@ -44,14 +56,15 @@ export default function Sidebar() {
               key={item.path}
               href={item.path}
               className={`
-                block px-4 py-2 rounded
+                block px-4 py-2.5 rounded-lg flex items-center gap-3
                 ${active
                   ? "bg-blue-100 text-blue-700 font-semibold"
                   : "text-gray-700 hover:bg-gray-100"
                 }
               `}
             >
-              {item.name}
+              <span className="text-lg">{item.icon}</span>
+              <span>{item.name}</span>
             </Link>
           );
         })}
@@ -61,9 +74,10 @@ export default function Sidebar() {
       {/* User Info & Logout */}
       <div className="border-t p-4 space-y-2">
         <div className="text-sm text-gray-600">
-          <div className="font-semibold">{user?.role || "User"}</div>
+          {/* FIXED: Better role display */}
+          <div className="font-semibold">{getRoleDisplay(user?.role)}</div>
           <div className="text-xs text-gray-500">
-            {user?.schoolId ? `School ID: ${user.schoolId}` : "Platform Admin"}
+            {user?.schoolId ? `School ID: ${user.schoolId}` : "Platform Level"}
           </div>
         </div>
         <button

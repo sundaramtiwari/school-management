@@ -20,9 +20,11 @@ public class UserController {
 
     @GetMapping
     @PreAuthorize("hasAnyRole('SUPER_ADMIN', 'PLATFORM_ADMIN', 'SCHOOL_ADMIN')")
-    public ResponseEntity<PageResponse<UserDto>> list(Pageable pageable) {
+    public ResponseEntity<PageResponse<UserDto>> list(
+            @RequestParam(required = false) String role,
+            Pageable pageable) {
         // Service layer enforces tenant isolation
-        Page<UserDto> page = userService.listUsers(pageable);
+        Page<UserDto> page = userService.listUsers(role, pageable);
         return ResponseEntity.ok(PageResponseMapper.fromPage(page));
     }
 

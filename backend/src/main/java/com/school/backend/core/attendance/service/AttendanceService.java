@@ -1,10 +1,11 @@
 package com.school.backend.core.attendance.service;
 
-import com.school.backend.common.exception.ResourceNotFoundException;
 import com.school.backend.core.attendance.entity.StudentAttendance;
 import com.school.backend.core.attendance.enums.AttendanceStatus;
 import com.school.backend.core.attendance.repository.AttendanceRepository;
+import com.school.backend.core.student.entity.StudentEnrollment;
 import com.school.backend.core.student.repository.StudentEnrollmentRepository;
+import com.school.backend.core.student.repository.StudentRepository;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
@@ -21,6 +22,7 @@ public class AttendanceService {
 
     private final AttendanceRepository attendanceRepository;
     private final StudentEnrollmentRepository enrollmentRepository;
+    private final StudentRepository studentRepository;
 
     @Transactional
     public void markAttendanceBulk(LocalDate date, Map<Long, AttendanceStatus> attendanceMap, Long schoolId) {
@@ -54,7 +56,7 @@ public class AttendanceService {
     public List<StudentAttendance> getAttendanceByClassAndDate(Long classId, String session, LocalDate date) {
         List<Long> studentIds = enrollmentRepository.findByClassIdAndSession(classId, session)
                 .stream()
-                .map(e -> e.getStudentId())
+                .map(StudentEnrollment::getStudentId)
                 .collect(Collectors.toList());
 
         if (studentIds.isEmpty())
@@ -62,4 +64,23 @@ public class AttendanceService {
 
         return attendanceRepository.findByAttendanceDateAndStudentIdIn(date, studentIds);
     }
+
+    @Transactional(readOnly = true)
+    public double getTodayStats(Long schoolId) {
+        long totalStudents = studentRepository.countBySchoolId(schoolId);
+        if (totalStudents == 0) {
+            return 0.0;
+        }
+
+        // Count PRESENT + LATE + HALF_DAY as present
+        long present = attendanceRepository.countByAttendanceDateAndStatusAndSchoolId(LocalDate.now(),
+                AttendanceStatus.PRESENT, schoolId);
+        long late = attendanceRepository.countByAttendanceDateAndStatusAndSchoolId(LocalDate.now(),
+                AttendanceStatus.LATE, schoolId);
+        long halfDay = attendanceRepository.countByAttendanceDateAndStatusAndSchoolId(LocalDate.now(),
+                AttendanceStatus.HALF_DAY, schoolId);
+
+        return ((double) (present + late + halfDay) / totalStudents) * 100.0;
+    }
+
 }

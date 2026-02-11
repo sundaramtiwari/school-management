@@ -1,5 +1,6 @@
 package com.school.backend.user.service;
 
+import com.school.backend.common.enums.UserRole;
 import com.school.backend.common.exception.ResourceNotFoundException;
 import com.school.backend.common.tenant.TenantContext;
 import com.school.backend.school.entity.School;
@@ -23,8 +24,18 @@ public class UserService {
     private final PasswordEncoder passwordEncoder;
 
     @Transactional(readOnly = true)
-    public Page<UserDto> listUsers(Pageable pageable) {
+    public Page<UserDto> listUsers(String role, Pageable pageable) {
         // TenantFilterAspect ensures filtering by school_id
+        if (role != null && !role.isEmpty()) {
+            try {
+                UserRole userRole = UserRole.valueOf(role.toUpperCase());
+                return userRepository.findByRole(userRole, pageable)
+                        .map(this::toDto);
+            } catch (IllegalArgumentException e) {
+                // Return empty page if role is invalid
+                return Page.empty(pageable);
+            }
+        }
         return userRepository.findAll(pageable)
                 .map(this::toDto);
     }

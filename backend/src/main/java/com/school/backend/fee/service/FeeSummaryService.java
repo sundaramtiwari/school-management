@@ -1,6 +1,7 @@
 package com.school.backend.fee.service;
 
 import com.school.backend.common.exception.ResourceNotFoundException;
+import com.school.backend.core.student.entity.Student;
 import com.school.backend.core.student.repository.StudentRepository;
 import com.school.backend.fee.dto.FeeStatsDto;
 import com.school.backend.fee.dto.FeeSummaryDto;
@@ -13,11 +14,13 @@ import com.school.backend.fee.repository.FeeStructureRepository;
 import com.school.backend.fee.repository.StudentFeeAssignmentRepository;
 import com.school.backend.user.security.SecurityUtil;
 import lombok.RequiredArgsConstructor;
+import org.springframework.data.domain.Pageable;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
 import java.time.LocalDate;
 import java.time.Month;
+import java.time.temporal.ChronoUnit;
 import java.util.List;
 
 @Service
@@ -49,11 +52,11 @@ public class FeeSummaryService {
                 // Get all students for the school
                 // We use a simple list fetch for now, assuming institution size is manageable
                 // (< 2000 students)
-                List<com.school.backend.core.student.entity.Student> students = studentRepository
-                                .findBySchoolId(schoolId, org.springframework.data.domain.Pageable.unpaged())
+                List<Student> students = studentRepository
+                                .findBySchoolId(schoolId, Pageable.unpaged())
                                 .getContent();
 
-                for (com.school.backend.core.student.entity.Student student : students) {
+                for (Student student : students) {
                         totalPending += getStudentFeeSummary(student.getId(), session).getPendingFee();
                 }
 
@@ -100,6 +103,12 @@ public class FeeSummaryService {
                 // 5. Build response
                 FeeSummaryDto dto = new FeeSummaryDto();
                 dto.setStudentId(studentId);
+
+                Student s = studentRepository.findById(studentId).orElse(null);
+                if (s != null) {
+                        dto.setStudentName(s.getFirstName() + " " + (s.getLastName() != null ? s.getLastName() : ""));
+                }
+
                 dto.setSession(session);
                 dto.setTotalFee((int) totalFeeAccrued);
                 dto.setTotalPaid((int) totalPaid);
@@ -107,6 +116,21 @@ public class FeeSummaryService {
                 dto.setFeePending(pending > 0);
 
                 return dto;
+        }
+
+        @Transactional(readOnly = true)
+        public List<FeeSummaryDto> getTopDefaulters(String session, int limit) {
+                Long schoolId = SecurityUtil.schoolId();
+                List<Student> students = studentRepository
+                                .findBySchoolId(schoolId, Pageable.unpaged())
+                                .getContent();
+
+                return students.stream()
+                                .map(s -> getStudentFeeSummary(s.getId(), session))
+                                .filter(dto -> dto.getPendingFee() > 0)
+                                .sorted((a, b) -> Integer.compare(b.getPendingFee(), a.getPendingFee()))
+                                .limit(limit)
+                                .toList();
         }
 
         /**
@@ -130,7 +154,7 @@ public class FeeSummaryService {
                 // Calculate months passed
                 // e.g., April (start) -> April (now) = 1 month due
                 // April -> May = 2 months due
-                long monthsPassed = java.time.temporal.ChronoUnit.MONTHS.between(sessionStart, now) + 1;
+                long monthsPassed = ChronoUnit.MONTHS.between(sessionStart, now) + 1;
 
                 if (monthsPassed < 1)
                         monthsPassed = 1;

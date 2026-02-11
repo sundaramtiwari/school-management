@@ -3,8 +3,13 @@ package com.school.backend.fee.controller;
 import com.school.backend.fee.dto.FeePaymentDto;
 import com.school.backend.fee.dto.FeePaymentRequest;
 import com.school.backend.fee.service.FeePaymentService;
+import com.school.backend.fee.service.FeeReceiptService;
 import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
+import org.springframework.http.HttpHeaders;
+import org.springframework.http.MediaType;
+import org.springframework.http.ResponseEntity;
+import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.web.bind.annotation.*;
 
 import java.util.List;
@@ -15,13 +20,13 @@ import java.util.List;
 public class FeePaymentController {
 
     private final FeePaymentService service;
-    private final com.school.backend.fee.service.FeeReceiptService receiptService;
+    private final FeeReceiptService receiptService;
 
     // Recent payments (global for school)
     @GetMapping("/recent")
-    @org.springframework.security.access.prepost.PreAuthorize("hasAnyRole('SCHOOL_ADMIN', 'ACCOUNTANT', 'SUPER_ADMIN')")
-    public List<FeePaymentDto> recent() {
-        return service.getRecentPayments();
+    @PreAuthorize("hasAnyRole('SCHOOL_ADMIN', 'ACCOUNTANT', 'SUPER_ADMIN')")
+    public List<FeePaymentDto> recent(@RequestParam(defaultValue = "10") int limit) {
+        return service.getRecentPayments(limit);
     }
 
     // Make payment
@@ -38,13 +43,13 @@ public class FeePaymentController {
 
     // Download Receipt
     @GetMapping("/{id}/receipt")
-    public org.springframework.http.ResponseEntity<byte[]> downloadReceipt(@PathVariable Long id) {
+    public ResponseEntity<byte[]> downloadReceipt(@PathVariable Long id) {
         byte[] pdf = receiptService.generateReceipt(id);
 
-        return org.springframework.http.ResponseEntity.ok()
-                .header(org.springframework.http.HttpHeaders.CONTENT_DISPOSITION,
+        return ResponseEntity.ok()
+                .header(HttpHeaders.CONTENT_DISPOSITION,
                         "attachment; filename=receipt_" + id + ".pdf")
-                .contentType(org.springframework.http.MediaType.APPLICATION_PDF)
+                .contentType(MediaType.APPLICATION_PDF)
                 .body(pdf);
     }
 }

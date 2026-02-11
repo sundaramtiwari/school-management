@@ -15,96 +15,98 @@ import org.springframework.http.HttpEntity;
 import org.springframework.http.HttpMethod;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
+import java.util.Objects;
 
 import static org.junit.jupiter.api.Assertions.*;
 
 public class UserControllerIntegrationTest extends BaseAuthenticatedIntegrationTest {
 
-    @Autowired
-    private SchoolRepository schoolRepository;
-    @Autowired
-    private UserRepository userRepository;
+        @Autowired
+        private SchoolRepository schoolRepository;
+        @Autowired
+        private UserRepository userRepository;
 
-    private School schoolA;
-    private School schoolB;
+        private School schoolA;
+        private School schoolB;
 
-    @BeforeEach
-    void setupTenants() {
-        userRepository.deleteAll(); // careful, might delete auth helper users if not isolated?
-        // BaseAuthenticatedIntegrationTest creates admins on the fly.
-        // Better NOT to delete all, but we are in H2 so maybe fine if we re-login.
-        // Actually, BaseAuthenticatedIntegrationTest baseSetup() runs BeforeEach and
-        // logs in as SuperAdmin.
-        // If we delete all here, we kill that user.
-        // Let's create schools first.
+        @BeforeEach
+        void setupTenants() {
+                userRepository.deleteAll(); // careful, might delete auth helper users if not isolated?
+                // BaseAuthenticatedIntegrationTest creates admins on the fly.
+                // Better NOT to delete all, but we are in H2 so maybe fine if we re-login.
+                // Actually, BaseAuthenticatedIntegrationTest baseSetup() runs BeforeEach and
+                // logs in as SuperAdmin.
+                // If we delete all here, we kill that user.
+                // Let's create schools first.
 
-        schoolA = createSchool("School A", "SCH-A");
-        schoolB = createSchool("School B", "SCH-B");
-    }
+                schoolA = createSchool("School A", "SCH-A");
+                schoolB = createSchool("School B", "SCH-B");
+        }
 
-    private School createSchool(String name, String code) {
-        return schoolRepository.save(School.builder()
-                .name(name)
-                .schoolCode(code)
-                .active(true)
-                .build());
-    }
+        private School createSchool(String name, String code) {
+                return schoolRepository.save(School.builder()
+                                .name(name)
+                                .schoolCode(code)
+                                .active(true)
+                                .build());
+        }
 
-    @Test
-    void testTenantIsolation_schoolAdminCanOnlySeeOwnUsers() {
-        // 1. Login as School A Admin
-        loginAsSchoolAdmin(schoolA.getId());
+        @Test
+        void testTenantIsolation_schoolAdminCanOnlySeeOwnUsers() {
+                // 1. Login as School A Admin
+                loginAsSchoolAdmin(schoolA.getId());
 
-        // 2. Create User in School A
-        UserDto reqA = new UserDto();
-        reqA.setEmail("teacher@schoola.com");
-        reqA.setPassword("pass123");
-        reqA.setRole(UserRole.TEACHER);
-        reqA.setFullName("Teacher A");
+                // 2. Create User in School A
+                UserDto reqA = new UserDto();
+                reqA.setEmail("teacher@schoola.com");
+                reqA.setPassword("pass123");
+                reqA.setRole(UserRole.TEACHER);
+                reqA.setFullName("Teacher A");
 
-        ResponseEntity<UserDto> respA = restTemplate.postForEntity(
-                "/api/users",
-                new HttpEntity<>(reqA, headers),
-                UserDto.class);
-        assertEquals(HttpStatus.CREATED, respA.getStatusCode());
+                ResponseEntity<UserDto> respA = restTemplate.postForEntity(
+                                "/api/users",
+                                new HttpEntity<>(reqA, headers),
+                                UserDto.class);
+                assertEquals(HttpStatus.CREATED, respA.getStatusCode());
 
-        // 3. Login as School B Admin
-        loginAsSchoolAdmin(schoolB.getId());
+                // 3. Login as School B Admin
+                loginAsSchoolAdmin(schoolB.getId());
 
-        // 4. Try to List Users -> Should NOT see Teacher A
-        ResponseEntity<PageResponse<UserDto>> listResp = restTemplate.exchange(
-                "/api/users",
-                HttpMethod.GET,
-                new HttpEntity<>(headers),
-                new ParameterizedTypeReference<>() {
-                });
+                // 4. Try to List Users -> Should NOT see Teacher A
+                ResponseEntity<PageResponse<UserDto>> listResp = restTemplate.exchange(
+                                "/api/users",
+                                HttpMethod.GET,
+                                new HttpEntity<>(headers),
+                                new ParameterizedTypeReference<>() {
+                                });
 
-        assertEquals(HttpStatus.OK, listResp.getStatusCode());
-        PageResponse<UserDto> page = listResp.getBody();
-        assertNotNull(page);
+                assertEquals(HttpStatus.OK, listResp.getStatusCode());
+                PageResponse<UserDto> page = Objects.requireNonNull(listResp.getBody());
+                assertNotNull(page);
 
-        // Should verify content does not contain "teacher@schoola.com"
-        boolean hasTeacherA = page.content().stream()
-                .anyMatch(u -> u.getEmail().equals("teacher@schoola.com"));
+                // Should verify content does not contain "teacher@schoola.com"
+                boolean hasTeacherA = page.content().stream()
+                                .anyMatch(u -> u.getEmail().equals("teacher@schoola.com"));
 
-        assertFalse(hasTeacherA, "School B should not see School A's users");
+                assertFalse(hasTeacherA, "School B should not see School A's users");
 
-        // 5. Create User in School B
-        UserDto reqB = new UserDto();
-        reqB.setEmail("teacher@schoolb.com");
-        reqB.setPassword("pass123");
-        reqB.setRole(UserRole.TEACHER);
-        reqB.setFullName("Teacher B");
+                // 5. Create User in School B
+                UserDto reqB = new UserDto();
+                reqB.setEmail("teacher@schoolb.com");
+                reqB.setPassword("pass123");
+                reqB.setRole(UserRole.TEACHER);
+                reqB.setFullName("Teacher B");
 
-        restTemplate.postForEntity("/api/users", new HttpEntity<>(reqB, headers), UserDto.class);
+                restTemplate.postForEntity("/api/users", new HttpEntity<>(reqB, headers), UserDto.class);
 
-        // 6. Verify List again -> Should see Teacher B
-        ResponseEntity<PageResponse<UserDto>> listRespB = restTemplate.exchange(
-                "/api/users",
-                HttpMethod.GET,
-                new HttpEntity<>(headers),
-                new ParameterizedTypeReference<>() {
-                });
-        assertTrue(listRespB.getBody().content().stream().anyMatch(u -> u.getEmail().equals("teacher@schoolb.com")));
-    }
+                // 6. Verify List again -> Should see Teacher B
+                ResponseEntity<PageResponse<UserDto>> listRespB = restTemplate.exchange(
+                                "/api/users",
+                                HttpMethod.GET,
+                                new HttpEntity<>(headers),
+                                new ParameterizedTypeReference<>() {
+                                });
+                assertTrue(Objects.requireNonNull(listRespB.getBody()).content().stream()
+                                .anyMatch(u -> u.getEmail().equals("teacher@schoolb.com")));
+        }
 }

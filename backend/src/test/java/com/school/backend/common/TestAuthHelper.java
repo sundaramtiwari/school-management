@@ -24,9 +24,9 @@ public class TestAuthHelper {
     private final PasswordEncoder passwordEncoder;
 
     public TestAuthHelper(TestRestTemplate restTemplate,
-                          UserRepository userRepository,
-                          SchoolRepository schoolRepository,
-                          PasswordEncoder passwordEncoder) {
+            UserRepository userRepository,
+            SchoolRepository schoolRepository,
+            PasswordEncoder passwordEncoder) {
 
         this.restTemplate = restTemplate;
         this.userRepository = userRepository;
@@ -52,8 +52,7 @@ public class TestAuthHelper {
             user = User.builder()
                     .email(email)
                     .passwordHash(
-                            passwordEncoder.encode(password)
-                    )
+                            passwordEncoder.encode(password))
                     .role(UserRole.SUPER_ADMIN)
                     .active(true)
                     .build();
@@ -64,7 +63,6 @@ public class TestAuthHelper {
         // 3. Login
         return login(email, password);
     }
-
 
     // ------------------------------------------------
 
@@ -88,11 +86,10 @@ public class TestAuthHelper {
             user = User.builder()
                     .email(email)
                     .passwordHash(
-                            passwordEncoder.encode(password)
-                    )
+                            passwordEncoder.encode(password))
                     .role(UserRole.SCHOOL_ADMIN)
                     .active(true)
-                    .school(school)   // ✅ MUST be set
+                    .school(school) // ✅ MUST be set
                     .build();
 
             userRepository.save(user);
@@ -111,7 +108,6 @@ public class TestAuthHelper {
         return login(user.getEmail(), password);
     }
 
-
     // ------------------------------------------------
 
     private String login(String email, String password) {
@@ -120,18 +116,20 @@ public class TestAuthHelper {
         req.setEmail(email);
         req.setPassword(password);
 
-        ResponseEntity<AuthResponse> res =
-                restTemplate.postForEntity(
-                        "/api/auth/login",
-                        req,
-                        AuthResponse.class
-                );
+        ResponseEntity<AuthResponse> res = restTemplate.postForEntity(
+                "/api/auth/login",
+                req,
+                AuthResponse.class);
 
         if (res.getStatusCode() != HttpStatus.OK) {
             throw new RuntimeException("Test login failed");
         }
 
-        return res.getBody().getToken();
+        AuthResponse body = res.getBody();
+        if (body == null) {
+            throw new RuntimeException("Test login failed: Empty response body");
+        }
+        return body.getToken();
     }
 
     // ------------------------------------------------

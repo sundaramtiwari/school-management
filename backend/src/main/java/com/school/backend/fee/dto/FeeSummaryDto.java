@@ -6,11 +6,12 @@ import lombok.Data;
 public class FeeSummaryDto {
 
     private Long studentId;
+    private String studentName;
     private String session;
 
-    private int totalFee;     // sum of fee structure
-    private int totalPaid;    // sum of payments
-    private int pendingFee;   // totalFee - totalPaid
+    private int totalFee; // sum of fee structure
+    private int totalPaid; // sum of payments
+    private int pendingFee; // totalFee - totalPaid
 
     private boolean feePending;
 }

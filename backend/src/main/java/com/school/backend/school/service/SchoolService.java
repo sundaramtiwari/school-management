@@ -1,14 +1,20 @@
 package com.school.backend.school.service;
 
+import com.school.backend.common.enums.UserRole;
 import com.school.backend.common.exception.ResourceNotFoundException;
 import com.school.backend.school.dto.SchoolDto;
+import com.school.backend.school.dto.SchoolOnboardingRequest;
 import com.school.backend.school.entity.School;
 import com.school.backend.school.mapper.SchoolMapper;
 import com.school.backend.school.repository.SchoolRepository;
+import com.school.backend.user.entity.User;
+import com.school.backend.user.repository.UserRepository;
 import lombok.RequiredArgsConstructor;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
+import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Service;
+import org.springframework.transaction.annotation.Transactional;
 
 import java.util.List;
 
@@ -17,8 +23,8 @@ import java.util.List;
 public class SchoolService {
 
     private final SchoolRepository schoolRepository;
-    private final com.school.backend.user.repository.UserRepository userRepository;
-    private final org.springframework.security.crypto.password.PasswordEncoder passwordEncoder;
+    private final UserRepository userRepository;
+    private final PasswordEncoder passwordEncoder;
 
     /**
      * Create school from DTO and return saved DTO
@@ -34,8 +40,8 @@ public class SchoolService {
     /**
      * Create School AND Initial Admin User
      */
-    @org.springframework.transaction.annotation.Transactional
-    public SchoolDto createSchoolWithAdmin(com.school.backend.school.dto.SchoolOnboardingRequest req) {
+    @Transactional
+    public SchoolDto createSchoolWithAdmin(SchoolOnboardingRequest req) {
         // 1. Check if user already exists
         if (userRepository.existsByEmail(req.getAdminEmail())) {
             throw new IllegalArgumentException("User with email " + req.getAdminEmail() + " already exists");
@@ -66,10 +72,10 @@ public class SchoolService {
         school = schoolRepository.save(school);
 
         // 3. Create Admin User
-        com.school.backend.user.entity.User user = new com.school.backend.user.entity.User();
+        User user = new User();
         user.setEmail(req.getAdminEmail());
         user.setPasswordHash(passwordEncoder.encode(req.getAdminPassword()));
-        user.setRole(com.school.backend.common.enums.UserRole.SCHOOL_ADMIN);
+        user.setRole(UserRole.SCHOOL_ADMIN);
         user.setSchool(school);
 
         userRepository.save(user);
@@ -95,6 +101,13 @@ public class SchoolService {
     public SchoolDto getByCode(String code) {
         School school = schoolRepository.findBySchoolCode(code)
                 .orElseThrow(() -> new ResourceNotFoundException("School not found with code: " + code));
+        return SchoolMapper.toDto(school);
+
+    }
+
+    public SchoolDto getById(Long id) {
+        School school = schoolRepository.findById(id)
+                .orElseThrow(() -> new ResourceNotFoundException("School not found with id: " + id));
         return SchoolMapper.toDto(school);
     }
 

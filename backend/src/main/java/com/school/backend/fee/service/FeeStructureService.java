@@ -1,14 +1,14 @@
 package com.school.backend.fee.service;
 
 import com.school.backend.common.exception.ResourceNotFoundException;
-import com.school.backend.common.tenant.TenantContext;
-import com.school.backend.user.security.SecurityUtil;
 import com.school.backend.fee.dto.FeeStructureCreateRequest;
 import com.school.backend.fee.dto.FeeStructureDto;
 import com.school.backend.fee.entity.FeeStructure;
 import com.school.backend.fee.entity.FeeType;
+import com.school.backend.fee.enums.FeeFrequency;
 import com.school.backend.fee.repository.FeeStructureRepository;
 import com.school.backend.fee.repository.FeeTypeRepository;
+import com.school.backend.user.security.SecurityUtil;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
@@ -35,8 +35,7 @@ public class FeeStructureService {
                 .session(req.getSession())
                 .feeType(feeType)
                 .amount(req.getAmount())
-                .frequency(req.getFrequency() != null ? req.getFrequency()
-                        : com.school.backend.fee.enums.FeeFrequency.ONE_TIME)
+                .frequency(req.getFrequency() != null ? req.getFrequency() : FeeFrequency.ONE_TIME)
                 .active(true)
                 .build();
 

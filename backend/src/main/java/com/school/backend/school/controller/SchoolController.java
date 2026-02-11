@@ -3,10 +3,13 @@ package com.school.backend.school.controller;
 import com.school.backend.common.dto.PageResponse;
 import com.school.backend.common.dto.PageResponseMapper;
 import com.school.backend.school.dto.SchoolDto;
+import com.school.backend.school.dto.SchoolOnboardingRequest;
 import com.school.backend.school.service.SchoolService;
+import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
+import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.web.bind.annotation.*;
@@ -42,10 +45,9 @@ public class SchoolController {
      */
     @PostMapping("/onboard")
     @PreAuthorize("hasAnyRole('SUPER_ADMIN', 'PLATFORM_ADMIN')")
-    public ResponseEntity<SchoolDto> onboard(
-            @RequestBody @jakarta.validation.Valid com.school.backend.school.dto.SchoolOnboardingRequest req) {
+    public ResponseEntity<SchoolDto> onboard(@RequestBody @Valid SchoolOnboardingRequest req) {
         SchoolDto created = schoolService.createSchoolWithAdmin(req);
-        return ResponseEntity.status(org.springframework.http.HttpStatus.CREATED).body(created);
+        return ResponseEntity.status(HttpStatus.CREATED).body(created);
     }
 
     /**
@@ -66,6 +68,12 @@ public class SchoolController {
     @PreAuthorize("hasAnyRole('SUPER_ADMIN', 'PLATFORM_ADMIN')")
     public ResponseEntity<SchoolDto> getByCode(@PathVariable String code) {
         return ResponseEntity.ok(schoolService.getByCode(code));
+    }
+
+    @GetMapping("/id/{id}")
+    @PreAuthorize("hasAnyRole('SUPER_ADMIN', 'PLATFORM_ADMIN')")
+    public ResponseEntity<SchoolDto> getById(@PathVariable Long id) {
+        return ResponseEntity.ok(schoolService.getById(id));
     }
 
     /**

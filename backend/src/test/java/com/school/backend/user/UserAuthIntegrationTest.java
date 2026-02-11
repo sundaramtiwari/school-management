@@ -23,141 +23,130 @@ import static org.assertj.core.api.Assertions.assertThat;
 @SpringBootTest(webEnvironment = SpringBootTest.WebEnvironment.RANDOM_PORT)
 public class UserAuthIntegrationTest {
 
-    @Autowired
-    private TestRestTemplate restTemplate;
+        @Autowired
+        private TestRestTemplate restTemplate;
 
-    @Autowired
-    private TestAuthHelper authHelper;
+        @Autowired
+        private TestAuthHelper authHelper;
 
-    @Autowired
-    private UserRepository userRepository;
+        @Autowired
+        private UserRepository userRepository;
 
-    @Autowired
-    private SchoolRepository schoolRepository;
+        @Autowired
+        private SchoolRepository schoolRepository;
 
-    @Autowired
-    private PasswordEncoder passwordEncoder;
+        @Autowired
+        private PasswordEncoder passwordEncoder;
 
-    private String token;
-    private HttpHeaders headers;
+        private String token;
+        private HttpHeaders headers;
 
-    private Long userId;
-    private Long schoolId;
+        private Long userId;
+        private Long schoolId;
 
-    // ------------------------------------------------
+        // ------------------------------------------------
 
-    @BeforeEach
-    void setup() {
+        @BeforeEach
+        void setup() {
 
-        token = authHelper.createSuperAdminAndLogin();
-        headers = authHelper.authHeaders(token);
-    }
-
-    // ------------------------------------------------
-
-    @Test
-    void shouldLoginSuccessfully() {
-
-        // 1. Create school (AUTHENTICATED)
-
-        schoolId = createSchool("Login Test School");
-
-
-        // 2. Create user
-
-        User user = User.builder()
-                .email("login@test.com")
-                .passwordHash(
-                        passwordEncoder.encode("secret123")
-                )
-                .role(UserRole.SCHOOL_ADMIN)
-                .school(
-                        schoolRepository.findById(schoolId)
-                                .orElseThrow()
-                )
-                .active(true)
-                .build();
-
-        user = userRepository.save(user);
-
-        userId = user.getId();
-
-
-        // 3. Login (PUBLIC API)
-
-        LoginRequest req = new LoginRequest();
-
-        req.setEmail("login@test.com");
-        req.setPassword("secret123");
-
-        ResponseEntity<AuthResponse> res =
-                restTemplate.postForEntity(
-                        "/api/auth/login",
-                        req,
-                        AuthResponse.class
-                );
-
-
-        // 4. Verify
-
-        assertThat(res.getStatusCode())
-                .isEqualTo(HttpStatus.OK);
-
-        AuthResponse body = res.getBody();
-
-        assertThat(body).isNotNull();
-        assertThat(body.getToken()).isNotBlank();
-
-        assertThat(body.getRole())
-                .isEqualTo(UserRole.SCHOOL_ADMIN);
-
-        assertThat(body.getSchoolId())
-                .isEqualTo(schoolId);
-
-        assertThat(body.getUserId())
-                .isEqualTo(userId);
-    }
-
-    // ------------------------------------------------
-
-    private Long createSchool(String name) {
-
-        SchoolCreateRequest req =
-                new SchoolCreateRequest();
-
-        req.setName(name);
-        req.setDisplayName(name);
-        req.setBoard("CBSE");
-        req.setAddress("Varanasi");
-
-        HttpEntity<SchoolCreateRequest> entity =
-                new HttpEntity<>(req, headers);
-
-        ResponseEntity<SchoolDto> res =
-                restTemplate.exchange(
-                        "/api/schools",
-                        HttpMethod.POST,
-                        entity,
-                        SchoolDto.class
-                );
-
-        assertThat(res.getStatusCode())
-                .isEqualTo(HttpStatus.CREATED);
-
-        return res.getBody().getId();
-    }
-
-    // ------------------------------------------------
-
-    @AfterEach
-    void cleanup() {
-
-        if (userId != null) {
-            userRepository.deleteById(userId);
+                token = authHelper.createSuperAdminAndLogin();
+                headers = authHelper.authHeaders(token);
         }
 
-        if (schoolId != null) {
-            schoolRepository.deleteById(schoolId);
+        // ------------------------------------------------
+
+        @Test
+        void shouldLoginSuccessfully() {
+
+                // 1. Create school (AUTHENTICATED)
+
+                schoolId = createSchool("Login Test School");
+
+                // 2. Create user
+
+                User user = User.builder()
+                                .email("login@test.com")
+                                .passwordHash(
+                                                passwordEncoder.encode("secret123"))
+                                .role(UserRole.SCHOOL_ADMIN)
+                                .school(
+                                                schoolRepository.findById(schoolId)
+                                                                .orElseThrow())
+                                .active(true)
+                                .build();
+
+                user = userRepository.save(user);
+
+                userId = user.getId();
+
+                // 3. Login (PUBLIC API)
+
+                LoginRequest req = new LoginRequest();
+
+                req.setEmail("login@test.com");
+                req.setPassword("secret123");
+
+                ResponseEntity<AuthResponse> res = restTemplate.postForEntity(
+                                "/api/auth/login",
+                                req,
+                                AuthResponse.class);
+
+                // 4. Verify
+
+                assertThat(res.getStatusCode())
+                                .isEqualTo(HttpStatus.OK);
+
+                AuthResponse body = res.getBody();
+
+                assertThat(body).isNotNull();
+                assertThat(body.getToken()).isNotBlank();
+
+                assertThat(body.getRole())
+                                .isEqualTo(UserRole.SCHOOL_ADMIN);
+
+                assertThat(body.getSchoolId())
+                                .isEqualTo(schoolId);
+
+                assertThat(body.getUserId())
+                                .isEqualTo(userId);
         }
-    }
+
+        // ------------------------------------------------
+
+        private Long createSchool(String name) {
+
+                SchoolCreateRequest req = new SchoolCreateRequest();
+
+                req.setName(name);
+                req.setDisplayName(name);
+                req.setBoard("CBSE");
+                req.setAddress("Varanasi");
+
+                HttpEntity<SchoolCreateRequest> entity = new HttpEntity<>(req, headers);
+
+                ResponseEntity<SchoolDto> res = restTemplate.exchange(
+                                "/api/schools",
+                                HttpMethod.POST,
+                                entity,
+                                SchoolDto.class);
+
+                assertThat(res.getStatusCode())
+                                .isEqualTo(HttpStatus.CREATED);
+
+                return res.getBody().getId();
+        }
+
+        // ------------------------------------------------
+
+        @AfterEach
+        void cleanup() {
+
+                if (userId != null) {
+                        userRepository.deleteById(userId);
+                }
+
+                if (schoolId != null) {
+                        schoolRepository.deleteById(schoolId);
+                }
+        }
 }
