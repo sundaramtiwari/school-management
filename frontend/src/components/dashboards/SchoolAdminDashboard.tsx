@@ -40,7 +40,7 @@ export default function SchoolAdminDashboard() {
       // Load stats via new dedicated endpoint
       const [results, classCountRes] = await Promise.all([
         api.get(`/api/dashboard/school-admin/stats?session=${activeSession}`),
-        api.get('/api/classes?size=1'), // Classes still separate as they are global-ish
+        api.get('/api/classes/mine?size=1'), // Classes still separate as they are global-ish
       ]);
 
       const data = results.data;

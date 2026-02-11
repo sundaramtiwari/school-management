@@ -53,7 +53,7 @@ export default function FeeStructuresPage() {
     async function loadClasses() {
         try {
             setLoadingClasses(true);
-            const res = await api.get("/api/classes?size=100");
+            const res = await api.get("/api/classes/mine?size=100");
             setClasses(res.data.content || []);
         } catch (e: any) {
             const msg = e.response?.data?.message || e.message;

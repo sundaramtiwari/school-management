@@ -37,7 +37,7 @@ export default function TransportEnrollmentPage() {
 
     async function loadClasses() {
         try {
-            const res = await api.get("/api/classes?size=100");
+            const res = await api.get("/api/classes/mine?size=100");
             setClasses(res.data.content || []);
         } catch {
             showToast("Failed to load classes", "error");

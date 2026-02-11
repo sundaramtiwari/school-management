@@ -46,12 +46,12 @@ export default function TeacherDashboard() {
       // Load teacher's assigned classes
       // Note: Backend needs /api/teachers/my-classes endpoint
       // For now, we'll simulate or use /api/classes with teacher filter
-      const classesRes = await api.get('/api/classes/my-classes').catch(() => 
-        api.get('/api/classes?size=100') // Fallback
+      const classesRes = await api.get('/api/classes/my-classes').catch(() =>
+        api.get('/api/classes/mine?size=100') // Fallback
       );
-      
+
       const classData = classesRes.data?.content || classesRes.data || [];
-      
+
       // Enrich each class with attendance status
       const enrichedClasses = await Promise.all(
         classData.map(async (cls: any) => {
@@ -61,7 +61,7 @@ export default function TeacherDashboard() {
               `/api/attendance/class/${cls.id}?date=${todayDate}`
             );
             const hasAttendance = (attendanceRes.data || []).length > 0;
-            
+
             // Get student count
             const studentRes = await api.get(`/api/students/by-class/${cls.id}?size=1`);
             const studentCount = studentRes.data?.totalElements || 0;
@@ -166,11 +166,11 @@ export default function TeacherDashboard() {
             <h1 className="text-3xl font-bold">Welcome, Teacher!</h1>
             <p className="text-purple-100 mt-1">Your Teaching Dashboard</p>
             <p className="text-purple-200 text-sm mt-1">
-              {new Date().toLocaleDateString('en-IN', { 
-                weekday: 'long', 
-                year: 'numeric', 
-                month: 'long', 
-                day: 'numeric' 
+              {new Date().toLocaleDateString('en-IN', {
+                weekday: 'long',
+                year: 'numeric',
+                month: 'long',
+                day: 'numeric'
               })}
             </p>
           </div>
