@@ -3,22 +3,14 @@ package com.school.backend.fee;
 import com.school.backend.common.BaseAuthenticatedIntegrationTest;
 import com.school.backend.common.enums.Gender;
 import com.school.backend.core.classsubject.entity.SchoolClass;
-import com.school.backend.core.classsubject.repository.SchoolClassRepository;
 import com.school.backend.core.student.entity.Student;
-import com.school.backend.core.student.repository.StudentRepository;
 import com.school.backend.fee.dto.*;
 import com.school.backend.fee.entity.FeePayment;
 import com.school.backend.fee.entity.FeeType;
 import com.school.backend.fee.enums.FeeFrequency;
-import com.school.backend.fee.repository.FeePaymentRepository;
-import com.school.backend.fee.repository.FeeStructureRepository;
-import com.school.backend.fee.repository.FeeTypeRepository;
-import com.school.backend.fee.repository.StudentFeeAssignmentRepository;
 import com.school.backend.school.entity.School;
-import com.school.backend.school.repository.SchoolRepository;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
-import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.HttpEntity;
 import org.springframework.http.HttpMethod;
 import org.springframework.http.HttpStatus;
@@ -31,29 +23,15 @@ import static org.junit.jupiter.api.Assertions.*;
 
 public class FeeIntegrationTest extends BaseAuthenticatedIntegrationTest {
 
-        @Autowired
-        private SchoolRepository schoolRepository;
-        @Autowired
-        private FeeStructureRepository feeStructureRepository;
-        @Autowired
-        private FeeTypeRepository feeTypeRepository;
-        @Autowired
-        private FeePaymentRepository feePaymentRepository;
-        @Autowired
-        private StudentFeeAssignmentRepository assignmentRepository;
-        @Autowired
-        private SchoolClassRepository classRepository;
-        @Autowired
-        private StudentRepository studentRepository;
-
         private School testSchool;
         private Long feeTypeId;
         private Long classId;
         private Long studentId;
+        private Long sessionId;
 
         @BeforeEach
         void setupFeeTest() {
-                cleanup();
+                fullCleanup();
 
                 // Ensure we are logged in as a school admin
                 testSchool = schoolRepository.findBySchoolCode("SPS001")
@@ -67,14 +45,18 @@ public class FeeIntegrationTest extends BaseAuthenticatedIntegrationTest {
 
                 loginAsSchoolAdmin(testSchool.getId());
 
+                // Create Session
+                sessionId = setupSession(testSchool.getId(), sessionRepository, schoolRepository);
+                setSessionHeader(sessionId);
+
                 // Create a Class
                 var cls = new SchoolClass();
                 cls.setName("X");
                 cls.setSection("A");
-                cls.setSession("2024-25");
+                cls.setSessionId(sessionId);
                 cls.setSchoolId(testSchool.getId());
                 cls.setActive(true);
-                cls = classRepository.save(cls);
+                cls = schoolClassRepository.save(cls);
                 classId = cls.getId();
 
                 // Create a Student
@@ -103,7 +85,7 @@ public class FeeIntegrationTest extends BaseAuthenticatedIntegrationTest {
                 // 1. Create Fee Structure (Monthly)
                 FeeStructureCreateRequest createReq = new FeeStructureCreateRequest();
                 createReq.setClassId(classId); // Real Class ID
-                createReq.setSession("2024-25");
+                createReq.setSessionId(sessionId);
                 createReq.setFeeTypeId(feeTypeId);
                 createReq.setAmount(5000);
                 createReq.setFrequency(FeeFrequency.MONTHLY);
@@ -118,13 +100,7 @@ public class FeeIntegrationTest extends BaseAuthenticatedIntegrationTest {
                 assertNotNull(structureBody.getId());
                 assertEquals(FeeFrequency.MONTHLY, structureBody.getFrequency());
 
-                // 2. Check Dues for a Student (ID: 501)
-                // Dues should be calculated based on logic (assuming implementation uses
-                // assignment or auto-calc)
-                // If auto-calc logic assumes 1 month due, let's see.
-                // Note: Logic depends on start date vs current date.
-
-                // 3. Pay Fees
+                // 2. Pay Fees
                 FeePaymentRequest payReq = new FeePaymentRequest();
                 payReq.setStudentId(studentId); // Use real student ID
                 payReq.setAmountPaid(5000);
@@ -141,7 +117,7 @@ public class FeeIntegrationTest extends BaseAuthenticatedIntegrationTest {
                 assertNotNull(payBody);
                 assertNotNull(payBody.getId());
 
-                // 4. Verify History
+                // 3. Verify History
                 ResponseEntity<FeePaymentDto[]> histResp = restTemplate.exchange(
                                 "/api/fees/payments/students/" + studentId,
                                 HttpMethod.GET,
@@ -151,20 +127,6 @@ public class FeeIntegrationTest extends BaseAuthenticatedIntegrationTest {
                 FeePaymentDto[] histBody = Objects.requireNonNull(histResp.getBody());
                 assertNotNull(histBody);
                 assertTrue(histBody.length >= 1);
-
-                // 5. Download Receipt - COMMENTED OUT: Requires OpenPDF dependency
-                // TODO: Add OpenPDF dependency to build.gradle to enable PDF receipt generation
-                /*
-                 * Long paymentId = payResp.getBody().getId();
-                 * ResponseEntity<byte[]> receiptResp = restTemplate.exchange(
-                 * "/api/fees/payments/" + paymentId + "/receipt",
-                 * HttpMethod.GET,
-                 * new HttpEntity<>(headers),
-                 * byte[].class);
-                 * assertEquals(HttpStatus.OK, receiptResp.getStatusCode());
-                 * assertTrue(receiptResp.getBody().length > 0,
-                 * "PDF content should not be empty");
-                 */
         }
 
         @Test
@@ -246,7 +208,6 @@ public class FeeIntegrationTest extends BaseAuthenticatedIntegrationTest {
                 feePaymentRepository.save(p2);
 
                 // 3. Fetch recent payments as SPS001 Admin
-                // (Headers are already set for testSchool in setupFeeTest)
                 ResponseEntity<FeePaymentDto[]> resp1 = restTemplate.exchange(
                                 "/api/fees/payments/recent",
                                 HttpMethod.GET,
@@ -272,17 +233,8 @@ public class FeeIntegrationTest extends BaseAuthenticatedIntegrationTest {
                 assertEquals(777, body2[0].getAmountPaid());
         }
 
-        private void cleanup() {
-                feePaymentRepository.deleteAllInBatch();
-                assignmentRepository.deleteAllInBatch();
-                feeStructureRepository.deleteAllInBatch();
-                feeTypeRepository.deleteAllInBatch();
-                studentRepository.deleteAllInBatch();
-                classRepository.deleteAllInBatch();
-        }
-
         @org.junit.jupiter.api.AfterEach
         void tearDown() {
-                cleanup();
+                fullCleanup();
         }
 }

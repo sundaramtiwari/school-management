@@ -30,8 +30,8 @@ public class FeeStructureController {
     @PreAuthorize("hasAnyRole('SCHOOL_ADMIN', 'ACCOUNTANT', 'TEACHER', 'SUPER_ADMIN')")
     public List<FeeStructureDto> listByClass(
             @PathVariable Long classId,
-            @RequestParam String session) {
+            @RequestParam Long sessionId) {
 
-        return service.listByClass(classId, session, SecurityUtil.schoolId());
+        return service.listByClass(classId, sessionId, SecurityUtil.schoolId());
     }
 }

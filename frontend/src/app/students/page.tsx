@@ -4,8 +4,9 @@ import { useEffect, useState } from "react";
 import { studentApi } from "@/lib/studentApi";
 import { api } from "@/lib/api";
 import { useToast } from "@/components/ui/Toast";
+import { useSession } from "@/context/SessionContext";
 import Modal from "@/components/ui/Modal";
-import { Skeleton, TableSkeleton } from "@/components/ui/Skeleton";
+import { TableSkeleton } from "@/components/ui/Skeleton";
 
 /* ---------------- Types ---------------- */
 
@@ -13,7 +14,6 @@ type SchoolClass = {
   id: number;
   name: string;
   section: string;
-  session: string;
 };
 
 type Student = {
@@ -29,6 +29,7 @@ type Student = {
 
 export default function StudentsPage() {
   const { showToast } = useToast();
+  const { currentSession } = useSession();
 
   /* ---------- Filters ---------- */
 
@@ -57,14 +58,13 @@ export default function StudentsPage() {
     contactNumber: "",
     email: "",
     classId: "",
-    session: "",
   });
 
   /* ---------------- Init ---------------- */
 
   useEffect(() => {
     loadClasses();
-  }, []);
+  }, [currentSession]);
 
   async function loadClasses() {
     try {
@@ -110,8 +110,8 @@ export default function StudentsPage() {
   }
 
   async function saveStudent() {
-    if (!studentForm.firstName || !studentForm.gender || !studentForm.classId || !studentForm.session || !studentForm.admissionNumber) {
-      showToast("Please fill all required fields", "warning");
+    if (!studentForm.firstName || !studentForm.gender || !studentForm.classId || !studentForm.admissionNumber || !currentSession) {
+      showToast(currentSession ? "Please fill all required fields" : "No active session", "warning");
       return;
     }
 
@@ -130,7 +130,7 @@ export default function StudentsPage() {
       await studentApi.enroll({
         studentId,
         classId: studentForm.classId,
-        session: studentForm.session,
+        sessionId: currentSession.id,
       });
 
       showToast("Student enrolled successfully!", "success");
@@ -144,7 +144,6 @@ export default function StudentsPage() {
         contactNumber: "",
         email: "",
         classId: "",
-        session: "",
       });
 
       if (Number(studentForm.classId) === Number(selectedClass)) {
@@ -165,16 +164,13 @@ export default function StudentsPage() {
       <div className="flex justify-between items-center">
         <div>
           <h1 className="text-3xl font-bold text-gray-800">Student Directory</h1>
-          <p className="text-gray-500">Manage student enrollments and records by class.</p>
+          <p className="text-gray-500">Manage students for <span className="text-blue-600 font-bold">{currentSession?.name || "current session"}</span>.</p>
         </div>
 
         <button
           onClick={() => {
             if (selectedClass) {
-              const cls = classes.find(c => c.id == selectedClass);
-              if (cls) {
-                setStudentForm(prev => ({ ...prev, classId: selectedClass.toString(), session: cls.session }));
-              }
+              setStudentForm(prev => ({ ...prev, classId: selectedClass.toString() }));
             }
             setShowAddModal(true);
           }}
@@ -196,7 +192,7 @@ export default function StudentsPage() {
             <option value="">Select Class</option>
             {classes.map((c) => (
               <option key={c.id} value={c.id}>
-                {c.name} {c.section} ({c.session})
+                {c.name} {c.section}
               </option>
             ))}
           </select>
@@ -342,13 +338,9 @@ export default function StudentsPage() {
             ))}
           </select>
 
-          <input
-            name="session"
-            placeholder="Academic Session (e.g. 2025-26) *"
-            value={studentForm.session}
-            onChange={updateStudentField}
-            className="input-ref"
-          />
+          <div className="p-3 bg-blue-50 rounded-xl border border-blue-100 italic text-xs text-blue-600 font-medium">
+            This student will be enrolled for the active session: <span className="font-bold">{currentSession?.name || "None"}</span>
+          </div>
 
           <h3 className="col-span-2 font-bold text-gray-700 border-b pb-2 mt-4">Contact Information</h3>
 

@@ -8,13 +8,13 @@ import lombok.Data;
 public class SchoolClassCreateRequest {
 
     @NotBlank
-    private String name;        // e.g. "Class 1"
+    private String name; // e.g. "Class 1"
 
     @NotBlank
-    private String section;     // e.g. "A"
+    private String section; // e.g. "A"
 
-    @NotBlank
-    private String session;     // e.g. "2024-25"
+    @NotNull
+    private Long sessionId;
 
     @NotNull
     private Long schoolId;

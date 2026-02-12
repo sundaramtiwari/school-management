@@ -4,12 +4,9 @@ import com.school.backend.common.BaseAuthenticatedIntegrationTest;
 import com.school.backend.common.dto.PageResponse;
 import com.school.backend.common.enums.UserRole;
 import com.school.backend.school.entity.School;
-import com.school.backend.school.repository.SchoolRepository;
 import com.school.backend.user.dto.UserDto;
-import com.school.backend.user.repository.UserRepository;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
-import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.core.ParameterizedTypeReference;
 import org.springframework.http.HttpEntity;
 import org.springframework.http.HttpMethod;
@@ -21,23 +18,12 @@ import static org.junit.jupiter.api.Assertions.*;
 
 public class UserControllerIntegrationTest extends BaseAuthenticatedIntegrationTest {
 
-        @Autowired
-        private SchoolRepository schoolRepository;
-        @Autowired
-        private UserRepository userRepository;
-
         private School schoolA;
         private School schoolB;
 
         @BeforeEach
         void setupTenants() {
-                userRepository.deleteAll(); // careful, might delete auth helper users if not isolated?
-                // BaseAuthenticatedIntegrationTest creates admins on the fly.
-                // Better NOT to delete all, but we are in H2 so maybe fine if we re-login.
-                // Actually, BaseAuthenticatedIntegrationTest baseSetup() runs BeforeEach and
-                // logs in as SuperAdmin.
-                // If we delete all here, we kill that user.
-                // Let's create schools first.
+                fullCleanup();
 
                 schoolA = createSchool("School A", "SCH-A");
                 schoolB = createSchool("School B", "SCH-B");

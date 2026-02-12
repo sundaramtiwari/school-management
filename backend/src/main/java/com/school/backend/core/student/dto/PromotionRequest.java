@@ -12,7 +12,7 @@ public class PromotionRequest {
     private String toSection;
 
     @NotNull
-    private String session;  // e.g. "2025-26"
+    private Long sessionId;
 
     private boolean promoted = true;
     private boolean feePending = false;

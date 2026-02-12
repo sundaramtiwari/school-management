@@ -1,6 +1,7 @@
 "use client";
 
 import { AuthProvider, useAuth } from "@/context/AuthContext";
+import { SessionProvider } from "@/context/SessionContext";
 import Sidebar from "@/components/Sidebar";
 import Breadcrumbs from "@/components/Breadcrumbs";
 import { usePathname } from "next/navigation";
@@ -29,7 +30,9 @@ function LayoutContent({ children }: { children: React.ReactNode }) {
 export default function ClientLayout({ children }: { children: React.ReactNode }) {
     return (
         <AuthProvider>
-            <LayoutContent>{children}</LayoutContent>
+            <SessionProvider>
+                <LayoutContent>{children}</LayoutContent>
+            </SessionProvider>
         </AuthProvider>
     );
 }

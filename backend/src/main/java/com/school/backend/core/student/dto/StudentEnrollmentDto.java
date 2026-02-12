@@ -10,7 +10,7 @@ public class StudentEnrollmentDto {
     private Long studentId;
     private Long classId;
     private String section;
-    private String session;
+    private Long sessionId;
     private Integer rollNumber;
     private LocalDate enrollmentDate;
     private boolean active;

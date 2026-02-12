@@ -9,7 +9,7 @@ import java.time.LocalDate;
 
 @Entity
 @Table(name = "promotion_records", indexes = {
-        @Index(name = "idx_promotion_student_session", columnList = "student_id,session")
+        @Index(name = "idx_promotion_student_session", columnList = "student_id,session_id")
 })
 @Getter
 @Setter
@@ -34,8 +34,8 @@ public class PromotionRecord extends TenantEntity {
     private Long toClassId;
     private String toSection;
 
-    @Column(nullable = false)
-    private String session;
+    @Column(name = "session_id", nullable = false)
+    private Long sessionId;
 
     @Builder.Default
     private LocalDate promotedOn = LocalDate.now();

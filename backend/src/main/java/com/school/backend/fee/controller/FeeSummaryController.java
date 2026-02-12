@@ -16,16 +16,16 @@ public class FeeSummaryController {
 
     @GetMapping("/stats")
     @PreAuthorize("hasAnyRole('SCHOOL_ADMIN', 'ACCOUNTANT', 'SUPER_ADMIN', 'PLATFORM_ADMIN')")
-    public FeeStatsDto getDashboardStats(@RequestParam String session) {
-        return service.getDashboardStats(session);
+    public FeeStatsDto getDashboardStats(@RequestParam Long sessionId) {
+        return service.getDashboardStats(sessionId);
     }
 
     @GetMapping("/students/{studentId}")
     @PreAuthorize("hasAnyRole('SCHOOL_ADMIN', 'ACCOUNTANT', 'TEACHER', 'SUPER_ADMIN', 'PLATFORM_ADMIN')")
     public FeeSummaryDto getStudentFeeSummary(
             @PathVariable Long studentId,
-            @RequestParam String session) {
+            @RequestParam Long sessionId) {
 
-        return service.getStudentFeeSummary(studentId, session);
+        return service.getStudentFeeSummary(studentId, sessionId);
     }
 }

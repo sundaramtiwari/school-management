@@ -59,13 +59,14 @@ public class DummyDataSeeder implements CommandLineRunner {
     private final PickupPointRepository pickupPointRepository;
     private final TransportEnrollmentRepository transportEnrollmentRepository;
     private final AttendanceRepository attendanceRepository;
+    private final com.school.backend.school.repository.AcademicSessionRepository academicSessionRepository;
 
     private final PasswordEncoder passwordEncoder;
     private final Random random = new Random();
 
     @Override
     @Transactional
-    public void run(String... args) throws Exception {
+    public void run(String... args) {
         if (schoolRepository.count() > 1) {
             log.info("Schools already exist. Skipping dummy data seeding.");
             return;
@@ -138,16 +139,25 @@ public class DummyDataSeeder implements CommandLineRunner {
         transportFee.setSchoolId(school.getId());
         transportFee = feeTypeRepository.save(transportFee);
 
-        // 5. Create Classes & Fee Structures
-        String[] classNames = { "Nursery", "LKG", "UKG", "1", "2", "3", "4", "5", "6", "7", "8", "9", "10", "11",
-                "12" };
+        // Create Academic Session
+        com.school.backend.school.entity.AcademicSession session = com.school.backend.school.entity.AcademicSession
+                .builder()
+                .name("2025-26")
+                .active(true)
+                .build();
+        session.setSchoolId(school.getId());
+        session = academicSessionRepository.save(session);
+
+        String[] classNames = {"Nursery", "LKG", "UKG", "1", "2", "3", "4", "5", "6", "7", "8", "9", "10",
+                "11",
+                "12"};
         List<SchoolClass> classes = new ArrayList<>();
 
         for (int i = 0; i < classNames.length; i++) {
             String className = classNames[i];
             SchoolClass sClass = SchoolClass.builder()
                     .name(className)
-                    .session("2025-26")
+                    .sessionId(session.getId())
                     .section("A")
                     .capacity(40)
                     .classTeacher(teachers.get(i % teachers.size())) // distribute teachers
@@ -163,7 +173,7 @@ public class DummyDataSeeder implements CommandLineRunner {
                     .feeType(tuitionFee)
                     .amount(5000 + (i * 500)) // varying fee
                     .frequency(FeeFrequency.MONTHLY)
-                    .session("2025-26")
+                    .sessionId(session.getId())
                     .active(true)
                     .build();
             fs.setSchoolId(school.getId());
@@ -222,12 +232,13 @@ public class DummyDataSeeder implements CommandLineRunner {
                 // it.
                 // Improved: Let's fetch FeeStructure by classId
                 List<FeeStructure> classFeeStructures = feeStructureRepository
-                        .findByClassIdAndSessionAndSchoolId(sClass.getId(), "2025-26", school.getId());
+                        .findByClassIdAndSessionIdAndSchoolId(sClass.getId(), session.getId(),
+                                school.getId());
                 for (FeeStructure fs : classFeeStructures) {
                     StudentFeeAssignment sfa = StudentFeeAssignment.builder()
                             .studentId(student.getId())
                             .feeStructureId(fs.getId())
-                            .session("2025-26")
+                            .sessionId(session.getId())
                             .active(true)
                             .build();
                     sfa.setSchoolId(school.getId());
@@ -239,7 +250,7 @@ public class DummyDataSeeder implements CommandLineRunner {
                     TransportEnrollment te = TransportEnrollment.builder()
                             .studentId(student.getId())
                             .pickupPoint(p1)
-                            .session("2025-26")
+                            .sessionId(session.getId())
                             .active(true)
                             .build();
                     te.setSchoolId(school.getId());
@@ -259,7 +270,8 @@ public class DummyDataSeeder implements CommandLineRunner {
                     StudentAttendance attendance = StudentAttendance.builder()
                             .studentId(student.getId())
                             .attendanceDate(date)
-                            .status(random.nextInt(10) > 1 ? AttendanceStatus.PRESENT : AttendanceStatus.ABSENT)
+                            .status(random.nextInt(10) > 1 ? AttendanceStatus.PRESENT
+                                    : AttendanceStatus.ABSENT)
                             .build();
                     attendance.setSchoolId(school.getId());
                     attendanceRepository.save(attendance);

@@ -9,4 +9,7 @@ export const sessionApi = {
 
     update: (id: number, data: any) =>
         api.put(`/api/academic-sessions/${id}`, data),
+
+    setCurrent: (sessionId: number) =>
+        api.put(`/api/academic-sessions/${sessionId}/set-current`),
 };

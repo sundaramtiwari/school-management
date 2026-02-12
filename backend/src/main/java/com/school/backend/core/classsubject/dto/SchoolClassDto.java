@@ -10,7 +10,7 @@ public class SchoolClassDto {
     private String name;
     private String section;
     @NotBlank
-    private String session;
+    private Long sessionId;
     private Integer capacity;
     private Long classTeacherId;
     private boolean active = true;

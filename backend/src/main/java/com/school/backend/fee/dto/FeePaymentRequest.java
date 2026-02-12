@@ -11,6 +11,7 @@ public class FeePaymentRequest {
 
     @NotNull
     private Long studentId;
+    private Long sessionId;
 
     @NotNull
     @Positive

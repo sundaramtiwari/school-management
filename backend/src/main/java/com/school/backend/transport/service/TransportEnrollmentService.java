@@ -51,7 +51,7 @@ public class TransportEnrollmentService {
 
                 // 2. Create/Update Enrollment
                 TransportEnrollment enrollment = enrollmentRepository
-                                .findByStudentIdAndSession(dto.getStudentId(), dto.getSession())
+                                .findByStudentIdAndSessionId(dto.getStudentId(), dto.getSessionId())
                                 .orElse(null);
 
                 if (enrollment == null) {
@@ -79,18 +79,18 @@ public class TransportEnrollmentService {
 
                 enrollment.setStudentId(dto.getStudentId());
                 enrollment.setPickupPoint(pickupPoint);
-                enrollment.setSession(dto.getSession());
+                enrollment.setSessionId(dto.getSessionId());
                 enrollment.setActive(true);
                 enrollment.setSchoolId(TenantContext.getSchoolId());
                 enrollment = enrollmentRepository.save(enrollment);
 
                 // 3. Fee Integration
-                ensureFeeAssigned(student, pickupPoint, dto.getSession());
+                ensureFeeAssigned(student, pickupPoint, dto.getSessionId());
 
                 return mapToDto(enrollment);
         }
 
-        private void ensureFeeAssigned(Student student, PickupPoint pp, String session) {
+        private void ensureFeeAssigned(Student student, PickupPoint pp, Long sessionId) {
                 // Get or Create TRANSPORT FeeType
                 FeeType transportType = getOrCreateTransportFeeType();
 
@@ -102,7 +102,7 @@ public class TransportEnrollmentService {
                 // Since we refactored classId to be nullable, we can find a structure where
                 // classId IS NULL
                 FeeStructure structure = feeStructureRepository
-                                .findByFeeTypeIdAndSessionAndClassIdIsNull(transportType.getId(), session)
+                                .findByFeeTypeIdAndSessionIdAndClassIdIsNull(transportType.getId(), sessionId)
                                 .stream()
                                 .filter(fs -> fs.getAmount().equals(pp.getAmount())
                                                 && fs.getFrequency().equals(pp.getFrequency()))
@@ -110,7 +110,7 @@ public class TransportEnrollmentService {
                                 .orElseGet(() -> {
                                         FeeStructure fs = FeeStructure.builder()
                                                         .feeType(transportType)
-                                                        .session(session)
+                                                        .sessionId(sessionId)
                                                         .amount(pp.getAmount())
                                                         .frequency(pp.getFrequency())
                                                         .classId(null) // Global fee
@@ -121,14 +121,14 @@ public class TransportEnrollmentService {
                                 });
 
                 // Assign to student if not already assigned
-                boolean alreadyAssigned = assignmentRepository.existsByStudentIdAndFeeStructureIdAndSession(
-                                student.getId(), structure.getId(), session);
+                boolean alreadyAssigned = assignmentRepository.existsByStudentIdAndFeeStructureIdAndSessionId(
+                                student.getId(), structure.getId(), sessionId);
 
                 if (!alreadyAssigned) {
                         StudentFeeAssignment assignment = StudentFeeAssignment.builder()
                                         .studentId(student.getId())
                                         .feeStructureId(structure.getId())
-                                        .session(session)
+                                        .sessionId(sessionId)
                                         .active(true)
                                         .schoolId(TenantContext.getSchoolId())
                                         .build();
@@ -156,14 +156,14 @@ public class TransportEnrollmentService {
                                 .id(e.getId())
                                 .studentId(e.getStudentId())
                                 .pickupPointId(e.getPickupPoint().getId())
-                                .session(e.getSession())
+                                .sessionId(e.getSessionId())
                                 .active(e.isActive())
                                 .build();
         }
 
         @Transactional(readOnly = true)
-        public java.util.Optional<TransportEnrollmentDto> getStudentEnrollment(Long studentId, String session) {
-                return enrollmentRepository.findByStudentIdAndSession(studentId, session)
+        public java.util.Optional<TransportEnrollmentDto> getStudentEnrollment(Long studentId, Long sessionId) {
+                return enrollmentRepository.findByStudentIdAndSessionId(studentId, sessionId)
                                 .map(this::mapToDto);
         }
 }

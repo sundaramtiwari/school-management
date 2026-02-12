@@ -9,6 +9,7 @@ import com.school.backend.core.classsubject.repository.ClassSubjectRepository;
 import com.school.backend.core.classsubject.repository.SchoolClassRepository;
 import com.school.backend.core.classsubject.repository.SubjectRepository;
 import com.school.backend.school.dto.SchoolDto;
+import com.school.backend.school.entity.AcademicSession;
 import com.school.backend.school.repository.SchoolRepository;
 import com.school.backend.user.repository.UserRepository;
 import org.assertj.core.api.Assertions;
@@ -26,150 +27,169 @@ import java.util.Objects;
 
 public class ClassSubjectFlowIntegrationTest extends BaseAuthenticatedIntegrationTest {
 
-        @Autowired
-        private ClassSubjectRepository classSubjectRepository;
-        @Autowired
-        private SchoolClassRepository schoolClassRepository;
-        @Autowired
-        private SubjectRepository subjectRepository;
-        @Autowired
-        private SchoolRepository schoolRepository;
-        @Autowired
-        private UserRepository userRepository;
+    @Autowired
+    private ClassSubjectRepository classSubjectRepository;
+    @Autowired
+    private SchoolClassRepository schoolClassRepository;
+    @Autowired
+    private SubjectRepository subjectRepository;
+    @Autowired
+    private SchoolRepository schoolRepository;
+    @Autowired
+    private UserRepository userRepository;
+    @Autowired
+    private com.school.backend.school.repository.AcademicSessionRepository sessionRepo;
 
-        private Long schoolId;
-        private Long classId;
-        private Long subjectId;
-        private Long classSubjectId;
+    private Long schoolId;
+    private Long classId;
+    private Long subjectId;
+    private Long classSubjectId;
+    private Long sessionId;
 
-        @Test
-        void fullFlow_createSchool_createSubject_createClass_assignSubject_and_page() {
+    @Test
+    void fullFlow_createSchool_createSubject_createClass_assignSubject_and_page() {
 
-                var headers = authHelper.authHeaders(token);
+        var headers = authHelper.authHeaders(token);
 
-                // 1) Create School
-                Map<String, Object> schoolReq = Map.of(
-                                "name", "Integration Test School",
-                                "displayName", "ITS",
-                                "board", "CBSE",
-                                "schoolCode", "ITS-2025",
-                                "contactEmail", "itstest@example.com",
-                                "city", "Varanasi",
-                                "state", "Uttar Pradesh");
+        // 1) Create School
+        Map<String, Object> schoolReq = Map.of(
+                "name", "Integration Test School",
+                "displayName", "ITS",
+                "board", "CBSE",
+                "schoolCode", "ITS-2025",
+                "contactEmail", "itstest@example.com",
+                "city", "Varanasi",
+                "state", "Uttar Pradesh");
 
-                var schoolEntity = new HttpEntity<>(schoolReq, headers);
+        var schoolEntity = new HttpEntity<>(schoolReq, headers);
 
-                ResponseEntity<SchoolDto> schoolResp = restTemplate.exchange(
-                                "/api/schools",
-                                HttpMethod.POST,
-                                schoolEntity,
-                                SchoolDto.class);
+        ResponseEntity<SchoolDto> schoolResp = restTemplate.exchange(
+                "/api/schools",
+                HttpMethod.POST,
+                schoolEntity,
+                SchoolDto.class);
 
-                Assertions.assertThat(schoolResp.getStatusCode()).isEqualTo(HttpStatus.CREATED);
-                schoolId = Objects.requireNonNull(schoolResp.getBody()).getId();
+        Assertions.assertThat(schoolResp.getStatusCode()).isEqualTo(HttpStatus.CREATED);
+        schoolId = Objects.requireNonNull(schoolResp.getBody()).getId();
 
-                // LOGIN AS SCHOOL ADMIN NOW
-                loginAsSchoolAdmin(schoolId);
-                headers = authHelper.authHeaders(token);
+        // LOGIN AS SCHOOL ADMIN NOW
+        loginAsSchoolAdmin(schoolId);
+        // LOGIN AS SCHOOL ADMIN NOW
+        loginAsSchoolAdmin(schoolId);
+        headers = authHelper.authHeaders(token);
 
-                // 2) Create Subject
-                SubjectDto subjectReq = new SubjectDto();
-                subjectReq.setName("Mathematics");
+        // 1.5) Create Session
+        AcademicSession session = AcademicSession
+                .builder()
+                .name("2025-26")
+                .schoolId(schoolId)
+                .active(true)
+                .build();
+        session = sessionRepo.save(session);
+        sessionId = session.getId();
 
-                var subjectEntity = new HttpEntity<>(subjectReq, headers);
+        // 2) Create Subject
+        SubjectDto subjectReq = new SubjectDto();
+        subjectReq.setName("Mathematics");
 
-                ResponseEntity<SubjectDto> subjectResp = restTemplate.exchange(
-                                "/api/subjects",
-                                HttpMethod.POST,
-                                subjectEntity,
-                                SubjectDto.class);
+        var subjectEntity = new HttpEntity<>(subjectReq, headers);
 
-                Assertions.assertThat(subjectResp.getStatusCode()).isEqualTo(HttpStatus.OK);
-                subjectId = Objects.requireNonNull(subjectResp.getBody()).getId();
+        ResponseEntity<SubjectDto> subjectResp = restTemplate.exchange(
+                "/api/subjects",
+                HttpMethod.POST,
+                subjectEntity,
+                SubjectDto.class);
 
-                // 3) Create Class
-                SchoolClassDto classReq = new SchoolClassDto();
-                classReq.setName("1");
-                classReq.setSession("2025-26");
+        Assertions.assertThat(subjectResp.getStatusCode()).isEqualTo(HttpStatus.OK);
+        subjectId = Objects.requireNonNull(subjectResp.getBody()).getId();
 
-                var classEntity = new HttpEntity<>(classReq, headers);
+        // 3) Create Class
+        SchoolClassDto classReq = new SchoolClassDto();
+        classReq.setName("1");
+        classReq.setSessionId(sessionId);
 
-                ResponseEntity<SchoolClassDto> classResp = restTemplate.exchange(
-                                "/api/classes",
-                                HttpMethod.POST,
-                                classEntity,
-                                SchoolClassDto.class);
+        var classEntity = new HttpEntity<>(classReq, headers);
 
-                Assertions.assertThat(classResp.getStatusCode()).isEqualTo(HttpStatus.OK);
-                classId = Objects.requireNonNull(classResp.getBody()).getId();
+        ResponseEntity<SchoolClassDto> classResp = restTemplate.exchange(
+                "/api/classes",
+                HttpMethod.POST,
+                classEntity,
+                SchoolClassDto.class);
 
-                // 4) Assign Subject to Class
-                ClassSubjectDto assignReq = new ClassSubjectDto();
-                assignReq.setClassId(classId);
-                assignReq.setSubjectId(subjectId);
+        Assertions.assertThat(classResp.getStatusCode()).isEqualTo(HttpStatus.OK);
+        classId = Objects.requireNonNull(classResp.getBody()).getId();
 
-                var assignEntity = new HttpEntity<>(assignReq, headers);
+        // 4) Assign Subject to Class
+        ClassSubjectDto assignReq = new ClassSubjectDto();
+        assignReq.setClassId(classId);
+        assignReq.setSubjectId(subjectId);
 
-                ResponseEntity<ClassSubjectDto> assignResp = restTemplate.exchange(
-                                "/api/class-subjects",
-                                HttpMethod.POST,
-                                assignEntity,
-                                ClassSubjectDto.class);
+        var assignEntity = new HttpEntity<>(assignReq, headers);
 
-                Assertions.assertThat(assignResp.getStatusCode()).isEqualTo(HttpStatus.OK);
-                classSubjectId = Objects.requireNonNull(assignResp.getBody()).getId();
+        ResponseEntity<ClassSubjectDto> assignResp = restTemplate.exchange(
+                "/api/class-subjects",
+                HttpMethod.POST,
+                assignEntity,
+                ClassSubjectDto.class);
 
-                // 5) Verify paging
-                String url = "/api/class-subjects/by-class/" + classId + "?page=0&size=10";
+        Assertions.assertThat(assignResp.getStatusCode()).isEqualTo(HttpStatus.OK);
+        classSubjectId = Objects.requireNonNull(assignResp.getBody()).getId();
 
-                var pageEntity = new HttpEntity<>(headers);
+        // 5) Verify paging
+        String url = "/api/class-subjects/by-class/" + classId + "?page=0&size=10";
 
-                ParameterizedTypeReference<PageResponse<ClassSubjectDto>> ptr = new ParameterizedTypeReference<>() {
-                };
+        var pageEntity = new HttpEntity<>(headers);
 
-                ResponseEntity<PageResponse<ClassSubjectDto>> pageResp = restTemplate.exchange(
-                                url,
-                                HttpMethod.GET,
-                                pageEntity,
-                                ptr);
+        ParameterizedTypeReference<PageResponse<ClassSubjectDto>> ptr = new ParameterizedTypeReference<>() {
+        };
 
-                Assertions.assertThat(pageResp.getStatusCode()).isEqualTo(HttpStatus.OK);
+        ResponseEntity<PageResponse<ClassSubjectDto>> pageResp = restTemplate.exchange(
+                url,
+                HttpMethod.GET,
+                pageEntity,
+                ptr);
 
-                Assertions.assertThat(Objects.requireNonNull(pageResp.getBody()).content())
-                                .extracting(ClassSubjectDto::getId)
-                                .contains(classSubjectId);
+        Assertions.assertThat(pageResp.getStatusCode()).isEqualTo(HttpStatus.OK);
+
+        Assertions.assertThat(Objects.requireNonNull(pageResp.getBody()).content())
+                .extracting(ClassSubjectDto::getId)
+                .contains(classSubjectId);
+    }
+
+    /**
+     * Cleanup runs after EACH test method.
+     * Order is critical to avoid FK violations.
+     */
+    @AfterEach
+    void cleanup() {
+        if (classSubjectId != null) {
+            classSubjectRepository.deleteById(classSubjectId);
         }
 
-        /**
-         * Cleanup runs after EACH test method.
-         * Order is critical to avoid FK violations.
-         */
-        @AfterEach
-        void cleanup() {
-                if (classSubjectId != null) {
-                        classSubjectRepository.deleteById(classSubjectId);
-                }
-
-                if (classId != null) {
-                        schoolClassRepository.deleteById(classId);
-                }
-
-                if (subjectId != null) {
-                        subjectRepository.deleteById(subjectId);
-                }
-
-                // 6. Users (IMPORTANT)
-                if (schoolId != null) {
-                        userRepository
-                                        .findAll()
-                                        .stream()
-                                        .filter(u -> u.getSchool() != null &&
-                                                        u.getSchool().getId().equals(schoolId))
-                                        .forEach(userRepository::delete);
-                }
-
-                if (schoolId != null) {
-                        schoolRepository.deleteById(schoolId);
-                }
+        if (classId != null) {
+            schoolClassRepository.deleteById(classId);
         }
+
+        if (subjectId != null) {
+            subjectRepository.deleteById(subjectId);
+        }
+
+        // 6. Users (IMPORTANT)
+        if (schoolId != null) {
+            userRepository
+                    .findAll()
+                    .stream()
+                    .filter(u -> u.getSchool() != null &&
+                            u.getSchool().getId().equals(schoolId))
+                    .forEach(userRepository::delete);
+        }
+
+        if (sessionId != null) {
+            sessionRepo.deleteById(sessionId);
+        }
+
+        if (schoolId != null) {
+            schoolRepository.deleteById(schoolId);
+        }
+    }
 }

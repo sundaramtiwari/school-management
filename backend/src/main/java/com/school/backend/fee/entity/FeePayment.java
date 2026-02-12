@@ -27,6 +27,9 @@ public class FeePayment extends TenantEntity {
     @Column(name = "student_id", nullable = false)
     private Long studentId;
 
+    @Column(name = "session_id")
+    private Long sessionId;
+
     @Column(nullable = false)
     private Integer amountPaid;
 
@@ -36,6 +39,6 @@ public class FeePayment extends TenantEntity {
     @Column(name = "transaction_reference", length = 100)
     private String transactionReference; // For UPI/online payments
 
-    private String mode;   // CASH / UPI / BANK
+    private String mode; // CASH / UPI / BANK
     private String remarks;
 }

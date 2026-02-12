@@ -9,7 +9,7 @@ public class FeeStructureDto {
 
     private Long schoolId;
     private Long classId;
-    private String session;
+    private Long sessionId;
 
     private Long feeTypeId;
     private String feeTypeName;

@@ -1,7 +1,6 @@
 package com.school.backend.fee.dto;
 
 import com.school.backend.fee.enums.FeeFrequency;
-import jakarta.validation.constraints.NotBlank;
 import jakarta.validation.constraints.NotNull;
 import lombok.Data;
 
@@ -10,8 +9,8 @@ public class FeeStructureCreateRequest {
 
     @NotNull
     private Long classId;
-    @NotBlank
-    private String session;
+    @NotNull
+    private Long sessionId;
     @NotNull
     private Long feeTypeId;
     @NotNull

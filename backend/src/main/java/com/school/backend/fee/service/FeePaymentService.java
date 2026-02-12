@@ -7,6 +7,7 @@ import com.school.backend.fee.dto.FeePaymentDto;
 import com.school.backend.fee.dto.FeePaymentRequest;
 import com.school.backend.fee.entity.FeePayment;
 import com.school.backend.fee.repository.FeePaymentRepository;
+import com.school.backend.school.repository.SchoolRepository;
 import lombok.RequiredArgsConstructor;
 import org.springframework.data.domain.PageRequest;
 import org.springframework.data.domain.Pageable;
@@ -22,6 +23,7 @@ public class FeePaymentService {
 
     private final FeePaymentRepository paymentRepository;
     private final StudentRepository studentRepository;
+    private final SchoolRepository schoolRepository;
 
     // ---------------- PAY ----------------
     @Transactional
@@ -31,8 +33,16 @@ public class FeePaymentService {
             throw new ResourceNotFoundException("Student not found: " + req.getStudentId());
         }
 
+        Long sessionId = req.getSessionId();
+        if (sessionId == null) {
+            sessionId = schoolRepository.findById(TenantContext.getSchoolId())
+                    .map(com.school.backend.school.entity.School::getCurrentSessionId)
+                    .orElse(null);
+        }
+
         FeePayment payment = FeePayment.builder()
                 .studentId(req.getStudentId())
+                .sessionId(sessionId)
                 .amountPaid(req.getAmountPaid())
                 .paymentDate(
                         req.getPaymentDate() != null

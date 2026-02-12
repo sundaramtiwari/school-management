@@ -2,12 +2,13 @@ package com.school.backend.testmanagement;
 
 import com.school.backend.common.BaseAuthenticatedIntegrationTest;
 import com.school.backend.common.enums.Gender;
+import com.school.backend.core.classsubject.entity.Subject;
 import com.school.backend.core.classsubject.repository.SchoolClassRepository;
 import com.school.backend.core.classsubject.repository.SubjectRepository;
-import com.school.backend.core.classsubject.entity.Subject;
 import com.school.backend.core.student.dto.StudentCreateRequest;
 import com.school.backend.core.student.dto.StudentDto;
 import com.school.backend.core.student.repository.StudentRepository;
+import com.school.backend.school.entity.AcademicSession;
 import com.school.backend.school.entity.School;
 import com.school.backend.school.repository.SchoolRepository;
 import com.school.backend.testmanagement.dto.ExamCreateRequest;
@@ -25,6 +26,7 @@ import org.assertj.core.api.Assertions;
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.core.ParameterizedTypeReference;
 import org.springframework.http.HttpEntity;
 import org.springframework.http.HttpMethod;
 import org.springframework.http.HttpStatus;
@@ -32,242 +34,259 @@ import org.springframework.http.ResponseEntity;
 
 import java.util.Map;
 import java.util.Objects;
-import org.springframework.core.ParameterizedTypeReference;
 
 public class MarksheetFlowIntegrationTest extends BaseAuthenticatedIntegrationTest {
-        @Autowired
-        private SchoolRepository schoolRepo;
-        @Autowired
-        private SchoolClassRepository classRepo;
-        @Autowired
-        private StudentRepository studentRepo;
-        @Autowired
-        private ExamRepository examRepo;
-        @Autowired
-        private ExamSubjectRepository examSubjectRepo;
-        @Autowired
-        private StudentMarkRepository markRepo;
-        @Autowired
-        private UserRepository userRepository;
-        @Autowired
-        private SubjectRepository subjectRepo;
+    @Autowired
+    private SchoolRepository schoolRepo;
+    @Autowired
+    private SchoolClassRepository classRepo;
+    @Autowired
+    private StudentRepository studentRepo;
+    @Autowired
+    private ExamRepository examRepo;
+    @Autowired
+    private ExamSubjectRepository examSubjectRepo;
+    @Autowired
+    private StudentMarkRepository markRepo;
+    @Autowired
+    private UserRepository userRepository;
+    @Autowired
+    private SubjectRepository subjectRepo;
+    @Autowired
+    private com.school.backend.school.repository.AcademicSessionRepository sessionRepo;
 
-        private Long schoolId;
-        private Long classId;
-        private Long studentId;
-        private Long examId;
-        private Long subjectId;
-        private Long examSubjectId;
+    private Long schoolId;
+    private Long classId;
+    private Long studentId;
+    private Long examId;
+    private Long subjectId;
+    private Long examSubjectId;
+    private Long sessionId;
 
-        @Test
-        void full_marksheet_flow() {
+    @Test
+    void full_marksheet_flow() {
 
-                /* ---------- School ---------- */
+        /* ---------- School ---------- */
 
-                Map<String, Object> schoolReq = Map.of(
-                                "name", "Marksheet School",
-                                "displayName", "MS",
-                                "board", "CBSE",
-                                "schoolCode", "MS-26",
-                                "city", "Varanasi",
-                                "state", "UP");
+        Map<String, Object> schoolReq = Map.of(
+                "name", "Marksheet School",
+                "displayName", "MS",
+                "board", "CBSE",
+                "schoolCode", "MS-26",
+                "city", "Varanasi",
+                "state", "UP");
 
-                HttpEntity<Map<String, Object>> schoolEntity = new HttpEntity<>(schoolReq, headers);
+        HttpEntity<Map<String, Object>> schoolEntity = new HttpEntity<>(schoolReq, headers);
 
-                ResponseEntity<School> schoolResp = restTemplate.exchange(
-                                "/api/schools",
-                                HttpMethod.POST,
-                                schoolEntity,
-                                School.class);
+        ResponseEntity<School> schoolResp = restTemplate.exchange(
+                "/api/schools",
+                HttpMethod.POST,
+                schoolEntity,
+                School.class);
 
-                schoolId = Objects.requireNonNull(schoolResp.getBody()).getId();
+        schoolId = Objects.requireNonNull(schoolResp.getBody()).getId();
 
-                // LOGIN AS SCHOOL ADMIN NOW
-                loginAsSchoolAdmin(schoolId);
+        // LOGIN AS SCHOOL ADMIN NOW
+        loginAsSchoolAdmin(schoolId);
 
-                /* ---------- Class ---------- */
+        /* ---------- Session ---------- */
+        AcademicSession session = AcademicSession
+                .builder()
+                .name("2025-26")
+                .schoolId(schoolId)
+                .active(true)
+                .build();
+        session = sessionRepo.save(session);
+        sessionId = session.getId();
 
-                Map<String, Object> classReq = Map.of(
-                                "name", "8",
-                                "session", "2025-26",
-                                "schoolId", schoolId);
+        /* ---------- Class ---------- */
 
-                HttpEntity<Map<String, Object>> classEntity = new HttpEntity<>(classReq, headers);
+        Map<String, Object> classReq = Map.of(
+                "name", "8",
+                "sessionId", sessionId,
+                "schoolId", schoolId);
 
-                ResponseEntity<Map<String, Object>> classResp = restTemplate.exchange(
-                                "/api/classes",
-                                HttpMethod.POST,
-                                classEntity,
-                                new ParameterizedTypeReference<Map<String, Object>>() {
-                                });
+        HttpEntity<Map<String, Object>> classEntity = new HttpEntity<>(classReq, headers);
 
-                classId = Long.valueOf(
-                                Objects.requireNonNull(classResp.getBody()).get("id").toString());
+        ResponseEntity<Map<String, Object>> classResp = restTemplate.exchange(
+                "/api/classes",
+                HttpMethod.POST,
+                classEntity,
+                new ParameterizedTypeReference<>() {
+                });
 
-                /* ---------- Student ---------- */
+        classId = Long.valueOf(
+                Objects.requireNonNull(classResp.getBody()).get("id").toString());
 
-                StudentCreateRequest sreq = new StudentCreateRequest();
+        /* ---------- Student ---------- */
 
-                sreq.setAdmissionNumber("ADM-M-1");
-                sreq.setFirstName("Mark");
-                sreq.setGender(Gender.MALE);
+        StudentCreateRequest sreq = new StudentCreateRequest();
 
-                HttpEntity<StudentCreateRequest> studentEntity = new HttpEntity<>(sreq, headers);
+        sreq.setAdmissionNumber("ADM-M-1");
+        sreq.setFirstName("Mark");
+        sreq.setGender(Gender.MALE);
 
-                ResponseEntity<StudentDto> studentResp = restTemplate.exchange(
-                                "/api/students",
-                                HttpMethod.POST,
-                                studentEntity,
-                                StudentDto.class);
+        HttpEntity<StudentCreateRequest> studentEntity = new HttpEntity<>(sreq, headers);
 
-                studentId = Objects.requireNonNull(studentResp.getBody()).getId();
+        ResponseEntity<StudentDto> studentResp = restTemplate.exchange(
+                "/api/students",
+                HttpMethod.POST,
+                studentEntity,
+                StudentDto.class);
 
-                /* ---------- Exam ---------- */
+        studentId = Objects.requireNonNull(studentResp.getBody()).getId();
 
-                ExamCreateRequest examReq = new ExamCreateRequest();
+        /* ---------- Exam ---------- */
 
-                examReq.setSchoolId(schoolId);
-                examReq.setClassId(classId);
-                examReq.setSession("2025-26");
-                examReq.setName("Final Exam");
-                examReq.setExamType("FINAL");
+        ExamCreateRequest examReq = new ExamCreateRequest();
 
-                HttpEntity<ExamCreateRequest> examEntity = new HttpEntity<>(examReq, headers);
+        examReq.setSchoolId(schoolId);
+        examReq.setClassId(classId);
+        examReq.setSessionId(sessionId);
+        examReq.setName("Final Exam");
+        examReq.setExamType("FINAL");
 
-                ResponseEntity<Exam> examResp = restTemplate.exchange(
-                                "/api/exams",
-                                HttpMethod.POST,
-                                examEntity,
-                                Exam.class);
+        HttpEntity<ExamCreateRequest> examEntity = new HttpEntity<>(examReq, headers);
 
-                examId = Objects.requireNonNull(examResp.getBody()).getId();
+        ResponseEntity<Exam> examResp = restTemplate.exchange(
+                "/api/exams",
+                HttpMethod.POST,
+                examEntity,
+                Exam.class);
 
-                /* ---------- Subject ---------- */
+        examId = Objects.requireNonNull(examResp.getBody()).getId();
 
-                Subject sub = Subject.builder()
-                                .name("Mathematics")
-                                .code("MATH")
-                                .build();
-                sub.setSchoolId(schoolId);
+        /* ---------- Subject ---------- */
 
-                sub = subjectRepo.save(sub);
-                subjectId = sub.getId();
+        Subject sub = Subject.builder()
+                .name("Mathematics")
+                .code("MATH")
+                .build();
+        sub.setSchoolId(schoolId);
 
-                /* ---------- Exam Subject ---------- */
+        sub = subjectRepo.save(sub);
+        subjectId = sub.getId();
 
-                ExamSubjectCreateRequest esReq = new ExamSubjectCreateRequest();
+        /* ---------- Exam Subject ---------- */
 
-                esReq.setExamId(examId);
-                esReq.setSubjectId(subjectId);
-                esReq.setMaxMarks(100);
+        ExamSubjectCreateRequest esReq = new ExamSubjectCreateRequest();
 
-                HttpEntity<ExamSubjectCreateRequest> esEntity = new HttpEntity<>(esReq, headers);
+        esReq.setExamId(examId);
+        esReq.setSubjectId(subjectId);
+        esReq.setMaxMarks(100);
 
-                ResponseEntity<ExamSubject> esResp = restTemplate.exchange(
-                                "/api/exam-subjects",
-                                HttpMethod.POST,
-                                esEntity,
-                                ExamSubject.class);
+        HttpEntity<ExamSubjectCreateRequest> esEntity = new HttpEntity<>(esReq, headers);
 
-                examSubjectId = Objects.requireNonNull(esResp.getBody()).getId();
+        ResponseEntity<ExamSubject> esResp = restTemplate.exchange(
+                "/api/exam-subjects",
+                HttpMethod.POST,
+                esEntity,
+                ExamSubject.class);
 
-                /* ---------- Marks Entry ---------- */
+        examSubjectId = Objects.requireNonNull(esResp.getBody()).getId();
 
-                MarkEntryRequest markReq = new MarkEntryRequest();
+        /* ---------- Marks Entry ---------- */
 
-                markReq.setExamSubjectId(examSubjectId);
-                markReq.setStudentId(studentId);
-                markReq.setMarksObtained(85);
+        MarkEntryRequest markReq = new MarkEntryRequest();
 
-                HttpEntity<MarkEntryRequest> markEntity = new HttpEntity<>(markReq, headers);
+        markReq.setExamSubjectId(examSubjectId);
+        markReq.setStudentId(studentId);
+        markReq.setMarksObtained(85);
 
-                restTemplate.exchange(
-                                "/api/marks",
-                                HttpMethod.POST,
-                                markEntity,
-                                StudentMark.class);
+        HttpEntity<MarkEntryRequest> markEntity = new HttpEntity<>(markReq, headers);
 
-                /* ---------- Marksheet ---------- */
+        restTemplate.exchange(
+                "/api/marks",
+                HttpMethod.POST,
+                markEntity,
+                StudentMark.class);
 
-                String url = "/api/marksheets/exam/" + examId + "/student/" + studentId;
+        /* ---------- Marksheet ---------- */
 
-                HttpEntity<Void> sheetEntity = new HttpEntity<>(headers);
+        String url = "/api/marksheets/exam/" + examId + "/student/" + studentId;
 
-                ResponseEntity<MarksheetDto> msResp = restTemplate.exchange(
-                                url,
-                                HttpMethod.GET,
-                                sheetEntity,
-                                MarksheetDto.class);
+        HttpEntity<Void> sheetEntity = new HttpEntity<>(headers);
 
-                Assertions.assertThat(msResp.getStatusCode())
-                                .isEqualTo(HttpStatus.OK);
+        ResponseEntity<MarksheetDto> msResp = restTemplate.exchange(
+                url,
+                HttpMethod.GET,
+                sheetEntity,
+                MarksheetDto.class);
 
-                MarksheetDto ms = Objects.requireNonNull(msResp.getBody());
+        Assertions.assertThat(msResp.getStatusCode())
+                .isEqualTo(HttpStatus.OK);
 
-                Assertions.assertThat(ms).isNotNull();
+        MarksheetDto ms = Objects.requireNonNull(msResp.getBody());
 
-                Assertions.assertThat(ms.getTotalMarks()).isEqualTo(85);
-                Assertions.assertThat(ms.getMaxMarks()).isEqualTo(100);
+        Assertions.assertThat(ms).isNotNull();
 
-                Assertions.assertThat(ms.getPercentage()).isEqualTo(85.0);
+        Assertions.assertThat(ms.getTotalMarks()).isEqualTo(85);
+        Assertions.assertThat(ms.getMaxMarks()).isEqualTo(100);
 
-                Assertions.assertThat(ms.isPassed()).isTrue();
+        Assertions.assertThat(ms.getPercentage()).isEqualTo(85.0);
 
-                Assertions.assertThat(ms.getGrade()).isEqualTo("A");
+        Assertions.assertThat(ms.isPassed()).isTrue();
 
-                Assertions.assertThat(ms.getSubjects()).hasSize(1);
+        Assertions.assertThat(ms.getGrade()).isEqualTo("A");
+
+        Assertions.assertThat(ms.getSubjects()).hasSize(1);
+    }
+
+    // ------------------------------------------------
+
+    @AfterEach
+    void cleanup() {
+
+        // 1. Marks
+        if (examSubjectId != null) {
+            markRepo.findAll()
+                    .forEach(markRepo::delete);
         }
 
-        // ------------------------------------------------
-
-        @AfterEach
-        void cleanup() {
-
-                // 1. Marks
-                if (examSubjectId != null) {
-                        markRepo.findAll()
-                                        .forEach(markRepo::delete);
-                }
-
-                // 2. Exam subjects
-                if (examSubjectId != null) {
-                        examSubjectRepo.deleteById(examSubjectId);
-                }
-
-                // 3. Exams
-                if (examId != null) {
-                        examRepo.deleteById(examId);
-                }
-
-                // 4. Students
-                if (studentId != null) {
-                        studentRepo.deleteById(studentId);
-                }
-
-                // 5. Classes
-                if (classId != null) {
-                        classRepo.deleteById(classId);
-                }
-
-                // 6. Users (IMPORTANT)
-                if (schoolId != null) {
-                        userRepository
-                                        .findAll()
-                                        .stream()
-                                        .filter(u -> u.getSchool() != null &&
-                                                        u.getSchool().getId().equals(schoolId))
-                                        .forEach(userRepository::delete);
-                }
-
-                // 7. Subject
-                if (subjectId != null) {
-                        subjectRepo.deleteById(subjectId);
-                }
-
-                // 8. School (LAST)
-                if (schoolId != null) {
-                        schoolRepo.deleteById(schoolId);
-                }
+        // 2. Exam subjects
+        if (examSubjectId != null) {
+            examSubjectRepo.deleteById(examSubjectId);
         }
+
+        // 3. Exams
+        if (examId != null) {
+            examRepo.deleteById(examId);
+        }
+
+        // 4. Students
+        if (studentId != null) {
+            studentRepo.deleteById(studentId);
+        }
+
+        // 5. Classes
+        if (classId != null) {
+            classRepo.deleteById(classId);
+        }
+
+        // 6. Users (IMPORTANT)
+        if (schoolId != null) {
+            userRepository
+                    .findAll()
+                    .stream()
+                    .filter(u -> u.getSchool() != null &&
+                            u.getSchool().getId().equals(schoolId))
+                    .forEach(userRepository::delete);
+        }
+
+        // 7. Subject
+        if (subjectId != null) {
+            subjectRepo.deleteById(subjectId);
+        }
+
+        // 8. Session
+        if (sessionId != null) {
+            sessionRepo.deleteById(sessionId);
+        }
+
+        // 9. School (LAST)
+        if (schoolId != null) {
+            schoolRepo.deleteById(schoolId);
+        }
+    }
 
 }

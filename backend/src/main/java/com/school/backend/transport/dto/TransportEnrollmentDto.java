@@ -11,6 +11,6 @@ public class TransportEnrollmentDto {
     private Long id;
     private Long studentId;
     private Long pickupPointId;
-    private String session;
+    private Long sessionId;
     private boolean active;
 }

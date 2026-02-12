@@ -3,17 +3,15 @@ package com.school.backend.school;
 import com.school.backend.common.BaseAuthenticatedIntegrationTest;
 import com.school.backend.common.dto.PageResponse;
 import com.school.backend.school.dto.SchoolDto;
-import com.school.backend.school.repository.SchoolRepository;
-import com.school.backend.core.classsubject.repository.SchoolClassRepository;
-import com.school.backend.core.attendance.repository.AttendanceRepository;
-import com.school.backend.core.student.repository.StudentEnrollmentRepository;
-import com.school.backend.core.student.repository.StudentRepository;
+import com.school.backend.school.dto.SchoolOnboardingRequest;
+import org.jspecify.annotations.NonNull;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
-import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.core.ParameterizedTypeReference;
-import org.springframework.http.*;
-import com.school.backend.user.repository.UserRepository;
+import org.springframework.http.HttpEntity;
+import org.springframework.http.HttpMethod;
+import org.springframework.http.HttpStatus;
+import org.springframework.http.ResponseEntity;
 import org.springframework.web.util.UriComponentsBuilder;
 
 import java.util.List;
@@ -23,267 +21,247 @@ import static org.junit.jupiter.api.Assertions.*;
 
 public class SchoolControllerIntegrationTest extends BaseAuthenticatedIntegrationTest {
 
-        @Autowired
-        private SchoolRepository schoolRepository;
+    private static final String BASE = "/api/schools";
 
-        @Autowired
-        private UserRepository userRepository;
+    @BeforeEach
+    void setup() {
+        fullCleanup();
+        loginAsSuperAdmin();
+    }
 
-        @Autowired
-        private SchoolClassRepository schoolClassRepository;
+    // ------------------------------------------------
 
-        @Autowired
-        private AttendanceRepository attendanceRepository;
+    private SchoolDto createSample(String name,
+                                   String code,
+                                   String city) {
 
-        @Autowired
-        private StudentEnrollmentRepository studentEnrollmentRepository;
+        SchoolDto dto = SchoolDto.builder()
+                .name(name)
+                .displayName(name)
+                .board("CBSE")
+                .medium("English")
+                .schoolCode(code)
+                .city(city)
+                .state("UP")
+                .pincode("221001")
+                .contactNumber("9000000000")
+                .contactEmail("info@" + code.toLowerCase() + ".edu")
+                .website("https://" + code.toLowerCase() + ".edu")
+                .active(true)
+                .build();
 
-        @Autowired
-        private StudentRepository studentRepository;
+        HttpEntity<SchoolDto> entity = new HttpEntity<>(dto, headers);
 
-        private static final String BASE = "/api/schools";
+        ResponseEntity<SchoolDto> resp = restTemplate.exchange(
+                BASE,
+                HttpMethod.POST,
+                entity,
+                SchoolDto.class);
 
-        @BeforeEach
-        void setup() {
-                userRepository.deleteAll();
-                attendanceRepository.deleteAll();
-                studentEnrollmentRepository.deleteAll();
-                studentRepository.deleteAll();
-                schoolClassRepository.deleteAll();
-                schoolRepository.deleteAll();
-                loginAsSuperAdmin();
-        }
+        assertEquals(
+                HttpStatus.CREATED,
+                resp.getStatusCode(),
+                "Expected 201 Created on POST");
 
-        // ------------------------------------------------
+        SchoolDto created = Objects.requireNonNull(resp.getBody());
 
-        private SchoolDto createSample(String name,
-                        String code,
-                        String city) {
+        assertNotNull(created);
+        assertNotNull(
+                created.getId(),
+                "Created school must have id");
 
-                SchoolDto dto = SchoolDto.builder()
-                                .name(name)
-                                .displayName(name)
-                                .board("CBSE")
-                                .medium("English")
-                                .schoolCode(code)
-                                .city(city)
-                                .state("UP")
-                                .pincode("221001")
-                                .contactNumber("9000000000")
-                                .contactEmail("info@" + code.toLowerCase() + ".edu")
-                                .website("https://" + code.toLowerCase() + ".edu")
-                                .active(true)
-                                .build();
+        return created;
+    }
 
-                HttpEntity<SchoolDto> entity = new HttpEntity<>(dto, headers);
+    // ------------------------------------------------
 
-                ResponseEntity<SchoolDto> resp = restTemplate.exchange(
-                                BASE,
-                                HttpMethod.POST,
-                                entity,
-                                SchoolDto.class);
+    @Test
+    void fullPaginationFlow_createsAndPagesWithoutJacksonPageImplErrors() {
 
-                assertEquals(
-                                HttpStatus.CREATED,
-                                resp.getStatusCode(),
-                                "Expected 201 Created on POST");
+        // create 5 schools
+        createSample("Sunrise Public School", "SPS001", "Varanasi");
+        createSample("Riverdale High", "RHS002", "Lucknow");
+        createSample("Green Valley School", "GVS003", "Allahabad");
+        createSample("Horizon School", "HS004", "Varanasi");
+        createSample("Maple Leaf Academy", "MLA005", "Varanasi");
 
-                SchoolDto created = Objects.requireNonNull(resp.getBody());
+        // build URI with page params
+        String url = UriComponentsBuilder.fromPath(BASE)
+                .queryParam("page", 0)
+                .queryParam("size", 2)
+                .build()
+                .toUriString();
 
-                assertNotNull(created);
-                assertNotNull(
-                                created.getId(),
-                                "Created school must have id");
+        ParameterizedTypeReference<PageResponse<SchoolDto>> ptr = new ParameterizedTypeReference<>() {
+        };
 
-                return created;
-        }
+        HttpEntity<Void> listEntity = new HttpEntity<>(headers);
 
-        // ------------------------------------------------
+        ResponseEntity<PageResponse<SchoolDto>> response = restTemplate.exchange(
+                url,
+                HttpMethod.GET,
+                listEntity,
+                ptr);
 
-        @Test
-        void fullPaginationFlow_createsAndPagesWithoutJacksonPageImplErrors() {
+        assertEquals(HttpStatus.OK, response.getStatusCode());
 
-                // create 5 schools
-                createSample("Sunrise Public School", "SPS001", "Varanasi");
-                createSample("Riverdale High", "RHS002", "Lucknow");
-                createSample("Green Valley School", "GVS003", "Allahabad");
-                createSample("Horizon School", "HS004", "Varanasi");
-                createSample("Maple Leaf Academy", "MLA005", "Varanasi");
+        PageResponse<SchoolDto> page = Objects.requireNonNull(response.getBody());
 
-                // build URI with page params
-                String url = UriComponentsBuilder.fromPath(BASE)
-                                .queryParam("page", 0)
-                                .queryParam("size", 2)
-                                .build()
-                                .toUriString();
+        assertNotNull(page, "PageResponse must not be null");
 
-                ParameterizedTypeReference<PageResponse<SchoolDto>> ptr = new ParameterizedTypeReference<>() {
-                };
+        // verify metadata
+        assertEquals(0, page.number(), "page number should be 0");
+        assertEquals(2, page.size(), "page size should be 2");
+        assertTrue(
+                page.totalElements() >= 5,
+                "totalElements should be >= 5");
 
-                HttpEntity<Void> listEntity = new HttpEntity<>(headers);
+        // content checks
+        List<SchoolDto> content = page.content();
 
-                ResponseEntity<PageResponse<SchoolDto>> response = restTemplate.exchange(
-                                url,
-                                HttpMethod.GET,
-                                listEntity,
-                                ptr);
+        assertNotNull(content);
+        assertEquals(2, content.size(), "expected 2 items on page 0");
 
-                assertEquals(HttpStatus.OK, response.getStatusCode());
+        // check required fields
+        SchoolDto first = content.get(0);
 
-                PageResponse<SchoolDto> page = Objects.requireNonNull(response.getBody());
+        assertNotNull(first.getId());
+        assertNotNull(first.getSchoolCode());
+        assertNotNull(first.getName());
 
-                assertNotNull(page, "PageResponse must not be null");
+        // sanity: repo count
+        long repoCount = schoolRepository.count();
 
-                // verify metadata
-                assertEquals(0, page.number(), "page number should be 0");
-                assertEquals(2, page.size(), "page size should be 2");
-                assertTrue(
-                                page.totalElements() >= 5,
-                                "totalElements should be >= 5");
+        assertEquals(
+                repoCount,
+                page.totalElements(),
+                "totalElements must match repository count");
+    }
 
-                // content checks
-                List<SchoolDto> content = page.content();
+    @Test
+    void testOnboardSchool_createsSchoolAndAdmin() {
+        // Arrange
+        HttpEntity<SchoolOnboardingRequest> entity = getSchoolOnboardingRequestHttpEntity();
 
-                assertNotNull(content);
-                assertEquals(2, content.size(), "expected 2 items on page 0");
+        // Act
+        ResponseEntity<SchoolDto> resp = restTemplate.postForEntity(BASE + "/onboard", entity, SchoolDto.class);
 
-                // check required fields
-                SchoolDto first = content.get(0);
+        // Assert
+        assertEquals(HttpStatus.CREATED, resp.getStatusCode());
+        SchoolDto resultBody = Objects.requireNonNull(resp.getBody());
+        assertEquals("ONB100", resultBody.getSchoolCode());
 
-                assertNotNull(first.getId());
-                assertNotNull(first.getSchoolCode());
-                assertNotNull(first.getName());
+        // Verify Admin User Creation? We might need UserRepository injected or check
+        // login?
+        // Let's rely on success for now, or we can inject UserRepository to verify.
+    }
 
-                // sanity: repo count
-                long repoCount = schoolRepository.count();
+    private @NonNull HttpEntity<SchoolOnboardingRequest> getSchoolOnboardingRequestHttpEntity() {
+        SchoolOnboardingRequest req = new SchoolOnboardingRequest();
+        req.setName("Onboarded School");
+        req.setSchoolCode("ONB100");
+        req.setAdminName("Admin One");
+        req.setAdminEmail("admin@onb100.com");
+        req.setAdminPassword("password123");
+        req.setCity("Varanasi");
+        req.setState("Uttar Pradesh");
+        req.setMedium("English");
+        req.setBoard("CBSE");
 
-                assertEquals(
-                                repoCount,
-                                page.totalElements(),
-                                "totalElements must match repository count");
-        }
+        return new HttpEntity<>(req, headers);
+    }
 
-        @Test
-        void testOnboardSchool_createsSchoolAndAdmin() {
-                // Arrange
-                com.school.backend.school.dto.SchoolOnboardingRequest req = new com.school.backend.school.dto.SchoolOnboardingRequest();
-                req.setName("Onboarded School");
-                req.setSchoolCode("ONB100");
-                req.setAdminName("Admin One");
-                req.setAdminEmail("admin@onb100.com");
-                req.setAdminPassword("password123");
-                req.setCity("Varanasi");
-                req.setState("Uttar Pradesh");
-                req.setMedium("English");
-                req.setBoard("CBSE");
+    @Test
+    void testSchoolAdmin_canAccessOwnSchool_viaGetAll() {
+        // 1. Create a school (will be done by super admin)
+        SchoolDto s = createSample("My Admin School", "MAS001", "Delhi");
 
-                HttpEntity<com.school.backend.school.dto.SchoolOnboardingRequest> entity = new HttpEntity<>(req,
-                                headers);
+        // 2. Login as School Admin for this school
+        loginAsSchoolAdmin(s.getId());
 
-                // Act
-                ResponseEntity<SchoolDto> resp = restTemplate.postForEntity(BASE + "/onboard", entity, SchoolDto.class);
+        // 3. Call GET /api/schools
+        ParameterizedTypeReference<PageResponse<SchoolDto>> ptr = new ParameterizedTypeReference<>() {
+        };
+        ResponseEntity<PageResponse<SchoolDto>> response = restTemplate.exchange(
+                BASE,
+                HttpMethod.GET,
+                new HttpEntity<>(headers),
+                ptr);
 
-                // Assert
-                assertEquals(HttpStatus.CREATED, resp.getStatusCode());
-                SchoolDto resultBody = Objects.requireNonNull(resp.getBody());
-                assertEquals("ONB100", resultBody.getSchoolCode());
+        // 4. Verify Success and Content
+        assertEquals(HttpStatus.OK, response.getStatusCode());
+        PageResponse<SchoolDto> page = Objects.requireNonNull(response.getBody());
 
-                // Verify Admin User Creation? We might need UserRepository injected or check
-                // login?
-                // Let's rely on success for now, or we can inject UserRepository to verify.
-        }
+        assertNotNull(page);
+        assertEquals(1, page.totalElements(), "School Admin should see exactly 1 school");
+        assertEquals(1, page.content().size());
+        assertEquals("MAS001", page.content().get(0).getSchoolCode());
+    }
 
-        @Test
-        void testSchoolAdmin_canAccessOwnSchool_viaGetAll() {
-                // 1. Create a school (will be done by super admin)
-                SchoolDto s = createSample("My Admin School", "MAS001", "Delhi");
+    @Test
+    void testSchoolAdmin_canAccessOwnSchool_viaGetById() {
+        SchoolDto s = createSample("My School", "MYS001", "Mumbai");
+        loginAsSchoolAdmin(s.getId());
 
-                // 2. Login as School Admin for this school
-                loginAsSchoolAdmin(s.getId());
+        ResponseEntity<SchoolDto> response = restTemplate.exchange(
+                BASE + "/id/" + s.getId(),
+                HttpMethod.GET,
+                new HttpEntity<>(headers),
+                SchoolDto.class);
 
-                // 3. Call GET /api/schools
-                ParameterizedTypeReference<PageResponse<SchoolDto>> ptr = new ParameterizedTypeReference<>() {
-                };
-                ResponseEntity<PageResponse<SchoolDto>> response = restTemplate.exchange(
-                                BASE,
-                                HttpMethod.GET,
-                                new HttpEntity<>(headers),
-                                ptr);
+        assertEquals(HttpStatus.OK, response.getStatusCode());
+        SchoolDto body = Objects.requireNonNull(response.getBody());
+        assertEquals(s.getId(), body.getId());
+    }
 
-                // 4. Verify Success and Content
-                assertEquals(HttpStatus.OK, response.getStatusCode());
-                PageResponse<SchoolDto> page = Objects.requireNonNull(response.getBody());
+    @Test
+    void testSchoolAdmin_cannotAccessOtherSchool_viaGetById() {
+        SchoolDto s1 = createSample("School One", "SCH001", "City1");
+        SchoolDto s2 = createSample("School Two", "SCH002", "City2");
 
-                assertNotNull(page);
-                assertEquals(1, page.totalElements(), "School Admin should see exactly 1 school");
-                assertEquals(1, page.content().size());
-                assertEquals("MAS001", page.content().get(0).getSchoolCode());
-        }
+        loginAsSchoolAdmin(s1.getId());
 
-        @Test
-        void testSchoolAdmin_canAccessOwnSchool_viaGetById() {
-                SchoolDto s = createSample("My School", "MYS001", "Mumbai");
-                loginAsSchoolAdmin(s.getId());
+        ResponseEntity<String> response = restTemplate.exchange(
+                BASE + "/id/" + s2.getId(),
+                HttpMethod.GET,
+                new HttpEntity<>(headers),
+                String.class);
 
-                ResponseEntity<SchoolDto> response = restTemplate.exchange(
-                                BASE + "/id/" + s.getId(),
-                                HttpMethod.GET,
-                                new HttpEntity<>(headers),
-                                SchoolDto.class);
+        // Expect 403 Forbidden (or 500 if AccessDeniedException is not handled
+        // globally, but usually 403)
+        // Spring Boot default error mapping for AccessDeniedException is 403
+        assertEquals(HttpStatus.FORBIDDEN, response.getStatusCode());
+    }
 
-                assertEquals(HttpStatus.OK, response.getStatusCode());
-                SchoolDto body = Objects.requireNonNull(response.getBody());
-                assertEquals(s.getId(), body.getId());
-        }
+    @Test
+    void testSchoolAdmin_canAccessOwnSchool_viaGetByCode() {
+        SchoolDto s = createSample("My Code School", "MCS001", "Pune");
+        loginAsSchoolAdmin(s.getId());
 
-        @Test
-        void testSchoolAdmin_cannotAccessOtherSchool_viaGetById() {
-                SchoolDto s1 = createSample("School One", "SCH001", "City1");
-                SchoolDto s2 = createSample("School Two", "SCH002", "City2");
+        ResponseEntity<SchoolDto> response = restTemplate.exchange(
+                BASE + "/" + s.getSchoolCode(),
+                HttpMethod.GET,
+                new HttpEntity<>(headers),
+                SchoolDto.class);
 
-                loginAsSchoolAdmin(s1.getId());
+        assertEquals(HttpStatus.OK, response.getStatusCode());
+        SchoolDto body = Objects.requireNonNull(response.getBody());
+        assertEquals(s.getSchoolCode(), body.getSchoolCode());
+    }
 
-                ResponseEntity<String> response = restTemplate.exchange(
-                                BASE + "/id/" + s2.getId(),
-                                HttpMethod.GET,
-                                new HttpEntity<>(headers),
-                                String.class);
+    @Test
+    void testSchoolAdmin_cannotAccessOtherSchool_viaGetByCode() {
+        SchoolDto s1 = createSample("Code School One", "CS100", "CityA");
+        SchoolDto s2 = createSample("Code School Two", "CS200", "CityB");
 
-                // Expect 403 Forbidden (or 500 if AccessDeniedException is not handled
-                // globally, but usually 403)
-                // Spring Boot default error mapping for AccessDeniedException is 403
-                assertEquals(HttpStatus.FORBIDDEN, response.getStatusCode());
-        }
+        loginAsSchoolAdmin(s1.getId());
 
-        @Test
-        void testSchoolAdmin_canAccessOwnSchool_viaGetByCode() {
-                SchoolDto s = createSample("My Code School", "MCS001", "Pune");
-                loginAsSchoolAdmin(s.getId());
+        ResponseEntity<String> response = restTemplate.exchange(
+                BASE + "/" + s2.getSchoolCode(),
+                HttpMethod.GET,
+                new HttpEntity<>(headers),
+                String.class);
 
-                ResponseEntity<SchoolDto> response = restTemplate.exchange(
-                                BASE + "/" + s.getSchoolCode(),
-                                HttpMethod.GET,
-                                new HttpEntity<>(headers),
-                                SchoolDto.class);
-
-                assertEquals(HttpStatus.OK, response.getStatusCode());
-                SchoolDto body = Objects.requireNonNull(response.getBody());
-                assertEquals(s.getSchoolCode(), body.getSchoolCode());
-        }
-
-        @Test
-        void testSchoolAdmin_cannotAccessOtherSchool_viaGetByCode() {
-                SchoolDto s1 = createSample("Code School One", "CS100", "CityA");
-                SchoolDto s2 = createSample("Code School Two", "CS200", "CityB");
-
-                loginAsSchoolAdmin(s1.getId());
-
-                ResponseEntity<String> response = restTemplate.exchange(
-                                BASE + "/" + s2.getSchoolCode(),
-                                HttpMethod.GET,
-                                new HttpEntity<>(headers),
-                                String.class);
-
-                assertEquals(HttpStatus.FORBIDDEN, response.getStatusCode());
-        }
+        assertEquals(HttpStatus.FORBIDDEN, response.getStatusCode());
+    }
 }

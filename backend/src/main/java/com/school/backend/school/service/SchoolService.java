@@ -9,14 +9,15 @@ import com.school.backend.school.mapper.SchoolMapper;
 import com.school.backend.school.repository.SchoolRepository;
 import com.school.backend.user.entity.User;
 import com.school.backend.user.repository.UserRepository;
+import com.school.backend.user.security.SecurityUtil;
 import lombok.RequiredArgsConstructor;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
+import org.springframework.security.access.AccessDeniedException;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
-import com.school.backend.user.security.SecurityUtil;
 import java.util.List;
 
 @Service
@@ -115,7 +116,7 @@ public class SchoolService {
                 // For security, strictly forbid or just return as if not found/unauthorized
                 // Spring Security usually handles 403 if we threw AccessDeniedException
                 // but here we are in service layer.
-                throw new org.springframework.security.access.AccessDeniedException("Access denied to other school");
+                throw new AccessDeniedException("Access denied to other school");
             }
         }
 
@@ -127,7 +128,7 @@ public class SchoolService {
         if (SecurityUtil.role() == UserRole.SCHOOL_ADMIN) {
             Long mySchoolId = SecurityUtil.schoolId();
             if (!id.equals(mySchoolId)) {
-                throw new org.springframework.security.access.AccessDeniedException("Access denied to other school");
+                throw new AccessDeniedException("Access denied to other school");
             }
         }
 
@@ -182,5 +183,16 @@ public class SchoolService {
             throw new IllegalStateException("Unable to generate unique school code");
         }
         return code;
+    }
+
+    /**
+     * Update the current session for a school
+     */
+    @Transactional
+    public void updateCurrentSession(Long schoolId, Long sessionId) {
+        School school = schoolRepository.findById(schoolId)
+                .orElseThrow(() -> new ResourceNotFoundException("School not found with id: " + schoolId));
+        school.setCurrentSessionId(sessionId);
+        schoolRepository.save(school);
     }
 }

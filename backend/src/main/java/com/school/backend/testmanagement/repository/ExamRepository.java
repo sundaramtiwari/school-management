@@ -9,7 +9,7 @@ import java.util.List;
 @Repository
 public interface ExamRepository extends JpaRepository<Exam, Long> {
 
-    List<Exam> findByClassIdAndSession(Long classId, String session);
+    List<Exam> findByClassIdAndSessionId(Long classId, Long sessionId);
 
     List<Exam> findBySchoolIdAndStartDateAfter(Long schoolId, java.time.LocalDate date);
 }

@@ -7,8 +7,7 @@ import lombok.experimental.SuperBuilder;
 
 @Entity
 @Table(name = "student_fee_assignments", indexes = {
-        @Index(name = "idx_student_fee_student_session",
-                columnList = "student_id,session")
+        @Index(name = "idx_student_fee_student_session", columnList = "student_id,session_id")
 })
 @Getter
 @Setter
@@ -29,8 +28,8 @@ public class StudentFeeAssignment extends TenantEntity {
     @Column(name = "fee_structure_id", nullable = false)
     private Long feeStructureId;
 
-    @Column(nullable = false)
-    private String session;
+    @Column(name = "session_id", nullable = false)
+    private Long sessionId;
 
     @Builder.Default
     private boolean active = true;

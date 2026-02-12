@@ -53,8 +53,8 @@ public class AttendanceService {
     }
 
     @Transactional(readOnly = true)
-    public List<StudentAttendance> getAttendanceByClassAndDate(Long classId, String session, LocalDate date) {
-        List<Long> studentIds = enrollmentRepository.findByClassIdAndSession(classId, session)
+    public List<StudentAttendance> getAttendanceByClassAndDate(Long classId, Long sessionId, LocalDate date) {
+        List<Long> studentIds = enrollmentRepository.findByClassIdAndSessionId(classId, sessionId)
                 .stream()
                 .map(StudentEnrollment::getStudentId)
                 .collect(Collectors.toList());

@@ -15,7 +15,7 @@ public class PromotionRecordDto {
     private Long toClassId;
     private String toSection;
 
-    private String session;
+    private Long sessionId;
     private LocalDate promotedOn;
 
     private boolean promoted;

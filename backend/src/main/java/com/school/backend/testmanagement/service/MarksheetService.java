@@ -1,6 +1,8 @@
 package com.school.backend.testmanagement.service;
 
 import com.lowagie.text.*;
+import com.lowagie.text.Font;
+import com.lowagie.text.Rectangle;
 import com.lowagie.text.pdf.PdfPCell;
 import com.lowagie.text.pdf.PdfPTable;
 import com.lowagie.text.pdf.PdfWriter;
@@ -13,7 +15,9 @@ import com.school.backend.core.student.entity.StudentGuardian;
 import com.school.backend.core.student.repository.StudentEnrollmentRepository;
 import com.school.backend.core.student.repository.StudentGuardianRepository;
 import com.school.backend.core.student.repository.StudentRepository;
+import com.school.backend.school.entity.AcademicSession;
 import com.school.backend.school.entity.School;
+import com.school.backend.school.repository.AcademicSessionRepository;
 import com.school.backend.school.repository.SchoolRepository;
 import com.school.backend.testmanagement.dto.MarksheetDto;
 import com.school.backend.testmanagement.entity.Exam;
@@ -25,7 +29,7 @@ import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
-import java.awt.Color;
+import java.awt.*;
 import java.io.ByteArrayOutputStream;
 import java.util.ArrayList;
 import java.util.List;
@@ -43,6 +47,7 @@ public class MarksheetService {
     private final StudentEnrollmentRepository enrollmentRepository;
     private final StudentGuardianRepository studentGuardianRepository;
     private final GuardianRepository guardianRepository;
+    private final AcademicSessionRepository sessionRepository;
 
     @Transactional(readOnly = true)
     public byte[] generatePdf(Long examId, Long studentId) {
@@ -57,6 +62,9 @@ public class MarksheetService {
         School school = schoolRepository.findById(exam.getSchoolId())
                 .orElseThrow(() -> new ResourceNotFoundException("School not found"));
 
+        AcademicSession session = sessionRepository.findById(exam.getSessionId())
+                .orElse(AcademicSession.builder().name("").build());
+
         try (ByteArrayOutputStream out = new ByteArrayOutputStream()) {
             Document document = new Document(PageSize.A4);
             PdfWriter.getInstance(document, out);
@@ -66,7 +74,7 @@ public class MarksheetService {
             addSchoolHeader(document, school);
 
             // 2. Marksheet Title
-            addTitle(document, exam);
+            addTitle(document, exam, session.getName());
 
             // 3. Student Details
             addStudentDetails(document, student, exam);
@@ -109,13 +117,13 @@ public class MarksheetService {
         document.add(new Paragraph(" "));
     }
 
-    private void addTitle(Document document, Exam exam) throws DocumentException {
+    private void addTitle(Document document, Exam exam, String sessionName) throws DocumentException {
         Font titleFont = FontFactory.getFont(FontFactory.HELVETICA_BOLD, 14);
         Paragraph title = new Paragraph("REPORT CARD / MARKSHEET", titleFont);
         title.setAlignment(Element.ALIGN_CENTER);
         document.add(title);
 
-        Paragraph examName = new Paragraph(exam.getName() + " - " + exam.getSession(),
+        Paragraph examName = new Paragraph(exam.getName() + " - " + sessionName,
                 FontFactory.getFont(FontFactory.HELVETICA_BOLD, 11));
         examName.setAlignment(Element.ALIGN_CENTER);
         document.add(examName);
@@ -133,10 +141,10 @@ public class MarksheetService {
 
         // Fetch roll number from enrollment
         Optional<StudentEnrollment> enrollment = enrollmentRepository
-                .findByStudentIdAndSession(student.getId(), exam.getSession()).stream().findFirst();
+                .findByStudentIdAndSessionId(student.getId(), exam.getSessionId()).stream().findFirst();
         String rollNo = enrollment.map(e -> e.getRollNumber() != null ? e.getRollNumber().toString() : "N/A")
                 .orElse("N/A");
-        String section = enrollment.map(e -> e.getSection()).orElse("A");
+        String section = enrollment.map(StudentEnrollment::getSection).orElse("A");
 
         // Fetch father's name (Primary Guardian)
         String fatherName = "N/A";
@@ -181,7 +189,7 @@ public class MarksheetService {
     private void addMarksTable(Document document, MarksheetDto data) throws DocumentException {
         PdfPTable table = new PdfPTable(4);
         table.setWidthPercentage(100);
-        table.setWidths(new float[] { 3f, 1f, 1f, 1f });
+        table.setWidths(new float[]{3f, 1f, 1f, 1f});
 
         Font headFont = FontFactory.getFont(FontFactory.HELVETICA_BOLD, 10, Color.WHITE);
         Color headerColor = new Color(52, 73, 94);

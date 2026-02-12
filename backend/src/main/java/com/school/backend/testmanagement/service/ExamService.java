@@ -32,7 +32,7 @@ public class ExamService {
         Exam exam = Exam.builder()
                 .schoolId(req.getSchoolId())
                 .classId(req.getClassId())
-                .session(req.getSession())
+                .sessionId(req.getSessionId())
                 .name(req.getName())
                 .examType(req.getExamType())
                 .active(true)
@@ -43,9 +43,9 @@ public class ExamService {
 
     // List exams
     @Transactional(readOnly = true)
-    public List<Exam> listByClass(Long classId, String session) {
+    public List<Exam> listByClass(Long classId, Long sessionId) {
 
-        return repository.findByClassIdAndSession(classId, session);
+        return repository.findByClassIdAndSessionId(classId, sessionId);
     }
 
     // Bulk save marks

@@ -16,8 +16,8 @@ public class DataSeeder implements CommandLineRunner {
     private final PasswordEncoder passwordEncoder;
 
     @Override
-    public void run(String... args) throws Exception {
-        if (userRepository.count() == 0) {
+    public void run(String... args) {
+        if (!userRepository.existsByEmail("admin@school.com")) {
             createSuperAdmin();
         }
     }

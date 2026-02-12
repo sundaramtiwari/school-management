@@ -1,6 +1,5 @@
 package com.school.backend.fee.dto;
 
-import jakarta.validation.constraints.NotBlank;
 import jakarta.validation.constraints.NotNull;
 import lombok.Data;
 
@@ -13,6 +12,6 @@ public class StudentFeeAssignRequest {
     @NotNull
     private Long feeStructureId;
 
-    @NotBlank
-    private String session;
+    @NotNull
+    private Long sessionId;
 }

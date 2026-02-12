@@ -33,10 +33,10 @@ public class AttendanceController {
     @PreAuthorize("hasAnyRole('SCHOOL_ADMIN', 'TEACHER', 'SUPER_ADMIN', 'PLATFORM_ADMIN')")
     public List<StudentAttendance> getAttendanceByClassAndDate(
             @PathVariable Long classId,
-            @RequestParam String session,
+            @RequestParam Long sessionId,
             @RequestParam @DateTimeFormat(iso = DateTimeFormat.ISO.DATE) LocalDate date) {
 
-        return attendanceService.getAttendanceByClassAndDate(classId, session, date);
+        return attendanceService.getAttendanceByClassAndDate(classId, sessionId, date);
     }
 
     @GetMapping("/stats/today")

@@ -42,7 +42,7 @@ public class StudentHistoryService {
             throw new ResourceNotFoundException("Student not found: " + studentId);
         }
 
-        return enrollmentRepo.findByStudentIdOrderBySessionAsc(studentId)
+        return enrollmentRepo.findByStudentIdOrderBySessionIdAsc(studentId)
                 .stream()
                 .map(this::toEnrollmentDto)
                 .toList();
@@ -56,7 +56,7 @@ public class StudentHistoryService {
             throw new ResourceNotFoundException("Student not found: " + studentId);
         }
 
-        return promotionRepo.findByStudentIdOrderBySessionAsc(studentId)
+        return promotionRepo.findByStudentIdOrderBySessionIdAsc(studentId)
                 .stream()
                 .map(this::toPromotionDto)
                 .toList();
@@ -70,8 +70,7 @@ public class StudentHistoryService {
                 .orElseThrow(() -> new ResourceNotFoundException("Student not found: " + studentId));
 
         // ---------------- FEE CHECK ----------------
-        FeeSummaryDto summary =
-                feeSummaryService.getStudentFeeSummary(studentId, req.getSession());
+        FeeSummaryDto summary = feeSummaryService.getStudentFeeSummary(studentId, req.getSessionId());
 
         if (summary.isFeePending()) {
             throw new BusinessException(
@@ -99,7 +98,7 @@ public class StudentHistoryService {
                 .fromSection(fromSection)
                 .toClassId(req.getToClassId())
                 .toSection(req.getToSection())
-                .session(req.getSession())
+                .sessionId(req.getSessionId())
                 .promotedOn(LocalDate.now())
                 .promoted(req.isPromoted())
                 .feePending(req.isFeePending())
@@ -114,7 +113,7 @@ public class StudentHistoryService {
                 .studentId(studentId)
                 .classId(req.getToClassId())
                 .section(req.getToSection())
-                .session(req.getSession())
+                .sessionId(req.getSessionId())
                 .rollNumber(null)
                 .enrollmentDate(LocalDate.now())
                 .active(true)
@@ -138,7 +137,7 @@ public class StudentHistoryService {
         dto.setStudentId(e.getStudentId());
         dto.setClassId(e.getClassId());
         dto.setSection(e.getSection());
-        dto.setSession(e.getSession());
+        dto.setSessionId(e.getSessionId());
         dto.setRollNumber(e.getRollNumber());
         dto.setEnrollmentDate(e.getEnrollmentDate());
         dto.setActive(e.isActive());
@@ -154,7 +153,7 @@ public class StudentHistoryService {
         dto.setFromSection(p.getFromSection());
         dto.setToClassId(p.getToClassId());
         dto.setToSection(p.getToSection());
-        dto.setSession(p.getSession());
+        dto.setSessionId(p.getSessionId());
         dto.setPromotedOn(p.getPromotedOn());
         dto.setPromoted(p.isPromoted());
         dto.setFeePending(p.isFeePending());

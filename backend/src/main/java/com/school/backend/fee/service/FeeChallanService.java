@@ -1,6 +1,8 @@
 package com.school.backend.fee.service;
 
 import com.lowagie.text.*;
+import com.lowagie.text.Font;
+import com.lowagie.text.Rectangle;
 import com.lowagie.text.pdf.PdfPCell;
 import com.lowagie.text.pdf.PdfPTable;
 import com.lowagie.text.pdf.PdfWriter;
@@ -13,12 +15,13 @@ import com.school.backend.fee.enums.FeeFrequency;
 import com.school.backend.fee.repository.FeeStructureRepository;
 import com.school.backend.fee.repository.StudentFeeAssignmentRepository;
 import com.school.backend.school.entity.School;
+import com.school.backend.school.repository.AcademicSessionRepository;
 import com.school.backend.school.repository.SchoolRepository;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
-import java.awt.Color;
+import java.awt.*;
 import java.io.ByteArrayOutputStream;
 import java.text.NumberFormat;
 import java.time.LocalDate;
@@ -31,17 +34,17 @@ import java.util.Locale;
 @RequiredArgsConstructor
 public class FeeChallanService {
 
+    private static final DateTimeFormatter DATE_FORMATTER = DateTimeFormatter.ofPattern("dd-MMM-yyyy");
+    private static final int LATE_FEE_PER_DAY = 50; // ₹50 per day
+    private static final int GRACE_PERIOD_DAYS = 7;
     private final StudentRepository studentRepository;
     private final SchoolRepository schoolRepository;
     private final FeeStructureRepository feeStructureRepository;
     private final StudentFeeAssignmentRepository assignmentRepository;
-
-    private static final DateTimeFormatter DATE_FORMATTER = DateTimeFormatter.ofPattern("dd-MMM-yyyy");
-    private static final int LATE_FEE_PER_DAY = 50; // ₹50 per day
-    private static final int GRACE_PERIOD_DAYS = 7;
+    private final AcademicSessionRepository academicSessionRepository;
 
     @Transactional(readOnly = true)
-    public byte[] generateChallan(Long studentId, String session, Long schoolId, int months) {
+    public byte[] generateChallan(Long studentId, Long sessionId, Long schoolId, int months) {
         Student student = studentRepository.findById(studentId)
                 .orElseThrow(() -> new ResourceNotFoundException("Student not found: " + studentId));
 
@@ -52,11 +55,16 @@ public class FeeChallanService {
         School school = schoolRepository.findById(schoolId)
                 .orElseThrow(() -> new ResourceNotFoundException("School not found"));
 
+        // Fetch session name
+        com.school.backend.school.entity.AcademicSession academicSession = academicSessionRepository.findById(sessionId)
+                .orElseThrow(() -> new ResourceNotFoundException("Academic Session not found: " + sessionId));
+        String sessionName = academicSession.getName();
+
         // Get all fee assignments for this student and session
-        List<StudentFeeAssignment> assignments = assignmentRepository.findByStudentIdAndSession(studentId, session);
+        List<StudentFeeAssignment> assignments = assignmentRepository.findByStudentIdAndSessionId(studentId, sessionId);
 
         if (assignments.isEmpty()) {
-            throw new IllegalArgumentException("No fee assignments found for student in session " + session);
+            throw new IllegalArgumentException("No fee assignments found for student in session " + sessionName);
         }
 
         try (ByteArrayOutputStream out = new ByteArrayOutputStream()) {
@@ -67,10 +75,10 @@ public class FeeChallanService {
 
             // Build the challan
             addSchoolHeader(document, school);
-            addChallanTitle(document, session, months);
+            addChallanTitle(document, sessionName, months);
             addStudentDetails(document, student);
             int totalAmount = addFeeBreakdown(document, assignments, months);
-            addPaymentDetails(document, session, totalAmount);
+            addPaymentDetails(document, sessionName, totalAmount);
             addFooter(document, school);
 
             document.close();
@@ -182,7 +190,7 @@ public class FeeChallanService {
 
         PdfPTable table = new PdfPTable(4);
         table.setWidthPercentage(100);
-        table.setWidths(new float[] { 3f, 1.2f, 0.8f, 1.5f });
+        table.setWidths(new float[]{3f, 1.2f, 0.8f, 1.5f});
 
         // Header Row
         PdfPCell headerCell1 = new PdfPCell(new Phrase("Fee Type", headerFont));

@@ -1,70 +1,58 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useState } from "react";
 import { sessionApi } from "@/lib/sessionApi";
 import { useAuth } from "@/context/AuthContext";
+import { useSession } from "@/context/SessionContext";
 import { useToast } from "@/components/ui/Toast";
 import Modal from "@/components/ui/Modal";
 import { TableSkeleton } from "@/components/ui/Skeleton";
 
-type Session = {
-    id: number;
-    name: string;
-    startDate: string;
-    endDate: string;
-    isCurrent: boolean;
-    active: boolean;
-};
-
 export default function SessionsPage() {
     const { user } = useAuth();
     const { showToast } = useToast();
-    const [sessions, setSessions] = useState<Session[]>([]);
-    const [loading, setLoading] = useState(true);
+    const { sessions, currentSession, setCurrentSession, refreshSessions, isLoading } = useSession();
     const [isSaving, setIsSaving] = useState(false);
     const [showForm, setShowForm] = useState(false);
 
     const [form, setForm] = useState({
         name: "",
-        startDate: "",
-        endDate: "",
-        isCurrent: false,
+        active: true,
     });
 
-    useEffect(() => {
-        loadSessions();
-    }, []);
-
-    async function loadSessions() {
-        try {
-            setLoading(true);
-            const res = await sessionApi.list();
-            setSessions(res.data);
-        } catch {
-            showToast("Failed to load sessions", "error");
-        } finally {
-            setLoading(false);
-        }
-    }
-
     async function saveSession() {
-        if (!form.name || !form.startDate || !form.endDate) {
+        if (!form.name) {
             showToast("Please fill all required fields", "warning");
             return;
         }
 
         try {
             setIsSaving(true);
-            const payload = { ...form };
-            await sessionApi.create(payload);
+            await sessionApi.create(form);
             showToast("Academic session created!", "success");
             setShowForm(false);
-            setForm({ name: "", startDate: "", endDate: "", isCurrent: false });
-            loadSessions();
+            setForm({ name: "", active: true });
+            await refreshSessions();
         } catch (e: any) {
             showToast("Save failed: " + (e.response?.data?.message || e.message), "error");
         } finally {
             setIsSaving(false);
+        }
+    }
+
+    async function handleSetCurrent(sessionId: number) {
+        try {
+            await sessionApi.setCurrent(sessionId);
+            showToast("Current session updated!", "success");
+            await refreshSessions();
+
+            // Update context immediately
+            const target = sessions.find(s => s.id === sessionId);
+            if (target) {
+                setCurrentSession(target);
+            }
+        } catch (e: any) {
+            showToast("Failed to set current session: " + (e.response?.data?.message || e.message), "error");
         }
     }
 
@@ -83,7 +71,7 @@ export default function SessionsPage() {
                 </button>
             </div>
 
-            {loading ? (
+            {isLoading ? (
                 <div className="bg-white p-8 rounded-2xl border">
                     <TableSkeleton rows={5} cols={4} />
                 </div>
@@ -93,9 +81,8 @@ export default function SessionsPage() {
                         <thead className="bg-gray-50 text-gray-600 font-bold border-b">
                             <tr>
                                 <th className="p-4 text-left">Academic Year</th>
-                                <th className="p-4 text-center">Duration</th>
                                 <th className="p-4 text-center">Status Flag</th>
-                                <th className="p-4 text-center w-32">Visibility</th>
+                                <th className="p-4 text-center w-48">Actions</th>
                             </tr>
                         </thead>
                         <tbody className="divide-y divide-gray-100">
@@ -104,15 +91,12 @@ export default function SessionsPage() {
                                     <td className="p-4">
                                         <div className="flex items-center gap-3">
                                             <span className="font-bold text-gray-800">{s.name}</span>
-                                            {s.isCurrent && (
+                                            {currentSession?.id === s.id && (
                                                 <span className="px-2 py-0.5 bg-green-100 text-green-700 text-[10px] font-black uppercase rounded-full border border-green-200">
                                                     Current
                                                 </span>
                                             )}
                                         </div>
-                                    </td>
-                                    <td className="p-4 text-center text-gray-500 font-medium">
-                                        {s.startDate} <span className="mx-2 text-gray-300">→</span> {s.endDate}
                                     </td>
                                     <td className="p-4 text-center">
                                         <span className={`px-3 py-1 rounded-full text-[10px] font-bold uppercase border ${s.active ? "bg-blue-50 text-blue-600 border-blue-100" : "bg-gray-50 text-gray-400 border-gray-200"
@@ -121,15 +105,25 @@ export default function SessionsPage() {
                                         </span>
                                     </td>
                                     <td className="p-4 text-center">
-                                        <button className="text-blue-600 hover:underline font-bold text-xs uppercase tracking-tighter">
-                                            Configure
-                                        </button>
+                                        <div className="flex items-center justify-center gap-3">
+                                            {currentSession?.id !== s.id && (
+                                                <button
+                                                    onClick={() => handleSetCurrent(s.id)}
+                                                    className="text-green-600 hover:text-green-700 font-bold text-xs uppercase tracking-tighter"
+                                                >
+                                                    Set Current
+                                                </button>
+                                            )}
+                                            <button className="text-blue-600 hover:underline font-bold text-xs uppercase tracking-tighter">
+                                                Edit
+                                            </button>
+                                        </div>
                                     </td>
                                 </tr>
                             ))}
                             {sessions.length === 0 && (
                                 <tr>
-                                    <td colSpan={4} className="p-20 text-center text-gray-400 italic bg-gray-50/30">
+                                    <td colSpan={3} className="p-20 text-center text-gray-400 italic bg-gray-50/30">
                                         No academic sessions recorded.
                                     </td>
                                 </tr>
@@ -169,39 +163,21 @@ export default function SessionsPage() {
                             value={form.name}
                             onChange={(e) => setForm({ ...form, name: e.target.value })}
                             placeholder="e.g. 2025-2026"
-                            className="input-ref font-bold"
+                            className="w-full px-4 py-3 rounded-xl border bg-gray-50 focus:bg-white focus:outline-none focus:ring-2 focus:ring-blue-500 transition-all font-bold"
                         />
                     </div>
 
-                    <div className="grid grid-cols-2 gap-4">
-                        <div>
-                            <label className="block text-xs font-bold text-gray-400 uppercase mb-2 ml-1">Start Date *</label>
-                            <input
-                                type="date"
-                                value={form.startDate}
-                                onChange={(e) => setForm({ ...form, startDate: e.target.value })}
-                                className="input-ref"
-                            />
-                        </div>
-                        <div>
-                            <label className="block text-xs font-bold text-gray-400 uppercase mb-2 ml-1">End Date *</label>
-                            <input
-                                type="date"
-                                value={form.endDate}
-                                onChange={(e) => setForm({ ...form, endDate: e.target.value })}
-                                className="input-ref"
-                            />
-                        </div>
-                    </div>
-
-                    <label className="flex items-center gap-3 cursor-pointer p-3 bg-blue-50 rounded-xl border border-dashed border-blue-200">
+                    <label className="flex items-center gap-3 cursor-pointer p-4 bg-blue-50 rounded-2xl border border-dashed border-blue-200">
                         <input
                             type="checkbox"
-                            checked={form.isCurrent}
-                            onChange={(e) => setForm({ ...form, isCurrent: e.target.checked })}
-                            className="w-5 h-5 text-blue-600 rounded shadow-sm"
+                            checked={form.active}
+                            onChange={(e) => setForm({ ...form, active: e.target.checked })}
+                            className="w-5 h-5 text-blue-600 rounded border-gray-300 focus:ring-blue-500"
                         />
-                        <span className="text-sm font-bold text-blue-800">Designate as Primary Session</span>
+                        <div>
+                            <span className="block text-sm font-bold text-blue-900 leading-none">Session Status</span>
+                            <span className="text-[10px] text-blue-600 font-medium">Available for data entry & selection</span>
+                        </div>
                     </label>
                 </div>
             </Modal>

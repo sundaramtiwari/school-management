@@ -24,8 +24,8 @@ public class TransportEnrollmentController {
     @PreAuthorize("hasAnyRole('SUPER_ADMIN', 'PLATFORM_ADMIN', 'SCHOOL_ADMIN', 'ACCOUNTANT', 'TEACHER')")
     public ResponseEntity<TransportEnrollmentDto> getByStudent(
             @PathVariable Long studentId,
-            @RequestParam String session) {
-        return enrollmentService.getStudentEnrollment(studentId, session)
+            @RequestParam Long sessionId) {
+        return enrollmentService.getStudentEnrollment(studentId, sessionId)
                 .map(ResponseEntity::ok)
                 .orElse(ResponseEntity.noContent().build());
     }

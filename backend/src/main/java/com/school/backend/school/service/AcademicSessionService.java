@@ -1,6 +1,7 @@
 package com.school.backend.school.service;
 
 import com.school.backend.school.entity.AcademicSession;
+import com.school.backend.school.entity.School;
 import com.school.backend.school.repository.AcademicSessionRepository;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
@@ -13,6 +14,7 @@ import java.util.List;
 public class AcademicSessionService {
 
     private final AcademicSessionRepository repository;
+    private final com.school.backend.school.repository.SchoolRepository schoolRepository;
 
     public List<AcademicSession> getSessions(Long schoolId) {
         return repository.findBySchoolIdAndActiveTrue(schoolId);
@@ -20,9 +22,7 @@ public class AcademicSessionService {
 
     @Transactional
     public AcademicSession createSession(AcademicSession session) {
-        if (session.isCurrent()) {
-            resetCurrentStatus(session.getSchoolId());
-        }
+        // No more current flag reset or date validations
         return repository.save(session);
     }
 
@@ -32,21 +32,38 @@ public class AcademicSessionService {
                 .orElseThrow(() -> new RuntimeException("Session not found"));
 
         session.setName(details.getName());
-        session.setStartDate(details.getStartDate());
-        session.setEndDate(details.getEndDate());
         session.setActive(details.isActive());
-
-        if (details.isCurrent() && !session.isCurrent()) {
-            resetCurrentStatus(session.getSchoolId());
-            session.setCurrent(true);
-        }
+        // No more start/end date or current flag updates here
 
         return repository.save(session);
     }
 
-    private void resetCurrentStatus(Long schoolId) {
-        List<AcademicSession> sessions = repository.findBySchoolId(schoolId);
-        sessions.forEach(s -> s.setCurrent(false));
-        repository.saveAll(sessions);
+    @Transactional
+    public void setCurrentSession(Long schoolId, Long sessionId) {
+        School school = schoolRepository.findById(schoolId)
+                .orElseThrow(() -> new RuntimeException("School not found"));
+
+        // Verify session belongs to school
+        AcademicSession session = repository.findById(sessionId)
+                .orElseThrow(() -> new RuntimeException("Session not found"));
+
+        if (!session.getSchoolId().equals(schoolId)) {
+            throw new RuntimeException("Session does not belong to this school");
+        }
+
+        school.setCurrentSessionId(sessionId);
+        schoolRepository.save(school);
+    }
+
+    public AcademicSession getCurrentSession(Long schoolId) {
+        School school = schoolRepository.findById(schoolId)
+                .orElseThrow(() -> new RuntimeException("School not found"));
+
+        if (school.getCurrentSessionId() == null) {
+            return null; // or throw exception if current session is required
+        }
+
+        return repository.findById(school.getCurrentSessionId())
+                .orElse(null);
     }
 }

@@ -32,7 +32,7 @@ public class FeeStructureService {
         FeeStructure fs = FeeStructure.builder()
                 .schoolId(SecurityUtil.schoolId())
                 .classId(req.getClassId())
-                .session(req.getSession())
+                .sessionId(req.getSessionId())
                 .feeType(feeType)
                 .amount(req.getAmount())
                 .frequency(req.getFrequency() != null ? req.getFrequency() : FeeFrequency.ONE_TIME)
@@ -44,10 +44,10 @@ public class FeeStructureService {
 
     // ---------------- LIST ----------------
     @Transactional(readOnly = true)
-    public List<FeeStructureDto> listByClass(Long classId, String session, Long schoolId) {
+    public List<FeeStructureDto> listByClass(Long classId, Long sessionId, Long schoolId) {
 
         return feeStructureRepository
-                .findByClassIdAndSessionAndSchoolId(classId, session, schoolId)
+                .findByClassIdAndSessionIdAndSchoolId(classId, sessionId, schoolId)
                 .stream()
                 .map(this::toDto)
                 .toList();
@@ -61,7 +61,7 @@ public class FeeStructureService {
         dto.setId(fs.getId());
         dto.setSchoolId(fs.getSchoolId());
         dto.setClassId(fs.getClassId());
-        dto.setSession(fs.getSession());
+        dto.setSessionId(fs.getSessionId());
 
         dto.setFeeTypeId(fs.getFeeType().getId());
         dto.setFeeTypeName(fs.getFeeType().getName());

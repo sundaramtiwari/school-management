@@ -28,8 +28,8 @@ public class StudentFeeAssignmentController {
     @GetMapping("/students/{studentId}")
     public List<StudentFeeAssignmentDto> listByStudent(
             @PathVariable Long studentId,
-            @RequestParam String session) {
+            @RequestParam Long sessionId) {
 
-        return service.listByStudent(studentId, session);
+        return service.listByStudent(studentId, sessionId);
     }
 }

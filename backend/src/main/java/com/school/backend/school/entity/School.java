@@ -44,6 +44,9 @@ public class School extends BaseEntity {
     private String logoUrl;
     private String description;
 
+    @Column(name = "current_session_id")
+    private Long currentSessionId;
+
     @Builder.Default
     private boolean active = true;
 }

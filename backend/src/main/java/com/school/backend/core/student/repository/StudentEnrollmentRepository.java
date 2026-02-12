@@ -13,12 +13,12 @@ public interface StudentEnrollmentRepository extends JpaRepository<StudentEnroll
 
     Page<StudentEnrollment> findByStudentId(Long studentId, Pageable pageable);
 
-    Page<StudentEnrollment> findBySession(String session, Pageable pageable);
+    Page<StudentEnrollment> findBySessionId(Long sessionId, Pageable pageable);
 
-    List<StudentEnrollment> findByStudentIdOrderBySessionAsc(Long studentId);
+    List<StudentEnrollment> findByStudentIdOrderBySessionIdAsc(Long studentId);
 
-    List<StudentEnrollment> findByStudentIdAndSession(Long studentId, String session);
+    List<StudentEnrollment> findByStudentIdAndSessionId(Long studentId, Long sessionId);
 
-    List<StudentEnrollment> findByClassIdAndSession(Long classId, String session);
+    List<StudentEnrollment> findByClassIdAndSessionId(Long classId, Long sessionId);
 
 }

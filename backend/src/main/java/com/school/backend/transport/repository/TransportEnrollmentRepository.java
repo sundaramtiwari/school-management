@@ -9,7 +9,7 @@ import java.util.Optional;
 
 @Repository
 public interface TransportEnrollmentRepository extends JpaRepository<TransportEnrollment, Long> {
-    Optional<TransportEnrollment> findByStudentIdAndSession(Long studentId, String session);
+    Optional<TransportEnrollment> findByStudentIdAndSessionId(Long studentId, Long sessionId);
 
     List<TransportEnrollment> findByPickupPointRouteId(Long routeId);
 

@@ -9,7 +9,7 @@ import lombok.experimental.SuperBuilder;
 
 @Entity
 @Table(name = "school_classes", indexes = {
-        @Index(name = "idx_schoolclass_schoolid_name_session", columnList = "school_id,name,session")
+        @Index(name = "idx_schoolclass_schoolid_name_session", columnList = "school_id,name,session_id")
 })
 @Getter
 @Setter
@@ -36,10 +36,10 @@ public class SchoolClass extends TenantEntity {
     private String section;
 
     /**
-     * Academic session like "2025-26"
+     * Academic session ID
      */
-    @Column(nullable = false)
-    private String session;
+    @Column(name = "session_id", nullable = false)
+    private Long sessionId;
 
     /**
      * Capacity of the class (optional)

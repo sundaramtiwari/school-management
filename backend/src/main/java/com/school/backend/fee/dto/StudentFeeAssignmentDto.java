@@ -9,7 +9,7 @@ public class StudentFeeAssignmentDto {
 
     private Long studentId;
     private Long feeStructureId;
-    private String session;
+    private Long sessionId;
 
     private boolean active;
 }

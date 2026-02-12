@@ -13,7 +13,7 @@ public class StudentEnrollmentRequest {
     private Long classId;
     private String section;
     @NotNull
-    private String session;
+    private Long sessionId;
     private Integer rollNumber;
     private LocalDate enrollmentDate;
     private String remarks;

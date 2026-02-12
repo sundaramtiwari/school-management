@@ -15,6 +15,8 @@ import com.school.backend.fee.repository.FeeStructureRepository;
 import com.school.backend.fee.repository.FeeTypeRepository;
 import com.school.backend.fee.repository.StudentFeeAssignmentRepository;
 import com.school.backend.school.dto.SchoolDto;
+import com.school.backend.school.entity.AcademicSession;
+import com.school.backend.school.repository.AcademicSessionRepository;
 import com.school.backend.school.repository.SchoolRepository;
 import com.school.backend.user.repository.UserRepository;
 import org.junit.jupiter.api.AfterEach;
@@ -55,6 +57,8 @@ public class PromotionFlowIntegrationTest extends BaseAuthenticatedIntegrationTe
         @Autowired
         private SchoolRepository schoolRepository;
         @Autowired
+        private AcademicSessionRepository sessionRepository;
+        @Autowired
         private UserRepository userRepository;
 
         private Long schoolId;
@@ -63,17 +67,35 @@ public class PromotionFlowIntegrationTest extends BaseAuthenticatedIntegrationTe
         private Long fromClassId;
         private Long toClassId;
         private Long studentId;
+        private Long session2024Id;
+        private Long session2025Id;
 
         @BeforeEach
         void setup() {
                 this.schoolId = createSchool("Test School");
                 // LOGIN AS SCHOOL ADMIN NOW
                 loginAsSchoolAdmin(schoolId);
-                this.fromClassId = createClass(schoolId, "Class 1", "A", "2024-25");
-                this.toClassId = createClass(schoolId, "Class 2", "B", "2025-26");
+
+                // Create sessions
+                AcademicSession session2024 = sessionRepository.save(AcademicSession.builder()
+                                .name("2024-25")
+                                .schoolId(schoolId)
+                                .active(true)
+                                .build());
+                session2024Id = session2024.getId();
+
+                AcademicSession session2025 = sessionRepository.save(AcademicSession.builder()
+                                .name("2025-26")
+                                .schoolId(schoolId)
+                                .active(true)
+                                .build());
+                session2025Id = session2025.getId();
+
+                this.fromClassId = createClass(schoolId, "Class 1", "A", session2024Id);
+                this.toClassId = createClass(schoolId, "Class 2", "B", session2025Id);
                 this.studentId = createStudent(schoolId, "Amit Kumar");
 
-                enrollStudent(studentId, fromClassId, "A", "2024-25");
+                enrollStudent(studentId, fromClassId, "A", session2024Id);
         }
 
         // ------------------------------ TEST ----------------------------------
@@ -101,7 +123,7 @@ public class PromotionFlowIntegrationTest extends BaseAuthenticatedIntegrationTe
                 FeeStructureCreateRequest fsReq = new FeeStructureCreateRequest();
 
                 fsReq.setClassId(toClassId);
-                fsReq.setSession("2025-26");
+                fsReq.setSessionId(session2025Id);
                 fsReq.setFeeTypeId(feeTypeId);
                 fsReq.setAmount(10000);
 
@@ -120,7 +142,7 @@ public class PromotionFlowIntegrationTest extends BaseAuthenticatedIntegrationTe
 
                 assignReq.setStudentId(studentId);
                 assignReq.setFeeStructureId(feeStructureId);
-                assignReq.setSession("2025-26");
+                assignReq.setSessionId(session2025Id);
 
                 HttpEntity<StudentFeeAssignRequest> assignEntity = new HttpEntity<>(assignReq, headers);
 
@@ -134,6 +156,7 @@ public class PromotionFlowIntegrationTest extends BaseAuthenticatedIntegrationTe
                 FeePaymentRequest payReq = new FeePaymentRequest();
 
                 payReq.setStudentId(studentId);
+                payReq.setSessionId(session2025Id);
                 payReq.setAmountPaid(10000);
                 payReq.setMode("CASH");
 
@@ -150,7 +173,7 @@ public class PromotionFlowIntegrationTest extends BaseAuthenticatedIntegrationTe
 
                 promoteReq.setToClassId(toClassId);
                 promoteReq.setToSection("B");
-                promoteReq.setSession("2025-26");
+                promoteReq.setSessionId(session2025Id);
                 promoteReq.setPromoted(true);
                 promoteReq.setFeePending(false);
                 promoteReq.setRemarks("Promoted successfully");
@@ -207,7 +230,7 @@ public class PromotionFlowIntegrationTest extends BaseAuthenticatedIntegrationTe
 
                 assertThat(latest.getClassId()).isEqualTo(toClassId);
                 assertThat(latest.getSection()).isEqualTo("B");
-                assertThat(latest.getSession()).isEqualTo("2025-26");
+                assertThat(latest.getSessionId()).isEqualTo(session2025Id);
         }
 
         // ------------------------------------------------------------------------
@@ -237,13 +260,13 @@ public class PromotionFlowIntegrationTest extends BaseAuthenticatedIntegrationTe
         private Long createClass(Long schoolId,
                         String className,
                         String section,
-                        String session) {
+                        Long sessionId) {
 
                 SchoolClassCreateRequest req = new SchoolClassCreateRequest();
 
                 req.setName(className);
                 req.setSection(section);
-                req.setSession(session);
+                req.setSessionId(sessionId);
                 req.setSchoolId(schoolId);
 
                 HttpEntity<SchoolClassCreateRequest> entity = new HttpEntity<>(req, headers);
@@ -284,14 +307,14 @@ public class PromotionFlowIntegrationTest extends BaseAuthenticatedIntegrationTe
         private void enrollStudent(Long studentId,
                         Long classId,
                         String section,
-                        String session) {
+                        Long sessionId) {
 
                 StudentEnrollmentRequest req = new StudentEnrollmentRequest();
 
                 req.setStudentId(studentId);
                 req.setClassId(classId);
                 req.setSection(section);
-                req.setSession(session);
+                req.setSessionId(sessionId);
 
                 HttpEntity<StudentEnrollmentRequest> entity = new HttpEntity<>(req, headers);
 
@@ -313,7 +336,7 @@ public class PromotionFlowIntegrationTest extends BaseAuthenticatedIntegrationTe
                 // 1. Promotion records
                 if (studentId != null) {
                         promotionRecordRepository
-                                        .findByStudentIdOrderBySessionAsc(studentId)
+                                        .findByStudentIdOrderBySessionIdAsc(studentId)
                                         .forEach(promotionRecordRepository::delete);
                 }
 
@@ -332,9 +355,9 @@ public class PromotionFlowIntegrationTest extends BaseAuthenticatedIntegrationTe
                 }
 
                 // 4. Fee assignments
-                if (studentId != null) {
+                if (studentId != null && session2025Id != null) {
                         assignmentRepository
-                                        .findByStudentIdAndSession(studentId, "2025-26")
+                                        .findByStudentIdAndSessionId(studentId, session2025Id)
                                         .forEach(assignmentRepository::delete);
                 }
 
@@ -371,7 +394,15 @@ public class PromotionFlowIntegrationTest extends BaseAuthenticatedIntegrationTe
                                                         u.getSchool().getId().equals(schoolId))
                                         .forEach(userRepository::delete);
                 }
-                // 10. School
+                // 10. Sessions
+                if (session2024Id != null) {
+                        sessionRepository.deleteById(session2024Id);
+                }
+                if (session2025Id != null) {
+                        sessionRepository.deleteById(session2025Id);
+                }
+
+                // 11. School
                 if (schoolId != null) {
                         schoolRepository.deleteById(schoolId);
                 }

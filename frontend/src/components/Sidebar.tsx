@@ -3,6 +3,7 @@
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { useAuth } from "@/context/AuthContext";
+import { useSession } from "@/context/SessionContext";
 
 const menu = [
   { name: "Dashboard", path: "/", icon: "📊", roles: ["SUPER_ADMIN", "PLATFORM_ADMIN", "SCHOOL_ADMIN", "TEACHER", "ACCOUNTANT"] },
@@ -33,13 +34,21 @@ const getRoleDisplay = (role: string | undefined): string => {
 export default function Sidebar() {
   const pathname = usePathname();
   const { user, logout } = useAuth();
+  const { currentSession } = useSession();
 
   return (
     <aside className="w-64 bg-white border-r flex flex-col h-screen">
 
       {/* Header - FIXED */}
-      <div className="p-4 text-xl font-bold border-b text-blue-600">
-        {getRoleDisplay(user?.role)}
+      <div className="p-4 border-b">
+        <div className="text-xl font-bold text-blue-600">
+          {getRoleDisplay(user?.role)}
+        </div>
+        {currentSession && (
+          <div className="mt-1 px-2 py-0.5 bg-blue-50 text-blue-700 text-[10px] font-black uppercase rounded border border-blue-100 inline-block">
+            Session {currentSession.name}
+          </div>
+        )}
       </div>
 
       {/* Menu - ADDED ICONS */}

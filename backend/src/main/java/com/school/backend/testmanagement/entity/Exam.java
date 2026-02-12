@@ -7,7 +7,7 @@ import lombok.experimental.SuperBuilder;
 
 @Entity
 @Table(name = "exams", indexes = {
-        @Index(name = "idx_exam_class_session", columnList = "class_id,session")
+        @Index(name = "idx_exam_class_session", columnList = "class_id,session_id")
 })
 @Getter
 @Setter
@@ -25,8 +25,8 @@ public class Exam extends TenantEntity {
     @Column(name = "class_id", nullable = false)
     private Long classId;
 
-    @Column(nullable = false)
-    private String session; // 2025-26
+    @Column(name = "session_id", nullable = false)
+    private Long sessionId;
 
     @Column(nullable = false)
     private String name; // Unit Test, Half Yearly, Annual

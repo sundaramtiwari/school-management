@@ -28,9 +28,9 @@ public class ExamController {
     @PreAuthorize("hasAnyRole('SUPER_ADMIN', 'PLATFORM_ADMIN', 'SCHOOL_ADMIN', 'TEACHER')")
     public List<Exam> listByClass(
             @PathVariable Long classId,
-            @RequestParam String session) {
+            @RequestParam Long sessionId) {
 
-        return service.listByClass(classId, session);
+        return service.listByClass(classId, sessionId);
     }
 
     @PostMapping("/{examId}/marks/bulk")

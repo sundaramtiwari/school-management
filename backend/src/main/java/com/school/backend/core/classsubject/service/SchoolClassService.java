@@ -25,8 +25,8 @@ public class SchoolClassService {
         Long schoolId = TenantContext.getSchoolId();
         System.err.println("SchoolID: " + schoolId);
         // duplication check using repository method
-        if (repository.existsByNameAndSectionAndSessionAndSchoolId(dto.getName(),
-                dto.getSection(), dto.getSession(), schoolId)) {
+        if (repository.existsByNameAndSectionAndSessionIdAndSchoolId(dto.getName(),
+                dto.getSection(), dto.getSessionId(), schoolId)) {
             throw new IllegalArgumentException("Class with same name/section/session already exists for this school");
         }
 
@@ -52,7 +52,7 @@ public class SchoolClassService {
 
         existing.setName(dto.getName());
         existing.setSection(dto.getSection());
-        existing.setSession(dto.getSession());
+        existing.setSessionId(dto.getSessionId());
         existing.setCapacity(dto.getCapacity());
         existing.setRemarks(dto.getRemarks());
         existing.setActive(dto.isActive());
@@ -95,8 +95,8 @@ public class SchoolClassService {
                 .map(mapper::toDto);
     }
 
-    public Page<SchoolClassDto> getBySchoolAndSession(Long schoolId, String session, Pageable pageable) {
-        return repository.findBySchoolIdAndSession(schoolId, session, pageable).map(mapper::toDto);
+    public Page<SchoolClassDto> getBySchoolAndSession(Long schoolId, Long sessionId, Pageable pageable) {
+        return repository.findBySchoolIdAndSessionId(schoolId, sessionId, pageable).map(mapper::toDto);
     }
 
     public Page<SchoolClassDto> getAll(Pageable pageable) {

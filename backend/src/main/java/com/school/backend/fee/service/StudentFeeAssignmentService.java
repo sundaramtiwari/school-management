@@ -32,15 +32,14 @@ public class StudentFeeAssignmentService {
         }
 
         FeeStructure fs = feeStructureRepository.findById(req.getFeeStructureId())
-                .orElseThrow(() ->
-                        new ResourceNotFoundException("FeeStructure not found: " + req.getFeeStructureId()));
+                .orElseThrow(() -> new ResourceNotFoundException("FeeStructure not found: " + req.getFeeStructureId()));
 
         // Prevent duplicate assignment
         boolean exists = assignmentRepository
-                .existsByStudentIdAndFeeStructureIdAndSession(
+                .existsByStudentIdAndFeeStructureIdAndSessionId(
                         req.getStudentId(),
                         req.getFeeStructureId(),
-                        req.getSession());
+                        req.getSessionId());
 
         if (exists) {
             throw new IllegalStateException("Fee already assigned to student for this session");
@@ -49,7 +48,7 @@ public class StudentFeeAssignmentService {
         StudentFeeAssignment assignment = StudentFeeAssignment.builder()
                 .studentId(req.getStudentId())
                 .feeStructureId(fs.getId())
-                .session(req.getSession())
+                .sessionId(req.getSessionId())
                 .schoolId(TenantContext.getSchoolId())
                 .active(true)
                 .build();
@@ -59,14 +58,14 @@ public class StudentFeeAssignmentService {
 
     // ---------------- LIST ----------------
     @Transactional(readOnly = true)
-    public List<StudentFeeAssignmentDto> listByStudent(Long studentId, String session) {
+    public List<StudentFeeAssignmentDto> listByStudent(Long studentId, Long sessionId) {
 
         if (!studentRepository.existsById(studentId)) {
             throw new ResourceNotFoundException("Student not found: " + studentId);
         }
 
         return assignmentRepository
-                .findByStudentIdAndSession(studentId, session)
+                .findByStudentIdAndSessionId(studentId, sessionId)
                 .stream()
                 .map(this::toDto)
                 .toList();
@@ -80,7 +79,7 @@ public class StudentFeeAssignmentService {
         dto.setId(sfa.getId());
         dto.setStudentId(sfa.getStudentId());
         dto.setFeeStructureId(sfa.getFeeStructureId());
-        dto.setSession(sfa.getSession());
+        dto.setSessionId(sfa.getSessionId());
         dto.setActive(sfa.isActive());
 
         return dto;

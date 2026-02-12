@@ -5,8 +5,6 @@ import jakarta.persistence.*;
 import lombok.*;
 import lombok.experimental.SuperBuilder;
 
-import java.time.LocalDate;
-
 @Entity
 @Table(name = "academic_sessions")
 @Getter
@@ -22,15 +20,6 @@ public class AcademicSession extends TenantEntity {
 
     @Column(nullable = false)
     private String name; // e.g., "2024-25"
-
-    @Column(nullable = false)
-    private LocalDate startDate;
-
-    @Column(nullable = false)
-    private LocalDate endDate;
-
-    @Builder.Default
-    private boolean current = false;
 
     @Builder.Default
     private boolean active = true;

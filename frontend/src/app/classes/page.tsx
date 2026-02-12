@@ -2,9 +2,9 @@
 
 import { useEffect, useState } from "react";
 import { api } from "@/lib/api";
-import SessionSelect from "@/components/SessionSelect";
 import { useToast } from "@/components/ui/Toast";
 import { useAuth } from "@/context/AuthContext";
+import { useSession } from "@/context/SessionContext";
 import Modal from "@/components/ui/Modal";
 import { TableSkeleton } from "@/components/ui/Skeleton";
 
@@ -13,13 +13,14 @@ type SchoolClass = {
     name: string;
     section: string;
     stream?: string;
-    session: string;
+    sessionId: number;
     active: boolean;
 };
 
 export default function ClassesPage() {
     const { user } = useAuth();
     const { showToast } = useToast();
+    const { currentSession } = useSession();
     const [classes, setClasses] = useState<SchoolClass[]>([]);
     const [loading, setLoading] = useState(true);
     const [isSaving, setIsSaving] = useState(false);
@@ -31,13 +32,12 @@ export default function ClassesPage() {
         className: "",
         section: "A",
         stream: "",
-        session: "2024-25",
         active: true,
     });
 
     useEffect(() => {
         loadClasses();
-    }, []);
+    }, [currentSession]);
 
     async function loadClasses() {
         if (!user) return;
@@ -66,7 +66,6 @@ export default function ClassesPage() {
             className: "",
             section: "A",
             stream: "",
-            session: "2024-25",
             active: true,
         });
     }
@@ -76,7 +75,6 @@ export default function ClassesPage() {
             className: c.name,
             section: c.section,
             stream: c.stream || "",
-            session: c.session,
             active: c.active,
         });
         setEditId(c.id);
@@ -84,8 +82,8 @@ export default function ClassesPage() {
     }
 
     async function saveClass() {
-        if (!form.className || !form.section || !form.session) {
-            showToast("Required fields missing", "warning");
+        if (!form.className || !form.section || !currentSession) {
+            showToast(currentSession ? "Required fields missing" : "No active session selected", "warning");
             return;
         }
 
@@ -95,7 +93,7 @@ export default function ClassesPage() {
                 name: form.className,
                 section: form.section,
                 stream: form.stream || null,
-                session: form.session,
+                sessionId: currentSession.id,
                 active: form.active,
             };
 
@@ -138,7 +136,7 @@ export default function ClassesPage() {
             <div className="flex justify-between items-center">
                 <div>
                     <h1 className="text-3xl font-bold text-gray-800">Class Management</h1>
-                    <p className="text-gray-500">Define and organize academic classes and sections.</p>
+                    <p className="text-gray-500">Define and organize academic classes for <span className="text-blue-600 font-bold">{currentSession?.name || "current session"}</span>.</p>
                 </div>
                 <button
                     onClick={() => {
@@ -154,7 +152,7 @@ export default function ClassesPage() {
 
             {loading ? (
                 <div className="bg-white p-8 rounded-2xl border">
-                    <TableSkeleton rows={8} cols={5} />
+                    <TableSkeleton rows={8} cols={4} />
                 </div>
             ) : (
                 <div className="bg-white border rounded-2xl shadow-sm overflow-hidden">
@@ -164,7 +162,6 @@ export default function ClassesPage() {
                                 <th className="p-4 text-left">Class Name</th>
                                 <th className="p-4 text-center">Section</th>
                                 <th className="p-4 text-center">Stream</th>
-                                <th className="p-4 text-center">Session</th>
                                 <th className="p-4 text-center w-32">Actions</th>
                             </tr>
                         </thead>
@@ -176,7 +173,6 @@ export default function ClassesPage() {
                                         <span className="px-2 py-1 bg-gray-100 rounded text-xs font-bold">{c.section}</span>
                                     </td>
                                     <td className="p-4 text-center text-gray-500 uppercase text-xs">{c.stream || "-"}</td>
-                                    <td className="p-4 text-center font-medium text-blue-600">{c.session}</td>
                                     <td className="p-4 text-center">
                                         <div className="flex justify-center gap-2">
                                             <button
@@ -202,7 +198,7 @@ export default function ClassesPage() {
                             ))}
                             {classes.length === 0 && (
                                 <tr>
-                                    <td colSpan={5} className="p-20 text-center text-gray-400 italic bg-gray-50/30">
+                                    <td colSpan={4} className="p-20 text-center text-gray-400 italic bg-gray-50/30">
                                         No classes defined yet.
                                     </td>
                                 </tr>
@@ -271,14 +267,8 @@ export default function ClassesPage() {
                             </div>
                         </div>
 
-                        <div>
-                            <label className="block text-xs font-bold text-gray-400 uppercase mb-2 ml-1">Academic Session *</label>
-                            <SessionSelect
-                                value={form.session}
-                                onChange={(val) => setForm({ ...form, session: val })}
-                                className="input-ref"
-                                placeholder="Select Session Year"
-                            />
+                        <div className="p-3 bg-blue-50 rounded-xl border border-blue-100 italic text-xs text-blue-600 font-medium">
+                            This class will be associated with the active session: <span className="font-bold">{currentSession?.name || "None"}</span>
                         </div>
 
                         <label className="flex items-center gap-3 cursor-pointer p-3 bg-gray-50 rounded-xl border border-dashed border-gray-300">

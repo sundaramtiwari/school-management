@@ -13,8 +13,8 @@ public class ExamCreateRequest {
     @NotNull
     private Long classId;
 
-    @NotBlank
-    private String session;
+    @NotNull
+    private Long sessionId;
 
     @NotBlank
     private String name;

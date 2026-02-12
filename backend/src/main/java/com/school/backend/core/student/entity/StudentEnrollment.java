@@ -9,7 +9,7 @@ import java.time.LocalDate;
 
 @Entity
 @Table(name = "student_enrollments", indexes = {
-        @Index(name = "idx_enroll_student_session", columnList = "student_id,session")
+        @Index(name = "idx_enroll_student_session", columnList = "student_id,session_id")
 })
 @Getter
 @Setter
@@ -31,12 +31,16 @@ public class StudentEnrollment extends TenantEntity {
     private Long classId;
 
     private String section;
-    private String session; // e.g., "2025-26"
+
+    @Column(name = "session_id", nullable = false)
+    private Long sessionId;
 
     private Integer rollNumber;
+
     private LocalDate enrollmentDate;
 
     @Builder.Default
     private boolean active = true;
+
     private String remarks;
 }

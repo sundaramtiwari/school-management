@@ -5,6 +5,7 @@ import { api } from "@/lib/api";
 import { useToast } from "@/components/ui/Toast";
 import Modal from "@/components/ui/Modal";
 import { TableSkeleton } from "@/components/ui/Skeleton";
+import { useSession } from "@/context/SessionContext";
 
 type FeeStructure = {
     id: number;
@@ -18,13 +19,13 @@ type SchoolClass = {
     id: number;
     name: string;
     section: string;
-    session: string;
 };
 
 const FREQUENCIES = ["ONE_TIME", "MONTHLY", "ANNUALLY"];
 
 export default function FeeStructuresPage() {
     const { showToast } = useToast();
+    const { currentSession } = useSession();
     const [classes, setClasses] = useState<SchoolClass[]>([]);
     const [selectedClass, setSelectedClass] = useState<number | "">("");
     const [structures, setStructures] = useState<FeeStructure[]>([]);
@@ -42,13 +43,12 @@ export default function FeeStructuresPage() {
         feeTypeId: "",
         amount: "",
         frequency: "ONE_TIME",
-        session: "2024-25",
     });
 
     useEffect(() => {
         loadClasses();
         loadFeeTypes();
-    }, []);
+    }, [currentSession]);
 
     async function loadClasses() {
         try {
@@ -106,11 +106,8 @@ export default function FeeStructuresPage() {
     async function loadStructures(classId: number) {
         try {
             setLoading(true);
-            const cls = classes.find(c => c.id == classId);
-            const session = cls ? cls.session : "2024-25";
-            const res = await api.get(`/api/fees/structures/by-class/${classId}?session=${session}`);
+            const res = await api.get(`/api/fees/structures/by-class/${classId}`);
             setStructures(res.data || []);
-            setForm(f => ({ ...f, session }));
         } catch (e: any) {
             const msg = e.response?.data?.message || e.message;
             showToast("Failed to load configurations: " + msg, "error");
@@ -120,8 +117,8 @@ export default function FeeStructuresPage() {
     }
 
     async function saveStructure() {
-        if (!selectedClass || !form.feeTypeId || !form.amount) {
-            showToast("All fields required", "warning");
+        if (!selectedClass || !form.feeTypeId || !form.amount || !currentSession) {
+            showToast(currentSession ? "All fields required" : "No active session", "warning");
             return;
         }
 
@@ -129,7 +126,7 @@ export default function FeeStructuresPage() {
             setIsSaving(true);
             await api.post("/api/fees/structures", {
                 classId: selectedClass,
-                session: form.session,
+                sessionId: currentSession.id,
                 feeTypeId: form.feeTypeId,
                 amount: Number(form.amount),
                 frequency: form.frequency
@@ -149,7 +146,7 @@ export default function FeeStructuresPage() {
             <div className="flex justify-between items-center text-wrap">
                 <div>
                     <h1 className="text-3xl font-bold text-gray-800">Fee Structures</h1>
-                    <p className="text-gray-500">Configure fee heads and amounts for specific academic classes.</p>
+                    <p className="text-gray-500">Configure fee heads for <span className="text-blue-600 font-bold">{currentSession?.name || "current session"}</span>.</p>
                 </div>
                 <div className="flex gap-3">
                     <button
@@ -179,7 +176,7 @@ export default function FeeStructuresPage() {
                     >
                         <option value="">Select Academic Class</option>
                         {classes.map(c => (
-                            <option key={c.id} value={c.id}>{c.name} {c.section} ({c.session})</option>
+                            <option key={c.id} value={c.id}>{c.name} {c.section}</option>
                         ))}
                     </select>
                 </div>

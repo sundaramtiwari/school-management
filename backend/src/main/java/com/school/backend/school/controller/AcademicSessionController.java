@@ -34,4 +34,10 @@ public class AcademicSessionController {
     public AcademicSession updateSession(@PathVariable Long id, @RequestBody AcademicSession session) {
         return service.updateSession(id, session);
     }
+
+    @PutMapping("/{sessionId}/set-current")
+    @PreAuthorize("hasAnyRole('SCHOOL_ADMIN', 'SUPER_ADMIN', 'PLATFORM_ADMIN')")
+    public void setCurrentSession(@PathVariable Long sessionId) {
+        service.setCurrentSession(SecurityUtil.schoolId(), sessionId);
+    }
 }
