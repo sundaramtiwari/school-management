@@ -54,9 +54,31 @@ export default function StudentsPage() {
     admissionNumber: "",
     firstName: "",
     lastName: "",
+    dob: "",
     gender: "",
+    pen: "",
+    aadharNumber: "",
+    religion: "",
+    caste: "",
+    category: "",
+    address: "",
+    city: "",
+    state: "",
+    pincode: "",
     contactNumber: "",
     email: "",
+    bloodGroup: "",
+    dateOfAdmission: new Date().toISOString().split('T')[0],
+    remarks: "",
+    // Previous School
+    previousSchoolName: "",
+    previousSchoolBoard: "",
+    previousClass: "",
+    previousYearOfPassing: "",
+    transferCertificateNumber: "",
+    previousSchoolAddress: "",
+    previousSchoolContact: "",
+    reasonForLeavingPreviousSchool: "",
     classId: "",
   });
 
@@ -117,13 +139,12 @@ export default function StudentsPage() {
 
     try {
       setIsSaving(true);
+
+      const { classId, ...registerData } = studentForm;
+
       const res = await studentApi.create({
-        admissionNumber: studentForm.admissionNumber,
-        firstName: studentForm.firstName,
-        lastName: studentForm.lastName,
-        gender: studentForm.gender,
-        contactNumber: studentForm.contactNumber,
-        email: studentForm.email,
+        ...registerData,
+        previousYearOfPassing: registerData.previousYearOfPassing ? Number(registerData.previousYearOfPassing) : null
       });
 
       const studentId = res.data.id;
@@ -140,9 +161,30 @@ export default function StudentsPage() {
         admissionNumber: "",
         firstName: "",
         lastName: "",
+        dob: "",
         gender: "",
+        pen: "",
+        aadharNumber: "",
+        religion: "",
+        caste: "",
+        category: "",
+        address: "",
+        city: "",
+        state: "",
+        pincode: "",
         contactNumber: "",
         email: "",
+        bloodGroup: "",
+        dateOfAdmission: new Date().toISOString().split('T')[0],
+        remarks: "",
+        previousSchoolName: "",
+        previousSchoolBoard: "",
+        previousClass: "",
+        previousYearOfPassing: "",
+        transferCertificateNumber: "",
+        previousSchoolAddress: "",
+        previousSchoolContact: "",
+        reasonForLeavingPreviousSchool: "",
         classId: "",
       });
 
@@ -264,8 +306,8 @@ export default function StudentsPage() {
       <Modal
         isOpen={showAddModal}
         onClose={() => setShowAddModal(false)}
-        title="Add New Student"
-        maxWidth="max-w-2xl"
+        title="Enroll New Student"
+        maxWidth="max-w-4xl"
         footer={
           <div className="flex gap-2">
             <button
@@ -284,81 +326,352 @@ export default function StudentsPage() {
           </div>
         }
       >
-        <div className="grid grid-cols-2 gap-5">
-          <h3 className="col-span-2 font-bold text-gray-700 border-b pb-2">Personal Information</h3>
+        <div className="flex flex-col gap-8 max-h-[70vh] overflow-y-auto px-1 pr-4 custom-scrollbar">
 
-          <input
-            name="firstName"
-            placeholder="First Name *"
-            value={studentForm.firstName}
-            onChange={updateStudentField}
-            className="input-ref"
-          />
-          <input
-            name="lastName"
-            placeholder="Last Name"
-            value={studentForm.lastName}
-            onChange={updateStudentField}
-            className="input-ref"
-          />
+          {/* Section 1: Admission & Enrollment */}
+          <section className="space-y-4">
+            <h3 className="text-sm font-bold text-blue-600 uppercase tracking-wider border-b pb-2 flex items-center gap-2">
+              <span className="bg-blue-600 text-white w-5 h-5 rounded-full flex items-center justify-center text-[10px]">1</span>
+              Enrollment Details
+            </h3>
+            <div className="grid grid-cols-3 gap-4">
+              <div className="space-y-1">
+                <label className="text-[10px] font-bold text-gray-400 ml-1">Admission Number *</label>
+                <input
+                  name="admissionNumber"
+                  placeholder="e.g. ADM-2025-001"
+                  value={studentForm.admissionNumber}
+                  onChange={updateStudentField}
+                  className="input-ref"
+                />
+              </div>
+              <div className="space-y-1">
+                <label className="text-[10px] font-bold text-gray-400 ml-1">Date of Admission</label>
+                <input
+                  name="dateOfAdmission"
+                  type="date"
+                  value={studentForm.dateOfAdmission}
+                  onChange={updateStudentField}
+                  className="input-ref"
+                />
+              </div>
+              <div className="space-y-1">
+                <label className="text-[10px] font-bold text-gray-400 ml-1">Assign Class *</label>
+                <select
+                  name="classId"
+                  value={studentForm.classId}
+                  onChange={updateStudentField}
+                  className="input-ref"
+                >
+                  <option value="">Select Class</option>
+                  {classes.map((c) => (
+                    <option key={c.id} value={c.id}>
+                      {c.name} {c.section}
+                    </option>
+                  ))}
+                </select>
+              </div>
+            </div>
+          </section>
 
-          <select
-            name="gender"
-            value={studentForm.gender}
-            onChange={updateStudentField}
-            className="input-ref"
-          >
-            <option value="">Select Gender *</option>
-            <option value="MALE">Male</option>
-            <option value="FEMALE">Female</option>
-            <option value="OTHER">Other</option>
-          </select>
+          {/* Section 2: Personal Information */}
+          <section className="space-y-4">
+            <h3 className="text-sm font-bold text-blue-600 uppercase tracking-wider border-b pb-2 flex items-center gap-2">
+              <span className="bg-blue-600 text-white w-5 h-5 rounded-full flex items-center justify-center text-[10px]">2</span>
+              Personal Information
+            </h3>
+            <div className="grid grid-cols-3 gap-4">
+              <div className="space-y-1">
+                <label className="text-[10px] font-bold text-gray-400 ml-1">First Name *</label>
+                <input
+                  name="firstName"
+                  placeholder="First name"
+                  value={studentForm.firstName}
+                  onChange={updateStudentField}
+                  className="input-ref"
+                />
+              </div>
+              <div className="space-y-1">
+                <label className="text-[10px] font-bold text-gray-400 ml-1">Last Name</label>
+                <input
+                  name="lastName"
+                  placeholder="Last name"
+                  value={studentForm.lastName}
+                  onChange={updateStudentField}
+                  className="input-ref"
+                />
+              </div>
+              <div className="space-y-1">
+                <label className="text-[10px] font-bold text-gray-400 ml-1">Gender *</label>
+                <select
+                  name="gender"
+                  value={studentForm.gender}
+                  onChange={updateStudentField}
+                  className="input-ref"
+                >
+                  <option value="">Select</option>
+                  <option value="MALE">Male</option>
+                  <option value="FEMALE">Female</option>
+                  <option value="OTHER">Other</option>
+                </select>
+              </div>
+              <div className="space-y-1">
+                <label className="text-[10px] font-bold text-gray-400 ml-1">Date of Birth</label>
+                <input
+                  name="dob"
+                  type="date"
+                  value={studentForm.dob}
+                  onChange={updateStudentField}
+                  className="input-ref"
+                />
+              </div>
+              <div className="space-y-1">
+                <label className="text-[10px] font-bold text-gray-400 ml-1">Blood Group</label>
+                <select
+                  name="bloodGroup"
+                  value={studentForm.bloodGroup}
+                  onChange={updateStudentField}
+                  className="input-ref"
+                >
+                  <option value="">Unknown</option>
+                  <option value="A+">A+</option>
+                  <option value="A-">A-</option>
+                  <option value="B+">B+</option>
+                  <option value="B-">B-</option>
+                  <option value="O+">O+</option>
+                  <option value="O-">O-</option>
+                  <option value="AB+">AB+</option>
+                  <option value="AB-">AB-</option>
+                </select>
+              </div>
+            </div>
+          </section>
 
-          <input
-            name="admissionNumber"
-            placeholder="Admission No *"
-            value={studentForm.admissionNumber}
-            onChange={updateStudentField}
-            className="input-ref"
-          />
+          {/* Section 3: Identity & Demographics */}
+          <section className="space-y-4">
+            <h3 className="text-sm font-bold text-blue-600 uppercase tracking-wider border-b pb-2 flex items-center gap-2">
+              <span className="bg-blue-600 text-white w-5 h-5 rounded-full flex items-center justify-center text-[10px]">3</span>
+              Identity & Demographics
+            </h3>
+            <div className="grid grid-cols-3 gap-4">
+              <div className="space-y-1">
+                <label className="text-[10px] font-bold text-gray-400 ml-1">Aadhar Number</label>
+                <input
+                  name="aadharNumber"
+                  placeholder="12-digit number"
+                  value={studentForm.aadharNumber}
+                  onChange={updateStudentField}
+                  className="input-ref font-mono"
+                />
+              </div>
+              <div className="space-y-1">
+                <label className="text-[10px] font-bold text-gray-400 ml-1">PEN (Permanent Edu Number)</label>
+                <input
+                  name="pen"
+                  placeholder="PEN"
+                  value={studentForm.pen}
+                  onChange={updateStudentField}
+                  className="input-ref font-mono"
+                />
+              </div>
+              <div className="space-y-1">
+                <label className="text-[10px] font-bold text-gray-400 ml-1">Religion</label>
+                <input
+                  name="religion"
+                  placeholder="Religion"
+                  value={studentForm.religion}
+                  onChange={updateStudentField}
+                  className="input-ref"
+                />
+              </div>
+              <div className="space-y-1">
+                <label className="text-[10px] font-bold text-gray-400 ml-1">Category</label>
+                <select
+                  name="category"
+                  value={studentForm.category}
+                  onChange={updateStudentField}
+                  className="input-ref"
+                >
+                  <option value="">Select</option>
+                  <option value="GENERAL">General</option>
+                  <option value="OBC">OBC</option>
+                  <option value="SC">SC</option>
+                  <option value="ST">ST</option>
+                  <option value="OTHERS">Others</option>
+                </select>
+              </div>
+              <div className="space-y-1">
+                <label className="text-[10px] font-bold text-gray-400 ml-1">Caste</label>
+                <input
+                  name="caste"
+                  placeholder="Caste"
+                  value={studentForm.caste}
+                  onChange={updateStudentField}
+                  className="input-ref"
+                />
+              </div>
+            </div>
+          </section>
 
-          <h3 className="col-span-2 font-bold text-gray-700 border-b pb-2 mt-4">Enrollment Details</h3>
+          {/* Section 4: Contact & Address */}
+          <section className="space-y-4">
+            <h3 className="text-sm font-bold text-blue-600 uppercase tracking-wider border-b pb-2 flex items-center gap-2">
+              <span className="bg-blue-600 text-white w-5 h-5 rounded-full flex items-center justify-center text-[10px]">4</span>
+              Contact & Address
+            </h3>
+            <div className="grid grid-cols-2 gap-4">
+              <div className="space-y-1">
+                <label className="text-[10px] font-bold text-gray-400 ml-1">Contact Number</label>
+                <input
+                  name="contactNumber"
+                  placeholder="Phone No"
+                  value={studentForm.contactNumber}
+                  onChange={updateStudentField}
+                  className="input-ref"
+                />
+              </div>
+              <div className="space-y-1">
+                <label className="text-[10px] font-bold text-gray-400 ml-1">Email Address</label>
+                <input
+                  name="email"
+                  type="email"
+                  placeholder="Email"
+                  value={studentForm.email}
+                  onChange={updateStudentField}
+                  className="input-ref"
+                />
+              </div>
+              <div className="col-span-2 space-y-1">
+                <label className="text-[10px] font-bold text-gray-400 ml-1">Full Address</label>
+                <textarea
+                  name="address"
+                  placeholder="Building, Street, Area..."
+                  value={studentForm.address}
+                  onChange={updateStudentField}
+                  className="input-ref min-h-[80px]"
+                />
+              </div>
+              <div className="grid grid-cols-3 gap-4 col-span-2">
+                <div className="space-y-1">
+                  <label className="text-[10px] font-bold text-gray-400 ml-1">City</label>
+                  <input
+                    name="city"
+                    placeholder="City"
+                    value={studentForm.city}
+                    onChange={updateStudentField}
+                    className="input-ref"
+                  />
+                </div>
+                <div className="space-y-1">
+                  <label className="text-[10px] font-bold text-gray-400 ml-1">State</label>
+                  <input
+                    name="state"
+                    placeholder="State"
+                    value={studentForm.state}
+                    onChange={updateStudentField}
+                    className="input-ref"
+                  />
+                </div>
+                <div className="space-y-1">
+                  <label className="text-[10px] font-bold text-gray-400 ml-1">Pincode</label>
+                  <input
+                    name="pincode"
+                    placeholder="Pincode"
+                    value={studentForm.pincode}
+                    onChange={updateStudentField}
+                    className="input-ref"
+                  />
+                </div>
+              </div>
+            </div>
+          </section>
 
-          <select
-            name="classId"
-            value={studentForm.classId}
-            onChange={updateStudentField}
-            className="input-ref"
-          >
-            <option value="">Enroll in Class *</option>
-            {classes.map((c) => (
-              <option key={c.id} value={c.id}>
-                {c.name} {c.section}
-              </option>
-            ))}
-          </select>
+          {/* Section 5: Previous School Details */}
+          <section className="space-y-4">
+            <h3 className="text-sm font-bold text-blue-600 uppercase tracking-wider border-b pb-2 flex items-center gap-2">
+              <span className="bg-blue-600 text-white w-5 h-5 rounded-full flex items-center justify-center text-[10px]">5</span>
+              Previous School History
+            </h3>
+            <div className="grid grid-cols-2 gap-4">
+              <div className="space-y-1">
+                <label className="text-[10px] font-bold text-gray-400 ml-1">Previous School Name</label>
+                <input
+                  name="previousSchoolName"
+                  placeholder="School Name"
+                  value={studentForm.previousSchoolName}
+                  onChange={updateStudentField}
+                  className="input-ref"
+                />
+              </div>
+              <div className="space-y-1">
+                <label className="text-[10px] font-bold text-gray-400 ml-1">Previous Class</label>
+                <input
+                  name="previousClass"
+                  placeholder="e.g. 5th"
+                  value={studentForm.previousClass}
+                  onChange={updateStudentField}
+                  className="input-ref"
+                />
+              </div>
+              <div className="space-y-1">
+                <label className="text-[10px] font-bold text-gray-400 ml-1">Board</label>
+                <input
+                  name="previousSchoolBoard"
+                  placeholder="e.g. CBSE / State"
+                  value={studentForm.previousSchoolBoard}
+                  onChange={updateStudentField}
+                  className="input-ref"
+                />
+              </div>
+              <div className="space-y-1">
+                <label className="text-[10px] font-bold text-gray-400 ml-1">Year of Passing</label>
+                <input
+                  name="previousYearOfPassing"
+                  type="number"
+                  placeholder="YYYY"
+                  value={studentForm.previousYearOfPassing}
+                  onChange={updateStudentField}
+                  className="input-ref"
+                />
+              </div>
+              <div className="space-y-1">
+                <label className="text-[10px] font-bold text-gray-400 ml-1">TC Number</label>
+                <input
+                  name="transferCertificateNumber"
+                  placeholder="TC No"
+                  value={studentForm.transferCertificateNumber}
+                  onChange={updateStudentField}
+                  className="input-ref font-mono"
+                />
+              </div>
+              <div className="space-y-1">
+                <label className="text-[10px] font-bold text-gray-400 ml-1">Reason for Leaving</label>
+                <input
+                  name="reasonForLeavingPreviousSchool"
+                  placeholder="Reason"
+                  value={studentForm.reasonForLeavingPreviousSchool}
+                  onChange={updateStudentField}
+                  className="input-ref"
+                />
+              </div>
+            </div>
+          </section>
 
-          <div className="p-3 bg-blue-50 rounded-xl border border-blue-100 italic text-xs text-blue-600 font-medium">
-            This student will be enrolled for the active session: <span className="font-bold">{currentSession?.name || "None"}</span>
-          </div>
+          {/* Section 6: Remarks */}
+          <section className="space-y-4 mb-4">
+            <h3 className="text-sm font-bold text-blue-600 uppercase tracking-wider border-b pb-2 flex items-center gap-2">
+              <span className="bg-blue-600 text-white w-5 h-5 rounded-full flex items-center justify-center text-[10px]">6</span>
+              Additional Remarks
+            </h3>
+            <textarea
+              name="remarks"
+              placeholder="Any additional notes..."
+              value={studentForm.remarks}
+              onChange={updateStudentField}
+              className="input-ref min-h-[60px]"
+            />
+          </section>
 
-          <h3 className="col-span-2 font-bold text-gray-700 border-b pb-2 mt-4">Contact Information</h3>
-
-          <input
-            name="contactNumber"
-            placeholder="Phone Number"
-            value={studentForm.contactNumber}
-            onChange={updateStudentField}
-            className="input-ref"
-          />
-          <input
-            name="email"
-            type="email"
-            placeholder="Email Address"
-            value={studentForm.email}
-            onChange={updateStudentField}
-            className="input-ref"
-          />
         </div>
       </Modal>
     </div>

@@ -38,11 +38,50 @@ public class StudentService {
         if (req.getGender() != null)
             existing.setGender(req.getGender());
 
-        if (req.getContactNumber() != null)
-            existing.setContactNumber(req.getContactNumber());
+        if (req.getPen() != null)
+            existing.setPen(req.getPen());
+
+        if (req.getAadharNumber() != null)
+            existing.setAadharNumber(req.getAadharNumber());
+
+        if (req.getReligion() != null)
+            existing.setReligion(req.getReligion());
+
+        if (req.getCaste() != null)
+            existing.setCaste(req.getCaste());
+
+        if (req.getCategory() != null)
+            existing.setCategory(req.getCategory());
+
+        if (req.getAddress() != null)
+            existing.setAddress(req.getAddress());
 
         if (req.getCity() != null)
             existing.setCity(req.getCity());
+
+        if (req.getState() != null)
+            existing.setState(req.getState());
+
+        if (req.getPincode() != null)
+            existing.setPincode(req.getPincode());
+
+        if (req.getContactNumber() != null)
+            existing.setContactNumber(req.getContactNumber());
+
+        if (req.getEmail() != null)
+            existing.setEmail(req.getEmail());
+
+        if (req.getBloodGroup() != null)
+            existing.setBloodGroup(req.getBloodGroup());
+
+        if (req.getPhotoUrl() != null)
+            existing.setPhotoUrl(req.getPhotoUrl());
+
+        if (req.getDateOfLeaving() != null)
+            existing.setDateOfLeaving(req.getDateOfLeaving());
+
+        if (req.getReasonForLeaving() != null)
+            existing.setReasonForLeaving(req.getReasonForLeaving());
 
         if (req.getRemarks() != null)
             existing.setRemarks(req.getRemarks());
@@ -50,6 +89,12 @@ public class StudentService {
         // Previous School
         if (req.getPreviousSchoolName() != null)
             existing.setPreviousSchoolName(req.getPreviousSchoolName());
+
+        if (req.getPreviousSchoolContact() != null)
+            existing.setPreviousSchoolContact(req.getPreviousSchoolContact());
+
+        if (req.getPreviousSchoolAddress() != null)
+            existing.setPreviousSchoolAddress(req.getPreviousSchoolAddress());
 
         if (req.getPreviousSchoolBoard() != null)
             existing.setPreviousSchoolBoard(req.getPreviousSchoolBoard());
