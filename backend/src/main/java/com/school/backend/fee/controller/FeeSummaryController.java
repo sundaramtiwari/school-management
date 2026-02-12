@@ -3,6 +3,7 @@ package com.school.backend.fee.controller;
 import com.school.backend.fee.dto.FeeStatsDto;
 import com.school.backend.fee.dto.FeeSummaryDto;
 import com.school.backend.fee.service.FeeSummaryService;
+import com.school.backend.common.tenant.SessionResolver;
 import lombok.RequiredArgsConstructor;
 import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.web.bind.annotation.*;
@@ -13,19 +14,22 @@ import org.springframework.web.bind.annotation.*;
 public class FeeSummaryController {
 
     private final FeeSummaryService service;
+    private final SessionResolver sessionResolver;
 
     @GetMapping("/stats")
     @PreAuthorize("hasAnyRole('SCHOOL_ADMIN', 'ACCOUNTANT', 'SUPER_ADMIN', 'PLATFORM_ADMIN')")
-    public FeeStatsDto getDashboardStats(@RequestParam Long sessionId) {
-        return service.getDashboardStats(sessionId);
+    public FeeStatsDto getDashboardStats(@RequestParam(required = false) Long sessionId) {
+        Long effectiveSessionId = sessionId != null ? sessionId : sessionResolver.resolveForCurrentSchool();
+        return service.getDashboardStats(effectiveSessionId);
     }
 
     @GetMapping("/students/{studentId}")
     @PreAuthorize("hasAnyRole('SCHOOL_ADMIN', 'ACCOUNTANT', 'TEACHER', 'SUPER_ADMIN', 'PLATFORM_ADMIN')")
     public FeeSummaryDto getStudentFeeSummary(
             @PathVariable Long studentId,
-            @RequestParam Long sessionId) {
+            @RequestParam(required = false) Long sessionId) {
 
-        return service.getStudentFeeSummary(studentId, sessionId);
+        Long effectiveSessionId = sessionId != null ? sessionId : sessionResolver.resolveForCurrentSchool();
+        return service.getStudentFeeSummary(studentId, effectiveSessionId);
     }
 }

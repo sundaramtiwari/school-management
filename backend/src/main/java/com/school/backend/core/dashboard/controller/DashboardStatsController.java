@@ -18,7 +18,7 @@ public class DashboardStatsController {
 
     @GetMapping("/school-admin/stats")
     @PreAuthorize("hasAnyRole('SUPER_ADMIN', 'PLATFORM_ADMIN', 'SCHOOL_ADMIN')")
-    public SchoolAdminStatsDto getSchoolAdminStats(@RequestParam String session) {
-        return service.getSchoolAdminStats(session);
+    public SchoolAdminStatsDto getSchoolAdminStats(@RequestParam(required = false) Long sessionId) {
+        return service.getSchoolAdminStats(sessionId);
     }
 }

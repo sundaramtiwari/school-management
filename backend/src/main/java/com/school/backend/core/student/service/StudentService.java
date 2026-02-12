@@ -1,6 +1,7 @@
 package com.school.backend.core.student.service;
 
 import com.school.backend.common.exception.ResourceNotFoundException;
+import com.school.backend.common.tenant.SessionResolver;
 import com.school.backend.common.tenant.TenantContext;
 import com.school.backend.core.classsubject.repository.SchoolClassRepository;
 import com.school.backend.core.student.dto.StudentCreateRequest;
@@ -24,6 +25,7 @@ public class StudentService {
     private final StudentMapper mapper;
     private final SchoolRepository schoolRepository;
     private final SchoolClassRepository classRepository;
+    private final SessionResolver sessionResolver;
 
     private static void updateStudentDetails(StudentUpdateRequest req, Student existing) {
         if (req.getFirstName() != null)
@@ -133,9 +135,10 @@ public class StudentService {
 
     @Transactional(readOnly = true)
     public Page<StudentDto> listByClass(Long classId, Pageable pageable) {
+        Long sessionId = sessionResolver.resolveForCurrentSchool();
 
         return repository
-                .findByClassId(classId, pageable)
+                .findByClassIdAndSessionId(classId, sessionId, pageable)
                 .map(mapper::toDto);
     }
 
@@ -148,7 +151,8 @@ public class StudentService {
 
     @Transactional(readOnly = true)
     public Page<StudentDto> listBySchool(Long schoolId, Pageable pageable) {
-        return repository.findBySchoolId(schoolId, pageable).map(mapper::toDto);
+        Long sessionId = sessionResolver.resolveForCurrentSchool();
+        return repository.findBySchoolIdAndSessionId(schoolId, sessionId, pageable).map(mapper::toDto);
     }
 
     @Transactional(readOnly = true)

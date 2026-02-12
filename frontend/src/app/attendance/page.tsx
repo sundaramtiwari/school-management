@@ -5,6 +5,7 @@ import { studentApi } from "@/lib/studentApi";
 import { api } from "@/lib/api";
 import { useToast } from "@/components/ui/Toast";
 import { TableSkeleton } from "@/components/ui/Skeleton";
+import { useSession } from "@/context/SessionContext";
 
 /* ---------------- Types ---------------- */
 
@@ -12,7 +13,7 @@ type SchoolClass = {
     id: number;
     name: string;
     section: string;
-    session: string;
+    sessionId: number;
 };
 
 type Student = {
@@ -28,6 +29,7 @@ type AttendanceStatus = "PRESENT" | "ABSENT" | "LATE" | "HALF_DAY";
 
 export default function AttendancePage() {
     const { showToast } = useToast();
+    const { currentSession } = useSession();
 
     /* ---------- Filters ---------- */
 
@@ -58,7 +60,7 @@ export default function AttendancePage() {
 
     useEffect(() => {
         loadClasses();
-    }, []);
+    }, [currentSession]);
 
     async function loadClasses() {
         try {
@@ -79,8 +81,7 @@ export default function AttendancePage() {
             setLoading(prev => ({ ...prev, students: true }));
             setError("");
 
-            const cls = classes.find(c => c.id === classId);
-            if (!cls) return;
+            if (!currentSession) return;
 
             // 1. Load Students (Paginated)
             const studentRes = await studentApi.byClass(classId, page, PAGE_SIZE);
@@ -90,7 +91,7 @@ export default function AttendancePage() {
             setTotalStudents(studentRes.data.totalElements || 0);
 
             // 2. Load Existing Attendance for the Class on this Date
-            const attendanceRes = await api.get(`/api/attendance/class/${classId}?session=${cls.session}&date=${date}`);
+            const attendanceRes = await api.get(`/api/attendance/class/${classId}?sessionId=${currentSession.id}&date=${date}`);
             const existingAttendance: any[] = attendanceRes.data || [];
 
             const newMap = { ...attendanceMap };
@@ -191,7 +192,7 @@ export default function AttendancePage() {
             <div className="flex justify-between items-center text-wrap">
                 <div>
                     <h1 className="text-3xl font-bold text-gray-800">Student Attendance</h1>
-                    <p className="text-gray-500">Track and record daily student presence.</p>
+                    <p className="text-gray-500">Track and record daily student presence for <span className="text-blue-600 font-bold">{currentSession?.name || "current session"}</span>.</p>
                 </div>
 
                 <div className="flex gap-3">
@@ -228,7 +229,7 @@ export default function AttendancePage() {
                         <option value="">Select Academic Class</option>
                         {classes.map(c => (
                             <option key={c.id} value={c.id}>
-                                {c.name} {c.section} ({c.session})
+                                {c.name} {c.section}
                             </option>
                         ))}
                     </select>

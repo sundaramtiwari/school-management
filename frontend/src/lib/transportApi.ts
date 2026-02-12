@@ -21,9 +21,9 @@ export const transportApi = {
     enroll: (data: {
         studentId: number;
         pickupPointId: number;
-        session: string;
+        sessionId: number;
     }) => api.post("/api/transport/enrollments", data),
 
-    getEnrollmentByStudent: (studentId: number, session: string) =>
-        api.get(`/api/transport/enrollments/student/${studentId}?session=${session}`),
+    getEnrollmentByStudent: (studentId: number, sessionId: number) =>
+        api.get(`/api/transport/enrollments/student/${studentId}?sessionId=${sessionId}`),
 };

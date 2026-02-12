@@ -5,16 +5,18 @@ import { transportApi } from "@/lib/transportApi";
 import { api } from "@/lib/api";
 import { studentApi } from "@/lib/studentApi";
 import { useToast } from "@/components/ui/Toast";
+import { useSession } from "@/context/SessionContext";
 import Modal from "@/components/ui/Modal";
 import { Skeleton, TableSkeleton } from "@/components/ui/Skeleton";
 
-type SchoolClass = { id: number; name: string; section: string; session: string };
+type SchoolClass = { id: number; name: string; section: string; sessionId: number };
 type Student = { id: number; firstName: string; lastName: string; admissionNumber: string };
 type Route = { id: number; name: string; capacity: number; currentStrength: number };
 type PickupPoint = { id: number; name: string; amount: number; frequency: string };
 
 export default function TransportEnrollmentPage() {
     const { showToast } = useToast();
+    const { currentSession } = useSession();
 
     const [classes, setClasses] = useState<SchoolClass[]>([]);
     const [selectedClass, setSelectedClass] = useState<number | "">("");
@@ -33,7 +35,7 @@ export default function TransportEnrollmentPage() {
     useEffect(() => {
         loadClasses();
         loadRoutes();
-    }, []);
+    }, [currentSession]);
 
     async function loadClasses() {
         try {
@@ -96,16 +98,14 @@ export default function TransportEnrollmentPage() {
     }
 
     async function enrollStudent() {
-        if (!currentStudent || !selectedPickupId || !selectedClass) return;
-        const cls = classes.find(c => c.id == selectedClass);
-        if (!cls) return;
+        if (!currentStudent || !selectedPickupId || !selectedClass || !currentSession) return;
 
         try {
             setIsSaving(true);
             await transportApi.enroll({
                 studentId: currentStudent.id,
                 pickupPointId: Number(selectedPickupId),
-                session: cls.session,
+                sessionId: currentSession.id,
             });
             showToast("Student enrolled in transport!", "success");
             setShowEnrollModal(false);
@@ -120,7 +120,7 @@ export default function TransportEnrollmentPage() {
         <div className="space-y-6">
             <header>
                 <h1 className="text-3xl font-bold text-gray-800">Transport Enrollment</h1>
-                <p className="text-gray-500">Assign students to transport routes for the current session.</p>
+                <p className="text-gray-500">Assign students to transport routes for <span className="text-blue-600 font-bold">{currentSession?.name || "current session"}</span>.</p>
             </header>
 
             <div className="bg-white p-6 border rounded-2xl shadow-sm flex flex-wrap gap-4 items-end">
@@ -128,7 +128,7 @@ export default function TransportEnrollmentPage() {
                     <label className="block text-xs font-bold uppercase text-gray-400 mb-2 ml-1">Select Academic Class</label>
                     <select className="input-ref" value={selectedClass} onChange={onClassChange}>
                         <option value="">Choose Class</option>
-                        {classes.map(c => <option key={c.id} value={c.id}>{c.name} {c.section} ({c.session})</option>)}
+                        {classes.map(c => <option key={c.id} value={c.id}>{c.name} {c.section}</option>)}
                     </select>
                 </div>
             </div>

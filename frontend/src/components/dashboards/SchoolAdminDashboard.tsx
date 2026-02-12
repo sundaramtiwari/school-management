@@ -4,11 +4,11 @@ import { useEffect, useState } from "react";
 import { api } from "@/lib/api";
 import { useAuth } from "@/context/AuthContext";
 import { Skeleton } from "@/components/ui/Skeleton";
-import { useActiveSession } from "@/hooks/useActiveSession";
+import { useSession } from "@/context/SessionContext";
 
 export default function SchoolAdminDashboard() {
   const { user } = useAuth();
-  const { session: activeSession, loading: sessionLoading } = useActiveSession();
+  const { currentSession, isLoading: sessionLoading } = useSession();
   const [stats, setStats] = useState({
     students: 0,
     classes: 0,
@@ -24,8 +24,8 @@ export default function SchoolAdminDashboard() {
   const [schoolName, setSchoolName] = useState("Your School");
 
   useEffect(() => {
-    if (!sessionLoading && activeSession) loadDashboardData();
-  }, [sessionLoading, activeSession]);
+    if (!sessionLoading && currentSession) loadDashboardData();
+  }, [sessionLoading, currentSession?.id]);
 
   async function loadDashboardData() {
     try {
@@ -39,7 +39,7 @@ export default function SchoolAdminDashboard() {
 
       // Load stats via new dedicated endpoint
       const [results, classCountRes] = await Promise.all([
-        api.get(`/api/dashboard/school-admin/stats?session=${activeSession}`),
+        api.get(`/api/dashboard/school-admin/stats?sessionId=${currentSession?.id}`),
         api.get('/api/classes/mine?size=1'), // Classes still separate as they are global-ish
       ]);
 
@@ -171,7 +171,7 @@ export default function SchoolAdminDashboard() {
           <div>
             <h1 className="text-3xl font-bold">{schoolName}</h1>
             <p className="text-blue-100 mt-1">School Administration Dashboard</p>
-            <p className="text-blue-200 text-sm mt-1">Session: {activeSession || "Loading..."}</p>
+            <p className="text-blue-200 text-sm mt-1">Session: {currentSession?.name || "Loading..."}</p>
           </div>
         </div>
       </header>
@@ -255,7 +255,7 @@ export default function SchoolAdminDashboard() {
                 <div>
                   <p className="font-semibold">Fee Defaulters</p>
                   <p className="text-sm text-red-600">
-                    {stats.feePendingCount} students have outstanding dues in {activeSession}
+                    {stats.feePendingCount} students have outstanding dues in {currentSession?.name}
                   </p>
                 </div>
               </div>

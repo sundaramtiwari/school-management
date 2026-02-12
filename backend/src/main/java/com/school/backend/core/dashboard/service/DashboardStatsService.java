@@ -1,6 +1,7 @@
 package com.school.backend.core.dashboard.service;
 
 import com.school.backend.common.enums.UserRole;
+import com.school.backend.common.tenant.SessionResolver;
 import com.school.backend.common.tenant.TenantContext;
 import com.school.backend.core.dashboard.dto.SchoolAdminStatsDto;
 import com.school.backend.core.student.repository.StudentRepository;
@@ -23,13 +24,15 @@ public class DashboardStatsService {
     private final TransportEnrollmentRepository transportRepository;
     private final ExamRepository examRepository;
     private final FeeSummaryService feeSummaryService;
+    private final SessionResolver sessionResolver;
 
-    public SchoolAdminStatsDto getSchoolAdminStats(String session) {
+    public SchoolAdminStatsDto getSchoolAdminStats(Long sessionId) {
         Long schoolId = TenantContext.getSchoolId();
+        Long effectiveSessionId = sessionId != null ? sessionId : sessionResolver.resolveForCurrentSchool();
 
         // 1. Basic Counts
-        long totalStudents = studentRepository.countBySchoolId(schoolId);
-        long transportCount = transportRepository.countBySchoolId(schoolId);
+        long totalStudents = studentRepository.countBySchoolIdAndSessionId(schoolId, effectiveSessionId);
+        long transportCount = transportRepository.countBySchoolIdAndSessionId(schoolId, effectiveSessionId);
         long totalTeachers = userRepository.countBySchoolIdAndRole(schoolId, UserRole.TEACHER);
 
         // 2. Fee Stats (Defaulters Count)
@@ -37,7 +40,7 @@ public class DashboardStatsService {
 
         // 3. Upcoming Exams
         LocalDate now = LocalDate.now();
-        var upcomingExams = examRepository.findBySchoolIdAndStartDateAfter(schoolId, now)
+        var upcomingExams = examRepository.findBySchoolIdAndSessionIdAndStartDateAfter(schoolId, effectiveSessionId, now)
                 .stream()
                 .limit(5)
                 .map(e -> SchoolAdminStatsDto.UpcomingExamDto.builder()

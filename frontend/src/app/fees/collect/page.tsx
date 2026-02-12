@@ -4,14 +4,16 @@ import { useEffect, useState } from "react";
 import { api } from "@/lib/api";
 import { useToast } from "@/components/ui/Toast";
 import { Skeleton, TableSkeleton } from "@/components/ui/Skeleton";
+import { useSession } from "@/context/SessionContext";
 
-type SchoolClass = { id: number; name: string; section: string; session: string };
+type SchoolClass = { id: number; name: string; section: string; sessionId: number };
 type Student = { id: number; firstName: string; lastName: string; admissionNumber: string };
 type FeeSummary = { totalFee: number; totalPaid: number; balance: number; status: string };
 type Payment = { id: number; amount: number; paymentDate: string; paymentMode: string; remarks: string };
 
 export default function FeeCollectPage() {
     const { showToast } = useToast();
+    const { currentSession } = useSession();
 
     /* -------- State -------- */
     const [classes, setClasses] = useState<SchoolClass[]>([]);
@@ -36,7 +38,7 @@ export default function FeeCollectPage() {
     /* -------- Initial Load -------- */
     useEffect(() => {
         loadClasses();
-    }, []);
+    }, [currentSession]);
 
     async function loadClasses() {
         try {
@@ -78,13 +80,11 @@ export default function FeeCollectPage() {
     }
 
     async function loadStudentData(stdId: number) {
+        if (!currentSession) return;
         try {
             setLoading(true);
-            const cls = classes.find(c => c.id == selectedClass);
-            const session = cls ? cls.session : "2024-25";
-
             const [sumRes, histRes] = await Promise.all([
-                api.get(`/api/fees/summary/students/${stdId}?session=${session}`),
+                api.get(`/api/fees/summary/students/${stdId}?sessionId=${currentSession.id}`),
                 api.get(`/api/fees/payments/students/${stdId}`)
             ]);
 
@@ -142,13 +142,11 @@ export default function FeeCollectPage() {
     }
 
     async function downloadChallan() {
-        if (!selectedStudent || !selectedClass) return;
+        if (!selectedStudent || !selectedClass || !currentSession) return;
         try {
             setIsDownloading(true);
             showToast("Generating challan...", "info");
-            const cls = classes.find(c => c.id == selectedClass);
-            const session = cls ? cls.session : "2024-25";
-            const res = await api.get(`/api/fees/challan/student/${selectedStudent}?session=${session}&months=${months}`, { responseType: 'blob' });
+            const res = await api.get(`/api/fees/challan/student/${selectedStudent}?sessionId=${currentSession.id}&months=${months}`, { responseType: 'blob' });
             const url = window.URL.createObjectURL(new Blob([res.data]));
             const link = document.createElement('a');
             link.href = url;
@@ -168,7 +166,7 @@ export default function FeeCollectPage() {
         <div className="space-y-6">
             <header>
                 <h1 className="text-3xl font-bold text-gray-800">Billing & Collections</h1>
-                <p className="text-gray-500 mt-1">Settle student dues and manage transactional records.</p>
+                <p className="text-gray-500 mt-1">Settle student dues and manage transactional records for <span className="text-blue-600 font-bold">{currentSession?.name || "current session"}</span>.</p>
             </header>
 
             <div className="bg-white p-6 border rounded-2xl shadow-sm flex flex-wrap gap-6 items-end">

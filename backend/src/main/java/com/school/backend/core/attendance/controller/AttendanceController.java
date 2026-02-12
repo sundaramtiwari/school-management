@@ -3,6 +3,7 @@ package com.school.backend.core.attendance.controller;
 import com.school.backend.core.attendance.entity.StudentAttendance;
 import com.school.backend.core.attendance.enums.AttendanceStatus;
 import com.school.backend.core.attendance.service.AttendanceService;
+import com.school.backend.common.tenant.SessionResolver;
 import com.school.backend.user.security.SecurityUtil;
 import lombok.RequiredArgsConstructor;
 import org.springframework.format.annotation.DateTimeFormat;
@@ -19,6 +20,7 @@ import java.util.Map;
 public class AttendanceController {
 
     private final AttendanceService attendanceService;
+    private final SessionResolver sessionResolver;
 
     @PostMapping("/bulk")
     @PreAuthorize("hasAnyRole('SCHOOL_ADMIN', 'TEACHER', 'SUPER_ADMIN', 'PLATFORM_ADMIN')")
@@ -33,10 +35,11 @@ public class AttendanceController {
     @PreAuthorize("hasAnyRole('SCHOOL_ADMIN', 'TEACHER', 'SUPER_ADMIN', 'PLATFORM_ADMIN')")
     public List<StudentAttendance> getAttendanceByClassAndDate(
             @PathVariable Long classId,
-            @RequestParam Long sessionId,
+            @RequestParam(required = false) Long sessionId,
             @RequestParam @DateTimeFormat(iso = DateTimeFormat.ISO.DATE) LocalDate date) {
 
-        return attendanceService.getAttendanceByClassAndDate(classId, sessionId, date);
+        Long effectiveSessionId = sessionId != null ? sessionId : sessionResolver.resolveForCurrentSchool();
+        return attendanceService.getAttendanceByClassAndDate(classId, effectiveSessionId, date);
     }
 
     @GetMapping("/stats/today")

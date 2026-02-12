@@ -1,6 +1,7 @@
 package com.school.backend.user.security;
 
 import com.school.backend.common.tenant.TenantContext;
+import com.school.backend.common.tenant.SessionContext;
 import com.school.backend.user.entity.User;
 import com.school.backend.user.repository.UserRepository;
 import io.jsonwebtoken.Claims;
@@ -31,8 +32,7 @@ public class JwtAuthFilter extends OncePerRequestFilter {
     protected void doFilterInternal(
             HttpServletRequest request,
             HttpServletResponse response,
-            FilterChain chain
-    ) throws ServletException, IOException {
+            FilterChain chain) throws ServletException, IOException {
 
         String header = request.getHeader("Authorization");
 
@@ -41,13 +41,21 @@ public class JwtAuthFilter extends OncePerRequestFilter {
 
                 String token = header.substring(7);
 
-
                 Claims claims = jwtUtil.parse(token);
 
                 Long schoolId = claims.get("schoolId", Long.class);
 
                 if (schoolId != null) {
                     TenantContext.setSchoolId(schoolId);
+                }
+                String sessionHeader = request.getHeader("X-Session-Id");
+                if (sessionHeader != null && !sessionHeader.isBlank()) {
+                    try {
+                        SessionContext.setSessionId(Long.valueOf(sessionHeader));
+                    } catch (NumberFormatException e) {
+                        // Log and ignore invalid session header to prevent request failure
+                        logger.warn("Invalid X-Session-Id header: " + sessionHeader);
+                    }
                 }
 
                 String email = claims.getSubject();
@@ -60,8 +68,8 @@ public class JwtAuthFilter extends OncePerRequestFilter {
 
                     CustomUserDetails details = new CustomUserDetails(user);
 
-                    UsernamePasswordAuthenticationToken auth =
-                            new UsernamePasswordAuthenticationToken(details, null, details.getAuthorities());
+                    UsernamePasswordAuthenticationToken auth = new UsernamePasswordAuthenticationToken(details, null,
+                            details.getAuthorities());
 
                     auth.setDetails(new WebAuthenticationDetailsSource().buildDetails(request));
 
@@ -78,6 +86,7 @@ public class JwtAuthFilter extends OncePerRequestFilter {
             return; // Don't continue chain
         } finally {
             TenantContext.clear();
+            SessionContext.clear();
         }
     }
 }

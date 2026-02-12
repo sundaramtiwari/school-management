@@ -7,12 +7,13 @@ import { api } from "@/lib/api";
 import { useAuth } from "@/context/AuthContext";
 import { useToast } from "@/components/ui/Toast";
 import { TableSkeleton } from "@/components/ui/Skeleton";
+import { useSession } from "@/context/SessionContext";
 
 /* ---------------- Types ---------------- */
 
 type School = { id: number; name: string };
-type SchoolClass = { id: number; name: string; section: string; session: string };
-type Exam = { id: number; name: string; session: string; examType: string };
+type SchoolClass = { id: number; name: string; section: string; sessionId: number };
+type Exam = { id: number; name: string; sessionId: number; examType: string };
 type Student = { id: number; firstName: string; lastName: string; admissionNumber: string };
 type ExamSubject = { id: number; examId: number; subjectId: number; maxMarks: number; subjectName?: string };
 type StudentMark = { studentId: number; examSubjectId: number; marksObtained: number };
@@ -22,6 +23,7 @@ type StudentMark = { studentId: number; examSubjectId: number; marksObtained: nu
 export default function MarksheetsPage() {
     const { user } = useAuth();
     const { showToast } = useToast();
+    const { currentSession } = useSession();
 
     /* ---------- State ---------- */
     const [schools, setSchools] = useState<School[]>([]);
@@ -95,14 +97,15 @@ export default function MarksheetsPage() {
         }
     }
 
-    async function loadExams(classId: number, session: string) {
+    async function loadExams(classId: number) {
+        if (!currentSession) return;
         try {
             setLoading(prev => ({ ...prev, exams: true }));
             setExams([]);
             setSelectedExam("");
             setStudents([]);
 
-            const res = await api.get(`/api/exams/by-class/${classId}?session=${session}`);
+            const res = await api.get(`/api/exams/by-class/${classId}?sessionId=${currentSession.id}`);
             setExams(res.data || []);
         } catch {
             showToast("No active exams found for this class", "warning");
@@ -162,11 +165,8 @@ export default function MarksheetsPage() {
         const classId = e.target.value;
         setSelectedClass(classId);
         if (classId) {
-            const cls = classes.find(c => c.id === Number(classId));
-            if (cls) {
-                loadExams(cls.id, cls.session);
-                loadStudents(cls.id);
-            }
+            loadExams(Number(classId));
+            loadStudents(Number(classId));
         }
     }
 
@@ -237,7 +237,7 @@ export default function MarksheetsPage() {
             <header className="flex flex-col md:flex-row md:items-center justify-between gap-4">
                 <div>
                     <h1 className="text-3xl font-bold text-gray-800 tracking-tight">Academic Marks</h1>
-                    <p className="text-gray-500 mt-1 font-medium">Manage student performance and distribute report cards.</p>
+                    <p className="text-gray-500 mt-1 font-medium">Manage student performance and distribute report cards for <span className="text-blue-600 font-bold">{currentSession?.name || "current session"}</span>.</p>
                 </div>
 
                 <div className="flex bg-gray-100 p-1 rounded-xl w-fit">
@@ -275,7 +275,7 @@ export default function MarksheetsPage() {
                     <label className="block text-[10px] font-black uppercase text-gray-400 mb-2 ml-1 tracking-widest">Classroom / Year</label>
                     <select value={selectedClass} onChange={onClassChange} disabled={!selectedSchool} className="input-ref font-bold">
                         <option value="">Select Target Class</option>
-                        {classes.map(c => <option key={c.id} value={c.id}>{c.name} {c.section} ({c.session})</option>)}
+                        {classes.map(c => <option key={c.id} value={c.id}>{c.name} {c.section}</option>)}
                     </select>
                 </div>
 
@@ -394,4 +394,3 @@ export default function MarksheetsPage() {
         </div>
     );
 }
-

@@ -104,9 +104,12 @@ export default function FeeStructuresPage() {
     }
 
     async function loadStructures(classId: number) {
+        if (!currentSession) {
+            return;
+        }
         try {
             setLoading(true);
-            const res = await api.get(`/api/fees/structures/by-class/${classId}`);
+            const res = await api.get(`/api/fees/structures/by-class/${classId}?sessionId=${currentSession.id}`);
             setStructures(res.data || []);
         } catch (e: any) {
             const msg = e.response?.data?.message || e.message;

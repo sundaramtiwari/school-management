@@ -1,6 +1,7 @@
 package com.school.backend.core.classsubject.service;
 
 import com.school.backend.common.exception.ResourceNotFoundException;
+import com.school.backend.common.tenant.SessionResolver;
 import com.school.backend.common.tenant.TenantContext;
 import com.school.backend.core.classsubject.dto.SchoolClassDto;
 import com.school.backend.core.classsubject.entity.SchoolClass;
@@ -20,6 +21,7 @@ public class SchoolClassService {
     private final SchoolClassRepository repository;
     private final SchoolClassMapper mapper;
     private final TeacherRepository teacherRepository;
+    private final SessionResolver sessionResolver;
 
     public SchoolClassDto create(SchoolClassDto dto) {
         Long schoolId = TenantContext.getSchoolId();
@@ -83,7 +85,8 @@ public class SchoolClassService {
     }
 
     public Page<SchoolClassDto> getBySchool(Long schoolId, Pageable pageable) {
-        return repository.findBySchoolId(schoolId, pageable).map(mapper::toDto);
+        Long sessionId = sessionResolver.resolveForCurrentSchool();
+        return repository.findBySchoolIdAndSessionId(schoolId, sessionId, pageable).map(mapper::toDto);
     }
 
     public Page<SchoolClassDto> getMyClasses(Long userId, Long schoolId, Pageable pageable) {
