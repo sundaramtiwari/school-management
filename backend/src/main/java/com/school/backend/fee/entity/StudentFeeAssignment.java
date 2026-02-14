@@ -31,6 +31,9 @@ public class StudentFeeAssignment extends TenantEntity {
     @Column(name = "session_id", nullable = false)
     private Long sessionId;
 
+    @Column(nullable = false)
+    private Integer amount;
+
     @Builder.Default
     private boolean active = true;
 }

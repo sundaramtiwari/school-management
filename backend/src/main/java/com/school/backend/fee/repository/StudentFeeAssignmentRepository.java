@@ -13,5 +13,7 @@ public interface StudentFeeAssignmentRepository
                         Long feeStructureId,
                         Long sessionId);
 
+        boolean existsByStudentIdAndFeeStructureId(Long studentId, Long feeStructureId);
+
         List<StudentFeeAssignment> findByStudentIdAndSessionId(Long studentId, Long sessionId);
 }

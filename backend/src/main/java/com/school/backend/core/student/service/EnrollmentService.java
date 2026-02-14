@@ -9,6 +9,10 @@ import com.school.backend.core.student.mapper.StudentEnrollmentMapper;
 import com.school.backend.core.student.repository.PromotionRecordRepository;
 import com.school.backend.core.student.repository.StudentEnrollmentRepository;
 import com.school.backend.core.student.repository.StudentRepository;
+import com.school.backend.fee.entity.FeeStructure;
+import com.school.backend.fee.repository.FeeStructureRepository;
+import com.school.backend.fee.service.FeeStructureService;
+import com.school.backend.common.tenant.TenantContext;
 import lombok.RequiredArgsConstructor;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
@@ -16,6 +20,7 @@ import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
 import java.time.LocalDate;
+import java.util.List;
 
 @Service
 @RequiredArgsConstructor
@@ -26,6 +31,8 @@ public class EnrollmentService {
     private final StudentRepository studentRepository;
     private final SchoolClassRepository classRepository;
     private final PromotionRecordRepository promotionRepo;
+    private final FeeStructureService feeStructureService;
+    private final FeeStructureRepository feeStructureRepository;
 
     @Transactional
     public StudentEnrollmentDto enroll(StudentEnrollmentRequest req) {
@@ -44,6 +51,15 @@ public class EnrollmentService {
             s.setCurrentClass(classRepository.findById(req.getClassId()).orElse(null));
             studentRepository.save(s);
         });
+
+        // Trigger Auto-Assignment of Fees
+        Long schoolId = TenantContext.getSchoolId();
+        List<FeeStructure> existingFees = feeStructureRepository.findByClassIdAndSessionIdAndSchoolId(
+                req.getClassId(), req.getSessionId(), schoolId);
+
+        for (FeeStructure fs : existingFees) {
+            feeStructureService.assignFeeToStudent(fs, req.getStudentId());
+        }
 
         return enrollmentMapper.toDto(saved);
     }

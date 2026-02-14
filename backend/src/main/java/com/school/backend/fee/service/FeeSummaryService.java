@@ -7,11 +7,9 @@ import com.school.backend.fee.dto.DefaulterDto;
 import com.school.backend.fee.dto.FeeStatsDto;
 import com.school.backend.fee.dto.FeeSummaryDto;
 import com.school.backend.fee.entity.FeePayment;
-import com.school.backend.fee.entity.FeeStructure;
 import com.school.backend.fee.entity.StudentFeeAssignment;
 import com.school.backend.fee.enums.FeeFrequency;
 import com.school.backend.fee.repository.FeePaymentRepository;
-import com.school.backend.fee.repository.FeeStructureRepository;
 import com.school.backend.fee.repository.StudentFeeAssignmentRepository;
 import com.school.backend.school.entity.AcademicSession;
 import com.school.backend.school.repository.AcademicSessionRepository;
@@ -34,7 +32,6 @@ import java.util.List;
 public class FeeSummaryService {
 
     private final StudentRepository studentRepository;
-    private final FeeStructureRepository feeStructureRepository;
     private final StudentFeeAssignmentRepository assignmentRepository;
     private final FeePaymentRepository paymentRepository;
     private final AcademicSessionRepository sessionRepository;
@@ -91,39 +88,20 @@ public class FeeSummaryService {
         List<StudentFeeAssignment> assignments = assignmentRepository.findByStudentIdAndSessionId(studentId,
                 sessionId);
 
-        // 2. Calculate Total Accrued Fee (How much *should* have been paid by today)
+        // 2. Calculate Total Accrued Fee (Using assignment.amount directly)
         long totalFeeAccrued = 0;
 
         for (StudentFeeAssignment assignment : assignments) {
-            FeeStructure structure = feeStructureRepository.findById(assignment.getFeeStructureId())
-                    .orElse(null);
-
-            if (structure != null) {
-                int multiplier = calculateMultiplier(structure.getFrequency(), sessionName);
-                totalFeeAccrued += (long) structure.getAmount() * multiplier;
-            }
+            // In the new logic, assignment.amount already contains the total due for the
+            // frequency
+            // (e.g., monthly * 12 for MONTHLY, or structure amount for ONE_TIME/ANNUALLY)
+            totalFeeAccrued += (long) assignment.getAmount();
         }
 
         // 3. Calculate total paid
-        // TODO: Payment should be filtered by session? Currently Payment has sessionId.
-        // Assuming we want total paid for THIS session.
-        // We need to update FeePaymentRepository to filter by sessionId.
-        // For now, if FeePayment has sessionId, we should use it.
-        // The current entity FeePayment has sessionId added.
-        // Let's assume we need to filter by sessionId.
-        // But wait, FeePaymentRepository.findByStudentId returns all payments.
-        // I need to update it to findByStudentIdAndSessionId.
-        // For MVP if we don't hold that yet, it might be wrong.
-        // But we added sessionId to FeePayment.
-        // So I will assume I need to fetch by student and session.
-
-        // Since I haven't updated FeePaymentRepository yet, I'll stick to
-        // findByStudentId
-        // and filter in stream if possible, or just assume for now.
-        // Better: update FeePaymentRepository later.
         long totalPaid = paymentRepository.findByStudentId(studentId)
                 .stream()
-                .filter(p -> sessionId.equals(p.getSessionId())) // Added filter
+                .filter(p -> sessionId.equals(p.getSessionId()))
                 .mapToLong(FeePayment::getAmountPaid)
                 .sum();
 
@@ -240,50 +218,5 @@ public class FeeSummaryService {
         // Sort by amount due descending
         defaulters.sort(Comparator.comparingLong(DefaulterDto::getAmountDue).reversed());
         return defaulters;
-    }
-
-    /**
-     * Calculates how many times the fee is due based on current date.
-     * Assumes Session starts in APRIL.
-     */
-    private int calculateMultiplier(FeeFrequency frequency, String session) {
-        if (frequency == FeeFrequency.ONE_TIME || frequency == FeeFrequency.ANNUALLY) {
-            return 1;
-        }
-
-        // Parse session year "2025-26" -> 2025
-        int startYear = Integer.parseInt(session.split("-")[0]);
-        LocalDate sessionStart = LocalDate.of(startYear, Month.APRIL, 1);
-        LocalDate now = LocalDate.now();
-
-        if (now.isBefore(sessionStart)) {
-            return 0; // Session hasn't started
-        }
-
-        // Calculate months passed
-        // e.g., April (start) -> April (now) = 1 month due
-        // April -> May = 2 months due
-        long monthsPassed = ChronoUnit.MONTHS.between(sessionStart, now) + 1;
-
-        if (monthsPassed < 1)
-            monthsPassed = 1;
-        if (monthsPassed > 12)
-            monthsPassed = 12; // Cap at 12 months
-
-        if (frequency == FeeFrequency.MONTHLY) {
-            return (int) monthsPassed;
-        }
-
-        if (frequency == FeeFrequency.QUARTERLY) {
-            // 1-3 months = 1 quarter, 4-6 = 2, etc.
-            return (int) Math.ceil((double) monthsPassed / 3);
-        }
-
-        if (frequency == FeeFrequency.HALF_YEARLY) {
-            // 1-6 months = 1, 7-12 = 2
-            return (int) Math.ceil((double) monthsPassed / 6);
-        }
-
-        return 1;
     }
 }

@@ -8,6 +8,10 @@ import com.school.backend.fee.entity.FeeType;
 import com.school.backend.fee.enums.FeeFrequency;
 import com.school.backend.fee.repository.FeeStructureRepository;
 import com.school.backend.fee.repository.FeeTypeRepository;
+import com.school.backend.core.student.entity.StudentEnrollment;
+import com.school.backend.core.student.repository.StudentEnrollmentRepository;
+import com.school.backend.fee.entity.StudentFeeAssignment;
+import com.school.backend.fee.repository.StudentFeeAssignmentRepository;
 import com.school.backend.user.security.SecurityUtil;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
@@ -21,6 +25,8 @@ public class FeeStructureService {
 
     private final FeeStructureRepository feeStructureRepository;
     private final FeeTypeRepository feeTypeRepository;
+    private final StudentEnrollmentRepository enrollmentRepository;
+    private final StudentFeeAssignmentRepository assignmentRepository;
     private final com.school.backend.school.service.SetupValidationService setupValidationService;
 
     // ---------------- CREATE ----------------
@@ -41,7 +47,56 @@ public class FeeStructureService {
                 .active(true)
                 .build();
 
-        return toDto(feeStructureRepository.save(fs));
+        FeeStructure saved = feeStructureRepository.save(fs);
+
+        // Auto-assign to all students in the class
+        if (saved.getClassId() != null) {
+            assignFeeToStudents(saved);
+        }
+
+        return toDto(saved);
+    }
+
+    @Transactional
+    public void assignFeeToStudents(FeeStructure fs) {
+        List<StudentEnrollment> enrollments = enrollmentRepository.findByClassIdAndSessionId(fs.getClassId(),
+                fs.getSessionId());
+        for (StudentEnrollment enroll : enrollments) {
+            assignFeeToStudent(fs, enroll.getStudentId());
+        }
+    }
+
+    @Transactional
+    public void assignFeeToStudent(FeeStructure fs, Long studentId) {
+        // Frequency Rules
+        if (fs.getFrequency() == FeeFrequency.ONE_TIME) {
+            // ONE_TIME: Check history-wide using studentId + feeStructureId
+            if (assignmentRepository.existsByStudentIdAndFeeStructureId(studentId, fs.getId())) {
+                return;
+            }
+        } else {
+            // ANNUALLY / MONTHLY: Check current session
+            if (assignmentRepository.existsByStudentIdAndFeeStructureIdAndSessionId(studentId, fs.getId(),
+                    fs.getSessionId())) {
+                return;
+            }
+        }
+
+        int finalAmount = fs.getAmount();
+        if (fs.getFrequency() == FeeFrequency.MONTHLY) {
+            finalAmount = finalAmount * 12;
+        }
+
+        StudentFeeAssignment assignment = StudentFeeAssignment.builder()
+                .schoolId(fs.getSchoolId())
+                .studentId(studentId)
+                .feeStructureId(fs.getId())
+                .sessionId(fs.getSessionId())
+                .amount(finalAmount)
+                .active(true)
+                .build();
+
+        assignmentRepository.save(assignment);
     }
 
     // ---------------- LIST ----------------
