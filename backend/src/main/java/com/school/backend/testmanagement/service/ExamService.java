@@ -24,10 +24,12 @@ public class ExamService {
     private final ExamRepository repository;
     private final ExamSubjectRepository subjectRepository;
     private final StudentMarkRepository markRepository;
+    private final com.school.backend.school.service.SetupValidationService setupValidationService;
 
     // Create exam
     @Transactional
     public Exam create(ExamCreateRequest req) {
+        setupValidationService.ensureAtLeastOneClassExists(req.getSchoolId(), req.getSessionId());
 
         Exam exam = Exam.builder()
                 .schoolId(req.getSchoolId())
@@ -51,6 +53,9 @@ public class ExamService {
     // Bulk save marks
     @Transactional
     public void saveMarksBulk(Long examId, BulkMarksDto dto) {
+        Exam exam = repository.findById(examId)
+                .orElseThrow(() -> new IllegalArgumentException("Exam not found"));
+        setupValidationService.ensureAtLeastOneClassExists(exam.getSchoolId(), exam.getSessionId());
 
         // 1. Get all subjects for this exam for validation
         List<ExamSubject> subjects = subjectRepository.findByExamId(examId);

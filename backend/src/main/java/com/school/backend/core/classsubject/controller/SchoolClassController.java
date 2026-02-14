@@ -85,4 +85,10 @@ public class SchoolClassController {
         service.delete(id);
         return ResponseEntity.noContent().build();
     }
+
+    @GetMapping("/count")
+    @PreAuthorize("hasAnyRole('SCHOOL_ADMIN', 'TEACHER', 'ACCOUNTANT', 'SUPER_ADMIN', 'PLATFORM_ADMIN')")
+    public ResponseEntity<java.util.Map<String, Long>> getClassCount() {
+        return ResponseEntity.ok(java.util.Collections.singletonMap("count", service.getClassCount()));
+    }
 }

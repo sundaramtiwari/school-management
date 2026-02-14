@@ -19,9 +19,14 @@ public class MarkEntryService {
 
     private final StudentMarkRepository markRepository;
     private final ExamSubjectRepository subjectRepository;
+    private final com.school.backend.school.service.SetupValidationService setupValidationService;
+    private final com.school.backend.common.tenant.SessionResolver sessionResolver;
 
     @Transactional
     public StudentMark enterMarks(MarkEntryRequest req) {
+        Long schoolId = TenantContext.getSchoolId();
+        Long sessionId = sessionResolver.resolveForCurrentSchool();
+        setupValidationService.ensureAtLeastOneClassExists(schoolId, sessionId);
 
         ExamSubject subject = subjectRepository.findById(req.getExamSubjectId())
                 .orElseThrow(() -> new ResourceNotFoundException("ExamSubject not found"));
@@ -31,7 +36,7 @@ public class MarkEntryService {
         }
 
         StudentMark mark = markRepository.findByExamSubjectIdAndStudentId(
-                        req.getExamSubjectId(), req.getStudentId())
+                req.getExamSubjectId(), req.getStudentId())
                 .orElseGet(() -> StudentMark.builder()
                         .examSubjectId(req.getExamSubjectId())
                         .studentId(req.getStudentId())

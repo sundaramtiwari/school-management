@@ -21,10 +21,12 @@ public class FeeStructureService {
 
     private final FeeStructureRepository feeStructureRepository;
     private final FeeTypeRepository feeTypeRepository;
+    private final com.school.backend.school.service.SetupValidationService setupValidationService;
 
     // ---------------- CREATE ----------------
     @Transactional
     public FeeStructureDto create(FeeStructureCreateRequest req) {
+        setupValidationService.ensureAtLeastOneClassExists(SecurityUtil.schoolId(), req.getSessionId());
 
         FeeType feeType = feeTypeRepository.findById(req.getFeeTypeId())
                 .orElseThrow(() -> new ResourceNotFoundException("FeeType not found: " + req.getFeeTypeId()));

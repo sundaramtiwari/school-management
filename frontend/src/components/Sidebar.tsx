@@ -34,7 +34,7 @@ const getRoleDisplay = (role: string | undefined): string => {
 export default function Sidebar() {
   const pathname = usePathname();
   const { user, logout } = useAuth();
-  const { currentSession } = useSession();
+  const { currentSession, hasClasses } = useSession();
 
   return (
     <aside className="w-64 bg-white border-r flex flex-col h-screen">
@@ -61,16 +61,35 @@ export default function Sidebar() {
 
           if (!hasAccess) return null;
 
+          // Class-based gating
+          const restrictedWithoutClasses = ["Students", "Fees", "Marksheets", "Attendance"].includes(item.name);
+          const isRestricted = restrictedWithoutClasses && !hasClasses && userRole === "SCHOOL_ADMIN";
+
           return (
             <Link
               key={item.path}
-              href={item.path}
+              href={isRestricted ? "/classes" : item.path}
+              onClick={(e) => {
+                if (isRestricted) {
+                  e.preventDefault();
+                  alert("Please create at least one class to access this section.");
+                  // You might want to use a toast here if available, but alert is safe for now as requested "banner/toast"
+                  // router.push("/classes"); // Link href handles it if we don't prevent default, but we want to intercept.
+                  // Actually, if we prevent default, we must push manually.
+                  // But cleaner is to let the href be /classes and just show the alert?
+                  // No, users prefer staying on the same page or explicit redirect.
+                  // Let's use simpler approach:
+                  // If restricted, clicking it shows alert and goes to /classes.
+                  window.location.href = "/classes";
+                }
+              }}
               className={`
                 block px-4 py-2.5 rounded-lg flex items-center gap-3
                 ${active
                   ? "bg-blue-100 text-blue-700 font-semibold"
                   : "text-gray-700 hover:bg-gray-100"
                 }
+                ${isRestricted ? "opacity-50 cursor-not-allowed" : ""}
               `}
             >
               <span className="text-lg">{item.icon}</span>

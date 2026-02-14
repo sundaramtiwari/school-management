@@ -112,4 +112,10 @@ public class SchoolClassService {
         }
         repository.deleteById(id);
     }
+
+    public long getClassCount() {
+        Long schoolId = TenantContext.getSchoolId();
+        Long sessionId = sessionResolver.resolveForCurrentSchool();
+        return repository.countBySchoolIdAndSessionId(schoolId, sessionId);
+    }
 }

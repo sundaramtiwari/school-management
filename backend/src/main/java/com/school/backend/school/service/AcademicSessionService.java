@@ -22,8 +22,17 @@ public class AcademicSessionService {
 
     @Transactional
     public AcademicSession createSession(AcademicSession session) {
-        // No more current flag reset or date validations
-        return repository.save(session);
+        AcademicSession saved = repository.save(session);
+
+        School school = schoolRepository.findById(session.getSchoolId())
+                .orElseThrow(() -> new RuntimeException("School not found"));
+
+        if (school.getCurrentSessionId() == null) {
+            school.setCurrentSessionId(saved.getId());
+            schoolRepository.save(school);
+        }
+
+        return saved;
     }
 
     @Transactional

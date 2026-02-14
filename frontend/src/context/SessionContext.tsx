@@ -2,6 +2,7 @@
 
 import { createContext, useContext, useEffect, useState } from "react";
 import { api } from "@/lib/api";
+import { useAuth } from "@/context/AuthContext";
 
 type AcademicSession = {
   id: number;
@@ -16,14 +17,17 @@ type SessionContextType = {
   setCurrentSession: (session: AcademicSession) => void;
   refreshSessions: () => Promise<void>;
   isLoading: boolean;
+  hasClasses: boolean;
 };
 
 const SessionContext = createContext<SessionContextType | null>(null);
 
 export function SessionProvider({ children }: { children: React.ReactNode }) {
+  const { user } = useAuth();
   const [currentSession, setCurrentSessionState] = useState<AcademicSession | null>(null);
   const [sessions, setSessions] = useState<AcademicSession[]>([]);
   const [isLoading, setIsLoading] = useState(true);
+  const [hasClasses, setHasClasses] = useState(false);
 
   // Load from localStorage on mount
   useEffect(() => {
@@ -40,10 +44,16 @@ export function SessionProvider({ children }: { children: React.ReactNode }) {
 
   // Fetch sessions from API
   const refreshSessions = async () => {
+    // STRICT: Only fetch sessions if user belongs to a school
+    if (!user || !user.schoolId) {
+      setSessions([]);
+      return;
+    }
+
     try {
       const response = await api.get<AcademicSession[]>("/api/academic-sessions");
       setSessions(response.data);
-      
+
       // If no current session is set, set the first active session
       if (!currentSession && response.data.length > 0) {
         const firstActive = response.data.find(s => s.active);
@@ -56,10 +66,14 @@ export function SessionProvider({ children }: { children: React.ReactNode }) {
     }
   };
 
-  // Load sessions on mount
+  // Load sessions when user changes
   useEffect(() => {
-    refreshSessions();
-  }, []);
+    if (user?.schoolId) {
+      refreshSessions();
+    } else {
+      setSessions([]);
+    }
+  }, [user?.schoolId]);
 
   const setCurrentSession = (session: AcademicSession) => {
     localStorage.setItem("currentSession", JSON.stringify(session));
@@ -80,6 +94,22 @@ export function SessionProvider({ children }: { children: React.ReactNode }) {
     };
   }, [currentSession]);
 
+  // Fetch class count when session changes
+  useEffect(() => {
+    if (currentSession) {
+      api.get<{ count: number }>("/api/classes/count")
+        .then(res => {
+          setHasClasses(res.data.count > 0);
+        })
+        .catch(err => {
+          console.error("Failed to fetch class count", err);
+          setHasClasses(false);
+        });
+    } else {
+      setHasClasses(false);
+    }
+  }, [currentSession]);
+
   return (
     <SessionContext.Provider
       value={{
@@ -88,6 +118,7 @@ export function SessionProvider({ children }: { children: React.ReactNode }) {
         setCurrentSession,
         refreshSessions,
         isLoading,
+        hasClasses,
       }}
     >
       {children}

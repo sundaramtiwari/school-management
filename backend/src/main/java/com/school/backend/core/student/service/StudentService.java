@@ -26,6 +26,7 @@ public class StudentService {
     private final SchoolRepository schoolRepository;
     private final SchoolClassRepository classRepository;
     private final SessionResolver sessionResolver;
+    private final com.school.backend.school.service.SetupValidationService setupValidationService;
 
     private static void updateStudentDetails(StudentUpdateRequest req, Student existing) {
         if (req.getFirstName() != null)
@@ -123,6 +124,11 @@ public class StudentService {
     @Transactional
     public StudentDto register(StudentCreateRequest req) {
         Long schoolId = TenantContext.getSchoolId();
+        Long sessionId = sessionResolver.resolveForCurrentSchool();
+
+        // Validate that at least one class exists
+        setupValidationService.ensureAtLeastOneClassExists(schoolId, sessionId);
+
         // duplicate check
         if (repository.existsByAdmissionNumberAndSchoolId(req.getAdmissionNumber(), schoolId)) {
             throw new IllegalArgumentException("Admission number already exists for this school");

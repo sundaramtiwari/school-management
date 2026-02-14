@@ -4,13 +4,31 @@ import { AuthProvider, useAuth } from "@/context/AuthContext";
 import { SessionProvider } from "@/context/SessionContext";
 import Sidebar from "@/components/Sidebar";
 import Breadcrumbs from "@/components/Breadcrumbs";
-import { usePathname } from "next/navigation";
+import { useRouter, usePathname } from "next/navigation";
+import { useSession } from "@/context/SessionContext";
+import { useEffect } from "react";
 
 function LayoutContent({ children }: { children: React.ReactNode }) {
-    const { user, isLoading } = useAuth();
+    const { user, isLoading: authLoading } = useAuth();
+    const { currentSession, isLoading: sessionLoading } = useSession();
     const pathname = usePathname();
+    const router = useRouter();
 
-    if (isLoading) {
+    useEffect(() => {
+        // STRICT: Only SCHOOL_ADMIN is forced to have a session
+        if (
+            user &&
+            user.role === "SCHOOL_ADMIN" &&
+            !sessionLoading &&
+            !currentSession &&
+            !pathname.startsWith("/school/setup") &&
+            !pathname.startsWith("/login")
+        ) {
+            router.push("/school/setup/session");
+        }
+    }, [user, currentSession, sessionLoading, pathname, router]);
+
+    if (authLoading || sessionLoading) {
         return <div className="flex h-screen items-center justify-center">Loading...</div>;
     }
 
