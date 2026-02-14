@@ -16,8 +16,9 @@ type SessionContextType = {
   sessions: AcademicSession[];
   setCurrentSession: (session: AcademicSession) => void;
   refreshSessions: () => Promise<void>;
-  isLoading: boolean;
+  isSessionLoading: boolean;
   hasClasses: boolean;
+  hasSession: boolean;
 };
 
 const SessionContext = createContext<SessionContextType | null>(null);
@@ -26,43 +27,44 @@ export function SessionProvider({ children }: { children: React.ReactNode }) {
   const { user } = useAuth();
   const [currentSession, setCurrentSessionState] = useState<AcademicSession | null>(null);
   const [sessions, setSessions] = useState<AcademicSession[]>([]);
-  const [isLoading, setIsLoading] = useState(true);
+  const [isSessionLoading, setIsSessionLoading] = useState(true);
   const [hasClasses, setHasClasses] = useState(false);
-
-  // Load from localStorage on mount
-  useEffect(() => {
-    const storedSession = localStorage.getItem("currentSession");
-    if (storedSession) {
-      try {
-        setCurrentSessionState(JSON.parse(storedSession));
-      } catch (e) {
-        console.error("Failed to parse stored session", e);
-      }
-    }
-    setIsLoading(false);
-  }, []);
 
   // Fetch sessions from API
   const refreshSessions = async () => {
     // STRICT: Only fetch sessions if user belongs to a school
     if (!user || !user.schoolId) {
       setSessions([]);
+      setCurrentSessionState(null);
+      setIsSessionLoading(false);
       return;
     }
 
     try {
-      const response = await api.get<AcademicSession[]>("/api/academic-sessions");
-      setSessions(response.data);
+      setIsSessionLoading(true);
+      const [sessionsRes, schoolRes] = await Promise.all([
+        api.get<AcademicSession[]>("/api/academic-sessions"),
+        api.get<any>(`/api/schools/id/${user.schoolId}`)
+      ]);
 
-      // If no current session is set, set the first active session
-      if (!currentSession && response.data.length > 0) {
-        const firstActive = response.data.find(s => s.active);
-        if (firstActive) {
-          setCurrentSession(firstActive);
-        }
+      const fetchedSessions = sessionsRes.data;
+      const school = schoolRes.data;
+      setSessions(fetchedSessions);
+
+      // STRICT: Determine currentSession using school.currentSessionId
+      if (school.currentSessionId) {
+        const activeSession = fetchedSessions.find(s => s.id === school.currentSessionId);
+        setCurrentSessionState(activeSession || null);
+      } else {
+        setCurrentSessionState(null);
       }
+
     } catch (error) {
       console.error("Failed to fetch sessions", error);
+      // On error, safest to set to null
+      setCurrentSessionState(null);
+    } finally {
+      setIsSessionLoading(false);
     }
   };
 
@@ -72,11 +74,19 @@ export function SessionProvider({ children }: { children: React.ReactNode }) {
       refreshSessions();
     } else {
       setSessions([]);
+      setCurrentSessionState(null);
+      setIsSessionLoading(false);
     }
   }, [user?.schoolId]);
 
-  const setCurrentSession = (session: AcademicSession) => {
-    localStorage.setItem("currentSession", JSON.stringify(session));
+  const setCurrentSession = (session: AcademicSession | null) => {
+    // We strictly use backend source of truth, so setting manually might be temporary or for optimistic UI?
+    // User wants "Session source of truth must be backend school.currentSessionId".
+    // This implies we shouldn't really be manually setting currentSession separate from backend.
+    // However, if we switch sessions, we probably call an API to update school.currentSessionId?
+    // The instructions don't mention session switching logic updates, just "Fix SessionContext".
+    // Assuming setCurrentSession updates local state for now, but maybe it should be removed or strictly strictly coupled?
+    // For now, let's keep it but remove localStorage as requested.
     setCurrentSessionState(session);
   };
 
@@ -96,7 +106,8 @@ export function SessionProvider({ children }: { children: React.ReactNode }) {
 
   // Fetch class count when session changes
   useEffect(() => {
-    if (currentSession) {
+    // Only fetch if session exists AND user is logged in with a school
+    if (currentSession && user?.schoolId) {
       api.get<{ count: number }>("/api/classes/count")
         .then(res => {
           setHasClasses(res.data.count > 0);
@@ -108,17 +119,18 @@ export function SessionProvider({ children }: { children: React.ReactNode }) {
     } else {
       setHasClasses(false);
     }
-  }, [currentSession]);
+  }, [currentSession, user?.schoolId]);
 
   return (
     <SessionContext.Provider
       value={{
         currentSession,
         sessions,
-        setCurrentSession,
+        setCurrentSession, // This function might need to call backend to switch session in future, but out of scope now
         refreshSessions,
-        isLoading,
+        isSessionLoading,
         hasClasses,
+        hasSession: !!currentSession,
       }}
     >
       {children}

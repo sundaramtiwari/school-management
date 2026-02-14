@@ -34,12 +34,12 @@ public class JwtAuthFilter extends OncePerRequestFilter {
             HttpServletResponse response,
             FilterChain chain) throws ServletException, IOException {
 
-        String header = request.getHeader("Authorization");
+        String authHeader = request.getHeader("Authorization");
 
         try {
-            if (header != null && header.startsWith("Bearer ")) {
+            if (authHeader != null && authHeader.startsWith("Bearer ")) {
 
-                String token = header.substring(7);
+                String token = authHeader.substring(7);
 
                 Claims claims = jwtUtil.parse(token);
 
@@ -65,7 +65,6 @@ public class JwtAuthFilter extends OncePerRequestFilter {
                         .orElse(null);
 
                 if (user != null) {
-
                     CustomUserDetails details = new CustomUserDetails(user);
 
                     UsernamePasswordAuthenticationToken auth = new UsernamePasswordAuthenticationToken(details, null,
@@ -84,9 +83,7 @@ public class JwtAuthFilter extends OncePerRequestFilter {
             response.setStatus(HttpServletResponse.SC_UNAUTHORIZED);
             response.getWriter().write("{\"error\":\"Invalid or expired token\"}");
             return; // Don't continue chain
-        } finally {
-            TenantContext.clear();
-            SessionContext.clear();
         }
+        // Note: TenantContext cleanup moved to TenantContextCleanupFilter
     }
 }

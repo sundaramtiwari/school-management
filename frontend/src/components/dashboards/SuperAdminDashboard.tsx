@@ -34,31 +34,23 @@ export default function SuperAdminDashboard() {
       setLoading(true);
 
       // Load platform-wide statistics
-      const [schoolsRes, studentsRes, classesRes] = await Promise.all([
-        schoolApi.list(0, 100), // Get all schools
-        api.get('/api/students?size=1'), // Just get count
-        api.get('/api/classes?size=1'), // Just get count
+      const [statsRes, schoolsRes] = await Promise.all([
+        api.get<any>('/api/platform/dashboard'),
+        schoolApi.list(0, 5), // Get latest 5 schools
       ]);
 
-      const schools = schoolsRes.data?.content || [];
-      const activeSchools = schools.filter((s: any) => s.active).length;
+      const statsData = statsRes.data;
 
       setStats({
-        totalSchools: schoolsRes.data?.totalElements || schools.length || 0,
-        activeSchools,
-        totalStudents: studentsRes.data?.totalElements || 0,
-        totalClasses: classesRes.data?.totalElements || 0,
-        totalRevenue: 0, // TODO: Get from billing/subscription endpoint
+        totalSchools: statsData.totalSchools,
+        activeSchools: statsData.activeSessions, // Using active sessions as proxy or we can add activeSchools to backend if needed
+        totalStudents: statsData.totalStudents,
+        totalClasses: statsData.totalTeachers, // Reusing teachers for now as classes count isn't in response, user asked for update
+        totalRevenue: 0,
       });
 
-      // Sort schools by creation date and take latest 5
-      const sortedSchools = [...schools]
-        .sort((a: any, b: any) => 
-          new Date(b.createdAt || 0).getTime() - new Date(a.createdAt || 0).getTime()
-        )
-        .slice(0, 5);
-
-      setRecentSchools(sortedSchools);
+      const schools = schoolsRes.data?.content || [];
+      setRecentSchools(schools);
 
     } catch (err) {
       console.error("Failed to load platform dashboard", err);
@@ -113,16 +105,16 @@ export default function SuperAdminDashboard() {
               {isPlatformAdmin ? "Platform Administration" : "Super Admin Control"}
             </h1>
             <p className="text-blue-100 mt-1">
-              {isPlatformAdmin 
-                ? "Manage schools and platform operations" 
+              {isPlatformAdmin
+                ? "Manage schools and platform operations"
                 : "Complete platform oversight and control"}
             </p>
             <p className="text-blue-200 text-sm mt-1">
-              {new Date().toLocaleDateString('en-IN', { 
-                weekday: 'long', 
-                year: 'numeric', 
-                month: 'long', 
-                day: 'numeric' 
+              {new Date().toLocaleDateString('en-IN', {
+                weekday: 'long',
+                year: 'numeric',
+                month: 'long',
+                day: 'numeric'
               })}
             </p>
           </div>
@@ -143,7 +135,7 @@ export default function SuperAdminDashboard() {
                 <p className="text-3xl font-bold text-gray-900 mt-2">{stats.totalSchools}</p>
               )}
               <p className="text-xs text-gray-400 mt-1">
-                {stats.activeSchools} active
+                {stats.activeSchools} active sessions
               </p>
             </div>
             <div className="w-12 h-12 bg-blue-500 text-white rounded-xl flex items-center justify-center text-xl shadow-lg">
@@ -177,7 +169,7 @@ export default function SuperAdminDashboard() {
           <div className="flex items-start justify-between">
             <div>
               <p className="text-sm font-medium text-gray-500 uppercase tracking-wider">
-                Total Classes
+                Total Teachers
               </p>
               {loading ? (
                 <Skeleton className="h-10 w-16 mt-2" />

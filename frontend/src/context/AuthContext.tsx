@@ -44,11 +44,11 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     localStorage.setItem("user", JSON.stringify(newUser));
     setToken(newToken);
     setUser(newUser);
-    
+
     // ✅ FIXED: Role-based redirect
     const role = newUser.role?.toUpperCase();
-    
-    switch(role) {
+
+    switch (role) {
       case "SUPER_ADMIN":
       case "PLATFORM_ADMIN":
         router.push("/schools"); // Platform admins manage schools
@@ -74,20 +74,6 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     setUser(null);
     router.push("/login");
   }
-
-  // Interceptor to attach token
-  useEffect(() => {
-    const interceptor = api.interceptors.request.use((config) => {
-      if (token) {
-        config.headers.Authorization = `Bearer ${token}`;
-      }
-      return config;
-    });
-
-    return () => {
-      api.interceptors.request.eject(interceptor);
-    };
-  }, [token]);
 
   // Protect routes
   useEffect(() => {

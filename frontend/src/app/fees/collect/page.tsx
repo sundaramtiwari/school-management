@@ -202,7 +202,7 @@ export default function FeeCollectPage() {
                         <div className="bg-gray-900 text-white rounded-2xl p-8 shadow-2xl relative overflow-hidden">
                             <div className="absolute top-0 right-0 p-4 opacity-10 text-6xl">₹</div>
                             <h3 className="text-xs font-black uppercase tracking-widest text-gray-400 mb-2">Outstanding Balance</h3>
-                            <p className="text-5xl font-black">₹ {summary.balance.toLocaleString()}</p>
+                            <p className="text-5xl font-black">₹ {(summary.balance ?? 0).toLocaleString()}</p>
 
                             <div className="mt-8 pt-6 border-t border-white/10 flex justify-between text-xs font-bold uppercase tracking-tight">
                                 <div className="text-gray-400">Total Dues: <span className="text-white ml-1">₹ {summary.totalFee}</span></div>
@@ -304,7 +304,7 @@ export default function FeeCollectPage() {
                                                 </span>
                                             </td>
                                             <td className="p-4 text-gray-400 text-xs italic">{p.remarks || "Regular collection"}</td>
-                                            <td className="p-4 text-right font-black text-gray-900">₹ {p.amount.toLocaleString()}</td>
+                                            <td className="p-4 text-right font-black text-gray-900">₹ {(p.amount ?? 0).toLocaleString()}</td>
                                             <td className="p-4 text-center">
                                                 <button
                                                     onClick={() => downloadReceipt(p.id)}

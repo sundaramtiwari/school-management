@@ -88,7 +88,7 @@ export default function MarksheetsPage() {
             setSelectedExam("");
             setStudents([]);
 
-            const res = await api.get(`/api/classes/by-school/${schoolId}`);
+            const res = await api.get("/api/classes/mine?size=100");
             setClasses(res.data.content || []);
         } catch {
             showToast("Failed to fetch classes for school", "error");

@@ -1,5 +1,6 @@
 package com.school.backend.school.service;
 
+import com.school.backend.common.exception.InvalidOperationException;
 import com.school.backend.school.entity.AcademicSession;
 import com.school.backend.school.entity.School;
 import com.school.backend.school.repository.AcademicSessionRepository;
@@ -22,6 +23,10 @@ public class AcademicSessionService {
 
     @Transactional
     public AcademicSession createSession(AcademicSession session) {
+        if (repository.existsBySchoolIdAndName(session.getSchoolId(), session.getName())) {
+            throw new InvalidOperationException(
+                    "Session with name '" + session.getName() + "' already exists for this school");
+        }
         AcademicSession saved = repository.save(session);
 
         School school = schoolRepository.findById(session.getSchoolId())
@@ -38,7 +43,15 @@ public class AcademicSessionService {
     @Transactional
     public AcademicSession updateSession(Long id, AcademicSession details) {
         AcademicSession session = repository.findById(id)
-                .orElseThrow(() -> new RuntimeException("Session not found"));
+                .orElseThrow(() -> new InvalidOperationException("Session not found"));
+
+        // Only check if name is changing
+        if (!session.getName().equals(details.getName())) {
+            if (repository.existsBySchoolIdAndName(session.getSchoolId(), details.getName())) {
+                throw new InvalidOperationException(
+                        "Session with name '" + details.getName() + "' already exists for this school");
+            }
+        }
 
         session.setName(details.getName());
         session.setActive(details.isActive());

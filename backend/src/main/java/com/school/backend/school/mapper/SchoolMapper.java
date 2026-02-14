@@ -11,7 +11,8 @@ import java.util.stream.Collectors;
  * Manual mapper for School <-> SchoolDto
  * - toDto: maps entity to dto
  * - toEntity: maps dto to new entity (sets id only if dto.id != null)
- * - updateFromDto: copies only non-null fields from dto to existing entity (partial update)
+ * - updateFromDto: copies only non-null fields from dto to existing entity
+ * (partial update)
  */
 public final class SchoolMapper {
 
@@ -19,7 +20,8 @@ public final class SchoolMapper {
     }
 
     public static SchoolDto toDto(School entity) {
-        if (entity == null) return null;
+        if (entity == null)
+            return null;
 
         SchoolDto dto = new SchoolDto();
         dto.setId(entity.getId());
@@ -43,11 +45,13 @@ public final class SchoolMapper {
         dto.setDescription(entity.getDescription());
 
         dto.setActive(entity.isActive());
+        dto.setCurrentSessionId(entity.getCurrentSessionId());
         return dto;
     }
 
     public static School toEntity(SchoolDto dto) {
-        if (dto == null) return null;
+        if (dto == null)
+            return null;
 
         School entity = new School();
 
@@ -62,7 +66,8 @@ public final class SchoolMapper {
         entity.setMedium(dto.getMedium());
 
         // TODO: Remove this dto.getSchoolCode before going live. Only for testing
-        entity.setSchoolCode(Objects.isNull(dto.getSchoolCode()) ? generateSchoolCode(dto.getName()) : dto.getSchoolCode());
+        entity.setSchoolCode(
+                Objects.isNull(dto.getSchoolCode()) ? generateSchoolCode(dto.getName()) : dto.getSchoolCode());
 
         entity.setAddress(dto.getAddress());
         entity.setCity(dto.getCity());
@@ -76,7 +81,8 @@ public final class SchoolMapper {
         entity.setLogoUrl(dto.getLogoUrl());
         entity.setDescription(dto.getDescription());
 
-        // boolean: if dto.active is null, keep default true on entity (as entity initializes)
+        // boolean: if dto.active is null, keep default true on entity (as entity
+        // initializes)
         if (dto.getActive() != null) {
             entity.setActive(dto.getActive());
         }
@@ -92,7 +98,8 @@ public final class SchoolMapper {
     }
 
     public static List<SchoolDto> toDtos(List<School> entities) {
-        if (entities == null) return List.of();
+        if (entities == null)
+            return List.of();
         return entities.stream()
                 .filter(Objects::nonNull)
                 .map(SchoolMapper::toDto)
@@ -104,26 +111,42 @@ public final class SchoolMapper {
      * Does NOT change id.
      */
     public static void updateFromDto(SchoolDto dto, School entity) {
-        if (dto == null || entity == null) return;
+        if (dto == null || entity == null)
+            return;
 
-        if (dto.getName() != null) entity.setName(dto.getName());
-        if (dto.getDisplayName() != null) entity.setDisplayName(dto.getDisplayName());
-        if (dto.getBoard() != null) entity.setBoard(dto.getBoard());
-        if (dto.getMedium() != null) entity.setMedium(dto.getMedium());
-        if (dto.getSchoolCode() != null) entity.setSchoolCode(dto.getSchoolCode());
+        if (dto.getName() != null)
+            entity.setName(dto.getName());
+        if (dto.getDisplayName() != null)
+            entity.setDisplayName(dto.getDisplayName());
+        if (dto.getBoard() != null)
+            entity.setBoard(dto.getBoard());
+        if (dto.getMedium() != null)
+            entity.setMedium(dto.getMedium());
+        if (dto.getSchoolCode() != null)
+            entity.setSchoolCode(dto.getSchoolCode());
 
-        if (dto.getAddress() != null) entity.setAddress(dto.getAddress());
-        if (dto.getCity() != null) entity.setCity(dto.getCity());
-        if (dto.getState() != null) entity.setState(dto.getState());
-        if (dto.getPincode() != null) entity.setPincode(dto.getPincode());
+        if (dto.getAddress() != null)
+            entity.setAddress(dto.getAddress());
+        if (dto.getCity() != null)
+            entity.setCity(dto.getCity());
+        if (dto.getState() != null)
+            entity.setState(dto.getState());
+        if (dto.getPincode() != null)
+            entity.setPincode(dto.getPincode());
 
-        if (dto.getContactNumber() != null) entity.setContactNumber(dto.getContactNumber());
-        if (dto.getContactEmail() != null) entity.setContactEmail(dto.getContactEmail());
+        if (dto.getContactNumber() != null)
+            entity.setContactNumber(dto.getContactNumber());
+        if (dto.getContactEmail() != null)
+            entity.setContactEmail(dto.getContactEmail());
 
-        if (dto.getWebsite() != null) entity.setWebsite(dto.getWebsite());
-        if (dto.getLogoUrl() != null) entity.setLogoUrl(dto.getLogoUrl());
-        if (dto.getDescription() != null) entity.setDescription(dto.getDescription());
+        if (dto.getWebsite() != null)
+            entity.setWebsite(dto.getWebsite());
+        if (dto.getLogoUrl() != null)
+            entity.setLogoUrl(dto.getLogoUrl());
+        if (dto.getDescription() != null)
+            entity.setDescription(dto.getDescription());
 
-        if (dto.getActive() != null) entity.setActive(dto.getActive());
+        if (dto.getActive() != null)
+            entity.setActive(dto.getActive());
     }
 }

@@ -1,16 +1,27 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { useRouter } from "next/navigation";
 import { api } from "@/lib/api";
 import { useSession } from "@/context/SessionContext";
 
 export default function SessionSetupPage() {
     const router = useRouter();
-    const { refreshSessions } = useSession();
+    const { refreshSessions, hasSession } = useSession();
     const [name, setName] = useState("");
     const [loading, setLoading] = useState(false);
     const [error, setError] = useState("");
+
+    // Prevent duplicate session creation
+    useEffect(() => {
+        if (hasSession) {
+            router.push("/");
+        }
+    }, [hasSession, router]);
+
+    if (hasSession) {
+        return null; // Don't render form if session exists
+    }
 
     const handleSubmit = async (e: React.FormEvent) => {
         e.preventDefault();
@@ -26,12 +37,14 @@ export default function SessionSetupPage() {
             // Refresh session context to pick up the new session and currentSessionId
             await refreshSessions();
 
-            // Redirect to dashboard
-            router.push("/");
+            // Wait for session context to update by checking hasSession
+            // Give it a moment for state to propagate
+            setTimeout(() => {
+                router.push("/");
+            }, 100);
         } catch (err: any) {
             console.error("Failed to create session", err);
             setError(err.response?.data?.message || "Failed to create session");
-        } finally {
             setLoading(false);
         }
     };

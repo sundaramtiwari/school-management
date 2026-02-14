@@ -11,7 +11,7 @@ import { TableSkeleton } from "@/components/ui/Skeleton";
 export default function SessionsPage() {
     const { user } = useAuth();
     const { showToast } = useToast();
-    const { sessions, currentSession, setCurrentSession, refreshSessions, isLoading } = useSession();
+    const { sessions, currentSession, setCurrentSession, refreshSessions, isSessionLoading: isLoading } = useSession();
     const [isSaving, setIsSaving] = useState(false);
     const [showForm, setShowForm] = useState(false);
 

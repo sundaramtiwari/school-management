@@ -1,7 +1,7 @@
 "use client";
 
 import Link from "next/link";
-import { usePathname } from "next/navigation";
+import { usePathname, useRouter } from "next/navigation";
 import { useAuth } from "@/context/AuthContext";
 import { useSession } from "@/context/SessionContext";
 
@@ -33,6 +33,7 @@ const getRoleDisplay = (role: string | undefined): string => {
 
 export default function Sidebar() {
   const pathname = usePathname();
+  const router = useRouter();
   const { user, logout } = useAuth();
   const { currentSession, hasClasses } = useSession();
 
@@ -61,26 +62,45 @@ export default function Sidebar() {
 
           if (!hasAccess) return null;
 
-          // Class-based gating
-          const restrictedWithoutClasses = ["Students", "Fees", "Marksheets", "Attendance"].includes(item.name);
-          const isRestricted = restrictedWithoutClasses && !hasClasses && userRole === "SCHOOL_ADMIN";
+          // GATING LOGIC
+          // 1. !currentSession (No Session) -> Disable everything except Dashboard, Staff, Transport, Sessions
+          //    (Sessions is effectively /school/setup/session redirect or manual management)
+          // 2. currentSession && !hasClasses -> Enable Classes. Disable Students, Fees, Attendance, Marksheets.
+
+          const isSchoolScoped = ["SCHOOL_ADMIN", "TEACHER", "ACCOUNTANT"].includes(userRole as string);
+
+          const requiresSession = ["Classes", "Students", "Fees", "Marksheets", "Attendance"].includes(item.name);
+          const requiresClasses = ["Students", "Fees", "Marksheets", "Attendance"].includes(item.name);
+
+          let isRestricted = false;
+          let restrictionMessage = "";
+          let redirectPath = "";
+
+          if (isSchoolScoped) {
+            if (!currentSession && requiresSession) {
+              // State 1: No Session
+              isRestricted = true;
+              restrictionMessage = "Please create an academic session first.";
+              redirectPath = "/school/setup/session";
+            } else if (currentSession && !hasClasses && requiresClasses) {
+              // State 2: Session exists, no classes -> Classes allowed, others restricted
+              isRestricted = true;
+              restrictionMessage = "Please create at least one class to access this section.";
+              redirectPath = "/classes";
+            }
+          }
 
           return (
             <Link
               key={item.path}
-              href={isRestricted ? "/classes" : item.path}
+              href={isRestricted ? "#" : item.path}
               onClick={(e) => {
                 if (isRestricted) {
                   e.preventDefault();
-                  alert("Please create at least one class to access this section.");
-                  // You might want to use a toast here if available, but alert is safe for now as requested "banner/toast"
-                  // router.push("/classes"); // Link href handles it if we don't prevent default, but we want to intercept.
-                  // Actually, if we prevent default, we must push manually.
-                  // But cleaner is to let the href be /classes and just show the alert?
-                  // No, users prefer staying on the same page or explicit redirect.
-                  // Let's use simpler approach:
-                  // If restricted, clicking it shows alert and goes to /classes.
-                  window.location.href = "/classes";
+                  alert(restrictionMessage);
+                  if (redirectPath) {
+                    router.push(redirectPath);
+                  }
                 }
               }}
               className={`

@@ -38,4 +38,5 @@ public class SchoolDto {
     private String description;
 
     private Boolean active; // use Boolean to allow null in partial updates
+    private Long currentSessionId; // Currently active academic session
 }

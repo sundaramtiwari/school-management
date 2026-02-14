@@ -8,7 +8,7 @@ import { useSession } from "@/context/SessionContext";
 
 export default function SchoolAdminDashboard() {
   const { user } = useAuth();
-  const { currentSession, isLoading: sessionLoading } = useSession();
+  const { currentSession, isSessionLoading: sessionLoading } = useSession();
   const [stats, setStats] = useState({
     students: 0,
     classes: 0,
@@ -171,7 +171,14 @@ export default function SchoolAdminDashboard() {
           <div>
             <h1 className="text-3xl font-bold">{schoolName}</h1>
             <p className="text-blue-100 mt-1">School Administration Dashboard</p>
-            <p className="text-blue-200 text-sm mt-1">Session: {currentSession?.name || "Loading..."}</p>
+            <p className="text-blue-200 text-sm mt-1">
+              {sessionLoading
+                ? "Loading Session..."
+                : currentSession
+                  ? `Session: ${currentSession.name}`
+                  : "No Academic Session Created"
+              }
+            </p>
           </div>
         </div>
       </header>
