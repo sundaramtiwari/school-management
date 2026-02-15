@@ -10,7 +10,7 @@ const menu = [
   { name: "Classes", path: "/classes" },
   { name: "Fees", path: "/fees" },
   { name: "Marksheets", path: "/marksheets" },
-  { name: "Attendance", path: "/attendance" },
+  { name: "Exams", path: "/exams" },
   { name: "Sessions", path: "/sessions" },
 ];
 

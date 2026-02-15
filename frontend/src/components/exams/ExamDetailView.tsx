@@ -1,0 +1,349 @@
+"use client";
+
+import { useEffect, useState } from "react";
+import { examApi } from "@/lib/examApi";
+import { studentApi } from "@/lib/studentApi";
+import { api } from "@/lib/api";
+import { useToast } from "@/components/ui/Toast";
+import Modal from "@/components/ui/Modal";
+import MarksheetMVP from "./MarksheetMVP";
+
+interface ExamDetailViewProps {
+    exam: any;
+    classId: number;
+    onClose: () => void;
+}
+
+export default function ExamDetailView({ exam, classId, onClose }: ExamDetailViewProps) {
+    const { showToast } = useToast();
+    const [activeTab, setActiveTab] = useState<"subjects" | "marks" | "results">("subjects");
+
+    const [subjects, setSubjects] = useState<any[]>([]);
+    const [loadingSubjects, setLoadingSubjects] = useState(false);
+
+    const [students, setStudents] = useState<any[]>([]);
+    const [loadingStudents, setLoadingStudents] = useState(false);
+
+    const [marksData, setMarksData] = useState<any[]>([]);
+    const [isSavingMarks, setIsSavingMarks] = useState(false);
+
+    const [availableSubjects, setAvailableSubjects] = useState<any[]>([]);
+    const [showAddSubject, setShowAddSubject] = useState(false);
+    const [newSubject, setNewSubject] = useState({ subjectId: "", maxMarks: 100 });
+
+    /* ---------------- Init ---------------- */
+
+    useEffect(() => {
+        loadSubjects();
+        loadStudents();
+        loadAvailableSubjects();
+        loadExistingMarks();
+    }, [exam.id]);
+
+    async function loadSubjects() {
+        try {
+            setLoadingSubjects(true);
+            const res = await examApi.listSubjects(exam.id);
+            setSubjects(res.data || []);
+        } catch {
+            showToast("Failed to load exam subjects", "error");
+        } finally {
+            setLoadingSubjects(false);
+        }
+    }
+
+    async function loadStudents() {
+        try {
+            setLoadingStudents(true);
+            const res = await studentApi.byClass(classId, 0, 100);
+            setStudents(res.data.content || []);
+        } catch {
+            showToast("Failed to load students", "error");
+        } finally {
+            setLoadingStudents(false);
+        }
+    }
+
+    async function loadAvailableSubjects() {
+        try {
+            const res = await api.get("/api/subjects/mine");
+            setAvailableSubjects(res.data.content || []);
+        } catch {
+            showToast("Failed to load available subjects", "error");
+        }
+    }
+
+    async function loadExistingMarks() {
+        try {
+            const res = await examApi.listMarks(exam.id);
+            setMarksData(res.data || []);
+        } catch {
+            showToast("Failed to load existing marks", "error");
+        }
+    }
+
+    /* ---------------- Handlers ---------------- */
+
+    async function handleAddSubject() {
+        if (!newSubject.subjectId || !newSubject.maxMarks) {
+            showToast("Please fill all fields", "warning");
+            return;
+        }
+        try {
+            await examApi.addSubject({
+                examId: exam.id,
+                subjectId: Number(newSubject.subjectId),
+                maxMarks: Number(newSubject.maxMarks),
+            });
+            showToast("Subject added successfully", "success");
+            setShowAddSubject(false);
+            loadSubjects();
+        } catch (err: any) {
+            showToast("Failed to add subject", "error");
+        }
+    }
+
+    async function handleBulkSave(editedMarks: any[]) {
+        try {
+            setIsSavingMarks(true);
+            await examApi.saveMarksBulk(exam.id, { marks: editedMarks });
+            showToast("Marks saved successfully", "success");
+            loadExistingMarks();
+        } catch {
+            showToast("Failed to save marks", "error");
+        } finally {
+            setIsSavingMarks(false);
+        }
+    }
+
+    /* ---------------- UI ---------------- */
+
+    return (
+        <Modal
+            isOpen={!!exam}
+            onClose={onClose}
+            title={`Exam: ${exam.name}`}
+            maxWidth="max-w-6xl"
+        >
+            <div className="flex flex-col gap-6">
+                {/* Tabs */}
+                <div className="flex gap-4 border-b">
+                    {["subjects", "marks", "results"].map((tab) => (
+                        <button
+                            key={tab}
+                            onClick={() => setActiveTab(tab as any)}
+                            className={`px-4 py-2 text-sm font-bold capitalize transition-all border-b-2 ${activeTab === tab
+                                    ? "border-blue-600 text-blue-600"
+                                    : "border-transparent text-gray-400 hover:text-gray-600"
+                                }`}
+                        >
+                            {tab}
+                        </button>
+                    ))}
+                </div>
+
+                {/* Tab Content */}
+                <div className="min-h-[400px]">
+                    {activeTab === "subjects" && (
+                        <div className="space-y-4">
+                            <div className="flex justify-between items-center">
+                                <h3 className="font-bold text-gray-700">Exam Subjects</h3>
+                                <button
+                                    onClick={() => setShowAddSubject(true)}
+                                    className="bg-blue-600 text-white px-4 py-1.5 rounded-lg text-xs font-bold"
+                                >
+                                    + Add Subject
+                                </button>
+                            </div>
+
+                            <div className="bg-gray-50 rounded-xl border overflow-hidden">
+                                <table className="w-full text-sm">
+                                    <thead className="bg-gray-100 border-b">
+                                        <tr>
+                                            <th className="p-3 text-left">Subject</th>
+                                            <th className="p-3 text-center">Max Marks</th>
+                                        </tr>
+                                    </thead>
+                                    <tbody className="divide-y">
+                                        {subjects.map((s) => (
+                                            <tr key={s.id}>
+                                                <td className="p-3 font-semibold">{s.subjectName || `Subject #${s.subjectId}`}</td>
+                                                <td className="p-3 text-center">{s.maxMarks}</td>
+                                            </tr>
+                                        ))}
+                                        {subjects.length === 0 && (
+                                            <tr>
+                                                <td colSpan={2} className="p-10 text-center text-gray-400 italic">No subjects added yet.</td>
+                                            </tr>
+                                        )}
+                                    </tbody>
+                                </table>
+                            </div>
+                        </div>
+                    )}
+
+                    {activeTab === "marks" && (
+                        <MarksEntryTable
+                            students={students}
+                            subjects={subjects}
+                            initialMarks={marksData}
+                            onSave={handleBulkSave}
+                            isSaving={isSavingMarks}
+                        />
+                    )}
+
+                    {activeTab === "results" && (
+                        <MarksheetMVP
+                            students={students}
+                            subjects={subjects}
+                            marks={marksData}
+                        />
+                    )}
+                </div>
+            </div>
+
+            {/* Add Subject Modal */}
+            {showAddSubject && (
+                <Modal
+                    isOpen={showAddSubject}
+                    onClose={() => setShowAddSubject(false)}
+                    title="Add Subject to Exam"
+                    footer={
+                        <div className="flex gap-2 text-sm">
+                            <button
+                                onClick={() => setShowAddSubject(false)}
+                                className="px-4 py-2 border rounded-lg"
+                            >
+                                Cancel
+                            </button>
+                            <button
+                                onClick={handleAddSubject}
+                                className="px-4 py-2 bg-blue-600 text-white font-bold rounded-lg"
+                            >
+                                Add Subject
+                            </button>
+                        </div>
+                    }
+                >
+                    <div className="space-y-4">
+                        <div className="space-y-1">
+                            <label className="text-xs font-bold text-gray-400 uppercase">Select Subject</label>
+                            <select
+                                value={newSubject.subjectId}
+                                onChange={(e) => setNewSubject({ ...newSubject, subjectId: e.target.value })}
+                                className="input-ref"
+                            >
+                                <option value="">Select Subject</option>
+                                {availableSubjects.map(s => (
+                                    <option key={s.id} value={s.id}>{s.name}</option>
+                                ))}
+                            </select>
+                        </div>
+                        <div className="space-y-1">
+                            <label className="text-xs font-bold text-gray-400 uppercase">Max Marks</label>
+                            <input
+                                type="number"
+                                value={newSubject.maxMarks}
+                                onChange={(e) => setNewSubject({ ...newSubject, maxMarks: Number(e.target.value) })}
+                                className="input-ref"
+                            />
+                        </div>
+                    </div>
+                </Modal>
+            )}
+        </Modal>
+    );
+}
+
+/* ---------------- Marks Entry Component ---------------- */
+
+function MarksEntryTable({ students, subjects, initialMarks, onSave, isSaving }: any) {
+    const [localMarks, setLocalMarks] = useState<Record<string, number>>({});
+
+    useEffect(() => {
+        const map: Record<string, number> = {};
+        initialMarks.forEach((m: any) => {
+            map[`${m.studentId}-${m.examSubjectId}`] = m.marksObtained;
+        });
+        setLocalMarks(map);
+    }, [initialMarks]);
+
+    function handleMarkChange(studentId: number, examSubjectId: number, val: string) {
+        const num = parseInt(val) || 0;
+        setLocalMarks({
+            ...localMarks,
+            [`${studentId}-${examSubjectId}`]: num
+        });
+    }
+
+    function doSave() {
+        const payload = Object.entries(localMarks).map(([key, val]) => {
+            const [studentId, examSubjectId] = key.split("-");
+            return {
+                studentId: Number(studentId),
+                examSubjectId: Number(examSubjectId),
+                marksObtained: val
+            };
+        });
+        onSave(payload);
+    }
+
+    if (subjects.length === 0) {
+        return <div className="p-20 text-center text-gray-400">Please add subjects first to enter marks.</div>;
+    }
+
+    return (
+        <div className="space-y-4">
+            <div className="flex justify-between items-center">
+                <h3 className="font-bold text-gray-700">Enter Marks</h3>
+                <button
+                    onClick={doSave}
+                    disabled={isSaving}
+                    className="bg-blue-600 text-white px-6 py-2 rounded-xl font-bold text-sm shadow-md hover:bg-blue-700 disabled:bg-gray-400"
+                >
+                    {isSaving ? "Saving..." : "Save All Marks"}
+                </button>
+            </div>
+
+            <div className="overflow-x-auto bg-white border rounded-xl shadow-sm">
+                <table className="w-full text-sm">
+                    <thead className="bg-gray-50 border-b">
+                        <tr>
+                            <th className="p-4 text-left border-r sticky left-0 bg-gray-50 z-10 w-48">Student Name</th>
+                            {subjects.map((s: any) => (
+                                <th key={s.id} className="p-4 text-center border-r min-w-[120px]">
+                                    {s.subjectName || `Subject #${s.subjectId}`}
+                                    <div className="text-[10px] text-gray-400 font-normal mt-1">(Max: {s.maxMarks})</div>
+                                </th>
+                            ))}
+                        </tr>
+                    </thead>
+                    <tbody className="divide-y">
+                        {students.map((st: any) => (
+                            <tr key={st.id} className="hover:bg-gray-50/50">
+                                <td className="p-4 font-bold text-gray-800 border-r sticky left-0 bg-white z-10 shadow-[2px_0_5px_rgba(0,0,0,0.05)]">
+                                    {st.firstName} {st.lastName}
+                                </td>
+                                {subjects.map((s: any) => {
+                                    const key = `${st.id}-${s.id}`;
+                                    return (
+                                        <td key={s.id} className="p-4 text-center border-r">
+                                            <input
+                                                type="number"
+                                                min="0"
+                                                max={s.maxMarks}
+                                                value={localMarks[key] !== undefined ? localMarks[key] : ""}
+                                                onChange={(e) => handleMarkChange(st.id, s.id, e.target.value)}
+                                                className="w-20 px-2 py-1 text-center border rounded font-mono font-bold focus:ring-2 focus:ring-blue-500 outline-none"
+                                            />
+                                        </td>
+                                    );
+                                })}
+                            </tr>
+                        ))}
+                    </tbody>
+                </table>
+            </div>
+        </div>
+    );
+}
