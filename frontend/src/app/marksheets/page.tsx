@@ -293,6 +293,25 @@ export default function MarksheetsPage() {
                 </div>
             </div>
 
+            {/* ---------------- Empty State / Create Exam Prompt ---------------- */}
+            {selectedClass && !loading.exams && exams.length === 0 && (
+                <div className="bg-blue-50 border border-blue-200 rounded-2xl p-6 flex flex-col md:flex-row items-center justify-between gap-4">
+                    <div className="flex items-center gap-4">
+                        <div className="bg-white p-3 rounded-full text-2xl shadow-sm">📝</div>
+                        <div>
+                            <h3 className="font-bold text-blue-900">No Exams Found</h3>
+                            <p className="text-sm text-blue-700">There are no exams created for this class yet. You need to create an exam first.</p>
+                        </div>
+                    </div>
+                    <a
+                        href="/exams"
+                        className="bg-blue-600 text-white px-6 py-2.5 rounded-xl font-bold shadow-md hover:bg-blue-700 transition-all text-sm whitespace-nowrap"
+                    >
+                        Go to Exam Management →
+                    </a>
+                </div>
+            )}
+
             {/* ---------------- Content ---------------- */}
             {loading.students || loading.exams || loading.examData ? (
                 <div className="bg-white p-8 rounded-2xl border shadow-sm">

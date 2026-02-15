@@ -9,8 +9,8 @@ const menu = [
   { name: "Students", path: "/students" },
   { name: "Classes", path: "/classes" },
   { name: "Fees", path: "/fees" },
-  { name: "Marksheets", path: "/marksheets" },
   { name: "Exams", path: "/exams" },
+  { name: "Marksheets", path: "/marksheets" },
   { name: "Sessions", path: "/sessions" },
 ];
 
