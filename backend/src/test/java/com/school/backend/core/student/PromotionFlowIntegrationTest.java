@@ -91,6 +91,8 @@ public class PromotionFlowIntegrationTest extends BaseAuthenticatedIntegrationTe
                                 .build());
                 session2025Id = session2025.getId();
 
+                setSessionHeader(session2024Id); // Set default session for student registration
+
                 this.fromClassId = createClass(schoolId, "Class 1", "A", session2024Id);
                 this.toClassId = createClass(schoolId, "Class 2", "B", session2025Id);
                 this.studentId = createStudent(schoolId, "Amit Kumar");

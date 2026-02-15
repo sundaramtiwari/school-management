@@ -7,6 +7,7 @@ import com.school.backend.fee.dto.StudentFeeAssignRequest;
 import com.school.backend.fee.dto.StudentFeeAssignmentDto;
 import com.school.backend.fee.entity.FeeStructure;
 import com.school.backend.fee.entity.StudentFeeAssignment;
+import com.school.backend.fee.enums.FeeFrequency;
 import com.school.backend.fee.repository.FeeStructureRepository;
 import com.school.backend.fee.repository.StudentFeeAssignmentRepository;
 import lombok.RequiredArgsConstructor;
@@ -45,10 +46,16 @@ public class StudentFeeAssignmentService {
             throw new IllegalStateException("Fee already assigned to student for this session");
         }
 
+        int finalAmount = fs.getAmount();
+        if (fs.getFrequency() == FeeFrequency.MONTHLY) {
+            finalAmount = finalAmount * 12;
+        }
+
         StudentFeeAssignment assignment = StudentFeeAssignment.builder()
                 .studentId(req.getStudentId())
                 .feeStructureId(fs.getId())
                 .sessionId(req.getSessionId())
+                .amount(finalAmount)
                 .schoolId(TenantContext.getSchoolId())
                 .active(true)
                 .build();

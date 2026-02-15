@@ -7,6 +7,7 @@ import com.school.backend.core.student.repository.StudentRepository;
 import com.school.backend.fee.entity.FeeStructure;
 import com.school.backend.fee.entity.FeeType;
 import com.school.backend.fee.entity.StudentFeeAssignment;
+import com.school.backend.fee.enums.FeeFrequency;
 import com.school.backend.fee.repository.FeeStructureRepository;
 import com.school.backend.fee.repository.FeeTypeRepository;
 import com.school.backend.fee.repository.StudentFeeAssignmentRepository;
@@ -125,10 +126,15 @@ public class TransportEnrollmentService {
                                 student.getId(), structure.getId(), sessionId);
 
                 if (!alreadyAssigned) {
+                        int finalAmount = structure.getAmount();
+                        if (structure.getFrequency() == FeeFrequency.MONTHLY) {
+                                finalAmount = finalAmount * 12;
+                        }
                         StudentFeeAssignment assignment = StudentFeeAssignment.builder()
                                         .studentId(student.getId())
                                         .feeStructureId(structure.getId())
                                         .sessionId(sessionId)
+                                        .amount(finalAmount)
                                         .active(true)
                                         .schoolId(TenantContext.getSchoolId())
                                         .build();
