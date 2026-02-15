@@ -7,7 +7,7 @@ import lombok.experimental.SuperBuilder;
 
 @Entity
 @Table(name = "student_marks", uniqueConstraints = {
-        @UniqueConstraint(columnNames = {"exam_subject_id", "student_id"})
+        @UniqueConstraint(columnNames = { "exam_id", "student_id", "exam_subject_id" })
 })
 @Getter
 @Setter
@@ -21,6 +21,9 @@ public class StudentMark extends TenantEntity {
     @GeneratedValue(strategy = GenerationType.IDENTITY)
     @EqualsAndHashCode.Include
     private Long id;
+
+    @Column(name = "exam_id", nullable = false)
+    private Long examId;
 
     @Column(name = "exam_subject_id", nullable = false)
     private Long examSubjectId;

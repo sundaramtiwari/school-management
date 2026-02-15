@@ -41,6 +41,7 @@ public class Exam extends TenantEntity {
     private boolean active = true;
 
     @Enumerated(EnumType.STRING)
-    private ExamStatus status;
+    @Builder.Default
+    private ExamStatus status = ExamStatus.DRAFT;
 
 }

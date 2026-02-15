@@ -23,6 +23,7 @@ type Exam = {
     startDate?: string;
     endDate?: string;
     active: boolean;
+    status: 'DRAFT' | 'PUBLISHED' | 'LOCKED';
 };
 
 export default function ExamsPage() {
@@ -182,8 +183,11 @@ export default function ExamsPage() {
                                         </span>
                                     </td>
                                     <td className="p-4 text-center">
-                                        <span className={`px-2 py-0.5 rounded-full text-[10px] font-bold uppercase ${exam.active ? "bg-green-50 text-green-600" : "bg-red-50 text-red-600"}`}>
-                                            {exam.active ? "Active" : "Closed"}
+                                        <span className={`px-2 py-0.5 rounded-full text-[10px] font-bold uppercase ${exam.status === 'PUBLISHED' ? "bg-blue-50 text-blue-600" :
+                                                exam.status === 'LOCKED' ? "bg-gray-100 text-gray-600" :
+                                                    "bg-yellow-50 text-yellow-600"
+                                            }`}>
+                                            {exam.status}
                                         </span>
                                     </td>
                                     <td className="p-4 text-center">

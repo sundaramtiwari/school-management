@@ -13,4 +13,8 @@ public interface ExamSubjectRepository
     boolean existsByExamIdAndSubjectId(Long examId, Long subjectId);
 
     List<ExamSubject> findByExamId(Long examId);
+
+    long countByExamId(Long examId);
+
+    boolean existsByExamIdAndMaxMarksLessThanEqual(Long examId, int maxMarks);
 }

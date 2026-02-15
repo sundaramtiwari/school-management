@@ -189,7 +189,7 @@ public class MarksheetService {
     private void addMarksTable(Document document, MarksheetDto data) throws DocumentException {
         PdfPTable table = new PdfPTable(4);
         table.setWidthPercentage(100);
-        table.setWidths(new float[]{3f, 1f, 1f, 1f});
+        table.setWidths(new float[] { 3f, 1f, 1f, 1f });
 
         Font headFont = FontFactory.getFont(FontFactory.HELVETICA_BOLD, 10, Color.WHITE);
         Color headerColor = new Color(52, 73, 94);
@@ -274,6 +274,11 @@ public class MarksheetService {
 
         Exam exam = examRepository.findById(examId)
                 .orElseThrow(() -> new ResourceNotFoundException("Exam not found"));
+
+        if (exam.getStatus() == com.school.backend.common.enums.ExamStatus.DRAFT) {
+            throw new com.school.backend.common.exception.BusinessException(
+                    "Marksheet cannot be generated for DRAFT exams.");
+        }
 
         List<Object[]> rows = queryRepo.fetchStudentMarks(examId, studentId);
 

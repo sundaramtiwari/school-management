@@ -15,4 +15,6 @@ public interface StudentMarkRepository
     Optional<StudentMark> findByExamSubjectIdAndStudentId(Long examSubjectId, Long studentId);
 
     List<StudentMark> findByExamSubjectIdIn(List<Long> subjectIds);
+
+    long countByExamId(Long examId);
 }

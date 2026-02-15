@@ -15,9 +15,17 @@ import java.util.List;
 public class ExamSubjectService {
 
     private final ExamSubjectRepository repository;
+    private final com.school.backend.testmanagement.repository.ExamRepository examRepository;
 
     @Transactional
     public ExamSubject create(ExamSubjectCreateRequest req) {
+        com.school.backend.testmanagement.entity.Exam exam = examRepository.findById(req.getExamId())
+                .orElseThrow(() -> new com.school.backend.common.exception.ResourceNotFoundException("Exam not found"));
+
+        if (exam.getStatus() != com.school.backend.common.enums.ExamStatus.DRAFT) {
+            throw new com.school.backend.common.exception.BusinessException(
+                    "Cannot add subjects to a published or locked exam.");
+        }
 
         if (repository.existsByExamIdAndSubjectId(
                 req.getExamId(), req.getSubjectId())) {

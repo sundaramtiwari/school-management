@@ -18,4 +18,10 @@ export const examApi = {
 
     saveMarksBulk: (examId: number, data: any) =>
         api.post(`/api/exams/${examId}/marks/bulk`, data),
+
+    publish: (examId: number) =>
+        api.put(`/api/exams/${examId}/publish`),
+
+    lock: (examId: number) =>
+        api.put(`/api/exams/${examId}/lock`),
 };

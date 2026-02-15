@@ -44,4 +44,16 @@ public class ExamController {
         service.saveMarksBulk(examId, dto);
         return ResponseEntity.ok().build();
     }
+
+    @PutMapping("/{examId}/publish")
+    @PreAuthorize("hasAnyRole('SUPER_ADMIN', 'PLATFORM_ADMIN', 'SCHOOL_ADMIN')")
+    public com.school.backend.testmanagement.dto.ExamDto publish(@PathVariable Long examId) {
+        return service.publishExam(examId);
+    }
+
+    @PutMapping("/{examId}/lock")
+    @PreAuthorize("hasAnyRole('SUPER_ADMIN', 'PLATFORM_ADMIN', 'SCHOOL_ADMIN')")
+    public com.school.backend.testmanagement.dto.ExamDto lock(@PathVariable Long examId) {
+        return service.lockExam(examId);
+    }
 }
