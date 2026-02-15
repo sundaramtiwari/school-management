@@ -46,5 +46,4 @@ public interface StudentRepository extends JpaRepository<Student, Long> {
 
     boolean existsByAdmissionNumberAndSchoolId(String admissionNumber, Long schoolId);
 
-    long countBySchoolId(Long schoolId);
 }

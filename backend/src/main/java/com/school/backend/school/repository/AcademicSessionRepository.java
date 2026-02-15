@@ -13,4 +13,6 @@ public interface AcademicSessionRepository extends JpaRepository<AcademicSession
     long countByActiveTrue();
 
     boolean existsBySchoolIdAndName(Long schoolId, String name);
+
+    boolean existsByIdAndSchoolId(Long id, Long schoolId);
 }

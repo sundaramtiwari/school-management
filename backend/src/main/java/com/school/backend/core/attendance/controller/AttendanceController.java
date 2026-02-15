@@ -1,9 +1,9 @@
 package com.school.backend.core.attendance.controller;
 
+import com.school.backend.common.tenant.SessionResolver;
 import com.school.backend.core.attendance.entity.StudentAttendance;
 import com.school.backend.core.attendance.enums.AttendanceStatus;
 import com.school.backend.core.attendance.service.AttendanceService;
-import com.school.backend.common.tenant.SessionResolver;
 import com.school.backend.user.security.SecurityUtil;
 import lombok.RequiredArgsConstructor;
 import org.springframework.format.annotation.DateTimeFormat;
@@ -44,8 +44,9 @@ public class AttendanceController {
 
     @GetMapping("/stats/today")
     @PreAuthorize("hasAnyRole('SCHOOL_ADMIN', 'SUPER_ADMIN', 'PLATFORM_ADMIN')")
-    public Map<String, Double> getTodayStats() {
-        double stats = attendanceService.getTodayStats(SecurityUtil.schoolId());
+    public Map<String, Double> getTodayStats(@RequestParam(required = false) Long sessionId) {
+        Long effectiveSessionId = sessionId != null ? sessionId : sessionResolver.resolveForCurrentSchool();
+        double stats = attendanceService.getTodayStats(SecurityUtil.schoolId(), effectiveSessionId);
         return Map.of("percentage", stats);
     }
 }

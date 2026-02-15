@@ -5,7 +5,6 @@ import com.school.backend.core.attendance.enums.AttendanceStatus;
 import com.school.backend.core.attendance.repository.AttendanceRepository;
 import com.school.backend.core.student.entity.StudentEnrollment;
 import com.school.backend.core.student.repository.StudentEnrollmentRepository;
-import com.school.backend.core.student.repository.StudentRepository;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
@@ -22,7 +21,6 @@ public class AttendanceService {
 
     private final AttendanceRepository attendanceRepository;
     private final StudentEnrollmentRepository enrollmentRepository;
-    private final StudentRepository studentRepository;
 
     @Transactional
     public void markAttendanceBulk(LocalDate date, Map<Long, AttendanceStatus> attendanceMap, Long schoolId) {
@@ -66,8 +64,9 @@ public class AttendanceService {
     }
 
     @Transactional(readOnly = true)
-    public double getTodayStats(Long schoolId) {
-        long totalStudents = studentRepository.countBySchoolId(schoolId);
+    public double getTodayStats(Long schoolId, Long sessionId) {
+        long totalStudents = enrollmentRepository
+                .countBySchoolIdAndSessionIdAndActiveTrue(schoolId, sessionId);
         if (totalStudents == 0) {
             return 0.0;
         }

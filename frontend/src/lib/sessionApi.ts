@@ -8,8 +8,8 @@ export const sessionApi = {
         api.post("/api/academic-sessions", data),
 
     update: (id: number, data: any) =>
-        api.put(`/api/academic-sessions/${id}`, data),
+        api.put("/api/academic-sessions/${id}", data),
 
     setCurrent: (sessionId: number) =>
-        api.put(`/api/academic-sessions/${sessionId}/set-current`),
+        api.put("/api/academic-sessions/${sessionId}/set-current"),
 };

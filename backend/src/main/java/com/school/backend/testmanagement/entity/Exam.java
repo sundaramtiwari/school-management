@@ -1,6 +1,7 @@
 package com.school.backend.testmanagement.entity;
 
 import com.school.backend.common.entity.TenantEntity;
+import com.school.backend.common.enums.ExamStatus;
 import jakarta.persistence.*;
 import lombok.*;
 import lombok.experimental.SuperBuilder;
@@ -38,5 +39,8 @@ public class Exam extends TenantEntity {
 
     @Builder.Default
     private boolean active = true;
+
+    @Enumerated(EnumType.STRING)
+    private ExamStatus status;
 
 }

@@ -21,4 +21,6 @@ public interface StudentEnrollmentRepository extends JpaRepository<StudentEnroll
 
     List<StudentEnrollment> findByClassIdAndSessionId(Long classId, Long sessionId);
 
+    long countBySchoolIdAndSessionIdAndActiveTrue(Long schoolId, Long sessionId);
+
 }
