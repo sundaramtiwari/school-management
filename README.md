@@ -1,99 +1,158 @@
 # School Management System (SaaS)
 
-A premium, full-stack School Management System built using **Spring Boot 3 (Backend)** and **Next.js 14 (Frontend)**. This platform is designed as a secure, multi-tenant SaaS for managing institutional operations including academics, finance, and administration.
+A secure, multi-tenant School Management SaaS built using:
+
+- Spring Boot 3 (Backend)
+- Next.js 14 (Frontend)
+- JWT-based tenant isolation
+- Strict session-aware academic model
+
+This system is designed for scalable institutional management in India.
 
 ---
 
-## 🎨 Design Philosophy: Premium UI/UX
+## 🎯 Core Philosophy
 
-This project features a custom-built, modern design system:
-- **Rich Aesthetics**: Vibrant colors, sleek dark modes, and high-contrast layouts.
-- **Glassmorphism & Micro-animations**: Subtle hover effects and smooth transitions for a high-end feel.
-- **Robust Feedback**: Integrated global Toast notifications and professional Modal systems.
-- **Skeleton Screens**: Every loading state is handled with skeleton loaders for perceived performance.
+- Strict tenant isolation (school-based)
+- Strict academic session enforcement
+- Clean service architecture
+- Production-ready validation logic
+- Premium UI/UX
 
 ---
 
 ## 🚀 Tech Stack
 
 ### Backend
-- **Java 17 / Spring Boot 3.x**
-- **Security**: Spring Security with JWT (Strict tenant isolation via JWT-derived `schoolId`).
-- **Data**: Spring Data JPA & Hibernate (PostgreSQL).
-- **Automation**: Flyway for database versioning.
-- **Documentation**: OpenAPI / Swagger.
+- Java 17
+- Spring Boot 3.x
+- Spring Security (JWT)
+- Hibernate + JPA
+- OpenPDF
+- H2 (Dev) → PostgreSQL (Planned)
 
 ### Frontend
-- **Next.js 14 (App Router)**
-- **Tailwind CSS**: Utility-first styling with custom premium design tokens.
-- **State Management**: React Context for global UI (Modals, Toasts).
-- **Type Safety**: TypeScript.
+- Next.js 14 (App Router)
+- TypeScript
+- Tailwind CSS
+- Context API for global UI state
 
 ---
 
-## 📁 Project Structure
+## 🏗 Architecture
 
-```text
-school-management/
-├── backend/  → Spring Boot application (REST API)
-└── frontend/ → Next.js application (Management Portal)
-```
+Controller → Service → Repository → Entity
 
----
 
-## ✅ Core Features
+Multi-tenancy:
+- schoolId derived from JWT
+- SUPER_ADMIN bypass supported
+- No cross-tenant data exposure
 
-### 🏛️ Institutional Management
-- **School Onboarding**: Global administration for multi-school setups.
-- **Academic Sessions**: Managed timelines with standard session selectors.
-- **RBAC**: Role-Based Access Control (SUPER_ADMIN, SCHOOL_ADMIN, TEACHER, etc.).
-
-### 🎓 Academic Operations
-- **Student Roster**: Full lifecycle management (Admission, Promotion).
-- **Attendance**: High-performance bulk marking with 50-student pagination and persistence.
-- **Marksheets**: Exam cycle management and official PDF report card generation.
-
-### 💰 Finance & Billing
-- **Fee Structures**: Granular fee head configuration per class/session.
-- **Collection**: Digital and cash payment recording with transactional auditing.
-- **Documents**: Auto-generated Fee Challans and Payment Receipts.
+Session isolation:
+- Academic data filtered by sessionId
+- StudentEnrollment is source of academic truth
 
 ---
 
-## ⚙️ Setup Instructions
+## ✅ Implemented Modules
 
-### ☕ Backend
-1. **Requirements**: Java 17+, Gradle.
-2. **Run**:
-   ```bash
-   cd backend
-   ./gradlew bootRun
-   ```
-   API: `http://localhost:8080/swagger-ui.html`
+### 🏫 School & RBAC
+- Multi-school onboarding
+- Role-based access control
+- JWT authentication
 
-### ⚛️ Frontend
-1. **Requirements**: Node.js 18+.
-2. **Run**:
-   ```bash
-   cd frontend
-   npm install
-   npm run dev
-   ```
-   Portal: `http://localhost:3000`
+### 🎓 Students & Academics
+- Student lifecycle
+- Enrollment per session
+- Attendance (bulk marking)
+- Exam Management
+- Marksheets (PDF generation)
+
+### 💰 Fee System
+- Fee Structures per class/session
+- Automatic student assignment
+- Snapshot-based dues
+- Payment tracking
+- Defaulter reporting
+
+### 📝 Exam Lifecycle
+Strict enforcement:
+
+DRAFT → PUBLISHED → LOCKED
+
+- Publish validation checks
+- Lock enforcement
+- Read-only protection
+- Unique examId-based StudentMark constraint
+
+---
+
+## 🧪 Local Setup
+
+### Backend
+
+```bash
+cd backend
+./gradlew bootRun
+
+Swagger:
+http://localhost:8080/swagger-ui.html
+
+Frontend
+
+cd frontend
+npm install
+npm run dev
+
+Portal:
+http://localhost:3000
 
 ---
 
 ## 🧪 Testing & Quality
-- **Integration Tests**: Multi-tenant isolation verified with H2/RestAssured.
-- **UI Audit**: Comprehensive polish verified across all management flows.
+
+- Integration tests with H2 + RestAssured
+- Multi-tenant isolation verified
+- UI audit completed
+- Performance optimizations applied
+
+---
+
+## 📌 Current Status
+
+Fully functional locally
+
+H2 development database
+
+Manual verification ongoing
+
+No production deployment yet
+
+Infra planning phase (AWS vs DO)
+
+## 🔜 Upcoming Work
+
+Parent/Guardian UI integration
+
+Transport module refinement
+
+PostgreSQL migration
+
+Production infrastructure setup
+
+Subscription & billing
+
+Advanced analytics
 
 ---
 
 ## 👨‍💻 Author
-**Developed by: Sundaram Tiwari**  
-A state-of-the-art SaaS platform for the modern Indian educational landscape.
+
+Sundaram Tiwari
 
 ---
 
 ## 📄 License
-This project is private and proprietary. All rights reserved.
+
+Private & proprietary. All rights reserved.

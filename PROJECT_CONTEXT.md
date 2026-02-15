@@ -6,104 +6,196 @@ Last Updated: Feb 2026
 
 ## 1. Project Goal
 
-Build a SaaS School Management System where:
+Build a production-grade SaaS School Management System with:
 
-- **Super Admin**: Onboards schools and has global access across all tenants.
-- **Schools**: Manage students, teachers, fees, academics with strict tenant isolation.
-- **Multi-tenant system**: School-based isolation enforced via JWT and Hibernate filters.
-- **Role-based Auth**: `SUPER_ADMIN`, `SCHOOL_ADMIN`, `TEACHER`, `ACCOUNTANT`, etc.
+- **Super Admin**: Onboards schools and manages tenants.
+- **Schools**: Manage students, teachers, fees, exams, attendance.
+- **Strict Multi-Tenancy**: Enforced via JWT-based `schoolId`.
+- **Strict Session Isolation**: Academic data is session-scoped.
+- **Role-based Auth**: SUPER_ADMIN, PLATFORM_ADMIN, SCHOOL_ADMIN, TEACHER, ACCOUNTANT.
+
+This is designed as a secure, scalable SaaS platform.
 
 ---
 
 ## 2. Tech Stack
 
 ### Backend
-- **Java 17 / Spring Boot 3.x**
-- **Spring Security**: RBAC + JWT-based school identification.
-- **Spring Data JPA / Hibernate**: Tenant Isolation via `@Filter` + `SecurityUtil`.
-- **Flyway**: Managed database migrations.
+- Java 17 / Spring Boot 3.x
+- Spring Security (JWT-based RBAC)
+- Spring Data JPA / Hibernate
+- Hibernate Tenant Filter (school-based isolation)
+- Flyway (planned for PostgreSQL migration)
+- OpenPDF (Report generation)
 
 ### Frontend
-- **Next.js 14+ (App Router)**
-- **Tailwind CSS**: Custom "Premium" design tokens.
-- **Global UI State**: Context-based Toast system, Modal system, and Breadcrumbs.
+- Next.js 14 (App Router)
+- TypeScript
+- Tailwind CSS (Premium Design System)
+- Context-based Global State (Session, Toasts, Modals)
 
 ---
 
-## 3. Architecture
+## 3. Core Architecture
 
 ### Pattern:
 Controller → Service → Repository → Entity
 
-### Security Layer (RBAC & Multi-tenancy)
-- **JWT Context**: Every request must carry a JWT. The `schoolId` is extracted from the JWT in the backend, not provided by the client (prevents cross-tenant IDOR).
-- **Global Admin**: `SUPER_ADMIN` bypasses tenant filters to manage all institutions.
+### Security Model
 
-### Modules:
-- **school**: Schools, Academic Sessions.
-- **user**: Staff, Roles, RBAC.
-- **core**: Students, Enrollment, Attendance (Bulk processing).
-- **fee**: Fee structures, Collection, Challans, Transaction auditing.
-- **marksheets**: Exam cycles, Result calculation, PDF report cards.
+- `schoolId` is derived from JWT.
+- Client NEVER sends schoolId.
+- SUPER_ADMIN bypasses tenant filter.
+- All academic modules are strictly school-scoped.
 
 ---
 
-## 4. UI/UX Framework
+## 4. Academic Session Model (STRICT)
 
-The frontend uses a standardized "Premium" aesthetic:
-- **Navigation**: Sidebar with dynamic active states + Global Breadcrumbs.
-- **Feedback**: 
-    - `useToast`: Non-blocking global notifications.
-    - `Modal`: Standardized dialogs for forms and confirmations.
-    - `Skeleton`: Visual feedback for all async loading states.
-- **Typography**: Bold, high-contrast layouts with modern sans-serif fonts.
+The system enforces session-based academic isolation.
 
----
+### Academic Data = Session Aware:
+- Students (via StudentEnrollment)
+- Classes
+- Exams
+- Marks
+- Attendance
+- Fees
+- Fee Assignments
 
-## 5. Core Entities
+### Non Session Aware:
+- School
+- Staff
+- FeeType
+- User / Roles
 
-### AcademicSession
-- `name` (e.g., "2024-25"), `startDate`, `endDate`, `isCurrent`.
+### StudentEnrollment = Academic Source of Truth
 
-### Student
-- `admissionNumber`, `firstName`, `lastName`.
-- `currentClass` (Linked to `SchoolClass`).
-- Automatic `schoolId` assignment via JWT.
+Student entity is permanent.
+Academic participation is determined by:
 
-### SchoolClass
-- Linked to `AcademicSession`.
+StudentEnrollment
 
-### Attendance
-- Bulk marking logic with 50-student-per-page pagination.
-- Persistence across pages via frontend `attendanceMap`.
+studentId
+classId
+sessionId
+active
 
----
 
-## 8. Frontend Status
-
-### Implemented
-- **Dashboard**: Institutional overview with real-time summary stats (Schools, Students, Collections).
-- **Fees**: Dashboard, Structure Configuration, and Transactional Collection flows.
-- **Attendance**: Global roster with bulk status toggles.
-- **Staff/Management**: Role-aware user creation and class/session configuration.
-- **Marksheets**: PDF generation for student report cards.
+All counts and academic queries must use StudentEnrollment.
 
 ---
 
-## 11. Key Design Decisions
-- **Strict School Context**: Removed `schoolId` from client parameters. Backend now uses `SecurityUtil.schoolId()` for all queries. (Secure SaaS model).
-- **Unified Navigation**: Centralized `ClientLayout` handles Sidebar and Breadcrumbs.
-- **Async Feedback**: All data-fetching components MUST implement `<TableSkeleton />`.
+## 5. Fee Module (Enhanced)
+
+### Features:
+
+- FeeStructure is class + session scoped.
+- Automatic assignment:
+  - On fee creation → assigned to enrolled students.
+  - On student enrollment → existing fees assigned.
+- Snapshot model:
+  - StudentFeeAssignment stores `amount` at assignment time.
+  - Future FeeStructure edits do not affect old dues.
+- Frequency Support:
+  - ONE_TIME (lifetime)
+  - ANNUALLY (per session)
+  - MONTHLY (aggregated as yearly total for MVP)
+
+### Optimization:
+- Removed N+1 queries.
+- Aggregated dues calculations.
+- Session-aware student filtering.
 
 ---
 
-## 12. Known Issues / Resolved
-- **PDF Logic**: Resolved `com.lowagie` dependency issues (OpenPDF).
-- **Tenant Leakage**: Fixed potential leakage by enforcing JWT-based filtering.
+## 6. Exam Lifecycle Enforcement
+
+Strict lifecycle implemented:
+
+DRAFT → PUBLISHED → LOCKED
+
+
+### Rules:
+
+DRAFT:
+- Subjects editable
+- Marks editable
+
+PUBLISHED:
+- Read-only marks
+- No subject edits
+- Marksheets allowed
+
+LOCKED:
+- Fully immutable
+- Finalized state
+
+### Validations Before Publish:
+
+- At least 1 subject
+- Active students exist in class/session
+- All subjects have maxMarks > 0
+- At least some marks entered
+- Tenant validation
+
+StudentMark now contains `examId` with unique constraint:
+(exam_id, student_id, exam_subject_id)
 
 ---
 
-## 14. Next Planned Steps
-- Parent/Guardian Portal.
-- Advanced Financial Reporting (Excel/CSV exports).
-- Mobile Application (PWA).
+## 7. Parent / Guardian Module
+
+Backend:
+- Parent entity exists.
+- Student ↔ Parent relationship defined.
+
+Frontend:
+- Parent data input UI pending implementation.
+
+Next Immediate Task:
+- Add Parent section in Student Create/Edit UI.
+
+---
+
+## 8. Current State
+
+- Running fully in local environment.
+- Database: H2 (development mode).
+- No production deployment yet.
+- Manual flow verification in progress.
+- Infrastructure decision pending (AWS vs DigitalOcean).
+
+---
+
+## 9. Key Design Decisions
+
+- Strict session enforcement.
+- Strict tenant enforcement.
+- No schoolId from client.
+- Snapshot-based fee system.
+- Exam lifecycle control.
+- No premature microservice splitting.
+- Optimize N+1 only when necessary.
+
+---
+
+## 10. Next Planned Steps
+
+- Parent UI implementation
+- Transport module refinement
+- PostgreSQL migration
+- Production infra setup
+- Billing & subscription system
+- Advanced reporting
+
+---
+
+## 11. Long-Term Vision
+
+- Parent portal
+- Teacher portal
+- Mobile PWA
+- Analytics dashboards
+- AI-based performance insights
+
