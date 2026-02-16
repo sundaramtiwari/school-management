@@ -10,6 +10,7 @@ const menu = [
   { name: "Schools", path: "/schools", icon: "🏫", roles: ["SUPER_ADMIN", "PLATFORM_ADMIN"] },
   { name: "Students", path: "/students", icon: "👨‍🎓", roles: ["SUPER_ADMIN", "PLATFORM_ADMIN", "SCHOOL_ADMIN", "TEACHER", "ACCOUNTANT"] },
   { name: "Classes", path: "/classes", icon: "📚", roles: ["SUPER_ADMIN", "PLATFORM_ADMIN", "SCHOOL_ADMIN", "TEACHER"] },
+  { name: "Subjects", path: "/subjects", icon: "📖", roles: ["SUPER_ADMIN", "PLATFORM_ADMIN", "SCHOOL_ADMIN", "TEACHER"] },
   { name: "Staff", path: "/staff", icon: "👥", roles: ["SUPER_ADMIN", "PLATFORM_ADMIN", "SCHOOL_ADMIN"] },
   { name: "Fees", path: "/fees", icon: "💰", roles: ["SUPER_ADMIN", "PLATFORM_ADMIN", "SCHOOL_ADMIN", "ACCOUNTANT"] },
   { name: "Transport", path: "/transport", icon: "🚌", roles: ["SUPER_ADMIN", "PLATFORM_ADMIN", "SCHOOL_ADMIN"] },

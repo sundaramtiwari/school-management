@@ -22,6 +22,16 @@ public class GlobalExceptionHandler {
                                                 "message", ex.getMessage()));
         }
 
+        @ExceptionHandler(BusinessException.class)
+        public ResponseEntity<Map<String, Object>> handleBusinessException(BusinessException ex) {
+                return ResponseEntity.status(HttpStatus.BAD_REQUEST)
+                                .body(Map.of(
+                                                "timestamp", LocalDateTime.now(),
+                                                "status", HttpStatus.BAD_REQUEST.value(),
+                                                "error", "Bad Request",
+                                                "message", ex.getMessage()));
+        }
+
         @ExceptionHandler(InvalidOperationException.class)
         public ResponseEntity<Map<String, Object>> handleInvalidOperation(InvalidOperationException ex) {
                 return ResponseEntity.status(HttpStatus.BAD_REQUEST)

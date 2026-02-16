@@ -41,10 +41,11 @@ public class SubjectController {
     @PreAuthorize("hasAnyRole('SCHOOL_ADMIN', 'TEACHER', 'ACCOUNTANT', 'SUPER_ADMIN', 'PLATFORM_ADMIN')")
     public ResponseEntity<Page<SubjectDto>> list(
             @RequestParam(defaultValue = "0") int page,
-            @RequestParam(defaultValue = "20") int size) {
+            @RequestParam(defaultValue = "20") int size,
+            @RequestParam(required = false) Boolean active) {
 
         Pageable pageable = PageRequest.of(page, size);
-        return ResponseEntity.ok(service.getBySchool(SecurityUtil.schoolId(), pageable));
+        return ResponseEntity.ok(service.getBySchool(SecurityUtil.schoolId(), active, pageable));
     }
 
     @GetMapping

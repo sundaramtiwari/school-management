@@ -1,7 +1,6 @@
 package com.school.backend.core.classsubject.service;
 
 import com.school.backend.common.exception.ResourceNotFoundException;
-import com.school.backend.common.tenant.TenantContext;
 import com.school.backend.core.classsubject.dto.ClassSubjectDto;
 import com.school.backend.core.classsubject.entity.ClassSubject;
 import com.school.backend.core.classsubject.entity.SchoolClass;
@@ -27,17 +26,29 @@ public class ClassSubjectService {
 
     public ClassSubjectDto create(ClassSubjectDto dto) {
 
+        Long schoolId = com.school.backend.user.security.SecurityUtil.schoolId();
+
         if (repository.existsBySchoolClassIdAndSubjectId(dto.getClassId(), dto.getSubjectId())) {
-            throw new IllegalArgumentException("Subject already assigned to class.");
+            throw new com.school.backend.common.exception.BusinessException("Subject already assigned to class.");
         }
 
         SchoolClass sc = classRepo.findById(dto.getClassId())
                 .orElseThrow(() -> new ResourceNotFoundException("Class not found: " + dto.getClassId()));
 
+        if (!sc.getSchool().getId().equals(schoolId)) {
+            throw new com.school.backend.common.exception.BusinessException("Class belongs to another school.");
+        }
+
         Subject s = subjectRepo.findById(dto.getSubjectId())
                 .orElseThrow(() -> new ResourceNotFoundException("Subject not found: " + dto.getSubjectId()));
 
-        Long schoolId = TenantContext.getSchoolId();
+        if (!s.getSchoolId().equals(schoolId)) {
+            throw new com.school.backend.common.exception.BusinessException("Subject belongs to another school.");
+        }
+
+        if (!s.isActive()) {
+            throw new com.school.backend.common.exception.BusinessException("Cannot assign inactive subject to class.");
+        }
 
         ClassSubject entity = mapper.toEntity(dto);
         entity.setSchoolId(schoolId);

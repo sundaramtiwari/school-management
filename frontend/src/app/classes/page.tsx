@@ -1,5 +1,7 @@
 "use client";
 
+import Link from "next/link";
+
 import { useEffect, useState } from "react";
 import { api } from "@/lib/api";
 import { useToast } from "@/components/ui/Toast";
@@ -168,7 +170,11 @@ export default function ClassesPage() {
                         <tbody className="divide-y divide-gray-100">
                             {classes.map((c) => (
                                 <tr key={c.id} className="hover:bg-gray-50/50 transition-colors">
-                                    <td className="p-4 font-bold text-gray-800">{c.name}</td>
+                                    <td className="p-4 font-bold text-gray-800">
+                                        <Link href={`/classes/${c.id}`} className="hover:text-blue-600 hover:underline">
+                                            {c.name}
+                                        </Link>
+                                    </td>
                                     <td className="p-4 text-center">
                                         <span className="px-2 py-1 bg-gray-100 rounded text-xs font-bold">{c.section}</span>
                                     </td>

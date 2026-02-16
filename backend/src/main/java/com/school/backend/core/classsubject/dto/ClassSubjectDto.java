@@ -14,4 +14,8 @@ public class ClassSubjectDto {
     private Integer displayOrder;
     private boolean active = true;
     private Long schoolId;
+
+    // Flattened fields for frontend display
+    private String subjectName;
+    private String subjectCode;
 }

@@ -5,8 +5,8 @@ import jakarta.persistence.*;
 import lombok.*;
 
 @Entity
-@Table(name = "subjects", indexes = {
-        @Index(name = "idx_subject_name", columnList = "name")
+@Table(name = "subjects", uniqueConstraints = {
+        @UniqueConstraint(name = "uk_subject_school_name", columnNames = { "school_id", "name" })
 })
 @Getter
 @Setter

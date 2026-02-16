@@ -3,6 +3,7 @@
 import { useEffect, useState } from "react";
 import { examApi } from "@/lib/examApi";
 import { studentApi } from "@/lib/studentApi";
+import { classSubjectApi } from "@/lib/classSubjectApi"; // Import classSubjectApi
 import { api } from "@/lib/api";
 import { useToast } from "@/components/ui/Toast";
 import Modal from "@/components/ui/Modal";
@@ -84,8 +85,9 @@ export default function ExamDetailView({ exam: initialExam, classId, onClose }: 
 
     async function loadAvailableSubjects() {
         try {
-            const res = await api.get("/api/subjects/mine");
-            setAvailableSubjects(res.data.content || []);
+            // Fetch subjects assigned to this class
+            const res = await classSubjectApi.getByClass(classId, 0, 100);
+            setAvailableSubjects(res.content || []);
         } catch {
             showToast("Failed to load available subjects", "error");
         }
@@ -319,8 +321,8 @@ export default function ExamDetailView({ exam: initialExam, classId, onClose }: 
                                 className="input-ref"
                             >
                                 <option value="">Select Subject</option>
-                                {availableSubjects.map(s => (
-                                    <option key={s.id} value={s.id}>{s.name}</option>
+                                {availableSubjects.map((s: any) => (
+                                    <option key={s.id} value={s.subjectId}>{s.subjectName}</option>
                                 ))}
                             </select>
                         </div>
