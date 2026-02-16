@@ -6,9 +6,22 @@ import org.springframework.data.jpa.repository.Query;
 import org.springframework.data.repository.query.Param;
 
 import java.util.List;
+import java.util.Optional;
 
 public interface StudentFeeAssignmentRepository
         extends JpaRepository<StudentFeeAssignment, Long> {
+
+    /**
+     * Find fee assignment for student, structure, and session.
+     * Used for checking if assignment exists and reactivating if needed.
+     *
+     * @param studentId      Student ID
+     * @param feeStructureId Fee Structure ID
+     * @param sessionId      Session ID
+     * @return Optional containing assignment if found
+     */
+    Optional<StudentFeeAssignment> findByStudentIdAndFeeStructureIdAndSessionId(
+            Long studentId, Long feeStructureId, Long sessionId);
 
     boolean existsByStudentIdAndFeeStructureIdAndSessionId(
             Long studentId,

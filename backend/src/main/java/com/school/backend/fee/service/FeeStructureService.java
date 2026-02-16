@@ -1,17 +1,18 @@
 package com.school.backend.fee.service;
 
 import com.school.backend.common.exception.ResourceNotFoundException;
+import com.school.backend.core.student.entity.StudentEnrollment;
+import com.school.backend.core.student.repository.StudentEnrollmentRepository;
 import com.school.backend.fee.dto.FeeStructureCreateRequest;
 import com.school.backend.fee.dto.FeeStructureDto;
 import com.school.backend.fee.entity.FeeStructure;
 import com.school.backend.fee.entity.FeeType;
+import com.school.backend.fee.entity.StudentFeeAssignment;
 import com.school.backend.fee.enums.FeeFrequency;
 import com.school.backend.fee.repository.FeeStructureRepository;
 import com.school.backend.fee.repository.FeeTypeRepository;
-import com.school.backend.core.student.entity.StudentEnrollment;
-import com.school.backend.core.student.repository.StudentEnrollmentRepository;
-import com.school.backend.fee.entity.StudentFeeAssignment;
 import com.school.backend.fee.repository.StudentFeeAssignmentRepository;
+import com.school.backend.school.service.SetupValidationService;
 import com.school.backend.user.security.SecurityUtil;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
@@ -27,7 +28,7 @@ public class FeeStructureService {
     private final FeeTypeRepository feeTypeRepository;
     private final StudentEnrollmentRepository enrollmentRepository;
     private final StudentFeeAssignmentRepository assignmentRepository;
-    private final com.school.backend.school.service.SetupValidationService setupValidationService;
+    private final SetupValidationService setupValidationService;
 
     // ---------------- CREATE ----------------
     @Transactional

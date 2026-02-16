@@ -41,20 +41,20 @@ public class AcademicSessionService {
     }
 
     @Transactional
-    public AcademicSession updateSession(Long id, AcademicSession details) {
+    public AcademicSession updateSession(Long id, AcademicSession updatedSession) {
         AcademicSession session = repository.findById(id)
                 .orElseThrow(() -> new InvalidOperationException("Session not found"));
 
         // Only check if name is changing
-        if (!session.getName().equals(details.getName())) {
-            if (repository.existsBySchoolIdAndName(session.getSchoolId(), details.getName())) {
+        if (!session.getName().equals(updatedSession.getName())) {
+            if (repository.existsBySchoolIdAndName(session.getSchoolId(), updatedSession.getName())) {
                 throw new InvalidOperationException(
-                        "Session with name '" + details.getName() + "' already exists for this school");
+                        "Session with name '" + updatedSession.getName() + "' already exists for this school");
             }
         }
 
-        session.setName(details.getName());
-        session.setActive(details.isActive());
+        session.setName(updatedSession.getName());
+        session.setActive(updatedSession.isActive());
         // No more start/end date or current flag updates here
 
         return repository.save(session);
