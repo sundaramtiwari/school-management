@@ -20,4 +20,6 @@ public interface SchoolClassRepository extends JpaRepository<SchoolClass, Long> 
     Page<SchoolClass> findByClassTeacherIdAndSchoolId(Long teacherId, Long schoolId, Pageable pageable);
 
     long countBySchoolIdAndSessionId(Long schoolId, Long sessionId);
+
+    boolean existsByIdAndSchoolId(Long id, Long schoolId);
 }

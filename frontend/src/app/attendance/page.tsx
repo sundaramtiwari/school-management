@@ -41,6 +41,9 @@ export default function AttendancePage() {
 
     const [students, setStudents] = useState<Student[]>([]);
     const [attendanceMap, setAttendanceMap] = useState<Record<number, AttendanceStatus>>({});
+    const [editable, setEditable] = useState(true);
+    const [committed, setCommitted] = useState(false);
+    const [isModifying, setIsModifying] = useState(false);
 
     /* ---------- Pagination ---------- */
     const [currentPage, setCurrentPage] = useState(0);
@@ -92,7 +95,10 @@ export default function AttendancePage() {
 
             // 2. Load Existing Attendance for the Class on this Date
             const attendanceRes = await api.get(`/api/attendance/class/${classId}?sessionId=${currentSession.id}&date=${date}`);
-            const existingAttendance: any[] = attendanceRes.data || [];
+            const { attendanceList, editable: isEditable, committed: isCommitted } = attendanceRes.data;
+            setEditable(isEditable);
+            setCommitted(isCommitted);
+            setIsModifying(false); // Reset modifying state on new load
 
             const newMap = { ...attendanceMap };
 
@@ -104,7 +110,7 @@ export default function AttendancePage() {
             });
 
             // Override with existing records from DB
-            existingAttendance.forEach(record => {
+            attendanceList.forEach((record: any) => {
                 newMap[record.studentId] = record.status;
             });
 
@@ -171,11 +177,11 @@ export default function AttendancePage() {
     /* ---------------- Save ---------------- */
 
     async function saveAttendance() {
-        if (!selectedClass || !selectedDate) return;
+        if (!selectedClass || !selectedDate || !currentSession) return;
 
         try {
             setLoading(prev => ({ ...prev, saving: true }));
-            await api.post(`/api/attendance/bulk?date=${selectedDate}`, attendanceMap);
+            await api.post(`/api/attendance/bulk?date=${selectedDate}&classId=${selectedClass}&sessionId=${currentSession.id}`, attendanceMap);
             showToast("Attendance records saved successfully!", "success");
         } catch (e: any) {
             const msg = e.response?.data?.message || e.message;
@@ -196,7 +202,7 @@ export default function AttendancePage() {
                 </div>
 
                 <div className="flex gap-3">
-                    {selectedClass && students.length > 0 && (
+                    {selectedClass && students.length > 0 && (editable && (!committed || isModifying)) && (
                         <>
                             <button
                                 onClick={markAllPresent}
@@ -247,12 +253,42 @@ export default function AttendancePage() {
             </div>
 
             {/* ---------------- Attendance Table ---------------- */}
+            {!editable && selectedClass && (
+                <div className="bg-yellow-50 border border-yellow-200 text-yellow-800 px-6 py-4 rounded-xl flex items-center justify-between gap-3">
+                    <div className="flex items-center gap-3">
+                        <span className="text-2xl">⚠️</span>
+                        <div>
+                            <p className="font-semibold">Attendance Locked</p>
+                            <p className="text-sm">This date is locked. Only admins can modify past attendance records.</p>
+                        </div>
+                    </div>
+                </div>
+            )}
+
+            {editable && committed && !isModifying && (
+                <div className="bg-blue-50 border border-blue-200 text-blue-800 px-6 py-4 rounded-xl flex items-center justify-between gap-3">
+                    <div className="flex items-center gap-3">
+                        <span className="text-2xl">ℹ️</span>
+                        <div>
+                            <p className="font-semibold">Attendance Committed</p>
+                            <p className="text-sm">Attendance has already been marked for this date.</p>
+                        </div>
+                    </div>
+                    <button
+                        onClick={() => setIsModifying(true)}
+                        className="bg-blue-600 text-white px-4 py-2 rounded-lg font-semibold hover:bg-blue-700 transition shadow-sm"
+                    >
+                        Modify Attendance
+                    </button>
+                </div>
+            )}
+
             {selectedClass && loading.students ? (
                 <div className="bg-white p-8 rounded-2xl border">
                     <TableSkeleton rows={12} cols={4} />
                 </div>
             ) : selectedClass ? (
-                <div className="space-y-4">
+                <fieldset disabled={!editable || (committed && !isModifying)} className="space-y-4">
                     <div className="bg-white border rounded-2xl shadow-sm overflow-hidden">
                         <table className="w-full text-sm">
                             <thead className="bg-gray-50 text-gray-600 font-bold border-b">
@@ -341,7 +377,7 @@ export default function AttendancePage() {
                             </div>
                         </div>
                     )}
-                </div>
+                </fieldset>
             ) : (
                 <div className="p-20 text-center bg-gray-50 rounded-2xl border border-dashed border-gray-300 text-gray-400 italic">
                     Select a class and date to manage attendance records.

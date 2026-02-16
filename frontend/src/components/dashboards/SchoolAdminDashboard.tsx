@@ -1,12 +1,14 @@
 "use client";
 
 import { useEffect, useState } from "react";
+import { useRouter } from "next/navigation";
 import { api } from "@/lib/api";
 import { useAuth } from "@/context/AuthContext";
 import { Skeleton } from "@/components/ui/Skeleton";
 import { useSession } from "@/context/SessionContext";
 
 export default function SchoolAdminDashboard() {
+  const router = useRouter();
   const { user } = useAuth();
   const { currentSession, isSessionLoading: sessionLoading } = useSession();
   const [stats, setStats] = useState({
@@ -217,7 +219,7 @@ export default function SchoolAdminDashboard() {
             {quickActions.map((action, i) => (
               <button
                 key={i}
-                onClick={() => window.location.href = action.href}
+                onClick={() => router.push(action.href)}
                 className={`
                   p-4 rounded-xl border-2 ${action.hoverBorder} 
                   ${action.hoverBg} transition-all text-left group

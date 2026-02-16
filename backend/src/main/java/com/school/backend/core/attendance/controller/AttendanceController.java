@@ -1,6 +1,7 @@
 package com.school.backend.core.attendance.controller;
 
 import com.school.backend.common.tenant.SessionResolver;
+import com.school.backend.core.attendance.dto.AttendanceResponse;
 import com.school.backend.core.attendance.entity.StudentAttendance;
 import com.school.backend.core.attendance.enums.AttendanceStatus;
 import com.school.backend.core.attendance.service.AttendanceService;
@@ -26,20 +27,28 @@ public class AttendanceController {
     @PreAuthorize("hasAnyRole('SCHOOL_ADMIN', 'TEACHER', 'SUPER_ADMIN', 'PLATFORM_ADMIN')")
     public void markAttendanceBulk(
             @RequestParam @DateTimeFormat(iso = DateTimeFormat.ISO.DATE) LocalDate date,
+            @RequestParam Long classId,
+            @RequestParam(required = false) Long sessionId,
             @RequestBody Map<Long, AttendanceStatus> attendanceMap) {
 
-        attendanceService.markAttendanceBulk(date, attendanceMap, SecurityUtil.schoolId());
+        Long effectiveSessionId = sessionId != null ? sessionId : sessionResolver.resolveForCurrentSchool();
+        attendanceService.markAttendanceBulk(date, classId, effectiveSessionId, attendanceMap, SecurityUtil.schoolId());
     }
 
     @GetMapping("/class/{classId}")
     @PreAuthorize("hasAnyRole('SCHOOL_ADMIN', 'TEACHER', 'SUPER_ADMIN', 'PLATFORM_ADMIN')")
-    public List<StudentAttendance> getAttendanceByClassAndDate(
+    public AttendanceResponse getAttendanceByClassAndDate(
             @PathVariable Long classId,
             @RequestParam(required = false) Long sessionId,
             @RequestParam @DateTimeFormat(iso = DateTimeFormat.ISO.DATE) LocalDate date) {
 
         Long effectiveSessionId = sessionId != null ? sessionId : sessionResolver.resolveForCurrentSchool();
-        return attendanceService.getAttendanceByClassAndDate(classId, effectiveSessionId, date);
+        List<StudentAttendance> attendance = attendanceService.getAttendanceByClassAndDate(classId, effectiveSessionId,
+                date);
+        boolean editable = attendanceService.isEditable(date);
+        boolean committed = !attendance.isEmpty();
+
+        return new AttendanceResponse(attendance, editable, committed);
     }
 
     @GetMapping("/stats/today")
