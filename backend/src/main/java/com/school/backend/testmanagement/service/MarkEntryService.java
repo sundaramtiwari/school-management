@@ -38,6 +38,7 @@ public class MarkEntryService {
         StudentMark mark = markRepository.findByExamSubjectIdAndStudentId(
                 req.getExamSubjectId(), req.getStudentId())
                 .orElseGet(() -> StudentMark.builder()
+                        .examId(subject.getExamId()) // Set examId from ExamSubject
                         .examSubjectId(req.getExamSubjectId())
                         .studentId(req.getStudentId())
                         .schoolId(TenantContext.getSchoolId()) // Ensure schoolId is set for new entries
