@@ -7,7 +7,7 @@ import lombok.experimental.SuperBuilder;
 
 @Entity
 @Table(name = "fee_types", uniqueConstraints = {
-        @UniqueConstraint(columnNames = { "name" })
+        @UniqueConstraint(columnNames = { "name", "school_id" })
 })
 @Getter
 @Setter
@@ -22,7 +22,7 @@ public class FeeType extends TenantEntity {
     @EqualsAndHashCode.Include
     private Long id;
 
-    @Column(nullable = false, unique = true)
+    @Column(nullable = false)
     private String name; // TUITION, EXAM, TRANSPORT
 
     private String description;

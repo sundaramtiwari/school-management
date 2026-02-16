@@ -13,6 +13,7 @@ type SchoolClass = { id: number; name: string; section: string; sessionId: numbe
 type Student = { id: number; firstName: string; lastName: string; admissionNumber: string };
 type Route = { id: number; name: string; capacity: number; currentStrength: number };
 type PickupPoint = { id: number; name: string; amount: number; frequency: string };
+type Enrollment = { id: number; studentId: number; pickupPointId: number; pickupPointName?: string; routeId?: number; routeName?: string; active: boolean };
 
 export default function TransportEnrollmentPage() {
     const { showToast } = useToast();
@@ -21,13 +22,16 @@ export default function TransportEnrollmentPage() {
     const [classes, setClasses] = useState<SchoolClass[]>([]);
     const [selectedClass, setSelectedClass] = useState<number | "">("");
     const [students, setStudents] = useState<Student[]>([]);
+    const [enrollments, setEnrollments] = useState<Record<number, Enrollment>>({});
     const [loading, setLoading] = useState(false);
+    const [loadingStudents, setLoadingStudents] = useState<Record<number, boolean>>({});
 
     const [routes, setRoutes] = useState<Route[]>([]);
     const [pickups, setPickups] = useState<PickupPoint[]>([]);
     const [selectedRouteId, setSelectedRouteId] = useState<number | "">("");
 
     const [showEnrollModal, setShowEnrollModal] = useState(false);
+    const [showUnenrollModal, setShowUnenrollModal] = useState(false);
     const [currentStudent, setCurrentStudent] = useState<Student | null>(null);
     const [selectedPickupId, setSelectedPickupId] = useState<number | "">("");
     const [isSaving, setIsSaving] = useState(false);
@@ -58,18 +62,33 @@ export default function TransportEnrollmentPage() {
     async function onClassChange(e: any) {
         const clsId = e.target.value;
         setSelectedClass(clsId);
-        if (clsId) {
+        if (clsId && currentSession) {
             try {
                 setLoading(true);
-                const res = await studentApi.byClass(Number(clsId), 0, 100);
-                setStudents(res.data.content || []);
+                const studentRes = await studentApi.byClass(Number(clsId), 0, 100);
+                const studentList = studentRes.data.content || [];
+                setStudents(studentList);
+
+                // Fetch batch transport status
+                if (studentList.length > 0) {
+                    const ids = studentList.map((s: Student) => s.id);
+                    const enrollRes = await transportApi.getBatchStatus(ids, currentSession.id);
+                    const enrollMap: Record<number, Enrollment> = {};
+                    enrollRes.data.forEach((e: Enrollment) => {
+                        enrollMap[e.studentId] = e;
+                    });
+                    setEnrollments(enrollMap);
+                } else {
+                    setEnrollments({});
+                }
             } catch {
-                showToast("Failed to pull student list", "error");
+                showToast("Failed to pull student list or status", "error");
             } finally {
                 setLoading(false);
             }
         } else {
             setStudents([]);
+            setEnrollments({});
         }
     }
 
@@ -79,6 +98,11 @@ export default function TransportEnrollmentPage() {
         setPickups([]);
         setSelectedPickupId("");
         setShowEnrollModal(true);
+    }
+
+    async function openUnenrollModal(student: Student) {
+        setCurrentStudent(student);
+        setShowUnenrollModal(true);
     }
 
     async function onRouteSelectChange(e: any) {
@@ -102,17 +126,54 @@ export default function TransportEnrollmentPage() {
 
         try {
             setIsSaving(true);
-            await transportApi.enroll({
+            setLoadingStudents(prev => ({ ...prev, [currentStudent.id]: true }));
+            const res = await transportApi.enroll({
                 studentId: currentStudent.id,
                 pickupPointId: Number(selectedPickupId),
                 sessionId: currentSession.id,
             });
+
+            // Update enrollment state
+            setEnrollments(prev => ({ ...prev, [currentStudent.id]: res.data }));
+
+            // Refresh routes to reflect updated capacity
+            loadRoutes();
+
             showToast("Student enrolled in transport!", "success");
             setShowEnrollModal(false);
         } catch (e: any) {
             showToast("Enrollment failed: " + (e.response?.data?.message || e.message), "error");
         } finally {
             setIsSaving(false);
+            setLoadingStudents(prev => ({ ...prev, [currentStudent.id]: false }));
+        }
+    }
+
+    async function unenrollStudent() {
+        if (!currentStudent || !currentSession) return;
+
+        try {
+            setIsSaving(true);
+            setLoadingStudents(prev => ({ ...prev, [currentStudent.id]: true }));
+            await transportApi.unenroll(currentStudent.id, currentSession.id);
+
+            // Remove from enrollment state
+            setEnrollments(prev => {
+                const updated = { ...prev };
+                delete updated[currentStudent.id];
+                return updated;
+            });
+
+            // Refresh routes to reflect restored capacity
+            loadRoutes();
+
+            showToast("Student unenrolled successfully", "success");
+            setShowUnenrollModal(false);
+        } catch (e: any) {
+            showToast("Unenrollment failed: " + (e.response?.data?.message || e.message), "error");
+        } finally {
+            setIsSaving(false);
+            setLoadingStudents(prev => ({ ...prev, [currentStudent.id]: false }));
         }
     }
 
@@ -144,27 +205,54 @@ export default function TransportEnrollmentPage() {
                             <tr>
                                 <th className="p-4 text-left">Student</th>
                                 <th className="p-4 text-center">Admission No</th>
-                                <th className="p-4 text-center w-48">Transport Status</th>
+                                <th className="p-4 text-center">Current Route</th>
+                                <th className="p-4 text-center w-48">Action</th>
                             </tr>
                         </thead>
                         <tbody className="divide-y divide-gray-100 font-medium">
-                            {students.map(s => (
-                                <tr key={s.id} className="hover:bg-gray-50/50 transition-colors">
-                                    <td className="p-4 text-gray-800 font-bold">{s.firstName} {s.lastName}</td>
-                                    <td className="p-4 text-center font-mono text-gray-400 text-xs">{s.admissionNumber}</td>
-                                    <td className="p-4 text-center">
-                                        <button
-                                            onClick={() => openEnrollModal(s)}
-                                            className="px-4 py-1.5 bg-blue-50 text-blue-600 rounded-lg text-xs font-bold border border-blue-100 hover:bg-blue-600 hover:text-white transition-all shadow-sm shadow-blue-50"
-                                        >
-                                            Enroll in Bus
-                                        </button>
-                                    </td>
-                                </tr>
-                            ))}
+                            {students.map(s => {
+                                const enrollment = enrollments[s.id];
+                                const isLoading = loadingStudents[s.id];
+
+                                return (
+                                    <tr key={s.id} className="hover:bg-gray-50/50 transition-colors">
+                                        <td className="p-4 text-gray-800 font-bold">{s.firstName} {s.lastName}</td>
+                                        <td className="p-4 text-center font-mono text-gray-400 text-xs">{s.admissionNumber}</td>
+                                        <td className="p-4 text-center">
+                                            {enrollment ? (
+                                                <div className="flex flex-col items-center">
+                                                    <span className="text-blue-600 font-bold text-xs">{enrollment.routeName}</span>
+                                                    <span className="text-[10px] text-gray-400">{enrollment.pickupPointName}</span>
+                                                </div>
+                                            ) : (
+                                                <span className="text-gray-300 italic text-xs">Not Enrolled</span>
+                                            )}
+                                        </td>
+                                        <td className="p-4 text-center">
+                                            {enrollment ? (
+                                                <button
+                                                    onClick={() => openUnenrollModal(s)}
+                                                    disabled={isLoading}
+                                                    className="px-4 py-1.5 bg-red-50 text-red-600 rounded-lg text-xs font-bold border border-red-100 hover:bg-red-600 hover:text-white transition-all shadow-sm disabled:opacity-50"
+                                                >
+                                                    {isLoading ? "Wait..." : "Unenroll"}
+                                                </button>
+                                            ) : (
+                                                <button
+                                                    onClick={() => openEnrollModal(s)}
+                                                    disabled={isLoading}
+                                                    className="px-4 py-1.5 bg-blue-50 text-blue-600 rounded-lg text-xs font-bold border border-blue-100 hover:bg-blue-600 hover:text-white transition-all shadow-sm shadow-blue-50 disabled:opacity-50"
+                                                >
+                                                    {isLoading ? "Wait..." : "Enroll in Bus"}
+                                                </button>
+                                            )}
+                                        </td>
+                                    </tr>
+                                );
+                            })}
                             {students.length === 0 && (
                                 <tr>
-                                    <td colSpan={3} className="p-20 text-center text-gray-400 italic">
+                                    <td colSpan={4} className="p-20 text-center text-gray-400 italic">
                                         No student records found for this class identifier.
                                     </td>
                                 </tr>
@@ -189,7 +277,7 @@ export default function TransportEnrollmentPage() {
                         <button
                             onClick={enrollStudent}
                             disabled={isSaving || !selectedPickupId}
-                            className="px-8 py-2 bg-blue-600 text-white font-bold rounded-xl shadow-lg hover:bg-blue-700 disabled:bg-gray-400 transition-all"
+                            className="px-8 py-2 bg-blue-600 text-white font-bold rounded-xl shadow-lg hover:bg-blue-700 disabled:bg-gray-400 transition-all font-outfit"
                         >
                             {isSaving ? "Enrolling..." : "Confirm Enrollment"}
                         </button>
@@ -244,6 +332,42 @@ export default function TransportEnrollmentPage() {
                             </div>
                         )}
                     </div>
+                </div>
+            </Modal>
+
+            {/* Unenrollment Confirmation Modal */}
+            <Modal
+                isOpen={showUnenrollModal}
+                onClose={() => setShowUnenrollModal(false)}
+                title="Confirm Unenrollment"
+                footer={
+                    <div className="flex gap-2">
+                        <button onClick={() => setShowUnenrollModal(false)} className="px-6 py-2 border rounded-xl font-medium text-gray-600 hover:bg-gray-50">Cancel</button>
+                        <button
+                            onClick={unenrollStudent}
+                            disabled={isSaving}
+                            className="px-8 py-2 bg-red-600 text-white font-bold rounded-xl shadow-lg hover:bg-red-700 disabled:bg-gray-400 transition-all"
+                        >
+                            {isSaving ? "Unenrolling..." : "Confirm Unenrollment"}
+                        </button>
+                    </div>
+                }
+            >
+                <div className="space-y-4">
+                    <div className="p-4 bg-red-50 border border-red-100 rounded-xl text-red-800 flex gap-3">
+                        <span className="text-xl">⚠️</span>
+                        <div className="text-xs font-medium space-y-2">
+                            <p className="font-bold">Are you sure you want to unenroll {currentStudent?.firstName} from transport?</p>
+                            <ul className="list-disc list-inside space-y-1">
+                                <li>One seat will be freed in the route: <b>{enrollments[currentStudent?.id || 0]?.routeName}</b></li>
+                                <li>Future transport fee assignments will be deactivated.</li>
+                                <li>Historical payment records will be preserved.</li>
+                            </ul>
+                        </div>
+                    </div>
+                    <p className="text-sm text-gray-500">
+                        This action is session-locked and follows strict multi-tenant safety rules.
+                    </p>
                 </div>
             </Modal>
         </div>

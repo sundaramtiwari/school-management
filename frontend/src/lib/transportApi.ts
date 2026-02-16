@@ -26,4 +26,10 @@ export const transportApi = {
 
     getEnrollmentByStudent: (studentId: number, sessionId: number) =>
         api.get(`/api/transport/enrollments/student/${studentId}?sessionId=${sessionId}`),
+
+    getBatchStatus: (studentIds: number[], sessionId: number) =>
+        api.get(`/api/transport/enrollments/active-status?studentIds=${studentIds.join(",")}&sessionId=${sessionId}`),
+
+    unenroll: (studentId: number, sessionId: number) =>
+        api.delete(`/api/transport/enrollments/student/${studentId}?sessionId=${sessionId}`),
 };

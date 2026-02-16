@@ -22,6 +22,7 @@ import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
+import java.util.List;
 import java.util.Optional;
 
 /**
@@ -58,11 +59,14 @@ public class TransportEnrollmentService {
      * @param dto Transport enrollment details
      * @return Enrollment DTO with assigned details
      * @throws ResourceNotFoundException if student or pickup point not found
-     * @throws IllegalStateException     if student not in class or route at capacity
+     * @throws IllegalStateException     if student not in class or route at
+     *                                   capacity
      */
     @Transactional
     public TransportEnrollmentDto enrollStudent(TransportEnrollmentDto dto) {
-        log.info("Enrolling student {} in transport for session {}", dto.getStudentId(), dto.getSessionId());
+        Long schoolId = TenantContext.getSchoolId();
+        log.info("Enrolling student {} in transport for session {} [Tenant: {}]",
+                dto.getStudentId(), dto.getSessionId(), schoolId);
 
         // 1. Validate Student & Class Enrollment
         Student student = studentRepository.findById(dto.getStudentId())
@@ -83,7 +87,7 @@ public class TransportEnrollmentService {
 
         // 2. Check for existing enrollment
         TransportEnrollment enrollment = enrollmentRepository
-                .findByStudentIdAndSessionId(dto.getStudentId(), dto.getSessionId())
+                .findByStudentIdAndSessionIdAndSchoolId(dto.getStudentId(), dto.getSessionId(), schoolId)
                 .orElse(null);
 
         if (enrollment == null) {
@@ -93,8 +97,8 @@ public class TransportEnrollmentService {
             // Assign fee FIRST (so it can fail before we increment capacity)
             ensureFeeAssigned(student, pickupPoint, dto.getSessionId());
 
-            // ✅ Atomic capacity check and increment
-            int updated = routeRepository.incrementStrengthIfCapacityAvailable(route.getId());
+            // ✅ Atomic capacity check and increment (Tenant enforced)
+            int updated = routeRepository.incrementStrengthIfCapacityAvailable(route.getId(), schoolId);
 
             if (updated == 0) {
                 log.warn("Route {} at capacity or inactive - enrollment rejected", route.getId());
@@ -109,7 +113,7 @@ public class TransportEnrollmentService {
                                     " is at full capacity (" + freshRoute.getCapacity() + " seats).");
                 } else {
                     throw new IllegalStateException(
-                            "Failed to enroll student. Route may be inactive.");
+                            "Failed to enroll student. Route may be inactive or does not belong to your school.");
                 }
             }
 
@@ -119,7 +123,7 @@ public class TransportEnrollmentService {
             enrollment.setPickupPoint(pickupPoint);
             enrollment.setSessionId(dto.getSessionId());
             enrollment.setActive(true);
-            enrollment.setSchoolId(TenantContext.getSchoolId());
+            enrollment.setSchoolId(schoolId);
 
             log.info("Student {} enrolled in route {} successfully", dto.getStudentId(), route.getId());
 
@@ -140,7 +144,7 @@ public class TransportEnrollmentService {
                 ensureFeeAssigned(student, pickupPoint, dto.getSessionId());
 
                 // Need to increment capacity again
-                int updated = routeRepository.incrementStrengthIfCapacityAvailable(newRouteId);
+                int updated = routeRepository.incrementStrengthIfCapacityAvailable(newRouteId, schoolId);
 
                 if (updated == 0) {
                     log.warn("Route {} at capacity - re-enrollment rejected", newRouteId);
@@ -159,15 +163,15 @@ public class TransportEnrollmentService {
                 if (!wasInactive) {
                     // Only decrement old route if was active
                     // ✅ Atomic: Decrement old route
-                    routeRepository.decrementStrength(oldRouteId);
+                    routeRepository.decrementStrength(oldRouteId, schoolId);
 
                     // ✅ Atomic: Increment new route (with capacity check)
-                    int updated = routeRepository.incrementStrengthIfCapacityAvailable(newRouteId);
+                    int updated = routeRepository.incrementStrengthIfCapacityAvailable(newRouteId, schoolId);
 
                     if (updated == 0) {
                         // New route at capacity - rollback old route decrement
                         log.warn("Route {} at capacity - rolling back route change", newRouteId);
-                        routeRepository.incrementStrengthIfCapacityAvailable(oldRouteId);
+                        routeRepository.incrementStrengthIfCapacityAvailable(oldRouteId, schoolId);
 
                         throw new IllegalStateException(
                                 "Transport route " + route.getName() + " is at full capacity.");
@@ -191,18 +195,24 @@ public class TransportEnrollmentService {
 
     /**
      * Unenrolls a student from transport.
-     * Decrements route capacity and soft-deletes the enrollment.
+     * Follows strict transactional ordering:
+     * 1. Soft-delete enrollment (active = false)
+     * 2. Decrement route strength
+     * 3. Validate rows updated to ensure invariant safety
      *
      * @param studentId Student ID
      * @param sessionId Session ID
-     * @throws ResourceNotFoundException if enrollment not found
+     * @throws ResourceNotFoundException if active enrollment not found
+     * @throws IllegalStateException     if invariant violation detected
      */
     @Transactional
     public void unenrollStudent(Long studentId, Long sessionId) {
-        log.info("Unenrolling student {} from transport for session {}", studentId, sessionId);
+        Long schoolId = TenantContext.getSchoolId();
+        log.info("Unenrolling student {} from transport for session {} [Tenant: {}]",
+                studentId, sessionId, schoolId);
 
         TransportEnrollment enrollment = enrollmentRepository
-                .findByStudentIdAndSessionId(studentId, sessionId)
+                .findByStudentIdAndSessionIdAndSchoolId(studentId, sessionId, schoolId)
                 .orElseThrow(() -> new ResourceNotFoundException(
                         "No transport enrollment found for student " + studentId));
 
@@ -211,19 +221,48 @@ public class TransportEnrollmentService {
             throw new IllegalStateException("Student is already unenrolled from transport");
         }
 
-        // Decrement route strength
+        // 1. Soft delete enrollment first (Atomic operation to prevent races)
+        int enrollmentUpdated = enrollmentRepository.deactivateEnrollment(enrollment.getId(), schoolId);
+        if (enrollmentUpdated == 0) {
+            log.error("Failed to deactivate enrollment {} - already inactive or tenant mismatch", enrollment.getId());
+            throw new IllegalStateException("Student is already unenrolled or enrollment state changed.");
+        }
+
+        // 2. Decrement route strength atomically
         Long routeId = enrollment.getPickupPoint().getRoute().getId();
-        routeRepository.decrementStrength(routeId);
+        int routeUpdated = routeRepository.decrementStrength(routeId, schoolId);
 
-        // Soft delete enrollment
-        enrollment.setActive(false);
-        enrollmentRepository.save(enrollment);
+        if (routeUpdated == 0) {
+            log.error(
+                    "Route strength invariant violation! Route {} strength could not be decremented for student unenrollment {}",
+                    routeId, studentId);
+            // This will trigger transaction rollback, restoring the enrollment 'active'
+            // state
+            throw new IllegalStateException("Route strength inconsistency detected. Data may be out of sync.");
+        }
 
-        // Optionally deactivate transport fee assignment
-        // Note: We soft-delete instead of hard-delete to preserve payment history
+        // 3. Deactivate transport fee assignment
         deactivateTransportFeeAssignment(studentId, sessionId);
 
-        log.info("Student {} successfully unenrolled from transport", studentId);
+        log.info("Student {} successfully unenrolled from transport. Capacity restored for route {}",
+                studentId, routeId);
+    }
+
+    /**
+     * Retrieves active transport enrollments for a list of student IDs.
+     * Used for bulk status fetching in UI to avoid N+1 queries.
+     *
+     * @param studentIds List of student IDs
+     * @param sessionId  Current session ID
+     * @return List of active enrollment DTOs
+     */
+    @Transactional(readOnly = true)
+    public List<TransportEnrollmentDto> getActiveEnrollmentsForStudents(java.util.Collection<Long> studentIds,
+            Long sessionId) {
+        return enrollmentRepository.findByStudentIdInAndSessionIdAndActiveTrue(studentIds, sessionId)
+                .stream()
+                .map(this::mapToDto)
+                .toList();
     }
 
     /**
@@ -262,28 +301,41 @@ public class TransportEnrollmentService {
     private void ensureFeeAssigned(Student student, PickupPoint pp, Long sessionId) {
         log.debug("Ensuring transport fee assigned for student {}", student.getId());
 
-        // Get or Create TRANSPORT FeeType
-        FeeType transportType = getOrCreateTransportFeeType();
+        Long schoolId = TenantContext.getSchoolId();
 
-        // Find or create fee structure for this pickup point
+        // 1. Ensure TRANSPORT FeeType exists
+        FeeType transportFeeType = feeTypeRepository.findByNameAndSchoolId("TRANSPORT", schoolId)
+                .orElseGet(() -> {
+                    log.info("Creating TRANSPORT fee type for school {}", schoolId);
+                    return feeTypeRepository.saveAndFlush(FeeType.builder()
+                            .name("TRANSPORT")
+                            .description("Transport / Bus Fees")
+                            .active(true)
+                            .schoolId(schoolId)
+                            .build());
+                });
+
+        // 2. Find or create fee structure for this pickup point's amount and frequency
         FeeStructure structure = feeStructureRepository
-                .findByFeeTypeIdAndSessionIdAndClassIdIsNull(transportType.getId(), sessionId)
+                .findByFeeTypeIdAndSessionIdAndClassIdIsNull(transportFeeType.getId(), sessionId)
                 .stream()
                 .filter(fs -> fs.getAmount().equals(pp.getAmount())
                         && fs.getFrequency().equals(pp.getFrequency()))
                 .findFirst()
                 .orElseGet(() -> {
-                    log.debug("Creating new transport fee structure for pickup point {}", pp.getId());
+                    log.debug(
+                            "Creating new transport fee structure for pickup point {} with amount {} and frequency {}",
+                            pp.getId(), pp.getAmount(), pp.getFrequency());
                     FeeStructure fs = FeeStructure.builder()
-                            .feeType(transportType)
+                            .feeType(transportFeeType)
                             .sessionId(sessionId)
                             .amount(pp.getAmount())
                             .frequency(pp.getFrequency())
                             .classId(null) // Global fee (not class-specific)
                             .active(true)
-                            .schoolId(TenantContext.getSchoolId())
+                            .schoolId(schoolId)
                             .build();
-                    return feeStructureRepository.save(fs);
+                    return feeStructureRepository.saveAndFlush(fs);
                 });
 
         // Check if already assigned (and active)
@@ -356,6 +408,9 @@ public class TransportEnrollmentService {
                 .id(e.getId())
                 .studentId(e.getStudentId())
                 .pickupPointId(e.getPickupPoint().getId())
+                .pickupPointName(e.getPickupPoint().getName())
+                .routeId(e.getPickupPoint().getRoute().getId())
+                .routeName(e.getPickupPoint().getRoute().getName())
                 .sessionId(e.getSessionId())
                 .active(e.isActive())
                 .build();
@@ -370,8 +425,10 @@ public class TransportEnrollmentService {
      */
     @Transactional(readOnly = true)
     public Optional<TransportEnrollmentDto> getStudentEnrollment(Long studentId, Long sessionId) {
-        log.debug("Fetching transport enrollment for student {} in session {}", studentId, sessionId);
-        return enrollmentRepository.findByStudentIdAndSessionId(studentId, sessionId)
+        Long schoolId = TenantContext.getSchoolId();
+        log.debug("Fetching transport enrollment for student {} in session {} [Tenant: {}]",
+                studentId, sessionId, schoolId);
+        return enrollmentRepository.findByStudentIdAndSessionIdAndSchoolId(studentId, sessionId, schoolId)
                 .map(this::mapToDto);
     }
 }

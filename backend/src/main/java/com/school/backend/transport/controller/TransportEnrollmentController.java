@@ -29,4 +29,21 @@ public class TransportEnrollmentController {
                 .map(ResponseEntity::ok)
                 .orElse(ResponseEntity.noContent().build());
     }
+
+    @GetMapping("/active-status")
+    @PreAuthorize("hasAnyRole('SUPER_ADMIN', 'PLATFORM_ADMIN', 'SCHOOL_ADMIN', 'ACCOUNTANT', 'TEACHER')")
+    public ResponseEntity<java.util.List<TransportEnrollmentDto>> getBatchStatus(
+            @RequestParam java.util.Collection<Long> studentIds,
+            @RequestParam Long sessionId) {
+        return ResponseEntity.ok(enrollmentService.getActiveEnrollmentsForStudents(studentIds, sessionId));
+    }
+
+    @DeleteMapping("/student/{studentId}")
+    @PreAuthorize("hasAnyRole('SUPER_ADMIN', 'PLATFORM_ADMIN', 'SCHOOL_ADMIN', 'ACCOUNTANT')")
+    public ResponseEntity<Void> unenroll(
+            @PathVariable Long studentId,
+            @RequestParam Long sessionId) {
+        enrollmentService.unenrollStudent(studentId, sessionId);
+        return ResponseEntity.ok().build();
+    }
 }

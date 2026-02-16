@@ -1,6 +1,7 @@
 package com.school.backend.transport.entity;
 
 import com.school.backend.common.entity.TenantEntity;
+import com.school.backend.school.entity.School;
 import jakarta.persistence.*;
 import lombok.*;
 import lombok.experimental.SuperBuilder;
@@ -33,4 +34,8 @@ public class TransportRoute extends TenantEntity {
 
     @Builder.Default
     private boolean active = true;
+
+    @ManyToOne(fetch = FetchType.LAZY)
+    @JoinColumn(name = "school_id", insertable = false, updatable = false)
+    private School school;
 }
