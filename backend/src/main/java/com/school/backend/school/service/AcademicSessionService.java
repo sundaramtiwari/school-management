@@ -77,15 +77,14 @@ public class AcademicSessionService {
         schoolRepository.save(school);
     }
 
-    public AcademicSession getCurrentSession(Long schoolId) {
+    public java.util.Optional<AcademicSession> getCurrentSession(Long schoolId) {
         School school = schoolRepository.findById(schoolId)
                 .orElseThrow(() -> new RuntimeException("School not found"));
 
         if (school.getCurrentSessionId() == null) {
-            return null; // or throw exception if current session is required
+            return java.util.Optional.empty();
         }
 
-        return repository.findById(school.getCurrentSessionId())
-                .orElse(null);
+        return repository.findById(school.getCurrentSessionId());
     }
 }

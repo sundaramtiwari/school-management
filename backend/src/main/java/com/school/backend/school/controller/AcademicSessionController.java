@@ -7,6 +7,8 @@ import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.web.bind.annotation.*;
 import com.school.backend.user.security.SecurityUtil;
 
+import com.school.backend.school.dto.ActiveSessionResponse;
+import java.util.Optional;
 import java.util.List;
 
 @RestController
@@ -20,6 +22,15 @@ public class AcademicSessionController {
     @PreAuthorize("hasAnyRole('SCHOOL_ADMIN', 'TEACHER', 'ACCOUNTANT', 'SUPER_ADMIN', 'PLATFORM_ADMIN')")
     public List<AcademicSession> getSessions() {
         return service.getSessions(SecurityUtil.schoolId());
+    }
+
+    @GetMapping("/active")
+    @PreAuthorize("isAuthenticated()")
+    public ActiveSessionResponse getActiveSession() {
+        Optional<AcademicSession> sessionOpt = service.getCurrentSession(SecurityUtil.schoolId());
+        return sessionOpt
+                .map(session -> new ActiveSessionResponse(true, session.getId(), session.getName()))
+                .orElseGet(() -> new ActiveSessionResponse(false, null, null));
     }
 
     @PostMapping

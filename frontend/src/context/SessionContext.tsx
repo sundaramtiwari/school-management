@@ -42,19 +42,25 @@ export function SessionProvider({ children }: { children: React.ReactNode }) {
 
     try {
       setIsSessionLoading(true);
-      const [sessionsRes, schoolRes] = await Promise.all([
+      const [sessionsRes, activeRes] = await Promise.all([
         api.get<AcademicSession[]>("/api/academic-sessions"),
-        api.get<any>(`/api/schools/id/${user.schoolId}`)
+        api.get<{ exists: boolean; sessionId: number; name: string }>("/api/academic-sessions/active")
       ]);
 
       const fetchedSessions = sessionsRes.data;
-      const school = schoolRes.data;
+      const activeInfo = activeRes.data;
       setSessions(fetchedSessions);
 
-      // STRICT: Determine currentSession using school.currentSessionId
-      if (school.currentSessionId) {
-        const activeSession = fetchedSessions.find(s => s.id === school.currentSessionId);
-        setCurrentSessionState(activeSession || null);
+      // STRICT: Determine currentSession using activeInfo
+      if (activeInfo.exists && activeInfo.sessionId) {
+        const activeSession = fetchedSessions.find(s => s.id === activeInfo.sessionId);
+        // Fallback to minimal object if not found in list (though it should be)
+        setCurrentSessionState(activeSession || {
+          id: activeInfo.sessionId,
+          name: activeInfo.name,
+          schoolId: user.schoolId,
+          active: true
+        });
       } else {
         setCurrentSessionState(null);
       }
@@ -68,7 +74,7 @@ export function SessionProvider({ children }: { children: React.ReactNode }) {
     }
   };
 
-  // Load sessions when user changes
+  // Load sessions when user changes - use user?.userId for stability
   useEffect(() => {
     if (user?.schoolId) {
       refreshSessions();
@@ -77,7 +83,7 @@ export function SessionProvider({ children }: { children: React.ReactNode }) {
       setCurrentSessionState(null);
       setIsSessionLoading(false);
     }
-  }, [user?.schoolId]);
+  }, [user?.userId, user?.schoolId]);
 
   const setCurrentSession = (session: AcademicSession | null) => {
     // We strictly use backend source of truth, so setting manually might be temporary or for optimistic UI?

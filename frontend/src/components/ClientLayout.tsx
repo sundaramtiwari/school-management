@@ -15,25 +15,25 @@ function LayoutContent({ children }: { children: React.ReactNode }) {
     const router = useRouter();
 
     useEffect(() => {
-        // STRICT REDIRECT RULE:
-        // Redirect to /school/setup/session if:
+        // Redirection logic:
         // 1. User belongs to a school (user.schoolId)
-        // 2. Session loading is finished (!isSessionLoading)
+        // 2. Session loading is finished (!sessionLoading)
         // 3. No session exists (!currentSession)
-        // 4. Role is SCHOOL_ADMIN, TEACHER, or ACCOUNTANT (Platform roles excluded)
+        // 4. Role is authorized to CREATE sessions (SCHOOL_ADMIN)
         // 5. Not already on setup page or login page
 
-        const schoolRoles = ["SCHOOL_ADMIN", "TEACHER", "ACCOUNTANT", "PARENT"]; // Added PARENT for future proofing if needed
-        const isSchoolRole = user?.role && schoolRoles.includes(user.role);
+        const canCreateSession = user?.role === "SCHOOL_ADMIN";
+        const isOnSetupPage = pathname.startsWith("/school/setup");
+        const isLoginPage = pathname.startsWith("/login");
 
         if (
             user &&
             user.schoolId &&
-            isSchoolRole &&
             !sessionLoading &&
             !currentSession &&
-            !pathname.startsWith("/school/setup") &&
-            !pathname.startsWith("/login")
+            canCreateSession &&
+            !isOnSetupPage &&
+            !isLoginPage
         ) {
             router.push("/school/setup/session");
         }
