@@ -26,4 +26,12 @@ public class TransportRouteController {
     public ResponseEntity<List<TransportRouteDto>> getAll() {
         return ResponseEntity.ok(routeService.getAllRoutes());
     }
+
+    // Add DELETE mapping for transport routes
+    @DeleteMapping("/{id}")
+    @PreAuthorize("hasAnyRole('SCHOOL_ADMIN','SUPER_ADMIN','PLATFORM_ADMIN')")
+    public ResponseEntity<Void> deleteRoute(@PathVariable Long id) {
+        routeService.deleteRoute(id);
+        return ResponseEntity.noContent().build();
+    }
 }

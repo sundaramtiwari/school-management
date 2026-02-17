@@ -117,8 +117,8 @@ export default function SessionsPage() {
                                                     Set Current
                                                 </button>
                                             )}
-                                            <button className="text-blue-600 hover:underline font-bold text-xs uppercase tracking-tighter">
-                                                Edit
+                                            <button disabled className="text-gray-400 cursor-not-allowed font-bold text-xs uppercase tracking-tighter">
+                                                Edit (Coming Soon)
                                             </button>
                                         </div>
                                     </td>

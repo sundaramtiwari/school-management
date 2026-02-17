@@ -94,6 +94,12 @@ export default function StaffPage() {
             showToast("Password required for new accounts", "warning");
             return;
         }
+        // Guard staff creation for platform roles without school selection
+        const selectedSchoolId = localStorage.getItem("schoolId");
+        if (["SUPER_ADMIN", "PLATFORM_ADMIN"].includes(currentUser?.role?.toUpperCase() ?? "") && !selectedSchoolId) {
+            showToast("Please select a school first from the Schools page.", "warning");
+            return;
+        }
 
         try {
             setIsSaving(true);

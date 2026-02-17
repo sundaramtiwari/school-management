@@ -117,8 +117,8 @@ export default function FeesDashboard() {
                         <h3 className="text-xl font-bold text-gray-800">Collection Reports</h3>
                         <p className="text-sm text-gray-400 mt-1 max-w-xs">Generate monthly, quarterly, or annual fee collection reports in PDF or Excel.</p>
                     </div>
-                    <button className="px-8 py-3 bg-gray-900 text-white rounded-xl font-bold shadow-lg hover:bg-black transition-all">
-                        Generate Report
+                    <button disabled className="px-8 py-3 bg-gray-400 text-white rounded-xl font-bold cursor-not-allowed opacity-70">
+                        Generate Report (Coming soon)
                     </button>
                 </div>
             </div>

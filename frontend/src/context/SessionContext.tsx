@@ -32,13 +32,17 @@ export function SessionProvider({ children }: { children: React.ReactNode }) {
 
   // Fetch sessions from API
   const refreshSessions = async () => {
-    // STRICT: Only fetch sessions if user belongs to a school
-    if (!user || !user.schoolId) {
+    // Fix Platform Session Bootstrap: Respect selected school for platform roles
+    const selectedSchoolId = localStorage.getItem("schoolId");
+    if (!user) return;
+    if (!user.schoolId && !selectedSchoolId) {
       setSessions([]);
       setCurrentSessionState(null);
       setIsSessionLoading(false);
       return;
     }
+
+    const schoolIdToUse = user.schoolId ?? (selectedSchoolId ? Number(selectedSchoolId) : null);
 
     try {
       setIsSessionLoading(true);
@@ -58,7 +62,7 @@ export function SessionProvider({ children }: { children: React.ReactNode }) {
         setCurrentSessionState(activeSession || {
           id: activeInfo.sessionId,
           name: activeInfo.name,
-          schoolId: user.schoolId,
+          schoolId: (user.schoolId ?? Number(selectedSchoolId)) as number,
           active: true
         });
       } else {
@@ -74,9 +78,10 @@ export function SessionProvider({ children }: { children: React.ReactNode }) {
     }
   };
 
-  // Load sessions when user changes - use user?.userId for stability
+  // Load sessions when user changes or selected school changes
   useEffect(() => {
-    if (user?.schoolId) {
+    const selectedSchoolId = localStorage.getItem("schoolId");
+    if (user?.schoolId || (isPlatformRole(user?.role) && selectedSchoolId)) {
       refreshSessions();
     } else {
       setSessions([]);
@@ -84,6 +89,10 @@ export function SessionProvider({ children }: { children: React.ReactNode }) {
       setIsSessionLoading(false);
     }
   }, [user?.userId, user?.schoolId]);
+
+  function isPlatformRole(role?: string) {
+    return ["SUPER_ADMIN", "PLATFORM_ADMIN"].includes(role?.toUpperCase() || "");
+  }
 
   const setCurrentSession = (session: AcademicSession | null) => {
     // We strictly use backend source of truth, so setting manually might be temporary or for optimistic UI?
@@ -112,8 +121,9 @@ export function SessionProvider({ children }: { children: React.ReactNode }) {
 
   // Fetch class count when session changes
   useEffect(() => {
-    // Only fetch if session exists AND user is logged in with a school
-    if (currentSession && user?.schoolId) {
+    // Ensure classes count respects selected school context
+    const selectedSchoolId = localStorage.getItem("schoolId");
+    if (currentSession && (user?.schoolId || selectedSchoolId)) {
       api.get<{ count: number }>("/api/classes/count")
         .then(res => {
           setHasClasses(res.data.count > 0);

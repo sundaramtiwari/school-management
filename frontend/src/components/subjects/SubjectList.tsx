@@ -3,8 +3,10 @@
 import { useEffect, useState } from "react";
 import { subjectApi, SubjectData } from "@/lib/subjectApi";
 import { SubjectModal } from "./SubjectModal";
+import { useAuth } from "@/context/AuthContext";
 
 export default function SubjectList() {
+    const { user } = useAuth();
     const [subjects, setSubjects] = useState<SubjectData[]>([]);
     const [loading, setLoading] = useState(true);
     const [showInactive, setShowInactive] = useState(false);
@@ -64,12 +66,15 @@ export default function SubjectList() {
                             Show Inactive
                         </label>
                     </div>
-                    <button
-                        onClick={handleCreate}
-                        className="bg-blue-600 text-white px-4 py-2 rounded-md hover:bg-blue-700"
-                    >
-                        + Add Subject
-                    </button>
+                    {/* Role Gate: Only School Admin can create subjects */}
+                    {user?.role?.toUpperCase() === "SCHOOL_ADMIN" && (
+                        <button
+                            onClick={handleCreate}
+                            className="bg-blue-600 text-white px-4 py-2 rounded-md hover:bg-blue-700"
+                        >
+                            + Add Subject
+                        </button>
+                    )}
                 </div>
             </div>
 
@@ -107,12 +112,15 @@ export default function SubjectList() {
                                         </span>
                                     </td>
                                     <td className="px-6 py-4">
-                                        <button
-                                            onClick={() => handleEdit(subject)}
-                                            className="text-blue-600 hover:text-blue-800 font-medium bg-blue-50 px-3 py-1 rounded hover:bg-blue-100 transition-colors"
-                                        >
-                                            Edit
-                                        </button>
+                                        {/* Role Gate: Only School Admin can edit subjects */}
+                                        {user?.role?.toUpperCase() === "SCHOOL_ADMIN" && (
+                                            <button
+                                                onClick={() => handleEdit(subject)}
+                                                className="text-blue-600 hover:text-blue-800 font-medium bg-blue-50 px-3 py-1 rounded hover:bg-blue-100 transition-colors"
+                                            >
+                                                Edit
+                                            </button>
+                                        )}
                                     </td>
                                 </tr>
                             ))

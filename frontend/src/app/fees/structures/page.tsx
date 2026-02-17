@@ -2,6 +2,7 @@
 
 import { useEffect, useState } from "react";
 import { api } from "@/lib/api";
+import { useAuth } from "@/context/AuthContext";
 import { useToast } from "@/components/ui/Toast";
 import Modal from "@/components/ui/Modal";
 import { TableSkeleton } from "@/components/ui/Skeleton";
@@ -24,6 +25,7 @@ type SchoolClass = {
 const FREQUENCIES = ["ONE_TIME", "MONTHLY", "ANNUALLY"];
 
 export default function FeeStructuresPage() {
+    const { user } = useAuth();
     const { showToast } = useToast();
     const { currentSession } = useSession();
     const [classes, setClasses] = useState<SchoolClass[]>([]);
@@ -158,13 +160,16 @@ export default function FeeStructuresPage() {
                     >
                         <span className="text-xl">⚙️</span> Manage Heads
                     </button>
-                    <button
-                        disabled={!selectedClass}
-                        onClick={() => setShowModal(true)}
-                        className="bg-blue-600 text-white px-6 py-2.5 rounded-xl font-bold shadow-lg hover:bg-blue-700 transition-all flex items-center gap-2 disabled:bg-gray-400"
-                    >
-                        <span className="text-xl">+</span> Add Fee Configuration
-                    </button>
+                    {/* Role Gate: Only School Admin can create fee structures */}
+                    {user?.role?.toUpperCase() === "SCHOOL_ADMIN" && (
+                        <button
+                            disabled={!selectedClass}
+                            onClick={() => setShowModal(true)}
+                            className="bg-blue-600 text-white px-6 py-2.5 rounded-xl font-bold shadow-lg hover:bg-blue-700 transition-all flex items-center gap-2 disabled:bg-gray-400"
+                        >
+                            <span className="text-xl">+</span> Add Fee Configuration
+                        </button>
+                    )}
                 </div>
             </div>
 
