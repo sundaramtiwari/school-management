@@ -85,8 +85,8 @@ export default function SuperAdminDashboard() {
       title: "System Settings",
       icon: "⚙️",
       color: "gray",
-      href: "/settings",
-      description: "Configuration"
+      href: "#",
+      description: "Coming soon"
     },
   ];
 
@@ -239,7 +239,7 @@ export default function SuperAdminDashboard() {
                     </p>
                   </div>
                   <button
-                    onClick={() => window.location.href = `/schools/${school.id}`}
+                    onClick={() => window.location.href = `/schools`}
                     className="text-blue-600 hover:text-blue-800 text-sm font-semibold"
                   >
                     View →

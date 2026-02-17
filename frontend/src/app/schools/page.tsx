@@ -179,6 +179,8 @@ export default function SchoolsPage() {
   /* ---------------- Open School --------------- */
   function openSchool(s: any) {
     localStorage.setItem("schoolId", String(s.id));
+    localStorage.setItem("schoolName", s.name);
+    // Hard refresh to trigger context bootstrap
     window.location.href = "/students";
   }
 

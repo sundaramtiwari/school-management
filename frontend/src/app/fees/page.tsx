@@ -106,7 +106,9 @@ export default function FeesDashboard() {
                             </div>
                         )}
                     </div>
-                    <button className="w-full py-2 text-sm font-bold text-blue-600 hover:underline">View All Transactions</button>
+                    <button disabled className="w-full py-2 text-sm font-bold text-gray-400 cursor-not-allowed italic">
+                        View All Transactions (Coming soon)
+                    </button>
                 </div>
 
                 <div className="bg-white p-8 rounded-2xl border shadow-sm flex flex-col justify-center items-center text-center space-y-4">

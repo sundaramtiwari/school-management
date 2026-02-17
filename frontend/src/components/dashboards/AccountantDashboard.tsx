@@ -104,8 +104,8 @@ export default function AccountantDashboard() {
       title: "Monthly Report",
       icon: "📊",
       color: "purple",
-      href: "/fees/reports",
-      description: "Download report"
+      href: "#",
+      description: "Coming soon"
     },
   ];
 
