@@ -23,6 +23,8 @@ export default function ClassesPage() {
     const { user } = useAuth();
     const { showToast } = useToast();
     const { currentSession } = useSession();
+
+    const canManageClasses = user?.role === "SCHOOL_ADMIN" || user?.role === "SUPER_ADMIN" || user?.role === "PLATFORM_ADMIN";
     const [classes, setClasses] = useState<SchoolClass[]>([]);
     const [loading, setLoading] = useState(true);
     const [isSaving, setIsSaving] = useState(false);
@@ -140,16 +142,18 @@ export default function ClassesPage() {
                     <h1 className="text-3xl font-bold text-gray-800">Class Management</h1>
                     <p className="text-gray-500">Define and organize academic classes for <span className="text-blue-600 font-bold">{currentSession?.name || "current session"}</span>.</p>
                 </div>
-                <button
-                    onClick={() => {
-                        resetForm();
-                        setEditId(null);
-                        setShowForm(true);
-                    }}
-                    className="bg-blue-600 text-white px-6 py-2.5 rounded-xl font-bold shadow-lg hover:bg-blue-700 transition-all flex items-center gap-2"
-                >
-                    <span className="text-xl">+</span> Add Class
-                </button>
+                {canManageClasses && (
+                    <button
+                        onClick={() => {
+                            resetForm();
+                            setEditId(null);
+                            setShowForm(true);
+                        }}
+                        className="bg-blue-600 text-white px-6 py-2.5 rounded-xl font-bold shadow-lg hover:bg-blue-700 transition-all flex items-center gap-2"
+                    >
+                        <span className="text-xl">+</span> Add Class
+                    </button>
+                )}
             </div>
 
             {loading ? (
@@ -180,32 +184,50 @@ export default function ClassesPage() {
                                     </td>
                                     <td className="p-4 text-center text-gray-500 uppercase text-xs">{c.stream || "-"}</td>
                                     <td className="p-4 text-center">
-                                        <div className="flex justify-center gap-2">
-                                            <button
-                                                onClick={() => openEdit(c)}
-                                                className="p-2 text-blue-600 hover:bg-blue-50 rounded-lg transition-all"
-                                            >
-                                                <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                                                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M11 5H6a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2v-5M16.5 3.5a2.121 2.121 0 113 3L11.707 15.364a2 2 0 01-.88.524l-4 1a1 1 0 01-1.213-1.213l1-4a2 2 0 01.524-.88L16.5 3.5z" />
-                                                </svg>
-                                            </button>
-                                            <button
-                                                onClick={() => deleteClass(c.id)}
-                                                disabled={isDeleting}
-                                                className="p-2 text-red-600 hover:bg-red-50 rounded-lg transition-all disabled:opacity-30"
-                                            >
-                                                <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                                                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" />
-                                                </svg>
-                                            </button>
-                                        </div>
+                                        {canManageClasses ? (
+                                            <div className="flex justify-center gap-2">
+                                                <button
+                                                    onClick={() => openEdit(c)}
+                                                    className="p-2 text-blue-600 hover:bg-blue-50 rounded-lg transition-all"
+                                                >
+                                                    <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                                                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M11 5H6a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2v-5M16.5 3.5a2.121 2.121 0 113 3L11.707 15.364a2 2 0 01-.88.524l-4 1a1 1 0 01-1.213-1.213l1-4a2 2 0 01.524-.88L16.5 3.5z" />
+                                                    </svg>
+                                                </button>
+                                                <button
+                                                    onClick={() => deleteClass(c.id)}
+                                                    disabled={isDeleting}
+                                                    className="p-2 text-red-600 hover:bg-red-50 rounded-lg transition-all disabled:opacity-30"
+                                                >
+                                                    <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                                                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" />
+                                                    </svg>
+                                                </button>
+                                            </div>
+                                        ) : (
+                                            <span className="text-gray-300 text-xs italic">Read Only</span>
+                                        )}
                                     </td>
                                 </tr>
                             ))}
                             {classes.length === 0 && (
                                 <tr>
                                     <td colSpan={4} className="p-20 text-center text-gray-400 italic bg-gray-50/30">
-                                        No classes defined yet.
+                                        <div className="flex flex-col items-center gap-3">
+                                            <span className="text-4xl">🏫</span>
+                                            <div>
+                                                <p className="font-bold text-gray-800">No Classes Defined</p>
+                                                <p className="text-sm">You haven't added any classes for this session yet.</p>
+                                            </div>
+                                            {canManageClasses && (
+                                                <button
+                                                    onClick={() => setShowForm(true)}
+                                                    className="mt-2 bg-blue-50 text-blue-600 px-6 py-2 rounded-xl font-bold hover:bg-blue-100 transition-all border border-blue-200"
+                                                >
+                                                    Add First Class →
+                                                </button>
+                                            )}
+                                        </div>
                                     </td>
                                 </tr>
                             )}

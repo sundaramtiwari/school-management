@@ -7,6 +7,7 @@ import { useToast } from "@/components/ui/Toast";
 import { useSession } from "@/context/SessionContext";
 import Modal from "@/components/ui/Modal";
 import { TableSkeleton } from "@/components/ui/Skeleton";
+import { useAuth } from "@/context/AuthContext";
 
 /* ---------------- Types ---------------- */
 
@@ -28,8 +29,11 @@ type Student = {
 /* ---------------- Page ---------------- */
 
 export default function StudentsPage() {
+  const { user } = useAuth();
   const { showToast } = useToast();
   const { currentSession } = useSession();
+
+  const canAddStudent = user?.role === "SCHOOL_ADMIN" || user?.role === "SUPER_ADMIN" || user?.role === "PLATFORM_ADMIN";
 
   /* ---------- Filters ---------- */
 
@@ -209,17 +213,19 @@ export default function StudentsPage() {
           <p className="text-gray-500">Manage students for <span className="text-blue-600 font-bold">{currentSession?.name || "current session"}</span>.</p>
         </div>
 
-        <button
-          onClick={() => {
-            if (selectedClass) {
-              setStudentForm(prev => ({ ...prev, classId: selectedClass.toString() }));
-            }
-            setShowAddModal(true);
-          }}
-          className="bg-blue-600 text-white px-6 py-2.5 rounded-xl font-bold shadow-lg hover:bg-blue-700 transition-all flex items-center gap-2"
-        >
-          <span className="text-xl">+</span> Add Student
-        </button>
+        {canAddStudent && (
+          <button
+            onClick={() => {
+              if (selectedClass) {
+                setStudentForm(prev => ({ ...prev, classId: selectedClass.toString() }));
+              }
+              setShowAddModal(true);
+            }}
+            className="bg-blue-600 text-white px-6 py-2.5 rounded-xl font-bold shadow-lg hover:bg-blue-700 transition-all flex items-center gap-2"
+          >
+            <span className="text-xl">+</span> Add Student
+          </button>
+        )}
       </div>
 
       <div className="bg-white p-6 border rounded-2xl shadow-sm flex flex-wrap gap-4 items-end">
@@ -285,10 +291,26 @@ export default function StudentsPage() {
               ))}
               {students.length === 0 && (
                 <tr>
-                  <td colSpan={5} className="p-20 text-center text-gray-400 italic">
-                    <div className="flex flex-col items-center gap-2">
+                  <td colSpan={5} className="p-20 text-center text-gray-400 italic bg-gray-50/30">
+                    <div className="flex flex-col items-center gap-3">
                       <span className="text-4xl">📂</span>
-                      No students enrolled in this class yet.
+                      <div>
+                        <p className="font-bold text-gray-800">Class is Empty</p>
+                        <p className="text-sm">No students have been enrolled in this class for the current session.</p>
+                      </div>
+                      {canAddStudent && (
+                        <button
+                          onClick={() => {
+                            if (selectedClass) {
+                              setStudentForm(prev => ({ ...prev, classId: selectedClass.toString() }));
+                            }
+                            setShowAddModal(true);
+                          }}
+                          className="mt-2 bg-blue-50 text-blue-600 px-6 py-2 rounded-xl font-bold hover:bg-blue-100 transition-all border border-blue-200"
+                        >
+                          Enroll First Student →
+                        </button>
+                      )}
                     </div>
                   </td>
                 </tr>

@@ -5,6 +5,7 @@ import { api } from "@/lib/api";
 import { useToast } from "@/components/ui/Toast";
 import { Skeleton, TableSkeleton } from "@/components/ui/Skeleton";
 import { useSession } from "@/context/SessionContext";
+import { useAuth } from "@/context/AuthContext";
 
 type SchoolClass = { id: number; name: string; section: string; sessionId: number };
 type Student = { id: number; firstName: string; lastName: string; admissionNumber: string };
@@ -12,8 +13,11 @@ type FeeSummary = { totalFee: number; totalPaid: number; balance: number; status
 type Payment = { id: number; amount: number; paymentDate: string; paymentMode: string; remarks: string };
 
 export default function FeeCollectPage() {
+    const { user } = useAuth();
     const { showToast } = useToast();
     const { currentSession } = useSession();
+
+    const canCollectFees = user?.role === "ACCOUNTANT" || user?.role === "SCHOOL_ADMIN" || user?.role === "SUPER_ADMIN" || user?.role === "PLATFORM_ADMIN";
 
     /* -------- State -------- */
     const [classes, setClasses] = useState<SchoolClass[]>([]);
@@ -269,13 +273,19 @@ export default function FeeCollectPage() {
                                         onChange={e => setRemarks(e.target.value)}
                                     />
                                 </div>
-                                <button
-                                    onClick={makePayment}
-                                    disabled={!paymentAmount || isProcessing}
-                                    className="w-full bg-green-600 hover:bg-green-700 text-white py-4 rounded-xl font-black shadow-lg shadow-green-200 transition-all disabled:opacity-50 uppercase text-xs tracking-widest"
-                                >
-                                    {isProcessing ? "Transacting..." : "Commit Transaction"}
-                                </button>
+                                {canCollectFees ? (
+                                    <button
+                                        onClick={makePayment}
+                                        disabled={!paymentAmount || isProcessing}
+                                        className="w-full bg-green-600 hover:bg-green-700 text-white py-4 rounded-xl font-black shadow-lg shadow-green-200 transition-all disabled:opacity-50 uppercase text-xs tracking-widest"
+                                    >
+                                        {isProcessing ? "Transacting..." : "Commit Transaction"}
+                                    </button>
+                                ) : (
+                                    <div className="p-4 bg-red-50 text-red-600 rounded-xl text-xs font-bold text-center border border-red-100">
+                                        You do not have permission to collect fees.
+                                    </div>
+                                )}
                             </div>
                         </div>
                     </div>

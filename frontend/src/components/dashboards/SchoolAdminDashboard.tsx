@@ -162,6 +162,22 @@ export default function SchoolAdminDashboard() {
     },
   ];
 
+  if (!sessionLoading && !currentSession) {
+    return (
+      <div className="p-10 bg-white border-2 border-dashed border-blue-200 rounded-3xl text-center">
+        <span className="text-5xl mb-4 block">🎓</span>
+        <h2 className="text-2xl font-black text-gray-900">Welcome! Let's set up your school</h2>
+        <p className="text-gray-500 mt-2 mb-8 max-w-sm mx-auto">Create your first academic session to start managing students, attendance, and fees.</p>
+        <button
+          onClick={() => router.push("/school/setup/session")}
+          className="bg-blue-600 text-white px-10 py-3 rounded-2xl font-black shadow-xl hover:bg-blue-700 transition-all"
+        >
+          Initialize First Session →
+        </button>
+      </div>
+    );
+  }
+
   return (
     <div className="space-y-8">
       {/* School Header */}

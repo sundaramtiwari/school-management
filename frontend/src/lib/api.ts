@@ -7,11 +7,17 @@ export const api = axios.create({
   },
 });
 
-// Interceptor to attach Authorization header from localStorage
+// Interceptor to attach Authorization header and X-School-Id from localStorage
 api.interceptors.request.use((config) => {
   const token = localStorage.getItem("token");
   if (token) {
     config.headers.Authorization = `Bearer ${token}`;
   }
+
+  const schoolId = localStorage.getItem("schoolId");
+  if (schoolId) {
+    config.headers["X-School-Id"] = schoolId;
+  }
+
   return config;
 });

@@ -1,6 +1,8 @@
 "use client";
 
 import { useEffect, useState } from "react";
+import { useSession } from "@/context/SessionContext";
+import { useRouter } from "next/navigation";
 import { api } from "@/lib/api";
 import { useAuth } from "@/context/AuthContext";
 import { Skeleton } from "@/components/ui/Skeleton";
@@ -22,7 +24,9 @@ type Defaulter = {
 };
 
 export default function AccountantDashboard() {
+  const router = useRouter();
   const { user } = useAuth();
+  const { currentSession, isSessionLoading: sessionLoading } = useSession();
   const [stats, setStats] = useState({
     collectedToday: 0,
     transactionsToday: 0,
@@ -35,23 +39,22 @@ export default function AccountantDashboard() {
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
-    loadAccountantDashboard();
-  }, []);
+    if (!sessionLoading && currentSession) loadAccountantDashboard();
+  }, [sessionLoading, currentSession?.id]);
 
   async function loadAccountantDashboard() {
     try {
       setLoading(true);
 
       // Load fee statistics
-      // Note: Backend needs these endpoints or we simulate
       const [statsRes, paymentsRes, defaultersRes] = await Promise.all([
-        api.get('/api/fees/summary/stats').catch(() => ({ 
-          data: { 
-            collectedToday: 0, 
+        api.get(`/api/fees/summary/stats?sessionId=${currentSession?.id}`).catch(() => ({
+          data: {
+            collectedToday: 0,
             transactionsToday: 0,
             collectedThisMonth: 0,
-            pendingTotal: 0 
-          } 
+            pendingTotal: 0
+          }
         })),
         api.get('/api/fees/payments/recent?limit=5').catch(() => ({ data: [] })),
         api.get('/api/fees/defaulters?limit=5').catch(() => ({ data: [] })),
@@ -110,6 +113,24 @@ export default function AccountantDashboard() {
     return `₹ ${amount.toLocaleString('en-IN')}`;
   };
 
+  if (!sessionLoading && !currentSession) {
+    return (
+      <div className="flex flex-col items-center justify-center py-20 bg-gray-50 rounded-3xl border-2 border-dashed border-gray-200">
+        <div className="w-20 h-20 bg-green-100 text-green-600 rounded-full flex items-center justify-center text-4xl mb-6 shadow-sm">
+          💰
+        </div>
+        <h2 className="text-2xl font-bold text-gray-800 mb-2">Academic Session Required</h2>
+        <p className="text-gray-500 max-w-md text-center mb-8">
+          The finance dashboard is restricted until an academic session is initialized by the school administrator.
+        </p>
+        <div className="bg-white px-6 py-4 rounded-xl border flex items-center gap-3 text-sm text-gray-600">
+          <span className="text-xl">ℹ️</span>
+          Wait for your administrator to set up the current year.
+        </div>
+      </div>
+    );
+  }
+
   return (
     <div className="space-y-8">
       {/* Welcome Header */}
@@ -122,11 +143,11 @@ export default function AccountantDashboard() {
             <h1 className="text-3xl font-bold">Finance Dashboard</h1>
             <p className="text-green-100 mt-1">Fee Collection & Management</p>
             <p className="text-green-200 text-sm mt-1">
-              {new Date().toLocaleDateString('en-IN', { 
-                weekday: 'long', 
-                year: 'numeric', 
-                month: 'long', 
-                day: 'numeric' 
+              {new Date().toLocaleDateString('en-IN', {
+                weekday: 'long',
+                year: 'numeric',
+                month: 'long',
+                day: 'numeric'
               })}
             </p>
           </div>
@@ -217,7 +238,7 @@ export default function AccountantDashboard() {
                 <Skeleton className="h-10 w-16 mt-2" />
               ) : (
                 <p className="text-3xl font-bold text-gray-900 mt-2">
-                  {stats.pendingDues > 0 
+                  {stats.pendingDues > 0
                     ? Math.round((stats.collectedThisMonth / (stats.collectedThisMonth + stats.pendingDues)) * 100)
                     : 100}%
                 </p>

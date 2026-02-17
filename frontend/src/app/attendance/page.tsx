@@ -6,6 +6,7 @@ import { api } from "@/lib/api";
 import { useToast } from "@/components/ui/Toast";
 import { TableSkeleton } from "@/components/ui/Skeleton";
 import { useSession } from "@/context/SessionContext";
+import { useAuth } from "@/context/AuthContext";
 
 /* ---------------- Types ---------------- */
 
@@ -28,8 +29,13 @@ type AttendanceStatus = "PRESENT" | "ABSENT" | "LATE" | "HALF_DAY";
 /* ---------------- Page ---------------- */
 
 export default function AttendancePage() {
+    const { user } = useAuth();
     const { showToast } = useToast();
     const { currentSession } = useSession();
+
+    const isPlatformAdmin = user?.role === "SUPER_ADMIN" || user?.role === "PLATFORM_ADMIN";
+    const canCommit = user?.role === "SCHOOL_ADMIN" || user?.role === "TEACHER" || isPlatformAdmin;
+    const canModify = user?.role === "SCHOOL_ADMIN" || isPlatformAdmin;
 
     /* ---------- Filters ---------- */
 
@@ -202,7 +208,7 @@ export default function AttendancePage() {
                 </div>
 
                 <div className="flex gap-3">
-                    {selectedClass && students.length > 0 && (editable && (!committed || isModifying)) && (
+                    {canCommit && selectedClass && students.length > 0 && (editable && (!committed || isModifying)) && (
                         <>
                             <button
                                 onClick={markAllPresent}
@@ -274,12 +280,14 @@ export default function AttendancePage() {
                             <p className="text-sm">Attendance has already been marked for this date.</p>
                         </div>
                     </div>
-                    <button
-                        onClick={() => setIsModifying(true)}
-                        className="bg-blue-600 text-white px-4 py-2 rounded-lg font-semibold hover:bg-blue-700 transition shadow-sm"
-                    >
-                        Modify Attendance
-                    </button>
+                    {canModify && (
+                        <button
+                            onClick={() => setIsModifying(true)}
+                            className="bg-blue-600 text-white px-4 py-2 rounded-lg font-semibold hover:bg-blue-700 transition shadow-sm"
+                        >
+                            Modify Attendance
+                        </button>
+                    )}
                 </div>
             )}
 

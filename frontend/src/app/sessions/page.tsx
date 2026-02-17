@@ -12,6 +12,7 @@ export default function SessionsPage() {
     const { user } = useAuth();
     const { showToast } = useToast();
     const { sessions, currentSession, setCurrentSession, refreshSessions, isSessionLoading: isLoading } = useSession();
+    const canManage = user?.role === "SCHOOL_ADMIN" || user?.role === "SUPER_ADMIN" || user?.role === "PLATFORM_ADMIN";
     const [isSaving, setIsSaving] = useState(false);
     const [showForm, setShowForm] = useState(false);
 
@@ -63,12 +64,14 @@ export default function SessionsPage() {
                     <h1 className="text-3xl font-bold text-gray-800">Academic Sessions</h1>
                     <p className="text-gray-500">Manage school years and current active session.</p>
                 </div>
-                <button
-                    onClick={() => setShowForm(true)}
-                    className="bg-blue-600 text-white px-6 py-2.5 rounded-xl font-bold shadow-lg hover:bg-blue-700 transition-all flex items-center gap-2"
-                >
-                    <span className="text-xl">+</span> Add Session
-                </button>
+                {canManage && (
+                    <button
+                        onClick={() => setShowForm(true)}
+                        className="bg-blue-600 text-white px-6 py-2.5 rounded-xl font-bold shadow-lg hover:bg-blue-700 transition-all flex items-center gap-2"
+                    >
+                        <span className="text-xl">+</span> Add Session
+                    </button>
+                )}
             </div>
 
             {isLoading ? (

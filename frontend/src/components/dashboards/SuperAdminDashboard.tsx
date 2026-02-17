@@ -19,7 +19,7 @@ export default function SuperAdminDashboard() {
     totalSchools: 0,
     activeSchools: 0,
     totalStudents: 0,
-    totalClasses: 0,
+    totalTeachers: 0,
     totalRevenue: 0,
   });
   const [recentSchools, setRecentSchools] = useState<RecentSchool[]>([]);
@@ -43,9 +43,9 @@ export default function SuperAdminDashboard() {
 
       setStats({
         totalSchools: statsData.totalSchools,
-        activeSchools: statsData.activeSessions, // Using active sessions as proxy or we can add activeSchools to backend if needed
+        activeSchools: statsData.activeSessions,
         totalStudents: statsData.totalStudents,
-        totalClasses: statsData.totalTeachers, // Reusing teachers for now as classes count isn't in response, user asked for update
+        totalTeachers: statsData.totalTeachers,
         totalRevenue: 0,
       });
 
@@ -175,13 +175,13 @@ export default function SuperAdminDashboard() {
                 <Skeleton className="h-10 w-16 mt-2" />
               ) : (
                 <p className="text-3xl font-bold text-gray-900 mt-2">
-                  {stats.totalClasses.toLocaleString('en-IN')}
+                  {stats.totalTeachers.toLocaleString('en-IN')}
                 </p>
               )}
               <p className="text-xs text-gray-400 mt-1">Platform-wide</p>
             </div>
             <div className="w-12 h-12 bg-green-500 text-white rounded-xl flex items-center justify-center text-xl shadow-lg">
-              📚
+              👨‍🏫
             </div>
           </div>
         </div>

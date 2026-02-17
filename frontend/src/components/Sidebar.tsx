@@ -1,9 +1,11 @@
 "use client";
 
+import { useEffect, useState } from "react";
 import Link from "next/link";
 import { usePathname, useRouter } from "next/navigation";
 import { useAuth } from "@/context/AuthContext";
 import { useSession } from "@/context/SessionContext";
+import { useToast } from "@/components/ui/Toast";
 
 const menu = [
   { name: "Dashboard", path: "/", icon: "📊", roles: ["SUPER_ADMIN", "PLATFORM_ADMIN", "SCHOOL_ADMIN", "TEACHER", "ACCOUNTANT"] },
@@ -38,11 +40,23 @@ export default function Sidebar() {
   const router = useRouter();
   const { user, logout } = useAuth();
   const { currentSession, hasClasses } = useSession();
+  const { showToast } = useToast();
+
+  const [schoolName, setSchoolName] = useState<string | null>(null);
+
+  useEffect(() => {
+    setSchoolName(localStorage.getItem("schoolName"));
+  }, []);
+
+  const clearContext = () => {
+    localStorage.removeItem("schoolId");
+    localStorage.removeItem("schoolName");
+    window.location.reload();
+  };
 
   return (
     <aside className="w-64 bg-white border-r flex flex-col h-screen">
 
-      {/* Header - FIXED */}
       <div className="p-4 border-b">
         <div className="text-xl font-bold text-blue-600">
           {getRoleDisplay(user?.role)}
@@ -70,6 +84,7 @@ export default function Sidebar() {
           // 2. currentSession && !hasClasses -> Enable Classes. Disable Students, Fees, Attendance, Marksheets.
 
           const isSchoolScoped = ["SCHOOL_ADMIN", "TEACHER", "ACCOUNTANT"].includes(userRole as string);
+          const isPlatformRole = ["SUPER_ADMIN", "PLATFORM_ADMIN"].includes(userRole as string);
 
           const requiresSession = ["Classes", "Students", "Fees", "Marksheets", "Attendance"].includes(item.name);
           const requiresClasses = ["Students", "Fees", "Marksheets", "Attendance"].includes(item.name);
@@ -92,6 +107,14 @@ export default function Sidebar() {
             }
           }
 
+          // Platform Role Gating: If no school selected, block school-specific links
+          const isSchoolModule = !["Dashboard", "Schools", "Staff"].includes(item.name);
+          if (isPlatformRole && isSchoolModule && !localStorage.getItem("schoolId")) {
+            isRestricted = true;
+            restrictionMessage = "Please select a school first from the Schools list.";
+            redirectPath = "/schools";
+          }
+
           return (
             <Link
               key={item.path}
@@ -99,7 +122,7 @@ export default function Sidebar() {
               onClick={(e) => {
                 if (isRestricted) {
                   e.preventDefault();
-                  alert(restrictionMessage);
+                  showToast(restrictionMessage, "warning");
                   if (redirectPath) {
                     router.push(redirectPath);
                   }
@@ -122,10 +145,24 @@ export default function Sidebar() {
 
       </nav>
 
+      {/* School Context Banner for Platform Roles */}
+      {schoolName && (user?.role === "SUPER_ADMIN" || user?.role === "PLATFORM_ADMIN") && (
+        <div className="border-t p-4 bg-gray-50 flex items-center justify-between text-[11px] font-bold">
+          <div className="flex items-center gap-2 text-gray-600 truncate">
+            <span>📍</span> Viewing: {schoolName}
+          </div>
+          <button
+            onClick={clearContext}
+            className="text-red-500 hover:text-red-700 ml-2 font-black flex items-center gap-1"
+          >
+            ✕ Exit
+          </button>
+        </div>
+      )}
+
       {/* User Info & Logout */}
       <div className="border-t p-4 space-y-2">
         <div className="text-sm text-gray-600">
-          {/* FIXED: Better role display */}
           <div className="font-semibold">{getRoleDisplay(user?.role)}</div>
           <div className="text-xs text-gray-500">
             {user?.schoolId ? `School ID: ${user.schoolId}` : "Platform Level"}

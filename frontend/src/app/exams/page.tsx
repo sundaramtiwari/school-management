@@ -9,6 +9,7 @@ import { useToast } from "@/components/ui/Toast";
 import { TableSkeleton } from "@/components/ui/Skeleton";
 import ExamCreationModal from "@/components/exams/ExamCreationModal";
 import ExamDetailView from "@/components/exams/ExamDetailView";
+import { useAuth } from "@/context/AuthContext";
 
 type SchoolClass = {
     id: number;
@@ -19,6 +20,8 @@ type SchoolClass = {
 type Exam = {
     id: number;
     name: string;
+    schoolId: number;
+    sessionId: number;
     examType: string;
     startDate?: string;
     endDate?: string;
@@ -28,12 +31,15 @@ type Exam = {
 
 export default function ExamsPage() {
     const router = useRouter();
+    const { user } = useAuth();
     const { showToast } = useToast();
     const { currentSession, isSessionLoading, hasClasses } = useSession();
 
     const [classes, setClasses] = useState<SchoolClass[]>([]);
     const [selectedClass, setSelectedClass] = useState<number | "">("");
     const [loadingClasses, setLoadingClasses] = useState(true);
+
+    const canCreateExam = user?.role === "SCHOOL_ADMIN" || user?.role === "SUPER_ADMIN" || user?.role === "PLATFORM_ADMIN";
 
     const [exams, setExams] = useState<Exam[]>([]);
     const [loadingExams, setLoadingExams] = useState(false);
@@ -125,18 +131,20 @@ export default function ExamsPage() {
                     <p className="text-gray-500">Manage exam schedules and marks for <span className="text-blue-600 font-bold">{currentSession.name}</span>.</p>
                 </div>
 
-                <button
-                    onClick={() => setShowAddModal(true)}
-                    disabled={!selectedClass}
-                    className={`
-            px-6 py-2.5 rounded-xl font-bold shadow-lg transition-all flex items-center gap-2
-            ${selectedClass
-                            ? "bg-blue-600 text-white hover:bg-blue-700"
-                            : "bg-gray-200 text-gray-400 cursor-not-allowed"}
-          `}
-                >
-                    <span className="text-xl">+</span> Create Exam
-                </button>
+                {canCreateExam && (
+                    <button
+                        onClick={() => setShowAddModal(true)}
+                        disabled={!selectedClass}
+                        className={`
+                            px-6 py-2.5 rounded-xl font-bold shadow-lg transition-all flex items-center gap-2
+                            ${selectedClass
+                                ? "bg-blue-600 text-white hover:bg-blue-700"
+                                : "bg-gray-200 text-gray-400 cursor-not-allowed"}
+                        `}
+                    >
+                        <span className="text-xl">+</span> Create Exam
+                    </button>
+                )}
             </div>
 
             <div className="bg-white p-6 border rounded-2xl shadow-sm flex flex-wrap gap-4 items-end">
@@ -184,8 +192,8 @@ export default function ExamsPage() {
                                     </td>
                                     <td className="p-4 text-center">
                                         <span className={`px-2 py-0.5 rounded-full text-[10px] font-bold uppercase ${exam.status === 'PUBLISHED' ? "bg-blue-50 text-blue-600" :
-                                                exam.status === 'LOCKED' ? "bg-gray-100 text-gray-600" :
-                                                    "bg-yellow-50 text-yellow-600"
+                                            exam.status === 'LOCKED' ? "bg-gray-100 text-gray-600" :
+                                                "bg-yellow-50 text-yellow-600"
                                             }`}>
                                             {exam.status}
                                         </span>
@@ -202,8 +210,22 @@ export default function ExamsPage() {
                             ))}
                             {exams.length === 0 && (
                                 <tr>
-                                    <td colSpan={4} className="p-20 text-center text-gray-400 italic">
-                                        No exams found for this class.
+                                    <td colSpan={4} className="p-20 text-center text-gray-400 italic bg-gray-50/30">
+                                        <div className="flex flex-col items-center gap-3">
+                                            <span className="text-3xl">📝</span>
+                                            <div>
+                                                <p className="font-bold text-gray-800">No Exams Scheduled</p>
+                                                <p className="text-sm">No exam records found for this class in the current session.</p>
+                                            </div>
+                                            {canCreateExam && (
+                                                <button
+                                                    onClick={() => setShowAddModal(true)}
+                                                    className="mt-2 bg-blue-50 text-blue-600 px-6 py-2 rounded-xl font-bold hover:bg-blue-100 transition-all border border-blue-200"
+                                                >
+                                                    Schedule First Exam →
+                                                </button>
+                                            )}
+                                        </div>
                                     </td>
                                 </tr>
                             )}

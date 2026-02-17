@@ -4,9 +4,13 @@ import { useEffect, useState } from "react";
 import { api } from "@/lib/api";
 import { Skeleton } from "@/components/ui/Skeleton";
 import { useSession } from "@/context/SessionContext";
+import { useAuth } from "@/context/AuthContext";
 
 export default function FeesDashboard() {
-    const { currentSession, isLoading: sessionLoading } = useSession();
+    const { user } = useAuth();
+    const { currentSession, isSessionLoading: sessionLoading } = useSession();
+
+    const canManageFees = user?.role === "ACCOUNTANT" || user?.role === "SCHOOL_ADMIN" || user?.role === "SUPER_ADMIN" || user?.role === "PLATFORM_ADMIN";
     const [stats, setStats] = useState({
         todayCollection: 0,
         pendingDues: 0,
@@ -50,12 +54,16 @@ export default function FeesDashboard() {
                     <p className="text-gray-500 mt-1">Institutional financial overview and collection status for <span className="text-blue-600 font-bold">{currentSession?.name || "current session"}</span>.</p>
                 </div>
                 <div className="flex gap-3">
-                    <button onClick={() => window.location.href = '/fees/structures'} className="px-5 py-2.5 bg-white border rounded-xl font-bold shadow-sm hover:bg-gray-50 transition-all text-gray-700">
-                        Edit Structures
-                    </button>
-                    <button onClick={() => window.location.href = '/fees/collect'} className="px-5 py-2.5 bg-blue-600 text-white rounded-xl font-bold shadow-lg hover:bg-blue-700 transition-all">
-                        Collect Fees
-                    </button>
+                    {canManageFees && (
+                        <>
+                            <button onClick={() => window.location.href = '/fees/structures'} className="px-5 py-2.5 bg-white border rounded-xl font-bold shadow-sm hover:bg-gray-50 transition-all text-gray-700">
+                                Edit Structures
+                            </button>
+                            <button onClick={() => window.location.href = '/fees/collect'} className="px-5 py-2.5 bg-blue-600 text-white rounded-xl font-bold shadow-lg hover:bg-blue-700 transition-all">
+                                Collect Fees
+                            </button>
+                        </>
+                    )}
                 </div>
             </header>
 

@@ -48,6 +48,18 @@ public class JwtAuthFilter extends OncePerRequestFilter {
                 if (schoolId != null) {
                     TenantContext.setSchoolId(schoolId);
                 }
+
+                String schoolIdHeader = request.getHeader("X-School-Id");
+                String role = claims.get("role", String.class);
+                if (schoolIdHeader != null && !schoolIdHeader.isBlank() &&
+                        ("SUPER_ADMIN".equals(role) || "PLATFORM_ADMIN".equals(role))) {
+                    try {
+                        TenantContext.setSchoolId(Long.valueOf(schoolIdHeader));
+                    } catch (NumberFormatException e) {
+                        logger.warn("Invalid X-School-Id header: " + schoolIdHeader);
+                    }
+                }
+
                 String sessionHeader = request.getHeader("X-Session-Id");
                 if (sessionHeader != null && !sessionHeader.isBlank()) {
                     try {

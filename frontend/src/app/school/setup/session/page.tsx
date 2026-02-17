@@ -14,16 +14,11 @@ export default function SessionSetupPage() {
     const [loading, setLoading] = useState(false);
     const [error, setError] = useState("");
 
-    // Prevent duplicate session creation
     useEffect(() => {
         if (hasSession) {
             router.push("/");
         }
     }, [hasSession, router]);
-
-    if (hasSession) {
-        return null; // Don't render form if session exists
-    }
 
     const canCreateSession = user?.role === "SCHOOL_ADMIN";
 
