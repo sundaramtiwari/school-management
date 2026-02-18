@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { ChangeEvent, useCallback, useEffect, useState } from "react";
 import { studentApi } from "@/lib/studentApi";
 import { api } from "@/lib/api";
 import { useToast } from "@/components/ui/Toast";
@@ -25,6 +25,12 @@ type Student = {
 };
 
 type AttendanceStatus = "PRESENT" | "ABSENT" | "LATE" | "HALF_DAY";
+type AttendanceRecord = { studentId: number; status: AttendanceStatus };
+type AttendanceClassResponse = {
+    attendanceList: AttendanceRecord[];
+    editable: boolean;
+    committed: boolean;
+};
 
 /* ---------------- Page ---------------- */
 
@@ -54,7 +60,6 @@ export default function AttendancePage() {
     /* ---------- Pagination ---------- */
     const [currentPage, setCurrentPage] = useState(0);
     const [totalPages, setTotalPages] = useState(0);
-    const [totalStudents, setTotalStudents] = useState(0);
     const PAGE_SIZE = 50;
 
     const [loading, setLoading] = useState({
@@ -63,15 +68,21 @@ export default function AttendancePage() {
         saving: false,
     });
 
-    const [error, setError] = useState("");
+    const getErrorMessage = (err: unknown): string => {
+        if (typeof err === "object" && err !== null && "response" in err) {
+            const response = (err as { response?: { data?: { message?: string } } }).response;
+            if (response?.data?.message) return response.data.message;
+        }
+        if (typeof err === "object" && err !== null && "message" in err) {
+            const message = (err as { message?: string }).message;
+            if (message) return message;
+        }
+        return "Unknown error";
+    };
 
     /* ---------------- Init ---------------- */
 
-    useEffect(() => {
-        loadClasses();
-    }, [currentSession]);
-
-    async function loadClasses() {
+    const loadClasses = useCallback(async () => {
         try {
             setLoading(prev => ({ ...prev, classes: true }));
             const res = await api.get("/api/classes/mine");
@@ -81,14 +92,17 @@ export default function AttendancePage() {
         } finally {
             setLoading(prev => ({ ...prev, classes: false }));
         }
-    }
+    }, [showToast]);
+
+    useEffect(() => {
+        void loadClasses();
+    }, [currentSession, loadClasses]);
 
     /* ---------------- Load Students & Attendance ---------------- */
 
     async function loadStudentsAndAttendance(classId: number, date: string, page: number) {
         try {
             setLoading(prev => ({ ...prev, students: true }));
-            setError("");
 
             if (!currentSession) return;
 
@@ -97,10 +111,9 @@ export default function AttendancePage() {
             const studentList = studentRes.data.content || [];
             setStudents(studentList);
             setTotalPages(studentRes.data.totalPages || 0);
-            setTotalStudents(studentRes.data.totalElements || 0);
 
             // 2. Load Existing Attendance for the Class on this Date
-            const attendanceRes = await api.get(`/api/attendance/class/${classId}?sessionId=${currentSession.id}&date=${date}`);
+            const attendanceRes = await api.get<AttendanceClassResponse>(`/api/attendance/class/${classId}?sessionId=${currentSession.id}&date=${date}`);
             const { attendanceList, editable: isEditable, committed: isCommitted } = attendanceRes.data;
             setEditable(isEditable);
             setCommitted(isCommitted);
@@ -116,14 +129,14 @@ export default function AttendancePage() {
             });
 
             // Override with existing records from DB
-            attendanceList.forEach((record: any) => {
+            attendanceList.forEach((record) => {
                 newMap[record.studentId] = record.status;
             });
 
             setAttendanceMap(newMap);
 
-        } catch (e: any) {
-            const msg = e.response?.data?.message || e.message;
+        } catch (e: unknown) {
+            const msg = getErrorMessage(e);
             showToast("Failed to load attendance: " + msg, "error");
         } finally {
             setLoading(prev => ({ ...prev, students: false }));
@@ -132,20 +145,20 @@ export default function AttendancePage() {
 
     /* ---------------- Handlers ---------------- */
 
-    function onClassChange(e: any) {
+    function onClassChange(e: ChangeEvent<HTMLSelectElement>) {
         const classId = e.target.value;
         setSelectedClass(classId);
         setCurrentPage(0);
         if (classId && selectedDate) {
-            loadStudentsAndAttendance(Number(classId), selectedDate, 0);
+            void loadStudentsAndAttendance(Number(classId), selectedDate, 0);
         }
     }
 
-    function onDateChange(e: any) {
+    function onDateChange(e: ChangeEvent<HTMLInputElement>) {
         const date = e.target.value;
         setSelectedDate(date);
         if (selectedClass && date) {
-            loadStudentsAndAttendance(Number(selectedClass), date, currentPage);
+            void loadStudentsAndAttendance(Number(selectedClass), date, currentPage);
         }
     }
 
@@ -153,7 +166,7 @@ export default function AttendancePage() {
         if (newPage < 0 || newPage >= totalPages) return;
         setCurrentPage(newPage);
         if (selectedClass && selectedDate) {
-            loadStudentsAndAttendance(Number(selectedClass), selectedDate, newPage);
+            void loadStudentsAndAttendance(Number(selectedClass), selectedDate, newPage);
         }
     }
 
@@ -189,8 +202,8 @@ export default function AttendancePage() {
             setLoading(prev => ({ ...prev, saving: true }));
             await api.post(`/api/attendance/bulk?date=${selectedDate}&classId=${selectedClass}&sessionId=${currentSession.id}`, attendanceMap);
             showToast("Attendance records saved successfully!", "success");
-        } catch (e: any) {
-            const msg = e.response?.data?.message || e.message;
+        } catch (e: unknown) {
+            const msg = getErrorMessage(e);
             showToast("Save failed: " + msg, "error");
         } finally {
             setLoading(prev => ({ ...prev, saving: false }));

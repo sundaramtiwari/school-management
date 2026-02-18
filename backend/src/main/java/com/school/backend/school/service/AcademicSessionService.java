@@ -1,10 +1,12 @@
 package com.school.backend.school.service;
 
 import com.school.backend.common.exception.InvalidOperationException;
+import com.school.backend.common.exception.ResourceNotFoundException;
 import com.school.backend.school.entity.AcademicSession;
 import com.school.backend.school.entity.School;
 import com.school.backend.school.repository.AcademicSessionRepository;
 import lombok.RequiredArgsConstructor;
+import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -13,30 +15,35 @@ import java.time.LocalDate;
 
 @Service
 @RequiredArgsConstructor
+@Slf4j
 public class AcademicSessionService {
 
     private final AcademicSessionRepository repository;
     private final com.school.backend.school.repository.SchoolRepository schoolRepository;
 
     public List<AcademicSession> getSessions(Long schoolId) {
+        log.debug("Fetching active sessions for schoolId={}", schoolId);
         return repository.findBySchoolIdAndActiveTrue(schoolId);
     }
 
     @Transactional
     public AcademicSession createSession(AcademicSession session) {
+        log.info("Creating academic session name={} for schoolId={}", session.getName(), session.getSchoolId());
         validateDates(session.getStartDate(), session.getEndDate());
         if (repository.existsBySchoolIdAndName(session.getSchoolId(), session.getName())) {
+            log.warn("Session creation blocked: duplicate name={} for schoolId={}", session.getName(), session.getSchoolId());
             throw new InvalidOperationException(
                     "Session with name '" + session.getName() + "' already exists for this school");
         }
         AcademicSession saved = repository.save(session);
 
         School school = schoolRepository.findById(session.getSchoolId())
-                .orElseThrow(() -> new RuntimeException("School not found"));
+                .orElseThrow(() -> new ResourceNotFoundException("School not found"));
 
         if (school.getCurrentSessionId() == null) {
             school.setCurrentSessionId(saved.getId());
             schoolRepository.save(school);
+            log.info("Initialized currentSessionId={} for schoolId={}", saved.getId(), school.getId());
         }
 
         return saved;
@@ -44,12 +51,14 @@ public class AcademicSessionService {
 
     @Transactional
     public AcademicSession updateSession(Long id, AcademicSession updatedSession) {
+        log.info("Updating academic session id={} (name={}, active={})", id, updatedSession.getName(), updatedSession.isActive());
         AcademicSession session = repository.findById(id)
                 .orElseThrow(() -> new InvalidOperationException("Session not found"));
 
         // Only check if name is changing
         if (!session.getName().equals(updatedSession.getName())) {
             if (repository.existsBySchoolIdAndName(session.getSchoolId(), updatedSession.getName())) {
+                log.warn("Session rename blocked: duplicate name={} for schoolId={}", updatedSession.getName(), session.getSchoolId());
                 throw new InvalidOperationException(
                         "Session with name '" + updatedSession.getName() + "' already exists for this school");
             }
@@ -64,15 +73,18 @@ public class AcademicSessionService {
 
     @Transactional
     public void setCurrentSession(Long schoolId, Long sessionId) {
+        log.info("Setting current session schoolId={} sessionId={}", schoolId, sessionId);
         School school = schoolRepository.findById(schoolId)
-                .orElseThrow(() -> new RuntimeException("School not found"));
+                .orElseThrow(() -> new ResourceNotFoundException("School not found"));
 
         // Verify session belongs to school
         AcademicSession session = repository.findById(sessionId)
-                .orElseThrow(() -> new RuntimeException("Session not found"));
+                .orElseThrow(() -> new ResourceNotFoundException("Session not found"));
 
         if (!session.getSchoolId().equals(schoolId)) {
-            throw new RuntimeException("Session does not belong to this school");
+            log.warn("Rejected current session change: sessionId={} belongsToSchoolId={}, attemptedSchoolId={}",
+                    sessionId, session.getSchoolId(), schoolId);
+            throw new InvalidOperationException("Session does not belong to this school");
         }
 
         school.setCurrentSessionId(sessionId);
@@ -80,8 +92,9 @@ public class AcademicSessionService {
     }
 
     public java.util.Optional<AcademicSession> getCurrentSession(Long schoolId) {
+        log.debug("Fetching current session for schoolId={}", schoolId);
         School school = schoolRepository.findById(schoolId)
-                .orElseThrow(() -> new RuntimeException("School not found"));
+                .orElseThrow(() -> new ResourceNotFoundException("School not found"));
 
         if (school.getCurrentSessionId() == null) {
             return java.util.Optional.empty();

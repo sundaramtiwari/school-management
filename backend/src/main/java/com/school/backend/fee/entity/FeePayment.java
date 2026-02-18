@@ -25,6 +25,9 @@ public class FeePayment extends TenantEntity {
     @EqualsAndHashCode.Include
     private Long id;
 
+    @Version
+    private Long version;
+
     @Column(name = "student_id", nullable = false)
     private Long studentId;
 

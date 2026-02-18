@@ -11,6 +11,7 @@ import com.school.backend.user.entity.User;
 import com.school.backend.user.repository.UserRepository;
 import com.school.backend.user.security.SecurityUtil;
 import lombok.RequiredArgsConstructor;
+import lombok.extern.slf4j.Slf4j;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
 import org.springframework.security.access.AccessDeniedException;
@@ -22,6 +23,7 @@ import java.util.List;
 
 @Service
 @RequiredArgsConstructor
+@Slf4j
 public class SchoolService {
 
     private final SchoolRepository schoolRepository;
@@ -32,6 +34,7 @@ public class SchoolService {
      * Create school from DTO and return saved DTO
      */
     public SchoolDto create(SchoolDto dto) {
+        log.info("Creating school via DTO name={}", dto.getName());
         School entity = SchoolMapper.toEntity(dto);
         // ensure ID is not set by client
         entity.setId(null);
@@ -44,8 +47,10 @@ public class SchoolService {
      */
     @Transactional
     public SchoolDto createSchoolWithAdmin(SchoolOnboardingRequest req) {
+        log.info("Starting school onboarding for schoolName={} adminEmail={}", req.getName(), req.getAdminEmail());
         // 1. Check if user already exists
         if (userRepository.existsByEmail(req.getAdminEmail())) {
+            log.warn("School onboarding rejected: admin email already exists email={}", req.getAdminEmail());
             throw new IllegalArgumentException("User with email " + req.getAdminEmail() + " already exists");
         }
 
@@ -72,6 +77,7 @@ public class SchoolService {
         }
 
         school = schoolRepository.save(school);
+        log.info("School created with id={} code={}", school.getId(), school.getSchoolCode());
 
         // 3. Create Admin User
         User user = new User();
@@ -81,6 +87,7 @@ public class SchoolService {
         user.setSchool(school);
 
         userRepository.save(user);
+        log.info("Initial school admin user created for schoolId={} email={}", school.getId(), req.getAdminEmail());
 
         return SchoolMapper.toDto(school);
     }
@@ -89,6 +96,7 @@ public class SchoolService {
      * Paginated listing returning Page<SchoolDto>
      */
     public Page<SchoolDto> listSchools(Pageable pageable) {
+        log.debug("Listing schools for role={}", SecurityUtil.role());
         if (SecurityUtil.role() == UserRole.SCHOOL_ADMIN) {
             Long schoolId = SecurityUtil.schoolId();
             School school = schoolRepository.findById(schoolId)
@@ -107,12 +115,14 @@ public class SchoolService {
     }
 
     public SchoolDto getByCode(String code) {
+        log.debug("Fetching school by code={}", code);
         School school = schoolRepository.findBySchoolCode(code)
                 .orElseThrow(() -> new ResourceNotFoundException("School not found with code: " + code));
 
         if (SecurityUtil.role() == UserRole.SCHOOL_ADMIN) {
             Long mySchoolId = SecurityUtil.schoolId();
             if (!school.getId().equals(mySchoolId)) {
+                log.warn("Access denied for school-by-code lookup. requestedCode={} userSchoolId={}", code, mySchoolId);
                 // For security, strictly forbid or just return as if not found/unauthorized
                 // Spring Security usually handles 403 if we threw AccessDeniedException
                 // but here we are in service layer.
@@ -124,10 +134,12 @@ public class SchoolService {
     }
 
     public SchoolDto getById(Long id) {
+        log.debug("Fetching school by id={}", id);
         // Security check for SCHOOL_ADMIN
         if (SecurityUtil.role() == UserRole.SCHOOL_ADMIN) {
             Long mySchoolId = SecurityUtil.schoolId();
             if (!id.equals(mySchoolId)) {
+                log.warn("Access denied for school-by-id lookup. requestedId={} userSchoolId={}", id, mySchoolId);
                 throw new AccessDeniedException("Access denied to other school");
             }
         }
@@ -142,6 +154,7 @@ public class SchoolService {
      * semantics).
      */
     public SchoolDto updateByCode(String code, SchoolDto dto) {
+        log.info("Updating school by code={}", code);
         School entity = schoolRepository.findBySchoolCode(code)
                 .orElseThrow(() -> new ResourceNotFoundException("School not found with code: " + code));
         SchoolMapper.updateFromDto(dto, entity);
@@ -154,6 +167,7 @@ public class SchoolService {
      * This preserves the same database id but replaces fields.
      */
     public SchoolDto replaceByCode(String code, SchoolDto dto) {
+        log.info("Replacing school by code={}", code);
         School existing = schoolRepository.findBySchoolCode(code)
                 .orElseThrow(() -> new ResourceNotFoundException("School not found with code: " + code));
 
@@ -190,6 +204,7 @@ public class SchoolService {
      */
     @Transactional
     public void updateCurrentSession(Long schoolId, Long sessionId) {
+        log.info("Updating school's currentSession schoolId={} sessionId={}", schoolId, sessionId);
         School school = schoolRepository.findById(schoolId)
                 .orElseThrow(() -> new ResourceNotFoundException("School not found with id: " + schoolId));
         school.setCurrentSessionId(sessionId);

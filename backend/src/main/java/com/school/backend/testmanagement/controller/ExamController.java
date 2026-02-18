@@ -22,6 +22,7 @@ public class ExamController {
     private final SessionResolver sessionResolver;
 
     @PostMapping
+    @PreAuthorize("hasAnyRole('SUPER_ADMIN', 'PLATFORM_ADMIN', 'SCHOOL_ADMIN', 'TEACHER')")
     public Exam create(@Valid @RequestBody ExamCreateRequest req) {
         return service.create(req);
     }
@@ -46,7 +47,7 @@ public class ExamController {
     }
 
     @PutMapping("/{examId}/publish")
-    @PreAuthorize("hasAnyRole('SUPER_ADMIN', 'PLATFORM_ADMIN', 'SCHOOL_ADMIN')")
+    @PreAuthorize("hasAnyRole('SUPER_ADMIN', 'PLATFORM_ADMIN', 'SCHOOL_ADMIN', 'TEACHER')")
     public com.school.backend.testmanagement.dto.ExamDto publish(@PathVariable Long examId) {
         return service.publishExam(examId);
     }

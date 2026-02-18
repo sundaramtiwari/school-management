@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { ChangeEvent, useCallback, useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
 import { useSession } from "@/context/SessionContext";
 import { api } from "@/lib/api";
@@ -39,7 +39,7 @@ export default function ExamsPage() {
     const [selectedClass, setSelectedClass] = useState<number | "">("");
     const [loadingClasses, setLoadingClasses] = useState(true);
 
-    const canCreateExam = user?.role === "SCHOOL_ADMIN" || user?.role === "SUPER_ADMIN" || user?.role === "PLATFORM_ADMIN";
+    const canCreateExam = user?.role === "SCHOOL_ADMIN" || user?.role === "SUPER_ADMIN" || user?.role === "PLATFORM_ADMIN" || user?.role === "TEACHER";
 
     const [exams, setExams] = useState<Exam[]>([]);
     const [loadingExams, setLoadingExams] = useState(false);
@@ -58,17 +58,11 @@ export default function ExamsPage() {
                 router.push("/classes");
             }
         }
-    }, [currentSession, isSessionLoading, hasClasses, router]);
+    }, [currentSession, isSessionLoading, hasClasses, router, showToast]);
 
     /* ---------------- Load Data ---------------- */
 
-    useEffect(() => {
-        if (currentSession) {
-            loadClasses();
-        }
-    }, [currentSession]);
-
-    async function loadClasses() {
+    const loadClasses = useCallback(async () => {
         try {
             setLoadingClasses(true);
             const res = await api.get("/api/classes/mine");
@@ -79,7 +73,13 @@ export default function ExamsPage() {
         } finally {
             setLoadingClasses(false);
         }
-    }
+    }, [showToast]);
+
+    useEffect(() => {
+        if (currentSession) {
+            void loadClasses();
+        }
+    }, [currentSession, loadClasses]);
 
     async function loadExams(classId: number) {
         if (!currentSession) return;
@@ -96,12 +96,12 @@ export default function ExamsPage() {
 
     /* ---------------- Handlers ---------------- */
 
-    function onClassChange(e: any) {
+    function onClassChange(e: ChangeEvent<HTMLSelectElement>) {
         const val = e.target.value;
         setSelectedClass(val);
         setExams([]);
         if (val) {
-            loadExams(Number(val));
+            void loadExams(Number(val));
         }
     }
 
