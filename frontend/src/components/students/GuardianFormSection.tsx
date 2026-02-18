@@ -1,8 +1,6 @@
 "use client";
 
 import { useEffect } from "react";
-import { Button } from "@/components/ui/Button";
-import { Plus, Trash2, ShieldCheck, MessageSquare } from "lucide-react";
 
 export type GuardianFormValue = {
     name: string;
@@ -54,7 +52,7 @@ export default function GuardianFormSection({ guardians, onChange }: GuardianFor
         onChange(newGuardians);
     };
 
-    const updateGuardian = (index: number, field: keyof GuardianFormValue, value: any) => {
+    const updateGuardian = (index: number, field: keyof GuardianFormValue, value: string | boolean) => {
         const newGuardians = [...guardians];
 
         if (field === "primaryGuardian" && value === true) {
@@ -73,15 +71,13 @@ export default function GuardianFormSection({ guardians, onChange }: GuardianFor
         <div className="space-y-4">
             <div className="flex items-center justify-between">
                 <h3 className="text-lg font-semibold text-gray-900">Guardians</h3>
-                <Button
+                <button
                     type="button"
-                    variant="outline"
-                    size="sm"
                     onClick={addGuardian}
-                    className="flex items-center gap-2"
+                    className="inline-flex items-center gap-2 px-3 py-1.5 rounded-md border border-gray-300 bg-white text-sm font-medium text-gray-700 hover:bg-gray-50"
                 >
-                    <Plus className="h-4 w-4" /> Add Guardian
-                </Button>
+                    <span aria-hidden="true">+</span> Add Guardian
+                </button>
             </div>
 
             {guardians.length === 0 && (
@@ -104,7 +100,7 @@ export default function GuardianFormSection({ guardians, onChange }: GuardianFor
                                             : "bg-gray-100 text-gray-500 hover:bg-gray-200"
                                         }`}
                                 >
-                                    <ShieldCheck className="h-3 w-3" />
+                                    <span aria-hidden="true">✓</span>
                                     Primary
                                 </button>
                                 <button
@@ -112,7 +108,7 @@ export default function GuardianFormSection({ guardians, onChange }: GuardianFor
                                     onClick={() => removeGuardian(index)}
                                     className="text-red-500 hover:text-red-700 transition-colors"
                                 >
-                                    <Trash2 className="h-4 w-4" />
+                                    <span aria-hidden="true">🗑</span>
                                 </button>
                             </div>
                         </div>
@@ -167,7 +163,7 @@ export default function GuardianFormSection({ guardians, onChange }: GuardianFor
                                                 : "bg-white border-gray-200 text-gray-500"
                                             }`}
                                     >
-                                        <MessageSquare className={`h-4 w-4 ${guardian.whatsappEnabled ? "text-green-600" : "text-gray-400"}`} />
+                                        <span aria-hidden="true" className={guardian.whatsappEnabled ? "text-green-600" : "text-gray-400"}>💬</span>
                                         {guardian.whatsappEnabled ? "Enabled" : "Enable"}
                                     </button>
                                 </div>

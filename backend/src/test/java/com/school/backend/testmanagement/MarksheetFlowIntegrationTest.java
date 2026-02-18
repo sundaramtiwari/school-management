@@ -5,6 +5,7 @@ import com.school.backend.common.enums.Gender;
 import com.school.backend.core.classsubject.entity.Subject;
 import com.school.backend.core.classsubject.repository.SchoolClassRepository;
 import com.school.backend.core.classsubject.repository.SubjectRepository;
+import com.school.backend.core.guardian.dto.GuardianRequest;
 import com.school.backend.core.student.dto.StudentCreateRequest;
 import com.school.backend.core.student.dto.StudentDto;
 import com.school.backend.core.student.dto.StudentEnrollmentDto;
@@ -35,6 +36,7 @@ import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 
 import java.time.LocalDate;
+import java.util.List;
 import java.util.Map;
 import java.util.Objects;
 
@@ -136,6 +138,12 @@ public class MarksheetFlowIntegrationTest extends BaseAuthenticatedIntegrationTe
                 sreq.setAdmissionNumber("ADM-M-1");
                 sreq.setFirstName("Mark");
                 sreq.setGender(Gender.MALE);
+                sreq.setGuardians(List.of(GuardianRequest.builder()
+                                .name("Marksheet Guardian")
+                                .contactNumber("4433221100")
+                                .relation("FATHER")
+                                .primaryGuardian(true)
+                                .build()));
 
                 HttpEntity<StudentCreateRequest> studentEntity = new HttpEntity<>(sreq, headers);
 
@@ -274,62 +282,7 @@ public class MarksheetFlowIntegrationTest extends BaseAuthenticatedIntegrationTe
 
         @AfterEach
         void cleanup() {
-
-                // 1. Marks
-                if (examSubjectId != null) {
-                        markRepo.findAll()
-                                        .forEach(markRepo::delete);
-                }
-
-                // 2. Exam subjects
-                if (examSubjectId != null) {
-                        examSubjectRepo.deleteById(examSubjectId);
-                }
-
-                // 3. Exams
-                if (examId != null) {
-                        examRepo.deleteById(examId);
-                }
-
-                // 4. Students
-                if (studentId != null) {
-                        studentEnrollmentRepository.deleteAll();
-                }
-
-                // 5. Students
-                if (studentId != null) {
-                        studentRepo.deleteById(studentId);
-                }
-
-                // 6. Classes
-                if (classId != null) {
-                        classRepo.deleteById(classId);
-                }
-
-                // 7. Users (IMPORTANT)
-                if (schoolId != null) {
-                        userRepository
-                                        .findAll()
-                                        .stream()
-                                        .filter(u -> u.getSchool() != null &&
-                                                        u.getSchool().getId().equals(schoolId))
-                                        .forEach(userRepository::delete);
-                }
-
-                // 8. Subject
-                if (subjectId != null) {
-                        subjectRepo.deleteById(subjectId);
-                }
-
-                // 9. Session
-                if (sessionId != null) {
-                        sessionRepo.deleteById(sessionId);
-                }
-
-                // 10. School (LAST)
-                if (schoolId != null) {
-                        schoolRepo.deleteById(schoolId);
-                }
+                fullCleanup();
         }
 
 }

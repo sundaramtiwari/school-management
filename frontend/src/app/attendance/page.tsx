@@ -147,10 +147,11 @@ export default function AttendancePage() {
 
     function onClassChange(e: ChangeEvent<HTMLSelectElement>) {
         const classId = e.target.value;
-        setSelectedClass(classId);
+        const parsedClassId = classId ? Number(classId) : "";
+        setSelectedClass(parsedClassId);
         setCurrentPage(0);
-        if (classId && selectedDate) {
-            void loadStudentsAndAttendance(Number(classId), selectedDate, 0);
+        if (parsedClassId && selectedDate) {
+            void loadStudentsAndAttendance(parsedClassId, selectedDate, 0);
         }
     }
 

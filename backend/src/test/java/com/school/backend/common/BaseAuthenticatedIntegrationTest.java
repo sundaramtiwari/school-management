@@ -3,8 +3,10 @@ package com.school.backend.common;
 import com.school.backend.core.attendance.repository.AttendanceRepository;
 import com.school.backend.core.classsubject.repository.ClassSubjectRepository;
 import com.school.backend.core.classsubject.repository.SchoolClassRepository;
+import com.school.backend.core.guardian.repository.GuardianRepository;
 import com.school.backend.core.student.repository.PromotionRecordRepository;
 import com.school.backend.core.student.repository.StudentEnrollmentRepository;
+import com.school.backend.core.student.repository.StudentGuardianRepository;
 import com.school.backend.core.student.repository.StudentRepository;
 import com.school.backend.core.teacher.repository.TeacherRepository;
 import com.school.backend.fee.repository.FeePaymentRepository;
@@ -56,6 +58,10 @@ public abstract class BaseAuthenticatedIntegrationTest {
     @Autowired
     protected AttendanceRepository attendanceRepository;
     @Autowired
+    protected GuardianRepository guardianRepository;
+    @Autowired
+    protected StudentGuardianRepository studentGuardianRepository;
+    @Autowired
     protected FeeTypeRepository feeTypeRepository;
     @Autowired
     protected FeeStructureRepository feeStructureRepository;
@@ -85,7 +91,7 @@ public abstract class BaseAuthenticatedIntegrationTest {
     }
 
     protected Long setupSession(Long schoolId, AcademicSessionRepository sessionRepository,
-                                SchoolRepository schoolRepository) {
+            SchoolRepository schoolRepository) {
         AcademicSession session = sessionRepository
                 .save(AcademicSession.builder()
                         .name("2025-26")
@@ -110,6 +116,8 @@ public abstract class BaseAuthenticatedIntegrationTest {
         attendanceRepository.deleteAll();
         promotionRecordRepository.deleteAll();
         studentEnrollmentRepository.deleteAll();
+        studentGuardianRepository.deleteAll();
+        guardianRepository.deleteAll();
         feePaymentRepository.deleteAll();
         assignmentRepository.deleteAll();
         lateFeePolicyRepository.deleteAll();

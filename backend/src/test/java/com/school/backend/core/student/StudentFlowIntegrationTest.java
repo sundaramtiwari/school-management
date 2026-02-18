@@ -3,6 +3,7 @@ package com.school.backend.core.student;
 import com.school.backend.common.BaseAuthenticatedIntegrationTest;
 import com.school.backend.common.dto.PageResponse;
 import com.school.backend.common.enums.Gender;
+import com.school.backend.core.guardian.dto.GuardianRequest;
 import com.school.backend.core.student.dto.*;
 import com.school.backend.fee.dto.*;
 import com.school.backend.fee.entity.FeeType;
@@ -17,6 +18,7 @@ import org.springframework.http.HttpMethod;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 
+import java.util.List;
 import java.util.Map;
 import java.util.Objects;
 
@@ -91,6 +93,12 @@ public class StudentFlowIntegrationTest extends BaseAuthenticatedIntegrationTest
                 sreq.setAdmissionNumber("ADM-100");
                 sreq.setFirstName("Test");
                 sreq.setGender(Gender.MALE);
+                sreq.setGuardians(List.of(GuardianRequest.builder()
+                                .name("Test Guardian")
+                                .contactNumber("9988776655")
+                                .relation("FATHER")
+                                .primaryGuardian(true)
+                                .build()));
 
                 HttpEntity<StudentCreateRequest> studentEntity = new HttpEntity<>(sreq, headers);
 
@@ -276,6 +284,12 @@ public class StudentFlowIntegrationTest extends BaseAuthenticatedIntegrationTest
                 createReq.setFirstName("Rahul");
                 createReq.setLastName("Sharma");
                 createReq.setGender(Gender.MALE);
+                createReq.setGuardians(List.of(GuardianRequest.builder()
+                                .name("Rahul Guardian")
+                                .contactNumber("8877665544")
+                                .relation("MOTHER")
+                                .primaryGuardian(true)
+                                .build()));
 
                 HttpEntity<StudentCreateRequest> createEntity = new HttpEntity<>(createReq, headers);
 

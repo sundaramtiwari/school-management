@@ -7,6 +7,6 @@ import { useSession } from "@/context/SessionContext";
  * Returns { session, loading } where session is e.g. "2024-25" or "" if none found.
  */
 export function useActiveSession() {
-    const { currentSession, isLoading } = useSession();
-    return { session: currentSession?.name || "", loading: isLoading };
+    const { currentSession, isSessionLoading } = useSession();
+    return { session: currentSession?.name || "", loading: isSessionLoading };
 }

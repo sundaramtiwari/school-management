@@ -2,6 +2,7 @@ package com.school.backend.fee;
 
 import com.school.backend.common.BaseAuthenticatedIntegrationTest;
 import com.school.backend.common.enums.Gender;
+import com.school.backend.core.guardian.dto.GuardianRequest;
 import com.school.backend.core.student.dto.StudentCreateRequest;
 import com.school.backend.core.student.dto.StudentDto;
 import com.school.backend.fee.dto.*;
@@ -16,6 +17,7 @@ import org.springframework.http.HttpMethod;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 
+import java.util.List;
 import java.util.Map;
 import java.util.Objects;
 
@@ -92,6 +94,12 @@ public class FeeFlowIntegrationTest extends BaseAuthenticatedIntegrationTest {
                 sreq.setAdmissionNumber("ADM-FEE-1");
                 sreq.setFirstName("Fee");
                 sreq.setGender(Gender.MALE);
+                sreq.setGuardians(List.of(GuardianRequest.builder()
+                                .name("Fee Guardian")
+                                .contactNumber("5544332211")
+                                .relation("FATHER")
+                                .primaryGuardian(true)
+                                .build()));
 
                 HttpEntity<StudentCreateRequest> studentEntity = new HttpEntity<>(sreq, headers);
 

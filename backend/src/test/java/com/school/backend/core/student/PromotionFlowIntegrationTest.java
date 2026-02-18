@@ -4,6 +4,7 @@ import com.school.backend.common.BaseAuthenticatedIntegrationTest;
 import com.school.backend.core.classsubject.dto.SchoolClassCreateRequest;
 import com.school.backend.core.classsubject.dto.SchoolClassDto;
 import com.school.backend.core.classsubject.repository.SchoolClassRepository;
+import com.school.backend.core.guardian.dto.GuardianRequest;
 import com.school.backend.core.student.dto.*;
 import com.school.backend.core.student.repository.PromotionRecordRepository;
 import com.school.backend.core.student.repository.StudentEnrollmentRepository;
@@ -31,6 +32,7 @@ import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 
 import java.time.LocalDate;
+import java.util.List;
 import java.util.Objects;
 
 import static com.school.backend.common.enums.Gender.MALE;
@@ -297,6 +299,12 @@ public class PromotionFlowIntegrationTest extends BaseAuthenticatedIntegrationTe
                 req.setDob(LocalDate.of(2015, 1, 1));
                 req.setGender(MALE);
                 req.setAdmissionNumber("name" + System.currentTimeMillis());
+                req.setGuardians(List.of(GuardianRequest.builder()
+                                .name("Promotion Guardian")
+                                .contactNumber("7766554433")
+                                .relation("FATHER")
+                                .primaryGuardian(true)
+                                .build()));
 
                 HttpEntity<StudentCreateRequest> entity = new HttpEntity<>(req, headers);
 
@@ -334,85 +342,9 @@ public class PromotionFlowIntegrationTest extends BaseAuthenticatedIntegrationTe
                 assertThat(res.getStatusCode()).isEqualTo(HttpStatus.OK);
         }
 
-        /**
-         * FK-safe cleanup after each test.
-         */
         @AfterEach
         void cleanup() {
-
-                // 1. Promotion records
-                if (studentId != null) {
-                        promotionRecordRepository
-                                        .findByStudentIdOrderBySessionIdAsc(studentId)
-                                        .forEach(promotionRecordRepository::delete);
-                }
-
-                // 2. Enrollments
-                if (studentId != null) {
-                        studentEnrollmentRepository
-                                        .findByStudentId(studentId, Pageable.unpaged())
-                                        .forEach(studentEnrollmentRepository::delete);
-                }
-
-                // 3. Fee payments
-                if (studentId != null) {
-                        feePaymentRepository
-                                        .findByStudentId(studentId)
-                                        .forEach(feePaymentRepository::delete);
-                }
-
-                // 4. Fee assignments
-                if (studentId != null && session2025Id != null) {
-                        assignmentRepository
-                                        .findByStudentIdAndSessionId(studentId, session2025Id)
-                                        .forEach(assignmentRepository::delete);
-                }
-
-                // 5. Fee structure
-                if (feeStructureId != null) {
-                        feeStructureRepository.deleteById(feeStructureId);
-                }
-
-                // 6. Fee type
-                if (feeTypeId != null) {
-                        feeTypeRepository.deleteById(feeTypeId);
-                }
-
-                // 7. Student
-                if (studentId != null) {
-                        studentRepository.deleteById(studentId);
-                }
-
-                // 8. Class
-                if (toClassId != null) {
-                        schoolClassRepository.deleteById(toClassId);
-                }
-
-                if (fromClassId != null) {
-                        schoolClassRepository.deleteById(fromClassId);
-                }
-
-                // 9. Users (IMPORTANT)
-                if (schoolId != null) {
-                        userRepository
-                                        .findAll()
-                                        .stream()
-                                        .filter(u -> u.getSchool() != null &&
-                                                        u.getSchool().getId().equals(schoolId))
-                                        .forEach(userRepository::delete);
-                }
-                // 10. Sessions
-                if (session2024Id != null) {
-                        sessionRepository.deleteById(session2024Id);
-                }
-                if (session2025Id != null) {
-                        sessionRepository.deleteById(session2025Id);
-                }
-
-                // 11. School
-                if (schoolId != null) {
-                        schoolRepository.deleteById(schoolId);
-                }
+                fullCleanup();
         }
 
 }

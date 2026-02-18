@@ -98,10 +98,11 @@ export default function ExamsPage() {
 
     function onClassChange(e: ChangeEvent<HTMLSelectElement>) {
         const val = e.target.value;
-        setSelectedClass(val);
+        const parsedClassId = val ? Number(val) : "";
+        setSelectedClass(parsedClassId);
         setExams([]);
-        if (val) {
-            void loadExams(Number(val));
+        if (parsedClassId) {
+            void loadExams(parsedClassId);
         }
     }
 

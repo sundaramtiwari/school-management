@@ -2,6 +2,7 @@ package com.school.backend.core.student;
 
 import com.school.backend.common.BaseAuthenticatedIntegrationTest;
 import com.school.backend.common.enums.Gender;
+import com.school.backend.core.guardian.dto.GuardianRequest;
 import com.school.backend.core.student.dto.StudentCreateRequest;
 import com.school.backend.core.student.dto.StudentDto;
 import com.school.backend.core.student.dto.StudentUpdateRequest;
@@ -12,6 +13,7 @@ import org.springframework.http.HttpMethod;
 import org.springframework.http.ResponseEntity;
 
 import java.time.LocalDate;
+import java.util.List;
 
 import static org.assertj.core.api.Assertions.assertThat;
 
@@ -71,6 +73,12 @@ public class StudentPersistenceIntegrationTest extends BaseAuthenticatedIntegrat
                 createReq.setPreviousSchoolAddress("456 Old St");
                 createReq.setPreviousSchoolContact("9876543210");
                 createReq.setReasonForLeavingPreviousSchool("Relocation");
+                createReq.setGuardians(List.of(GuardianRequest.builder()
+                                .name("Persistence Guardian")
+                                .contactNumber("6655443322")
+                                .relation("FATHER")
+                                .primaryGuardian(true)
+                                .build()));
 
                 HttpEntity<StudentCreateRequest> createEntity = new HttpEntity<>(createReq, headers);
                 ResponseEntity<StudentDto> createRes = restTemplate.postForEntity("/api/students", createEntity,
