@@ -8,6 +8,7 @@ import org.springframework.web.bind.annotation.*;
 import com.school.backend.user.security.SecurityUtil;
 
 import com.school.backend.school.dto.ActiveSessionResponse;
+import jakarta.validation.Valid;
 import java.util.Optional;
 import java.util.List;
 
@@ -35,14 +36,14 @@ public class AcademicSessionController {
 
     @PostMapping
     @PreAuthorize("hasAnyRole('SCHOOL_ADMIN', 'SUPER_ADMIN', 'PLATFORM_ADMIN')")
-    public AcademicSession createSession(@RequestBody AcademicSession session) {
+    public AcademicSession createSession(@Valid @RequestBody AcademicSession session) {
         session.setSchoolId(SecurityUtil.schoolId());
         return service.createSession(session);
     }
 
     @PutMapping("/{id}")
     @PreAuthorize("hasAnyRole('SCHOOL_ADMIN', 'SUPER_ADMIN', 'PLATFORM_ADMIN')")
-    public AcademicSession updateSession(@PathVariable Long id, @RequestBody AcademicSession session) {
+    public AcademicSession updateSession(@PathVariable Long id, @Valid @RequestBody AcademicSession session) {
         return service.updateSession(id, session);
     }
 

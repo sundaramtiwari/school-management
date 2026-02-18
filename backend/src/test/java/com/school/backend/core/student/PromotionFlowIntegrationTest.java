@@ -79,6 +79,8 @@ public class PromotionFlowIntegrationTest extends BaseAuthenticatedIntegrationTe
                 // Create sessions
                 AcademicSession session2024 = sessionRepository.save(AcademicSession.builder()
                                 .name("2024-25")
+                                .startDate(LocalDate.of(2024, 4, 1))
+                                .endDate(LocalDate.of(2025, 3, 31))
                                 .schoolId(schoolId)
                                 .active(true)
                                 .build());
@@ -86,6 +88,8 @@ public class PromotionFlowIntegrationTest extends BaseAuthenticatedIntegrationTe
 
                 AcademicSession session2025 = sessionRepository.save(AcademicSession.builder()
                                 .name("2025-26")
+                                .startDate(LocalDate.of(2025, 4, 1))
+                                .endDate(LocalDate.of(2026, 3, 31))
                                 .schoolId(schoolId)
                                 .active(true)
                                 .build());

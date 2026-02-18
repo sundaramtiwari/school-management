@@ -5,6 +5,8 @@ import jakarta.persistence.*;
 import lombok.*;
 import lombok.experimental.SuperBuilder;
 
+import java.time.LocalDate;
+
 @Entity
 @Table(name = "academic_sessions", uniqueConstraints = {
         @UniqueConstraint(columnNames = { "name", "school_id" })
@@ -22,6 +24,12 @@ public class AcademicSession extends TenantEntity {
 
     @Column(nullable = false)
     private String name; // e.g., "2024-25"
+
+    @Column
+    private LocalDate startDate;
+
+    @Column
+    private LocalDate endDate;
 
     @Builder.Default
     private boolean active = true;

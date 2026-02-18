@@ -13,10 +13,14 @@ import com.school.backend.core.teacher.entity.Teacher;
 import com.school.backend.core.teacher.repository.TeacherRepository;
 import com.school.backend.fee.entity.FeeStructure;
 import com.school.backend.fee.entity.FeeType;
+import com.school.backend.fee.entity.LateFeePolicy;
 import com.school.backend.fee.entity.StudentFeeAssignment;
 import com.school.backend.fee.enums.FeeFrequency;
+import com.school.backend.fee.enums.LateFeeCapType;
+import com.school.backend.fee.enums.LateFeeType;
 import com.school.backend.fee.repository.FeeStructureRepository;
 import com.school.backend.fee.repository.FeeTypeRepository;
+import com.school.backend.fee.repository.LateFeePolicyRepository;
 import com.school.backend.fee.repository.StudentFeeAssignmentRepository;
 import com.school.backend.school.entity.School;
 import com.school.backend.school.repository.SchoolRepository;
@@ -54,6 +58,7 @@ public class DummyDataSeeder implements CommandLineRunner {
         private final StudentRepository studentRepository;
         private final FeeTypeRepository feeTypeRepository;
         private final FeeStructureRepository feeStructureRepository;
+        private final LateFeePolicyRepository lateFeePolicyRepository;
         private final StudentFeeAssignmentRepository studentFeeAssignmentRepository;
         private final TransportRouteRepository transportRouteRepository;
         private final PickupPointRepository pickupPointRepository;
@@ -143,6 +148,8 @@ public class DummyDataSeeder implements CommandLineRunner {
                 com.school.backend.school.entity.AcademicSession session = com.school.backend.school.entity.AcademicSession
                                 .builder()
                                 .name("2025-26")
+                                .startDate(LocalDate.of(2025, 4, 1))
+                                .endDate(LocalDate.of(2026, 3, 31))
                                 .active(true)
                                 .build();
                 session.setSchoolId(school.getId());
@@ -177,7 +184,18 @@ public class DummyDataSeeder implements CommandLineRunner {
                                         .active(true)
                                         .schoolId(school.getId())
                                         .build();
-                        feeStructureRepository.save(fs);
+                        fs = feeStructureRepository.save(fs);
+
+                        lateFeePolicyRepository.save(LateFeePolicy.builder()
+                                        .schoolId(school.getId())
+                                        .feeStructure(fs)
+                                        .type(LateFeeType.PERCENTAGE)
+                                        .amountValue(java.math.BigDecimal.valueOf(2))
+                                        .graceDays(7)
+                                        .capType(LateFeeCapType.PERCENTAGE)
+                                        .capValue(java.math.BigDecimal.valueOf(10))
+                                        .active(true)
+                                        .build());
                 }
 
                 // 6. Transport Routes

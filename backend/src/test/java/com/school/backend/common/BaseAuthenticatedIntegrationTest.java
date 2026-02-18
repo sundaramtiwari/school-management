@@ -8,6 +8,7 @@ import com.school.backend.core.student.repository.StudentEnrollmentRepository;
 import com.school.backend.core.student.repository.StudentRepository;
 import com.school.backend.core.teacher.repository.TeacherRepository;
 import com.school.backend.fee.repository.FeePaymentRepository;
+import com.school.backend.fee.repository.LateFeePolicyRepository;
 import com.school.backend.fee.repository.FeeStructureRepository;
 import com.school.backend.fee.repository.FeeTypeRepository;
 import com.school.backend.fee.repository.StudentFeeAssignmentRepository;
@@ -22,6 +23,7 @@ import org.springframework.boot.test.context.SpringBootTest;
 import org.springframework.boot.test.web.client.TestRestTemplate;
 import org.springframework.http.HttpHeaders;
 import org.springframework.test.context.ActiveProfiles;
+import java.time.LocalDate;
 
 @SpringBootTest(webEnvironment = SpringBootTest.WebEnvironment.RANDOM_PORT)
 @ActiveProfiles("test")
@@ -58,6 +60,8 @@ public abstract class BaseAuthenticatedIntegrationTest {
     @Autowired
     protected FeeStructureRepository feeStructureRepository;
     @Autowired
+    protected LateFeePolicyRepository lateFeePolicyRepository;
+    @Autowired
     protected StudentFeeAssignmentRepository assignmentRepository;
     @Autowired
     protected FeePaymentRepository feePaymentRepository;
@@ -85,6 +89,8 @@ public abstract class BaseAuthenticatedIntegrationTest {
         AcademicSession session = sessionRepository
                 .save(AcademicSession.builder()
                         .name("2025-26")
+                        .startDate(LocalDate.of(2025, 4, 1))
+                        .endDate(LocalDate.of(2026, 3, 31))
                         .schoolId(schoolId)
                         .active(true)
                         .build());
@@ -106,6 +112,7 @@ public abstract class BaseAuthenticatedIntegrationTest {
         studentEnrollmentRepository.deleteAll();
         feePaymentRepository.deleteAll();
         assignmentRepository.deleteAll();
+        lateFeePolicyRepository.deleteAll();
         feeStructureRepository.deleteAll();
         feeTypeRepository.deleteAll();
         studentRepository.deleteAll();

@@ -9,6 +9,7 @@ import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
 import java.util.List;
+import java.time.LocalDate;
 
 @Service
 @RequiredArgsConstructor
@@ -23,6 +24,7 @@ public class AcademicSessionService {
 
     @Transactional
     public AcademicSession createSession(AcademicSession session) {
+        validateDates(session.getStartDate(), session.getEndDate());
         if (repository.existsBySchoolIdAndName(session.getSchoolId(), session.getName())) {
             throw new InvalidOperationException(
                     "Session with name '" + session.getName() + "' already exists for this school");
@@ -55,7 +57,7 @@ public class AcademicSessionService {
 
         session.setName(updatedSession.getName());
         session.setActive(updatedSession.isActive());
-        // No more start/end date or current flag updates here
+        // startDate/endDate are immutable after creation.
 
         return repository.save(session);
     }
@@ -86,5 +88,14 @@ public class AcademicSessionService {
         }
 
         return repository.findById(school.getCurrentSessionId());
+    }
+
+    private void validateDates(LocalDate startDate, LocalDate endDate) {
+        if (startDate == null || endDate == null) {
+            throw new InvalidOperationException("Session startDate and endDate are required");
+        }
+        if (endDate.isBefore(startDate)) {
+            throw new InvalidOperationException("Session endDate must be on or after startDate");
+        }
     }
 }

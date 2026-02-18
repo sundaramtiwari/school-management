@@ -8,6 +8,14 @@ import { useToast } from "@/components/ui/Toast";
 import Modal from "@/components/ui/Modal";
 import { TableSkeleton } from "@/components/ui/Skeleton";
 
+type AcademicSessionItem = {
+    id: number;
+    name: string;
+    startDate?: string;
+    endDate?: string;
+    active: boolean;
+};
+
 export default function SessionsPage() {
     const { user } = useAuth();
     const { showToast } = useToast();
@@ -15,27 +23,43 @@ export default function SessionsPage() {
     const canManage = user?.role === "SCHOOL_ADMIN" || user?.role === "SUPER_ADMIN" || user?.role === "PLATFORM_ADMIN";
     const [isSaving, setIsSaving] = useState(false);
     const [showForm, setShowForm] = useState(false);
+    const [editId, setEditId] = useState<number | null>(null);
 
     const [form, setForm] = useState({
         name: "",
+        startDate: "",
+        endDate: "",
         active: true,
     });
 
     async function saveSession() {
-        if (!form.name) {
+        if (!form.name || (!editId && (!form.startDate || !form.endDate))) {
             showToast("Please fill all required fields", "warning");
+            return;
+        }
+        if (!editId && new Date(form.endDate) < new Date(form.startDate)) {
+            showToast("End date must be on or after start date", "warning");
             return;
         }
 
         try {
             setIsSaving(true);
-            await sessionApi.create(form);
-            showToast("Academic session created!", "success");
+            if (editId) {
+                await sessionApi.update(editId, { name: form.name, active: form.active });
+                showToast("Academic session updated!", "success");
+            } else {
+                await sessionApi.create(form);
+                showToast("Academic session created!", "success");
+            }
             setShowForm(false);
-            setForm({ name: "", active: true });
+            setEditId(null);
+            setForm({ name: "", startDate: "", endDate: "", active: true });
             await refreshSessions();
-        } catch (e: any) {
-            showToast("Save failed: " + (e.response?.data?.message || e.message), "error");
+        } catch (e: unknown) {
+            const msg = (e as { response?: { data?: { message?: string } }; message?: string })?.response?.data?.message
+                || (e as { message?: string })?.message
+                || "Unknown error";
+            showToast("Save failed: " + msg, "error");
         } finally {
             setIsSaving(false);
         }
@@ -52,9 +76,29 @@ export default function SessionsPage() {
             if (target) {
                 setCurrentSession(target);
             }
-        } catch (e: any) {
-            showToast("Failed to set current session: " + (e.response?.data?.message || e.message), "error");
+        } catch (e: unknown) {
+            const msg = (e as { response?: { data?: { message?: string } }; message?: string })?.response?.data?.message
+                || (e as { message?: string })?.message
+                || "Unknown error";
+            showToast("Failed to set current session: " + msg, "error");
         }
+    }
+
+    function openCreate() {
+        setEditId(null);
+        setForm({ name: "", startDate: "", endDate: "", active: true });
+        setShowForm(true);
+    }
+
+    function openEdit(session: AcademicSessionItem) {
+        setEditId(session.id);
+        setForm({
+            name: session.name || "",
+            startDate: session.startDate || "",
+            endDate: session.endDate || "",
+            active: !!session.active,
+        });
+        setShowForm(true);
     }
 
     return (
@@ -66,7 +110,7 @@ export default function SessionsPage() {
                 </div>
                 {canManage && (
                     <button
-                        onClick={() => setShowForm(true)}
+                        onClick={openCreate}
                         className="bg-blue-600 text-white px-6 py-2.5 rounded-xl font-bold shadow-lg hover:bg-blue-700 transition-all flex items-center gap-2"
                     >
                         <span className="text-xl">+</span> Add Session
@@ -84,6 +128,7 @@ export default function SessionsPage() {
                         <thead className="bg-gray-50 text-gray-600 font-bold border-b">
                             <tr>
                                 <th className="p-4 text-left">Academic Year</th>
+                                <th className="p-4 text-center">Period</th>
                                 <th className="p-4 text-center">Status Flag</th>
                                 <th className="p-4 text-center w-48">Actions</th>
                             </tr>
@@ -101,6 +146,9 @@ export default function SessionsPage() {
                                             )}
                                         </div>
                                     </td>
+                                    <td className="p-4 text-center text-xs text-gray-600 font-semibold">
+                                        {(s.startDate && s.endDate) ? `${s.startDate} to ${s.endDate}` : "Dates not set"}
+                                    </td>
                                     <td className="p-4 text-center">
                                         <span className={`px-3 py-1 rounded-full text-[10px] font-bold uppercase border ${s.active ? "bg-blue-50 text-blue-600 border-blue-100" : "bg-gray-50 text-gray-400 border-gray-200"
                                             }`}>
@@ -117,16 +165,21 @@ export default function SessionsPage() {
                                                     Set Current
                                                 </button>
                                             )}
-                                            <button disabled className="text-gray-400 cursor-not-allowed font-bold text-xs uppercase tracking-tighter">
-                                                Edit (Coming Soon)
-                                            </button>
+                                            {canManage && (
+                                                <button
+                                                    onClick={() => openEdit(s)}
+                                                    className="text-blue-600 hover:text-blue-700 font-bold text-xs uppercase tracking-tighter"
+                                                >
+                                                    Edit
+                                                </button>
+                                            )}
                                         </div>
                                     </td>
                                 </tr>
                             ))}
                             {sessions.length === 0 && (
                                 <tr>
-                                    <td colSpan={3} className="p-20 text-center text-gray-400 italic bg-gray-50/30">
+                                    <td colSpan={4} className="p-20 text-center text-gray-400 italic bg-gray-50/30">
                                         No academic sessions recorded.
                                     </td>
                                 </tr>
@@ -139,7 +192,7 @@ export default function SessionsPage() {
             <Modal
                 isOpen={showForm}
                 onClose={() => setShowForm(false)}
-                title="Initialize New Session"
+                title={editId ? "Edit Session" : "Initialize New Session"}
                 maxWidth="max-w-md"
                 footer={
                     <div className="flex gap-2">
@@ -154,7 +207,7 @@ export default function SessionsPage() {
                             disabled={isSaving}
                             className="px-8 py-2 rounded-xl bg-blue-600 text-white font-bold shadow-lg hover:bg-blue-700 disabled:bg-gray-400 transition-all"
                         >
-                            {isSaving ? "Creating..." : "Start Session"}
+                            {isSaving ? (editId ? "Saving..." : "Creating...") : (editId ? "Save Changes" : "Start Session")}
                         </button>
                     </div>
                 }
@@ -169,6 +222,33 @@ export default function SessionsPage() {
                             className="w-full px-4 py-3 rounded-xl border bg-gray-50 focus:bg-white focus:outline-none focus:ring-2 focus:ring-blue-500 transition-all font-bold"
                         />
                     </div>
+                    {!editId && (
+                        <div className="grid grid-cols-2 gap-4">
+                            <div>
+                                <label className="block text-xs font-bold text-gray-400 uppercase mb-2 ml-1">Start Date *</label>
+                                <input
+                                    type="date"
+                                    value={form.startDate}
+                                    onChange={(e) => setForm({ ...form, startDate: e.target.value })}
+                                    className="w-full px-4 py-3 rounded-xl border bg-gray-50 focus:bg-white focus:outline-none focus:ring-2 focus:ring-blue-500 transition-all font-bold"
+                                />
+                            </div>
+                            <div>
+                                <label className="block text-xs font-bold text-gray-400 uppercase mb-2 ml-1">End Date *</label>
+                                <input
+                                    type="date"
+                                    value={form.endDate}
+                                    onChange={(e) => setForm({ ...form, endDate: e.target.value })}
+                                    className="w-full px-4 py-3 rounded-xl border bg-gray-50 focus:bg-white focus:outline-none focus:ring-2 focus:ring-blue-500 transition-all font-bold"
+                                />
+                            </div>
+                        </div>
+                    )}
+                    {editId && (
+                        <div className="p-3 bg-gray-50 rounded-xl border text-xs text-gray-600 font-semibold">
+                            Session dates are fixed after creation and cannot be edited.
+                        </div>
+                    )}
 
                     <label className="flex items-center gap-3 cursor-pointer p-4 bg-blue-50 rounded-2xl border border-dashed border-blue-200">
                         <input

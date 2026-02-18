@@ -22,6 +22,7 @@ import org.springframework.http.HttpMethod;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 
+import java.time.LocalDate;
 import java.util.Map;
 import java.util.Objects;
 
@@ -82,6 +83,8 @@ public class ClassSubjectFlowIntegrationTest extends BaseAuthenticatedIntegratio
         AcademicSession session = AcademicSession
                 .builder()
                 .name("2025-26")
+                .startDate(LocalDate.of(2025, 4, 1))
+                .endDate(LocalDate.of(2026, 3, 31))
                 .schoolId(schoolId)
                 .active(true)
                 .build();

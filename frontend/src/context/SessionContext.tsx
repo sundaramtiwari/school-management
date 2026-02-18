@@ -8,6 +8,8 @@ type AcademicSession = {
   id: number;
   name: string;
   schoolId: number;
+  startDate: string;
+  endDate: string;
   active: boolean;
 };
 
@@ -63,6 +65,8 @@ export function SessionProvider({ children }: { children: React.ReactNode }) {
           id: activeInfo.sessionId,
           name: activeInfo.name,
           schoolId: (user.schoolId ?? Number(selectedSchoolId)) as number,
+          startDate: "",
+          endDate: "",
           active: true
         });
       } else {

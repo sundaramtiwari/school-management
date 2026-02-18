@@ -16,6 +16,8 @@ import com.school.backend.core.student.service.StudentService;
 import com.school.backend.fee.dto.FeePaymentRequest;
 import com.school.backend.fee.dto.FeeStructureCreateRequest;
 import com.school.backend.fee.enums.FeeFrequency;
+import com.school.backend.fee.enums.LateFeeCapType;
+import com.school.backend.fee.enums.LateFeeType;
 import com.school.backend.fee.repository.FeeStructureRepository;
 import com.school.backend.fee.service.FeePaymentService;
 import com.school.backend.fee.service.FeeStructureService;
@@ -189,6 +191,8 @@ public class DataSeeder implements CommandLineRunner {
         AcademicSession session = new AcademicSession();
         session.setSchoolId(schoolId);
         session.setName(sessionName);
+        session.setStartDate(LocalDate.of(2024, 4, 1));
+        session.setEndDate(LocalDate.of(2025, 3, 31));
         session.setActive(true);
 
         return academicSessionService.createSession(session);
@@ -342,6 +346,11 @@ public class DataSeeder implements CommandLineRunner {
             req.setFeeTypeId(tuitionFeeTypeId);
             req.setAmount(java.math.BigDecimal.valueOf(20000));
             req.setFrequency(FeeFrequency.ANNUALLY);
+            req.setLateFeeType(LateFeeType.PERCENTAGE);
+            req.setLateFeeAmountValue(java.math.BigDecimal.valueOf(2));
+            req.setLateFeeGraceDays(7);
+            req.setLateFeeCapType(LateFeeCapType.PERCENTAGE);
+            req.setLateFeeCapValue(java.math.BigDecimal.valueOf(10));
 
             try {
                 feeStructureService.create(req);

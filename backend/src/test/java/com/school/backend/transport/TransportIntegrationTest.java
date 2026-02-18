@@ -31,6 +31,7 @@ import org.springframework.http.HttpEntity;
 import org.springframework.http.HttpMethod;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
+import java.time.LocalDate;
 
 import static java.lang.Boolean.TRUE;
 import static org.junit.jupiter.api.Assertions.*;
@@ -83,6 +84,8 @@ public class TransportIntegrationTest extends BaseAuthenticatedIntegrationTest {
                 // Create Session
                 AcademicSession session = sessionRepository.save(AcademicSession.builder()
                                 .name("2024-25")
+                                .startDate(LocalDate.of(2024, 4, 1))
+                                .endDate(LocalDate.of(2025, 3, 31))
                                 .schoolId(testSchool.getId())
                                 .active(true)
                                 .build());

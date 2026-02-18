@@ -114,10 +114,11 @@ public class FeeStructureService {
         // --- Snapshot Late Fee Policy ---
         LateFeePolicy policy = lateFeePolicyRepository.findByFeeStructureId(fs.getId()).orElse(null);
 
-        // Derive Due Date (copy logic from StudentFeeAssignmentService or centralize)
-        int sessionStartYear = resolveSessionStartYear(fs.getSessionId(), fs.getSchoolId());
-        java.time.LocalDate dueDate = java.time.LocalDate.of(sessionStartYear, 4,
-                Math.min(fs.getDueDayOfMonth() != null ? fs.getDueDayOfMonth() : 10, 28));
+        // Derive due date from actual session date range.
+        java.time.LocalDate dueDate = resolveDerivedDueDate(
+                fs.getSessionId(),
+                fs.getSchoolId(),
+                fs.getDueDayOfMonth() != null ? fs.getDueDayOfMonth() : 10);
 
         StudentFeeAssignment assignment = StudentFeeAssignment.builder()
                 .schoolId(fs.getSchoolId())
@@ -178,22 +179,31 @@ public class FeeStructureService {
         return dto;
     }
 
-    private int resolveSessionStartYear(Long sessionId, Long schoolId) {
-        return academicSessionRepository.findById(sessionId)
+    private java.time.LocalDate resolveDerivedDueDate(Long sessionId, Long schoolId, Integer dueDayOfMonth) {
+        AcademicSession session = academicSessionRepository.findById(sessionId)
                 .filter(s -> schoolId.equals(s.getSchoolId()))
-                .map(AcademicSession::getName)
-                .map(this::extractYearFromSessionName)
-                .orElse(java.time.LocalDate.now().getYear());
+                .orElse(null);
+
+        if (session == null || session.getStartDate() == null) {
+            return java.time.LocalDate.now().plusDays(10);
+        }
+
+        java.time.LocalDate start = session.getStartDate();
+        java.time.LocalDate end = session.getEndDate() != null ? session.getEndDate() : start.plusYears(1).minusDays(1);
+        int targetDay = Math.max(1, Math.min(dueDayOfMonth != null ? dueDayOfMonth : 10, 31));
+
+        java.time.LocalDate candidate = clampDay(start.withDayOfMonth(1), targetDay);
+        if (candidate.isBefore(start)) {
+            candidate = clampDay(start.plusMonths(1).withDayOfMonth(1), targetDay);
+        }
+        if (candidate.isAfter(end)) {
+            return end;
+        }
+        return candidate;
     }
 
-    private int extractYearFromSessionName(String sessionName) {
-        if (sessionName == null) {
-            return java.time.LocalDate.now().getYear();
-        }
-        java.util.regex.Matcher matcher = java.util.regex.Pattern.compile("(\\d{4})").matcher(sessionName);
-        if (matcher.find()) {
-            return Integer.parseInt(matcher.group(1));
-        }
-        return java.time.LocalDate.now().getYear();
+    private java.time.LocalDate clampDay(java.time.LocalDate baseMonth, int day) {
+        int lastDay = baseMonth.lengthOfMonth();
+        return baseMonth.withDayOfMonth(Math.min(day, lastDay));
     }
 }

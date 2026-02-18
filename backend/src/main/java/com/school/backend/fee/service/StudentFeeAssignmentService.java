@@ -59,10 +59,9 @@ public class StudentFeeAssignmentService {
             finalAmount = finalAmount.multiply(new BigDecimal(12));
         }
 
-        // --- Derive Due Date ---
-        int sessionStartYear = resolveSessionStartYear(req.getSessionId(), fs.getSchoolId());
-        int dueDay = Math.min(fs.getDueDayOfMonth() != null ? fs.getDueDayOfMonth() : 10, 28);
-        LocalDate dueDate = LocalDate.of(sessionStartYear, 4, dueDay);
+        // --- Derive Due Date from session start/end ---
+        int dueDay = fs.getDueDayOfMonth() != null ? fs.getDueDayOfMonth() : 10;
+        LocalDate dueDate = resolveDerivedDueDate(req.getSessionId(), fs.getSchoolId(), dueDay);
 
         // --- Snapshot Late Fee Policy ---
         LateFeePolicy policy = lateFeePolicyRepository.findByFeeStructureId(fs.getId()).orElse(null);
@@ -129,22 +128,31 @@ public class StudentFeeAssignmentService {
         return dto;
     }
 
-    private int resolveSessionStartYear(Long sessionId, Long schoolId) {
-        return academicSessionRepository.findById(sessionId)
+    private LocalDate resolveDerivedDueDate(Long sessionId, Long schoolId, Integer dueDayOfMonth) {
+        AcademicSession session = academicSessionRepository.findById(sessionId)
                 .filter(s -> schoolId.equals(s.getSchoolId()))
-                .map(AcademicSession::getName)
-                .map(this::extractYearFromSessionName)
-                .orElse(LocalDate.now().getYear());
+                .orElse(null);
+
+        if (session == null || session.getStartDate() == null) {
+            return LocalDate.now().plusDays(10);
+        }
+
+        LocalDate start = session.getStartDate();
+        LocalDate end = session.getEndDate() != null ? session.getEndDate() : start.plusYears(1).minusDays(1);
+        int targetDay = Math.max(1, Math.min(dueDayOfMonth != null ? dueDayOfMonth : 10, 31));
+
+        LocalDate candidate = clampDay(start.withDayOfMonth(1), targetDay);
+        if (candidate.isBefore(start)) {
+            candidate = clampDay(start.plusMonths(1).withDayOfMonth(1), targetDay);
+        }
+        if (candidate.isAfter(end)) {
+            return end;
+        }
+        return candidate;
     }
 
-    private int extractYearFromSessionName(String sessionName) {
-        if (sessionName == null) {
-            return LocalDate.now().getYear();
-        }
-        java.util.regex.Matcher matcher = java.util.regex.Pattern.compile("(\\d{4})").matcher(sessionName);
-        if (matcher.find()) {
-            return Integer.parseInt(matcher.group(1));
-        }
-        return LocalDate.now().getYear();
+    private LocalDate clampDay(LocalDate baseMonth, int day) {
+        int lastDay = baseMonth.lengthOfMonth();
+        return baseMonth.withDayOfMonth(Math.min(day, lastDay));
     }
 }

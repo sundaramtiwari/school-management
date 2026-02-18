@@ -11,6 +11,8 @@ export default function SessionSetupPage() {
     const { user } = useAuth();
     const { refreshSessions, hasSession } = useSession();
     const [name, setName] = useState("");
+    const [startDate, setStartDate] = useState("");
+    const [endDate, setEndDate] = useState("");
     const [loading, setLoading] = useState(false);
     const [error, setError] = useState("");
 
@@ -25,12 +27,22 @@ export default function SessionSetupPage() {
     const handleSubmit = async (e: React.FormEvent) => {
         if (!canCreateSession) return;
         e.preventDefault();
+        if (!startDate || !endDate) {
+            setError("Session start and end dates are required");
+            return;
+        }
+        if (new Date(endDate) < new Date(startDate)) {
+            setError("End date must be on or after start date");
+            return;
+        }
         setLoading(true);
         setError("");
 
         try {
             await api.post("/api/academic-sessions", {
                 name,
+                startDate,
+                endDate,
                 active: true, // First session is active by default
             });
 
@@ -42,9 +54,11 @@ export default function SessionSetupPage() {
             setTimeout(() => {
                 router.push("/");
             }, 100);
-        } catch (err: any) {
+        } catch (err: unknown) {
             console.error("Failed to create session", err);
-            setError(err.response?.data?.message || "Failed to create session");
+            const msg = (err as { response?: { data?: { message?: string } } })?.response?.data?.message
+                || "Failed to create session";
+            setError(msg);
             setLoading(false);
         }
     };
@@ -59,7 +73,7 @@ export default function SessionSetupPage() {
                 {canCreateSession ? (
                     <>
                         <p className="text-gray-600 mb-6 text-center">
-                            Welcome! To get started, please create your first academic session (e.g., "2024-2025").
+                            Welcome! To get started, please create your first academic session (e.g., 2024-2025).
                         </p>
 
                         {error && (
@@ -80,6 +94,30 @@ export default function SessionSetupPage() {
                                     className="w-full px-3 py-2 border rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
                                     value={name}
                                     onChange={(e) => setName(e.target.value)}
+                                />
+                            </div>
+                            <div>
+                                <label className="block text-sm font-medium text-gray-700 mb-1">
+                                    Start Date
+                                </label>
+                                <input
+                                    type="date"
+                                    required
+                                    className="w-full px-3 py-2 border rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
+                                    value={startDate}
+                                    onChange={(e) => setStartDate(e.target.value)}
+                                />
+                            </div>
+                            <div>
+                                <label className="block text-sm font-medium text-gray-700 mb-1">
+                                    End Date
+                                </label>
+                                <input
+                                    type="date"
+                                    required
+                                    className="w-full px-3 py-2 border rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
+                                    value={endDate}
+                                    onChange={(e) => setEndDate(e.target.value)}
                                 />
                             </div>
 
