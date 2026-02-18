@@ -9,8 +9,15 @@ import { useAuth } from "@/context/AuthContext";
 
 type SchoolClass = { id: number; name: string; section: string; sessionId: number };
 type Student = { id: number; firstName: string; lastName: string; admissionNumber: string };
-type FeeSummary = { totalFee: number; totalPaid: number; balance: number; status: string };
-type Payment = { id: number; amount: number; paymentDate: string; paymentMode: string; remarks: string };
+type FeeSummary = {
+    totalFee: number;
+    totalPaid: number;
+    pendingFee: number;
+    totalLateFeeAccrued: number;
+    totalLateFeePaid: number;
+    status: string
+};
+type Payment = { id: number; amountPaid: number; paymentDate: string; mode: string; remarks: string };
 
 export default function FeeCollectPage() {
     const { user } = useAuth();
@@ -108,8 +115,8 @@ export default function FeeCollectPage() {
             setIsProcessing(true);
             await api.post("/api/fees/payments", {
                 studentId: selectedStudent,
-                amount: Number(paymentAmount),
-                paymentMode,
+                amountPaid: Number(paymentAmount),
+                mode: paymentMode,
                 remarks,
                 paymentDate: new Date().toISOString().split('T')[0]
             });
@@ -206,11 +213,21 @@ export default function FeeCollectPage() {
                         <div className="bg-gray-900 text-white rounded-2xl p-8 shadow-2xl relative overflow-hidden">
                             <div className="absolute top-0 right-0 p-4 opacity-10 text-6xl">₹</div>
                             <h3 className="text-xs font-black uppercase tracking-widest text-gray-400 mb-2">Outstanding Balance</h3>
-                            <p className="text-5xl font-black">₹ {(summary.balance ?? 0).toLocaleString()}</p>
+                            <p className="text-5xl font-black">₹ {(summary.pendingFee ?? 0).toLocaleString()}</p>
 
-                            <div className="mt-8 pt-6 border-t border-white/10 flex justify-between text-xs font-bold uppercase tracking-tight">
-                                <div className="text-gray-400">Total Dues: <span className="text-white ml-1">₹ {summary.totalFee}</span></div>
-                                <div className="text-gray-400">Paid: <span className="text-green-400 ml-1">₹ {summary.totalPaid}</span></div>
+                            <div className="mt-6 flex flex-col gap-2 text-[10px] font-bold uppercase tracking-tight border-t border-white/10 pt-4">
+                                <div className="flex justify-between">
+                                    <span className="text-gray-400">Principal Amount:</span>
+                                    <span className="text-white">₹ {summary.totalFee.toLocaleString()}</span>
+                                </div>
+                                <div className="flex justify-between">
+                                    <span className="text-gray-400">Accrued Late Fees:</span>
+                                    <span className="text-orange-400">₹ {(summary.totalLateFeeAccrued ?? 0).toLocaleString()}</span>
+                                </div>
+                                <div className="flex justify-between border-t border-white/5 pt-2 mt-1">
+                                    <span className="text-gray-400">Total Collected:</span>
+                                    <span className="text-green-400">₹ {summary.totalPaid.toLocaleString()}</span>
+                                </div>
                             </div>
 
                             <div className="mt-8 pt-6 border-t border-white/10 space-y-4">
@@ -310,11 +327,11 @@ export default function FeeCollectPage() {
                                             <td className="p-4 font-bold text-gray-700">{p.paymentDate}</td>
                                             <td className="p-4 text-center">
                                                 <span className="px-2 py-0.5 bg-gray-100 rounded-lg text-[10px] font-black uppercase text-gray-500 border">
-                                                    {p.paymentMode}
+                                                    {p.mode}
                                                 </span>
                                             </td>
                                             <td className="p-4 text-gray-400 text-xs italic">{p.remarks || "Regular collection"}</td>
-                                            <td className="p-4 text-right font-black text-gray-900">₹ {(p.amount ?? 0).toLocaleString()}</td>
+                                            <td className="p-4 text-right font-black text-gray-900">₹ {(p.amountPaid ?? 0).toLocaleString()}</td>
                                             <td className="p-4 text-center">
                                                 <button
                                                     onClick={() => downloadReceipt(p.id)}

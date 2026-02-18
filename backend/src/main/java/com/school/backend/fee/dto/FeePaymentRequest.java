@@ -15,7 +15,10 @@ public class FeePaymentRequest {
 
     @NotNull
     @Positive
-    private Integer amountPaid;
+    private java.math.BigDecimal amountPaid; // Total
+
+    private java.math.BigDecimal principalPaid;
+    private java.math.BigDecimal lateFeePaid;
 
     // Optional (defaults to today)
     private LocalDate paymentDate;

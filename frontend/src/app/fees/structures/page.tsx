@@ -14,6 +14,11 @@ type FeeStructure = {
     amount: number;
     frequency: string;
     active: boolean;
+    lateFeeType?: string;
+    lateFeeAmountValue?: number;
+    lateFeeGraceDays?: number;
+    lateFeeCapType?: string;
+    lateFeeCapValue?: number;
 };
 
 type SchoolClass = {
@@ -45,7 +50,62 @@ export default function FeeStructuresPage() {
         feeTypeId: "",
         amount: "",
         frequency: "ONE_TIME",
+        dueDayOfMonth: "10",
+        lateFeeType: "NONE",
+        lateFeeAmountValue: "",
+        lateFeeGraceDays: "0",
+        lateFeeCapType: "NONE",
+        lateFeeCapValue: "",
     });
+
+    const lateFeeType = form.lateFeeType;
+    const lateFeeCapType = form.lateFeeCapType;
+    const lateFeeAmount = Number(form.lateFeeAmountValue || 0);
+    const lateFeeGraceDays = Number(form.lateFeeGraceDays || 0);
+    const lateFeeCapValue = Number(form.lateFeeCapValue || 0);
+    const isPercentageType = lateFeeType === "PERCENTAGE" || lateFeeType === "DAILY_PERCENTAGE";
+    const hasLateFee = lateFeeType !== "NONE";
+
+    const lateFeeValidationError = (() => {
+        if (!hasLateFee) {
+            return "";
+        }
+        if (lateFeeAmount <= 0) {
+            return "Late fee value must be greater than 0.";
+        }
+        if (lateFeeGraceDays < 0) {
+            return "Grace days cannot be negative.";
+        }
+        if (isPercentageType && lateFeeAmount > 100) {
+            return "Late fee percentage cannot exceed 100.";
+        }
+        if (lateFeeCapType !== "NONE") {
+            if (lateFeeCapValue < 0) {
+                return "Cap value cannot be negative.";
+            }
+            if (lateFeeCapType === "PERCENTAGE" && lateFeeCapValue > 100) {
+                return "Cap percentage cannot exceed 100.";
+            }
+        }
+        return "";
+    })();
+
+    const lateFeePreviewText = (() => {
+        if (!hasLateFee) {
+            return "No late fee applied";
+        }
+        const valueLabel = lateFeeType === "FLAT"
+            ? `₹${lateFeeAmount || 0}`
+            : `${lateFeeAmount || 0}%`;
+        const typeLabel = lateFeeType === "DAILY_PERCENTAGE" ? "per day" : "";
+        let preview = `Late fee: ${valueLabel}${typeLabel ? ` ${typeLabel}` : ""} after ${lateFeeGraceDays || 0} days`;
+        if (lateFeeCapType === "FIXED") {
+            preview += ` (capped at ₹${lateFeeCapValue || 0})`;
+        } else if (lateFeeCapType === "PERCENTAGE") {
+            preview += ` (capped at ${lateFeeCapValue || 0}%)`;
+        }
+        return preview;
+    })();
 
     useEffect(() => {
         loadClasses();
@@ -126,6 +186,10 @@ export default function FeeStructuresPage() {
             showToast(currentSession ? "All fields required" : "No active session", "warning");
             return;
         }
+        if (lateFeeValidationError) {
+            showToast(lateFeeValidationError, "warning");
+            return;
+        }
 
         try {
             setIsSaving(true);
@@ -134,7 +198,13 @@ export default function FeeStructuresPage() {
                 sessionId: currentSession.id,
                 feeTypeId: form.feeTypeId,
                 amount: Number(form.amount),
-                frequency: form.frequency
+                frequency: form.frequency,
+                dueDayOfMonth: Number(form.dueDayOfMonth),
+                lateFeeType: form.lateFeeType,
+                lateFeeAmountValue: hasLateFee ? Number(form.lateFeeAmountValue || 0) : 0,
+                lateFeeGraceDays: hasLateFee ? Number(form.lateFeeGraceDays || 0) : 0,
+                lateFeeCapType: hasLateFee ? form.lateFeeCapType : "NONE",
+                lateFeeCapValue: hasLateFee && lateFeeCapType !== "NONE" ? Number(form.lateFeeCapValue || 0) : 0
             });
             showToast("Fee configuration saved!", "success");
             setShowModal(false);
@@ -202,6 +272,7 @@ export default function FeeStructuresPage() {
                                 <th className="p-4 text-left">Fee Category</th>
                                 <th className="p-4 text-center">Frequency</th>
                                 <th className="p-4 text-right">Amount Value</th>
+                                <th className="p-4 text-center">Late Fee Policy</th>
                                 <th className="p-4 text-center w-32">Status Flag</th>
                             </tr>
                         </thead>
@@ -217,6 +288,25 @@ export default function FeeStructuresPage() {
                                     <td className="p-4 text-right font-black text-gray-900">
                                         ₹ {fs.amount.toLocaleString("en-IN")}
                                     </td>
+                                    <td className="p-4 text-center text-[11px]">
+                                        {fs.lateFeeType && fs.lateFeeType !== "NONE" ? (
+                                            <div className="flex flex-col items-center">
+                                                <span className="font-bold text-orange-600">
+                                                    {fs.lateFeeType === "FLAT"
+                                                        ? `₹${fs.lateFeeAmountValue}`
+                                                        : `${fs.lateFeeAmountValue}%${fs.lateFeeType === "DAILY_PERCENTAGE" ? " / day" : ""}`}
+                                                </span>
+                                                <span className="text-gray-400">after {fs.lateFeeGraceDays} days grace</span>
+                                                {fs.lateFeeCapType && fs.lateFeeCapType !== "NONE" && (
+                                                    <span className="text-gray-400">
+                                                        cap: {fs.lateFeeCapType === "FIXED" ? `₹${fs.lateFeeCapValue}` : `${fs.lateFeeCapValue}%`}
+                                                    </span>
+                                                )}
+                                            </div>
+                                        ) : (
+                                            <span className="text-gray-300 italic">No policy</span>
+                                        )}
+                                    </td>
                                     <td className="p-4 text-center">
                                         <span className={`px-2 py-0.5 rounded-full text-[10px] font-bold uppercase ${fs.active ? "bg-green-100 text-green-700" : "bg-gray-100 text-gray-400"
                                             }`}>
@@ -227,7 +317,7 @@ export default function FeeStructuresPage() {
                             ))}
                             {structures.length === 0 && (
                                 <tr>
-                                    <td colSpan={4} className="p-20 text-center text-gray-400 italic bg-gray-50/30">
+                                    <td colSpan={5} className="p-20 text-center text-gray-400 italic bg-gray-50/30">
                                         No fee heads configured for this class year.
                                     </td>
                                 </tr>
@@ -256,7 +346,7 @@ export default function FeeStructuresPage() {
                         </button>
                         <button
                             onClick={saveStructure}
-                            disabled={isSaving}
+                            disabled={isSaving || !!lateFeeValidationError}
                             className="px-8 py-2 rounded-xl bg-blue-600 text-white font-bold shadow-lg hover:bg-blue-700 disabled:bg-gray-400 transition-all"
                         >
                             {isSaving ? "Saving..." : "Commit Structure"}
@@ -307,6 +397,105 @@ export default function FeeStructuresPage() {
                                 placeholder="0.00"
                             />
                         </div>
+                    </div>
+
+                    <div className="pt-4 border-t space-y-4">
+                        <h4 className="text-[10px] font-black uppercase tracking-widest text-blue-600">Late Fee Policy</h4>
+
+                        <div className="grid grid-cols-2 gap-4">
+                            <div>
+                                <label className="block text-[10px] font-bold text-gray-400 uppercase mb-1.5 ml-1">Policy Type</label>
+                                <select
+                                    className="input-ref text-xs font-bold"
+                                    value={form.lateFeeType}
+                                    onChange={(e) =>
+                                        setForm({
+                                            ...form,
+                                            lateFeeType: e.target.value,
+                                            lateFeeAmountValue: "",
+                                            lateFeeGraceDays: "0",
+                                            lateFeeCapType: "NONE",
+                                            lateFeeCapValue: "",
+                                        })
+                                    }
+                                >
+                                    <option value="NONE">No Late Fee</option>
+                                    <option value="FLAT">Flat Amount</option>
+                                    <option value="PERCENTAGE">% of Unpaid Amount</option>
+                                    <option value="DAILY_PERCENTAGE">Daily % of Unpaid Amount</option>
+                                </select>
+                            </div>
+                            <div>
+                                <label className="block text-[10px] font-bold text-gray-400 uppercase mb-1.5 ml-1">Grace Period (Days)</label>
+                                <input
+                                    type="number"
+                                    className="input-ref text-xs"
+                                    value={form.lateFeeGraceDays}
+                                    onChange={(e) => setForm({ ...form, lateFeeGraceDays: e.target.value })}
+                                    placeholder="0"
+                                    disabled={!hasLateFee}
+                                />
+                            </div>
+                        </div>
+
+                        {hasLateFee && (
+                            <div className="grid grid-cols-2 gap-4 animate-in fade-in slide-in-from-top-2 duration-300">
+                                <div>
+                                    <label className="block text-[10px] font-bold text-gray-400 uppercase mb-1.5 ml-1">
+                                        {lateFeeType === "FLAT" ? "Amount (₹)" : "Rate (%)"}
+                                    </label>
+                                    <input
+                                        type="number"
+                                        className="input-ref text-xs font-bold"
+                                        value={form.lateFeeAmountValue}
+                                        onChange={(e) => setForm({ ...form, lateFeeAmountValue: e.target.value })}
+                                        placeholder="0.00"
+                                    />
+                                </div>
+                                <div>
+                                    <label className="block text-[10px] font-bold text-gray-400 uppercase mb-1.5 ml-1">Cap Type</label>
+                                    <select
+                                        className="input-ref text-xs font-bold"
+                                        value={form.lateFeeCapType}
+                                        onChange={(e) => setForm({ ...form, lateFeeCapType: e.target.value, lateFeeCapValue: "" })}
+                                    >
+                                        <option value="NONE">No Cap</option>
+                                        <option value="FIXED">Fixed</option>
+                                        <option value="PERCENTAGE">Percentage</option>
+                                    </select>
+                                </div>
+                            </div>
+                        )}
+
+                        {hasLateFee && lateFeeCapType !== "NONE" && (
+                            <div className="animate-in fade-in slide-in-from-top-2 duration-300">
+                                <label className="block text-[10px] font-bold text-gray-400 uppercase mb-1.5 ml-1">
+                                    Cap Value ({lateFeeCapType === "FIXED" ? "₹" : "%"})
+                                </label>
+                                <input
+                                    type="number"
+                                    className="input-ref text-xs font-bold"
+                                    value={form.lateFeeCapValue}
+                                    onChange={(e) => setForm({ ...form, lateFeeCapValue: e.target.value })}
+                                    placeholder={lateFeeCapType === "FIXED" ? "0.00" : "0-100"}
+                                />
+                            </div>
+                        )}
+
+                        {hasLateFee && lateFeeType === "DAILY_PERCENTAGE" && (
+                            <p className="text-[11px] text-blue-700 bg-blue-50 border border-blue-100 rounded-lg px-3 py-2">
+                                Calculated daily on unpaid amount after grace.
+                            </p>
+                        )}
+
+                        <p className="text-[11px] text-gray-600 bg-gray-50 border border-gray-100 rounded-lg px-3 py-2">
+                            {lateFeePreviewText}
+                        </p>
+                        {!!lateFeeValidationError && (
+                            <p className="text-[11px] text-red-600 font-semibold">
+                                {lateFeeValidationError}
+                            </p>
+                        )}
                     </div>
                 </div>
             </Modal>

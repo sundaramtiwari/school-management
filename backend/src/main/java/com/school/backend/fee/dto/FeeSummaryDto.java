@@ -9,9 +9,11 @@ public class FeeSummaryDto {
     private String studentName;
     private String session;
 
-    private int totalFee; // sum of fee structure
-    private int totalPaid; // sum of payments
-    private int pendingFee; // totalFee - totalPaid
+    private java.math.BigDecimal totalFee; // sum of fee structure principal
+    private java.math.BigDecimal totalPaid; // sum of principal + late fee payments
+    private java.math.BigDecimal pendingFee; // total (Principal + Accrued Late Fee) - Total Paid
+    private java.math.BigDecimal totalLateFeeAccrued;
+    private java.math.BigDecimal totalLateFeePaid;
 
     private boolean feePending;
 }

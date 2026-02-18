@@ -1,9 +1,14 @@
 package com.school.backend.fee.entity;
 
 import com.school.backend.common.entity.TenantEntity;
+import com.school.backend.fee.enums.LateFeeCapType;
+import com.school.backend.fee.enums.LateFeeType;
 import jakarta.persistence.*;
 import lombok.*;
 import lombok.experimental.SuperBuilder;
+
+import java.math.BigDecimal;
+import java.time.LocalDate;
 
 @Entity
 @Table(name = "student_fee_assignments", indexes = {
@@ -31,8 +36,52 @@ public class StudentFeeAssignment extends TenantEntity {
     @Column(name = "session_id", nullable = false)
     private Long sessionId;
 
-    @Column(nullable = false)
-    private Integer amount;
+    @Column(nullable = false, precision = 15, scale = 2)
+    private BigDecimal amount;
+
+    // --- Snapshot Fields ---
+    private LocalDate dueDate;
+
+    @Enumerated(EnumType.STRING)
+    @Column(length = 20)
+    private LateFeeType lateFeeType;
+
+    @Column(precision = 15, scale = 2)
+    private BigDecimal lateFeeValue;
+
+    private Integer lateFeeGraceDays;
+
+    @Enumerated(EnumType.STRING)
+    @Column(length = 20)
+    @Builder.Default
+    private LateFeeCapType lateFeeCapType = LateFeeCapType.NONE;
+
+    @Column(precision = 15, scale = 2)
+    private BigDecimal lateFeeCapValue;
+
+    // --- Aggregate / Tracking Fields ---
+    @Builder.Default
+    private boolean lateFeeApplied = false;
+
+    @Column(precision = 15, scale = 2)
+    @Builder.Default
+    private BigDecimal lateFeeAccrued = BigDecimal.ZERO;
+
+    @Column(precision = 15, scale = 2)
+    @Builder.Default
+    private BigDecimal principalPaid = BigDecimal.ZERO;
+
+    @Column(precision = 15, scale = 2)
+    @Builder.Default
+    private BigDecimal lateFeePaid = BigDecimal.ZERO;
+
+    @Column(precision = 15, scale = 2)
+    @Builder.Default
+    private BigDecimal lateFeeWaived = BigDecimal.ZERO;
+
+    @Column(precision = 15, scale = 2)
+    @Builder.Default
+    private BigDecimal totalDiscountAmount = BigDecimal.ZERO;
 
     @Builder.Default
     private boolean active = true;

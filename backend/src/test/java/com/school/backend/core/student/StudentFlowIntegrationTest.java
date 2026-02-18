@@ -144,7 +144,8 @@ public class StudentFlowIntegrationTest extends BaseAuthenticatedIntegrationTest
                 fsReq.setClassId(classId);
                 fsReq.setSessionId(session2025Id);
                 fsReq.setFeeTypeId(feeTypeId);
-                fsReq.setAmount(10000);
+                fsReq.setAmount(java.math.BigDecimal.valueOf(10000));
+                fsReq.setFrequency(com.school.backend.fee.enums.FeeFrequency.ONE_TIME);
                 fsReq.setFrequency(com.school.backend.fee.enums.FeeFrequency.ONE_TIME);
 
                 HttpEntity<FeeStructureCreateRequest> fsEntity = new HttpEntity<>(fsReq, headers);
@@ -175,7 +176,7 @@ public class StudentFlowIntegrationTest extends BaseAuthenticatedIntegrationTest
 
                 payReq.setStudentId(studentId);
                 payReq.setSessionId(session2025Id);
-                payReq.setAmountPaid(10000);
+                payReq.setAmountPaid(java.math.BigDecimal.valueOf(10000));
                 payReq.setMode("CASH");
 
                 HttpEntity<FeePaymentRequest> payEntity = new HttpEntity<>(payReq, headers);

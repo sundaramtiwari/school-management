@@ -10,8 +10,8 @@ import { Skeleton } from "@/components/ui/Skeleton";
 type RecentPayment = {
   id: number;
   studentName: string;
-  amount: number;
-  paymentMode: string;
+  amountPaid: number;
+  mode: string;
   paymentDate: string;
 };
 
@@ -279,11 +279,11 @@ export default function AccountantDashboard() {
                   <div className="flex-1">
                     <p className="font-bold text-gray-800">{payment.studentName}</p>
                     <p className="text-sm text-gray-500">
-                      {payment.paymentMode} • {new Date(payment.paymentDate).toLocaleDateString('en-IN')}
+                      {payment.mode} • {new Date(payment.paymentDate).toLocaleDateString('en-IN')}
                     </p>
                   </div>
                   <div className="text-right">
-                    <p className="font-bold text-green-600">{formatCurrency(payment.amount)}</p>
+                    <p className="font-bold text-green-600">{formatCurrency(payment.amountPaid)}</p>
                     <button
                       onClick={() => window.location.href = `/fees/payments/${payment.id}/receipt`}
                       className="text-xs text-blue-600 hover:text-blue-800 mt-1"

@@ -10,10 +10,16 @@ import com.school.backend.fee.entity.StudentFeeAssignment;
 import com.school.backend.fee.enums.FeeFrequency;
 import com.school.backend.fee.repository.FeeStructureRepository;
 import com.school.backend.fee.repository.StudentFeeAssignmentRepository;
+import com.school.backend.school.entity.AcademicSession;
+import com.school.backend.school.repository.AcademicSessionRepository;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
+import com.school.backend.fee.entity.LateFeePolicy;
+import com.school.backend.fee.repository.LateFeePolicyRepository;
+import java.math.BigDecimal;
+import java.time.LocalDate;
 import java.util.List;
 
 @Service
@@ -23,6 +29,8 @@ public class StudentFeeAssignmentService {
     private final StudentFeeAssignmentRepository assignmentRepository;
     private final FeeStructureRepository feeStructureRepository;
     private final StudentRepository studentRepository;
+    private final LateFeePolicyRepository lateFeePolicyRepository;
+    private final AcademicSessionRepository academicSessionRepository;
 
     // ---------------- ASSIGN ----------------
     @Transactional
@@ -46,16 +54,30 @@ public class StudentFeeAssignmentService {
             throw new IllegalStateException("Fee already assigned to student for this session");
         }
 
-        int finalAmount = fs.getAmount();
+        BigDecimal finalAmount = fs.getAmount();
         if (fs.getFrequency() == FeeFrequency.MONTHLY) {
-            finalAmount = finalAmount * 12;
+            finalAmount = finalAmount.multiply(new BigDecimal(12));
         }
+
+        // --- Derive Due Date ---
+        int sessionStartYear = resolveSessionStartYear(req.getSessionId(), fs.getSchoolId());
+        int dueDay = Math.min(fs.getDueDayOfMonth() != null ? fs.getDueDayOfMonth() : 10, 28);
+        LocalDate dueDate = LocalDate.of(sessionStartYear, 4, dueDay);
+
+        // --- Snapshot Late Fee Policy ---
+        LateFeePolicy policy = lateFeePolicyRepository.findByFeeStructureId(fs.getId()).orElse(null);
 
         StudentFeeAssignment assignment = StudentFeeAssignment.builder()
                 .studentId(req.getStudentId())
                 .feeStructureId(fs.getId())
                 .sessionId(req.getSessionId())
                 .amount(finalAmount)
+                .dueDate(dueDate)
+                .lateFeeType(policy != null ? policy.getType() : null)
+                .lateFeeValue(policy != null ? policy.getAmountValue() : BigDecimal.ZERO)
+                .lateFeeGraceDays(policy != null ? policy.getGraceDays() : 0)
+                .lateFeeCapType(policy != null ? policy.getCapType() : com.school.backend.fee.enums.LateFeeCapType.NONE)
+                .lateFeeCapValue(policy != null ? policy.getCapValue() : BigDecimal.ZERO)
                 .schoolId(TenantContext.getSchoolId())
                 .active(true)
                 .build();
@@ -87,8 +109,42 @@ public class StudentFeeAssignmentService {
         dto.setStudentId(sfa.getStudentId());
         dto.setFeeStructureId(sfa.getFeeStructureId());
         dto.setSessionId(sfa.getSessionId());
+        dto.setAmount(sfa.getAmount());
+
+        dto.setDueDate(sfa.getDueDate());
+        dto.setLateFeeType(sfa.getLateFeeType());
+        dto.setLateFeeValue(sfa.getLateFeeValue());
+        dto.setLateFeeGraceDays(sfa.getLateFeeGraceDays());
+        dto.setLateFeeCapType(sfa.getLateFeeCapType());
+        dto.setLateFeeCapValue(sfa.getLateFeeCapValue());
+
+        dto.setLateFeeApplied(sfa.isLateFeeApplied());
+        dto.setLateFeeAccrued(sfa.getLateFeeAccrued());
+        dto.setLateFeePaid(sfa.getLateFeePaid());
+        dto.setLateFeeWaived(sfa.getLateFeeWaived());
+        dto.setTotalDiscountAmount(sfa.getTotalDiscountAmount());
+
         dto.setActive(sfa.isActive());
 
         return dto;
+    }
+
+    private int resolveSessionStartYear(Long sessionId, Long schoolId) {
+        return academicSessionRepository.findById(sessionId)
+                .filter(s -> schoolId.equals(s.getSchoolId()))
+                .map(AcademicSession::getName)
+                .map(this::extractYearFromSessionName)
+                .orElse(LocalDate.now().getYear());
+    }
+
+    private int extractYearFromSessionName(String sessionName) {
+        if (sessionName == null) {
+            return LocalDate.now().getYear();
+        }
+        java.util.regex.Matcher matcher = java.util.regex.Pattern.compile("(\\d{4})").matcher(sessionName);
+        if (matcher.find()) {
+            return Integer.parseInt(matcher.group(1));
+        }
+        return LocalDate.now().getYear();
     }
 }

@@ -3,6 +3,7 @@ package com.school.backend.fee.dto;
 import lombok.Builder;
 import lombok.Data;
 
+import java.math.BigDecimal;
 import java.time.LocalDate;
 
 @Data
@@ -14,7 +15,8 @@ public class DefaulterDto {
     private String admissionNumber;
     private String className;
     private String classSection;
-    private long amountDue;
+    private BigDecimal amountDue;
+    private BigDecimal lateFeeAccrued;
     private LocalDate lastPaymentDate;
     private long daysOverdue;
     private String parentContact;

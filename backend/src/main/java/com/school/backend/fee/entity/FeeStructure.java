@@ -6,6 +6,8 @@ import jakarta.persistence.*;
 import lombok.*;
 import lombok.experimental.SuperBuilder;
 
+import java.math.BigDecimal;
+
 @Entity
 @Table(name = "fee_structures", indexes = {
         @Index(name = "idx_fee_structure_school_class_session", columnList = "school_id,class_id,session_id")
@@ -33,13 +35,17 @@ public class FeeStructure extends TenantEntity {
     @JoinColumn(name = "fee_type_id", nullable = false)
     private FeeType feeType;
 
-    @Column(nullable = false)
-    private Integer amount; // in INR
+    @Column(nullable = false, precision = 15, scale = 2)
+    private BigDecimal amount; // in INR
 
     @Enumerated(EnumType.STRING)
     @Column(nullable = false, length = 20)
     @Builder.Default
     private FeeFrequency frequency = FeeFrequency.ONE_TIME;
+
+    @Column(name = "due_day_of_month")
+    @Builder.Default
+    private Integer dueDayOfMonth = 10;
 
     @Builder.Default
     private boolean active = true;

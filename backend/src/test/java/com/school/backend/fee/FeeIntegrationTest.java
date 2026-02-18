@@ -4,6 +4,7 @@ import com.school.backend.common.BaseAuthenticatedIntegrationTest;
 import com.school.backend.common.enums.Gender;
 import com.school.backend.core.classsubject.entity.SchoolClass;
 import com.school.backend.core.student.entity.Student;
+import com.school.backend.core.student.entity.StudentEnrollment;
 import com.school.backend.fee.dto.*;
 import com.school.backend.fee.entity.FeePayment;
 import com.school.backend.fee.entity.FeeType;
@@ -71,6 +72,14 @@ public class FeeIntegrationTest extends BaseAuthenticatedIntegrationTest {
                 student = studentRepository.save(student);
                 studentId = student.getId();
 
+                StudentEnrollment enrollment = new StudentEnrollment();
+                enrollment.setStudentId(studentId);
+                enrollment.setClassId(classId);
+                enrollment.setSessionId(sessionId);
+                enrollment.setSchoolId(testSchool.getId());
+                enrollment.setActive(true);
+                studentEnrollmentRepository.save(enrollment);
+
                 // Create a Fee Type
                 var ft = new FeeType();
                 ft.setName("Tuition Fee");
@@ -87,7 +96,7 @@ public class FeeIntegrationTest extends BaseAuthenticatedIntegrationTest {
                 createReq.setClassId(classId); // Real Class ID
                 createReq.setSessionId(sessionId);
                 createReq.setFeeTypeId(feeTypeId);
-                createReq.setAmount(5000);
+                createReq.setAmount(java.math.BigDecimal.valueOf(5000));
                 createReq.setFrequency(FeeFrequency.MONTHLY);
 
                 ResponseEntity<FeeStructureDto> structureResp = restTemplate.postForEntity(
@@ -103,7 +112,7 @@ public class FeeIntegrationTest extends BaseAuthenticatedIntegrationTest {
                 // 2. Pay Fees
                 FeePaymentRequest payReq = new FeePaymentRequest();
                 payReq.setStudentId(studentId); // Use real student ID
-                payReq.setAmountPaid(5000);
+                payReq.setAmountPaid(java.math.BigDecimal.valueOf(5000));
                 payReq.setMode("CASH");
                 payReq.setPaymentDate(LocalDate.now());
                 payReq.setRemarks("Jan Fee");
@@ -135,7 +144,7 @@ public class FeeIntegrationTest extends BaseAuthenticatedIntegrationTest {
                 // Payment 1: Today
                 var p1 = FeePayment.builder()
                                 .studentId(studentId)
-                                .amountPaid(1000)
+                                .principalPaid(java.math.BigDecimal.valueOf(1000))
                                 .paymentDate(LocalDate.now())
                                 .mode("CASH")
                                 .schoolId(testSchool.getId())
@@ -145,7 +154,7 @@ public class FeeIntegrationTest extends BaseAuthenticatedIntegrationTest {
                 // Payment 2: Yesterday
                 var p2 = FeePayment.builder()
                                 .studentId(studentId)
-                                .amountPaid(2000)
+                                .principalPaid(java.math.BigDecimal.valueOf(2000))
                                 .paymentDate(LocalDate.now().minusDays(1))
                                 .mode("UPI")
                                 .schoolId(testSchool.getId())
@@ -155,7 +164,7 @@ public class FeeIntegrationTest extends BaseAuthenticatedIntegrationTest {
                 // Payment 3: 2 days ago
                 var p3 = FeePayment.builder()
                                 .studentId(studentId)
-                                .amountPaid(3000)
+                                .principalPaid(java.math.BigDecimal.valueOf(3000))
                                 .paymentDate(LocalDate.now().minusDays(2))
                                 .mode("BANK")
                                 .schoolId(testSchool.getId())
@@ -175,8 +184,10 @@ public class FeeIntegrationTest extends BaseAuthenticatedIntegrationTest {
                 assertEquals(2, recent.length, "Should return only 2 payments due to limit");
 
                 // 3. Verify order (descending by paymentDate)
-                assertEquals(1000, recent[0].getAmountPaid(), "First payment should be the most recent (today)");
-                assertEquals(2000, recent[1].getAmountPaid(), "Second payment should be yesterday's");
+                assertEquals(0, java.math.BigDecimal.valueOf(1000).compareTo(recent[0].getAmountPaid()),
+                                "First payment should be the most recent (today)");
+                assertEquals(0, java.math.BigDecimal.valueOf(2000).compareTo(recent[1].getAmountPaid()),
+                                "Second payment should be yesterday's");
         }
 
         @Test
@@ -184,7 +195,7 @@ public class FeeIntegrationTest extends BaseAuthenticatedIntegrationTest {
                 // 1. Create payment for Current School (SPS001)
                 var p1 = FeePayment.builder()
                                 .studentId(studentId)
-                                .amountPaid(555)
+                                .principalPaid(java.math.BigDecimal.valueOf(555))
                                 .paymentDate(LocalDate.now())
                                 .mode("CASH")
                                 .schoolId(testSchool.getId())
@@ -200,7 +211,7 @@ public class FeeIntegrationTest extends BaseAuthenticatedIntegrationTest {
 
                 var p2 = FeePayment.builder()
                                 .studentId(999L) // Dummy student
-                                .amountPaid(777)
+                                .principalPaid(java.math.BigDecimal.valueOf(777))
                                 .paymentDate(LocalDate.now())
                                 .mode("UPI")
                                 .schoolId(school2.getId())
@@ -217,7 +228,7 @@ public class FeeIntegrationTest extends BaseAuthenticatedIntegrationTest {
                 FeePaymentDto[] body1 = Objects.requireNonNull(resp1.getBody());
                 assertNotNull(body1);
                 assertEquals(1, body1.length);
-                assertEquals(555, body1[0].getAmountPaid());
+                assertEquals(0, java.math.BigDecimal.valueOf(555).compareTo(body1[0].getAmountPaid()));
 
                 // 4. Login as Other School Admin and fetch
                 loginAsSchoolAdmin(school2.getId());
@@ -230,7 +241,7 @@ public class FeeIntegrationTest extends BaseAuthenticatedIntegrationTest {
                 FeePaymentDto[] body2 = Objects.requireNonNull(resp2.getBody());
                 assertNotNull(body2);
                 assertEquals(1, body2.length);
-                assertEquals(777, body2[0].getAmountPaid());
+                assertEquals(0, java.math.BigDecimal.valueOf(777).compareTo(body2[0].getAmountPaid()));
         }
 
         @org.junit.jupiter.api.AfterEach

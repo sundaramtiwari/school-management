@@ -77,7 +77,7 @@ public class FeeChallanService {
             addSchoolHeader(document, school);
             addChallanTitle(document, sessionName, months);
             addStudentDetails(document, student);
-            int totalAmount = addFeeBreakdown(document, assignments, months);
+            java.math.BigDecimal totalAmount = addFeeBreakdown(document, assignments, months);
             addPaymentDetails(document, sessionName, totalAmount);
             addFooter(document, school);
 
@@ -183,14 +183,15 @@ public class FeeChallanService {
         document.add(new Paragraph(" "));
     }
 
-    private int addFeeBreakdown(Document document, List<StudentFeeAssignment> assignments, int monthsToPay)
+    private java.math.BigDecimal addFeeBreakdown(Document document, List<StudentFeeAssignment> assignments,
+            int monthsToPay)
             throws DocumentException {
         Font headerFont = FontFactory.getFont(FontFactory.HELVETICA_BOLD, 11, Color.WHITE);
         Font contentFont = FontFactory.getFont(FontFactory.HELVETICA, 10);
 
         PdfPTable table = new PdfPTable(4);
         table.setWidthPercentage(100);
-        table.setWidths(new float[]{3f, 1.2f, 0.8f, 1.5f});
+        table.setWidths(new float[] { 3f, 1.2f, 0.8f, 1.5f });
 
         // Header Row
         PdfPCell headerCell1 = new PdfPCell(new Phrase("Fee Type", headerFont));
@@ -217,7 +218,7 @@ public class FeeChallanService {
         table.addCell(headerCell4);
 
         // Fee Rows
-        int totalAmount = 0;
+        java.math.BigDecimal totalAmount = java.math.BigDecimal.ZERO;
         for (StudentFeeAssignment assignment : assignments) {
             FeeStructure structure = feeStructureRepository.findById(assignment.getFeeStructureId())
                     .orElse(null);
@@ -232,7 +233,8 @@ public class FeeChallanService {
                     multiplier = (int) Math.ceil((double) monthsToPay / 6);
                 }
 
-                int subtotal = structure.getAmount() * multiplier;
+                java.math.BigDecimal subtotal = structure.getAmount()
+                        .multiply(java.math.BigDecimal.valueOf(multiplier));
 
                 // Fee Type
                 table.addCell(createTableCell(structure.getFeeType().getName(), contentFont, Element.ALIGN_LEFT));
@@ -244,7 +246,7 @@ public class FeeChallanService {
                 // Amount
                 table.addCell(createTableCell(formatIndianRupees(subtotal), contentFont, Element.ALIGN_RIGHT));
 
-                totalAmount += subtotal;
+                totalAmount = totalAmount.add(subtotal);
             }
         }
 
@@ -279,7 +281,8 @@ public class FeeChallanService {
         return cell;
     }
 
-    private void addPaymentDetails(Document document, String session, int totalAmount) throws DocumentException {
+    private void addPaymentDetails(Document document, String session, java.math.BigDecimal totalAmount)
+            throws DocumentException {
         addSeparatorLine(document);
         document.add(new Paragraph(" "));
 
@@ -356,9 +359,8 @@ public class FeeChallanService {
 
     /**
      * Format amount in Indian rupee format with ₹ symbol
-     * Example: ₹ 1,50,000
      */
-    private String formatIndianRupees(int amount) {
+    private String formatIndianRupees(java.math.BigDecimal amount) {
         NumberFormat formatter = NumberFormat.getCurrencyInstance(new Locale("en", "IN"));
         return formatter.format(amount).replace("₹", "₹ "); // Add space after symbol for readability
     }
@@ -402,18 +404,18 @@ public class FeeChallanService {
     /**
      * Calculate late fee based on days overdue
      */
-    public int calculateLateFee(LocalDate dueDate, int baseFee) {
+    public java.math.BigDecimal calculateLateFee(LocalDate dueDate, java.math.BigDecimal baseFee) {
         LocalDate now = LocalDate.now();
 
         if (now.isAfter(dueDate.plusDays(GRACE_PERIOD_DAYS))) {
             long daysOverdue = java.time.temporal.ChronoUnit.DAYS.between(dueDate.plusDays(GRACE_PERIOD_DAYS), now);
-            int lateFee = (int) (daysOverdue * LATE_FEE_PER_DAY);
+            java.math.BigDecimal lateFee = java.math.BigDecimal.valueOf(daysOverdue * LATE_FEE_PER_DAY);
 
             // Cap late fee at 10% of base fee
-            int maxLateFee = (int) (baseFee * 0.10);
-            return Math.min(lateFee, maxLateFee);
+            java.math.BigDecimal maxLateFee = baseFee.multiply(java.math.BigDecimal.valueOf(0.10));
+            return lateFee.min(maxLateFee);
         }
 
-        return 0;
+        return java.math.BigDecimal.ZERO;
     }
 }

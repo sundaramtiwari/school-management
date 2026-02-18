@@ -5,6 +5,7 @@ import jakarta.persistence.*;
 import lombok.*;
 import lombok.experimental.SuperBuilder;
 
+import java.math.BigDecimal;
 import java.time.LocalDate;
 
 @Entity
@@ -30,8 +31,13 @@ public class FeePayment extends TenantEntity {
     @Column(name = "session_id")
     private Long sessionId;
 
-    @Column(nullable = false)
-    private Integer amountPaid;
+    @Column(nullable = false, precision = 15, scale = 2)
+    @Builder.Default
+    private BigDecimal principalPaid = BigDecimal.ZERO;
+
+    @Column(nullable = false, precision = 15, scale = 2)
+    @Builder.Default
+    private BigDecimal lateFeePaid = BigDecimal.ZERO;
 
     @Column(nullable = false)
     private LocalDate paymentDate;
@@ -41,4 +47,9 @@ public class FeePayment extends TenantEntity {
 
     private String mode; // CASH / UPI / BANK
     private String remarks;
+
+    public BigDecimal getAmountPaid() {
+        return (principalPaid != null ? principalPaid : BigDecimal.ZERO)
+                .add(lateFeePaid != null ? lateFeePaid : BigDecimal.ZERO);
+    }
 }

@@ -319,7 +319,7 @@ public class TransportEnrollmentService {
         FeeStructure structure = feeStructureRepository
                 .findByFeeTypeIdAndSessionIdAndClassIdIsNull(transportFeeType.getId(), sessionId)
                 .stream()
-                .filter(fs -> fs.getAmount().equals(pp.getAmount())
+                .filter(fs -> fs.getAmount().compareTo(pp.getAmount()) == 0
                         && fs.getFrequency().equals(pp.getFrequency()))
                 .findFirst()
                 .orElseGet(() -> {
@@ -354,7 +354,8 @@ public class TransportEnrollmentService {
             }
         } else {
             // Create new assignment
-            int finalAmount = structure.getAmount() * structure.getFrequency().getPeriodsPerYear();
+            java.math.BigDecimal finalAmount = structure.getAmount()
+                    .multiply(java.math.BigDecimal.valueOf(structure.getFrequency().getPeriodsPerYear()));
 
             StudentFeeAssignment assignment = StudentFeeAssignment.builder()
                     .studentId(student.getId())

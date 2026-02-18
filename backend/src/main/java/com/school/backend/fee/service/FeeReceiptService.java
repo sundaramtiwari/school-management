@@ -6,6 +6,7 @@ import com.lowagie.text.Rectangle;
 import com.lowagie.text.pdf.PdfPCell;
 import com.lowagie.text.pdf.PdfPTable;
 import com.lowagie.text.pdf.PdfWriter;
+import com.lowagie.text.FontFactory;
 import com.school.backend.common.exception.ResourceNotFoundException;
 import com.school.backend.core.student.entity.Student;
 import com.school.backend.core.student.repository.StudentRepository;
@@ -83,7 +84,8 @@ public class FeeReceiptService {
         Font addressFont = FontFactory.getFont(FontFactory.HELVETICA, 9, Color.GRAY);
         if (school.getAddress() != null) {
             Paragraph address = new Paragraph(
-                    school.getAddress() + ", " + school.getCity() + ", " + school.getState() + " - " + school.getPincode(),
+                    school.getAddress() + ", " + school.getCity() + ", " + school.getState() + " - "
+                            + school.getPincode(),
                     addressFont);
             address.setAlignment(Element.ALIGN_CENTER);
             document.add(address);
@@ -91,7 +93,8 @@ public class FeeReceiptService {
 
         if (school.getContactNumber() != null || school.getContactEmail() != null) {
             String contact = "";
-            if (school.getContactNumber() != null) contact += "Tel: " + school.getContactNumber();
+            if (school.getContactNumber() != null)
+                contact += "Tel: " + school.getContactNumber();
             if (school.getContactEmail() != null)
                 contact += (contact.isEmpty() ? "" : " | ") + "Email: " + school.getContactEmail();
 
@@ -151,7 +154,8 @@ public class FeeReceiptService {
         addDetailCell(table, formatPaymentMode(payment.getMode()), valueFont);
         addDetailCell(table, "Reference:", labelFont);
         addDetailCell(table, payment.getTransactionReference() != null
-                ? payment.getTransactionReference() : "N/A", valueFont);
+                ? payment.getTransactionReference()
+                : "N/A", valueFont);
 
         document.add(table);
         addSeparatorLine(document);
@@ -240,7 +244,9 @@ public class FeeReceiptService {
         table.addCell(cell);
     }
 
-    private String formatIndianRupees(int amount) {
+    private String formatIndianRupees(java.math.BigDecimal amount) {
+        if (amount == null)
+            return "₹ 0.00";
         NumberFormat formatter = NumberFormat.getCurrencyInstance(new Locale("en", "IN"));
         return formatter.format(amount).replace("₹", "₹ ");
     }

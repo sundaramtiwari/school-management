@@ -166,7 +166,8 @@ public class DataSeeder implements CommandLineRunner {
         try {
             schoolService.createSchoolWithAdmin(req);
         } catch (Exception ex) {
-            // If something went wrong (e.g. user already exists), try to recover by fetching the school
+            // If something went wrong (e.g. user already exists), try to recover by
+            // fetching the school
             System.out.println("Skipping demo school creation: " + ex.getMessage());
         }
 
@@ -246,8 +247,7 @@ public class DataSeeder implements CommandLineRunner {
             Gender gender,
             SchoolClassDto schoolClass,
             Long sessionId,
-            int rollNumber
-    ) {
+            int rollNumber) {
         Long schoolId = TenantContext.getSchoolId();
 
         if (schoolId == null) {
@@ -314,15 +314,13 @@ public class DataSeeder implements CommandLineRunner {
         var classesPage = schoolClassService.getBySchoolAndSession(
                 schoolId,
                 sessionId,
-                org.springframework.data.domain.PageRequest.of(0, 20)
-        );
+                org.springframework.data.domain.PageRequest.of(0, 20));
 
         classesPage.getContent().forEach(c -> {
             var existing = feeStructureRepository.findByClassIdAndSessionIdAndSchoolId(
                     c.getId(),
                     sessionId,
-                    schoolId
-            );
+                    schoolId);
 
             if (!existing.isEmpty()) {
                 return;
@@ -342,7 +340,7 @@ public class DataSeeder implements CommandLineRunner {
             req.setClassId(c.getId());
             req.setSessionId(sessionId);
             req.setFeeTypeId(tuitionFeeTypeId);
-            req.setAmount(20000);
+            req.setAmount(java.math.BigDecimal.valueOf(20000));
             req.setFrequency(FeeFrequency.ANNUALLY);
 
             try {
@@ -386,8 +384,7 @@ public class DataSeeder implements CommandLineRunner {
 
         var studentsPage = studentService.listBySchool(
                 schoolId,
-                org.springframework.data.domain.PageRequest.of(0, 5)
-        );
+                org.springframework.data.domain.PageRequest.of(0, 5));
 
         if (studentsPage.isEmpty()) {
             return;
@@ -397,7 +394,7 @@ public class DataSeeder implements CommandLineRunner {
             FeePaymentRequest req = new FeePaymentRequest();
             req.setStudentId(s.getId());
             req.setSessionId(sessionId);
-            req.setAmountPaid(5000);
+            req.setAmountPaid(java.math.BigDecimal.valueOf(5000));
             req.setPaymentDate(LocalDate.now());
             req.setMode("CASH");
             req.setRemarks("Initial installment (demo)");
@@ -424,8 +421,7 @@ public class DataSeeder implements CommandLineRunner {
         var classesPage = schoolClassService.getBySchoolAndSession(
                 schoolId,
                 sessionId,
-                org.springframework.data.domain.PageRequest.of(0, 20)
-        );
+                org.springframework.data.domain.PageRequest.of(0, 20));
 
         classesPage.getContent().forEach(c -> {
             int order = 1;
@@ -443,8 +439,9 @@ public class DataSeeder implements CommandLineRunner {
                 try {
                     classSubjectService.create(dto);
                 } catch (Exception ex) {
-                    System.out.println("Skipping class-subject for class " + c.getId() + " and subject " + subj.getName()
-                            + ": " + ex.getMessage());
+                    System.out
+                            .println("Skipping class-subject for class " + c.getId() + " and subject " + subj.getName()
+                                    + ": " + ex.getMessage());
                 }
             }
         });
@@ -461,8 +458,7 @@ public class DataSeeder implements CommandLineRunner {
             var page = subjectService.getBySchool(
                     schoolId,
                     true,
-                    org.springframework.data.domain.PageRequest.of(0, 50)
-            );
+                    org.springframework.data.domain.PageRequest.of(0, 50));
             var existing = page.getContent().stream()
                     .filter(s -> name.equalsIgnoreCase(s.getName()))
                     .findFirst();
@@ -496,8 +492,7 @@ public class DataSeeder implements CommandLineRunner {
         var classesPage = schoolClassService.getBySchoolAndSession(
                 schoolId,
                 sessionId,
-                org.springframework.data.domain.PageRequest.of(0, 10)
-        );
+                org.springframework.data.domain.PageRequest.of(0, 10));
 
         if (classesPage.isEmpty()) {
             return;
@@ -555,8 +550,7 @@ public class DataSeeder implements CommandLineRunner {
         var activeSubjects = subjectService.getBySchool(
                 schoolId,
                 true,
-                org.springframework.data.domain.PageRequest.of(0, 50)
-        );
+                org.springframework.data.domain.PageRequest.of(0, 50));
 
         activeSubjects.getContent().forEach(s -> {
             ExamSubjectCreateRequest req = new ExamSubjectCreateRequest();

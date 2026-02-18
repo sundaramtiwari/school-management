@@ -124,8 +124,7 @@ public class TransportIntegrationTest extends BaseAuthenticatedIntegrationTest {
                 // 2. Create Pickup Point (Monthly, 1500)
                 PickupPointDto ppReq = PickupPointDto.builder()
                                 .name("Stop 1")
-                                .amount(1500)
-                                .frequency(FeeFrequency.MONTHLY)
+                                .amount(java.math.BigDecimal.valueOf(1000)).frequency(FeeFrequency.MONTHLY)
                                 .routeId(routeId)
                                 .build();
 
@@ -184,7 +183,8 @@ public class TransportIntegrationTest extends BaseAuthenticatedIntegrationTest {
                 TransportRoute route = routeRepository.save(TransportRoute.builder()
                                 .name("Route B").schoolId(testSchool.getId()).active(true).build());
                 PickupPoint pp = pickupPointRepository.save(PickupPoint.builder()
-                                .name("Stop 2").amount(1000).frequency(FeeFrequency.MONTHLY)
+                                .name("Stop 2").amount(java.math.BigDecimal.valueOf(1000))
+                                .frequency(FeeFrequency.MONTHLY)
                                 .route(route).schoolId(testSchool.getId()).build());
 
                 TransportEnrollmentDto enrollReq = TransportEnrollmentDto.builder()
@@ -208,7 +208,8 @@ public class TransportIntegrationTest extends BaseAuthenticatedIntegrationTest {
                                 .name("Route C").schoolId(testSchool.getId()).currentStrength(0).capacity(40)
                                 .active(true).build());
                 PickupPoint pp = pickupPointRepository.save(PickupPoint.builder()
-                                .name("Stop C").amount(1000).frequency(FeeFrequency.MONTHLY)
+                                .name("Stop C").amount(java.math.BigDecimal.valueOf(1000))
+                                .frequency(FeeFrequency.MONTHLY)
                                 .route(route).schoolId(testSchool.getId()).build());
 
                 // Enroll manually

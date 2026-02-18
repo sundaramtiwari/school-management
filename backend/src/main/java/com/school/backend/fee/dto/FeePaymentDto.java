@@ -10,8 +10,11 @@ public class FeePaymentDto {
     private Long id;
 
     private Long studentId;
+    private Long sessionId;
 
-    private Integer amountPaid;
+    private java.math.BigDecimal amountPaid; // Total
+    private java.math.BigDecimal principalPaid;
+    private java.math.BigDecimal lateFeePaid;
 
     private LocalDate paymentDate;
 

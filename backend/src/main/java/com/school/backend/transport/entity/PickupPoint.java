@@ -22,8 +22,8 @@ public class PickupPoint extends TenantEntity {
     @Column(nullable = false)
     private String name;
 
-    @Column(nullable = false)
-    private Integer amount;
+    @Column(nullable = false, precision = 15, scale = 2)
+    private java.math.BigDecimal amount;
 
     @Enumerated(EnumType.STRING)
     @Column(nullable = false, length = 20)

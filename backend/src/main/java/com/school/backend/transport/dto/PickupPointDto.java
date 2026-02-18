@@ -11,7 +11,7 @@ import lombok.*;
 public class PickupPointDto {
     private Long id;
     private String name;
-    private Integer amount;
+    private java.math.BigDecimal amount;
     private FeeFrequency frequency;
     private Long routeId;
 }
