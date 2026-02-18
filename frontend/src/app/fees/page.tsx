@@ -10,7 +10,7 @@ export default function FeesDashboard() {
     const { user } = useAuth();
     const { currentSession, isSessionLoading: sessionLoading } = useSession();
 
-    const canManageFees = user?.role === "ACCOUNTANT" || user?.role === "SCHOOL_ADMIN" || user?.role === "SUPER_ADMIN" || user?.role === "PLATFORM_ADMIN";
+    const canManageFees = user?.role === "ACCOUNTANT" || user?.role === "SCHOOL_ADMIN" || user?.role === "SUPER_ADMIN";
     const [stats, setStats] = useState({
         todayCollection: 0,
         pendingDues: 0,

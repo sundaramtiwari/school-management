@@ -4,6 +4,7 @@ import { useEffect, useState } from "react";
 import { api } from "@/lib/api";
 import { useToast } from "@/components/ui/Toast";
 import { Skeleton, TableSkeleton } from "@/components/ui/Skeleton";
+import { useAuth } from "@/context/AuthContext";
 
 type Defaulter = {
   studentId: number;
@@ -18,7 +19,9 @@ type Defaulter = {
 };
 
 export default function FeeDefaultersPage() {
+  const { user } = useAuth();
   const { showToast } = useToast();
+  const canMutateFinance = user?.role === "SCHOOL_ADMIN" || user?.role === "ACCOUNTANT" || user?.role === "SUPER_ADMIN";
 
   const [defaulters, setDefaulters] = useState<Defaulter[]>([]);
   const [filteredDefaulters, setFilteredDefaulters] = useState<Defaulter[]>([]);
@@ -355,20 +358,24 @@ export default function FeeDefaultersPage() {
                     </a>
                   </td>
                   <td className="p-4">
-                    <div className="flex gap-2 justify-center">
-                      <button
-                        onClick={() => goToCollectFee(defaulter.studentId)}
-                        className="px-3 py-1.5 bg-green-600 text-white rounded-lg hover:bg-green-700 transition text-xs font-bold"
-                      >
-                        Collect
-                      </button>
-                      <button
-                        onClick={() => sendReminder(defaulter)}
-                        className="px-3 py-1.5 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition text-xs font-bold"
-                      >
-                        Remind
-                      </button>
-                    </div>
+                    {canMutateFinance ? (
+                      <div className="flex gap-2 justify-center">
+                        <button
+                          onClick={() => goToCollectFee(defaulter.studentId)}
+                          className="px-3 py-1.5 bg-green-600 text-white rounded-lg hover:bg-green-700 transition text-xs font-bold"
+                        >
+                          Collect
+                        </button>
+                        <button
+                          onClick={() => sendReminder(defaulter)}
+                          className="px-3 py-1.5 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition text-xs font-bold"
+                        >
+                          Remind
+                        </button>
+                      </div>
+                    ) : (
+                      <span className="text-gray-400 text-xs italic">View Only</span>
+                    )}
                   </td>
                 </tr>
               ))}

@@ -15,7 +15,7 @@ public class TransportEnrollmentController {
     private final TransportEnrollmentService enrollmentService;
 
     @PostMapping
-    @PreAuthorize("hasAnyRole('SUPER_ADMIN', 'PLATFORM_ADMIN', 'SCHOOL_ADMIN', 'ACCOUNTANT')")
+    @PreAuthorize("hasAnyRole('SUPER_ADMIN', 'SCHOOL_ADMIN', 'ACCOUNTANT')")
     public ResponseEntity<TransportEnrollmentDto> enroll(@RequestBody TransportEnrollmentDto dto) {
         return ResponseEntity.ok(enrollmentService.enrollStudent(dto));
     }
@@ -39,7 +39,7 @@ public class TransportEnrollmentController {
     }
 
     @DeleteMapping("/student/{studentId}")
-    @PreAuthorize("hasAnyRole('SUPER_ADMIN', 'PLATFORM_ADMIN', 'SCHOOL_ADMIN', 'ACCOUNTANT')")
+    @PreAuthorize("hasAnyRole('SUPER_ADMIN', 'SCHOOL_ADMIN', 'ACCOUNTANT')")
     public ResponseEntity<Void> unenroll(
             @PathVariable Long studentId,
             @RequestParam Long sessionId) {

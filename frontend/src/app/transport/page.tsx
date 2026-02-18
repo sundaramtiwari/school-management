@@ -5,6 +5,7 @@ import { transportApi } from "@/lib/transportApi";
 import { useToast } from "@/components/ui/Toast";
 import Modal from "@/components/ui/Modal";
 import { Skeleton, TableSkeleton } from "@/components/ui/Skeleton";
+import { useAuth } from "@/context/AuthContext";
 
 type Route = {
     id: number;
@@ -24,7 +25,9 @@ type PickupPoint = {
 const FREQUENCIES = ["MONTHLY", "QUARTERLY", "HALF_YEARLY", "ANNUALLY"];
 
 export default function TransportPage() {
+    const { user } = useAuth();
     const { showToast } = useToast();
+    const canMutateTransport = user?.role === "SCHOOL_ADMIN" || user?.role === "SUPER_ADMIN";
 
     const [routes, setRoutes] = useState<Route[]>([]);
     const [selectedRoute, setSelectedRoute] = useState<Route | null>(null);
@@ -77,6 +80,7 @@ export default function TransportPage() {
     }
 
     async function saveRoute() {
+        if (!canMutateTransport) return;
         if (!routeForm.name) return;
         try {
             setIsSaving(true);
@@ -96,6 +100,7 @@ export default function TransportPage() {
     }
 
     async function deleteRoute(id: number) {
+        if (!canMutateTransport) return;
         try {
             setIsSaving(true);
             await transportApi.deleteRoute(id);
@@ -111,6 +116,7 @@ export default function TransportPage() {
     }
 
     async function savePickup() {
+        if (!canMutateTransport) return;
         if (!selectedRoute || !pickupForm.name || !pickupForm.amount) return;
         try {
             setIsSaving(true);
@@ -139,6 +145,7 @@ export default function TransportPage() {
                 </div>
                 <button
                     onClick={() => setShowRouteModal(true)}
+                    disabled={!canMutateTransport}
                     className="bg-blue-600 text-white px-6 py-2.5 rounded-xl font-bold shadow-lg hover:bg-blue-700 transition-all flex items-center gap-2"
                 >
                     <span>+</span> New Route
@@ -189,6 +196,7 @@ export default function TransportPage() {
                                         e.stopPropagation();
                                         setRouteToDelete(r.id);
                                     }}
+                                    disabled={!canMutateTransport}
                                     className="absolute top-4 right-4 p-2 text-gray-400 hover:text-red-600 opacity-0 group-hover:opacity-100 transition-opacity"
                                 >
                                     🗑️
@@ -232,6 +240,7 @@ export default function TransportPage() {
                                 </span>
                                 <button
                                     onClick={() => setShowPickupModal(true)}
+                                    disabled={!canMutateTransport}
                                     className="text-xs font-bold text-blue-600 hover:underline"
                                 >
                                     + Add Stop

@@ -24,7 +24,7 @@ public class FeeSummaryController {
     }
 
     @GetMapping("/students/{studentId}")
-    @PreAuthorize("hasAnyRole('SCHOOL_ADMIN', 'ACCOUNTANT', 'TEACHER', 'SUPER_ADMIN', 'PLATFORM_ADMIN')")
+    @PreAuthorize("hasAnyRole('SCHOOL_ADMIN', 'ACCOUNTANT', 'SUPER_ADMIN', 'PLATFORM_ADMIN')")
     public FeeSummaryDto getStudentFeeSummary(
             @PathVariable Long studentId,
             @RequestParam(required = false) Long sessionId) {

@@ -24,25 +24,28 @@ public class FeePaymentController {
 
     // Recent payments (global for school)
     @GetMapping("/recent")
-    @PreAuthorize("hasAnyRole('SCHOOL_ADMIN', 'ACCOUNTANT', 'SUPER_ADMIN')")
+    @PreAuthorize("hasAnyRole('SCHOOL_ADMIN', 'ACCOUNTANT', 'SUPER_ADMIN', 'PLATFORM_ADMIN')")
     public List<FeePaymentDto> recent(@RequestParam(defaultValue = "10") int limit) {
         return service.getRecentPayments(limit);
     }
 
     // Make payment
     @PostMapping
+    @PreAuthorize("hasAnyRole('SCHOOL_ADMIN', 'ACCOUNTANT', 'SUPER_ADMIN')")
     public FeePaymentDto pay(@Valid @RequestBody FeePaymentRequest req) {
         return service.pay(req);
     }
 
     // Payment history
     @GetMapping("/students/{studentId}")
+    @PreAuthorize("hasAnyRole('SCHOOL_ADMIN', 'ACCOUNTANT', 'SUPER_ADMIN', 'PLATFORM_ADMIN')")
     public List<FeePaymentDto> history(@PathVariable Long studentId) {
         return service.getHistory(studentId);
     }
 
     // Download Receipt
     @GetMapping("/{id}/receipt")
+    @PreAuthorize("hasAnyRole('SCHOOL_ADMIN', 'ACCOUNTANT', 'SUPER_ADMIN', 'PLATFORM_ADMIN')")
     public ResponseEntity<byte[]> downloadReceipt(@PathVariable Long id) {
         byte[] pdf = receiptService.generateReceipt(id);
 

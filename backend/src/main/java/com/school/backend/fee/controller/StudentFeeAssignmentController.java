@@ -5,6 +5,7 @@ import com.school.backend.fee.dto.StudentFeeAssignmentDto;
 import com.school.backend.fee.service.StudentFeeAssignmentService;
 import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
+import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.web.bind.annotation.*;
 
 import java.util.List;
@@ -18,6 +19,7 @@ public class StudentFeeAssignmentController {
 
     // Assign fee to student
     @PostMapping
+    @PreAuthorize("hasAnyRole('SCHOOL_ADMIN', 'SUPER_ADMIN')")
     public StudentFeeAssignmentDto assign(
             @Valid @RequestBody StudentFeeAssignRequest req) {
 
@@ -26,6 +28,7 @@ public class StudentFeeAssignmentController {
 
     // List student's assigned fees
     @GetMapping("/students/{studentId}")
+    @PreAuthorize("hasAnyRole('SCHOOL_ADMIN', 'ACCOUNTANT', 'SUPER_ADMIN', 'PLATFORM_ADMIN')")
     public List<StudentFeeAssignmentDto> listByStudent(
             @PathVariable Long studentId,
             @RequestParam Long sessionId) {

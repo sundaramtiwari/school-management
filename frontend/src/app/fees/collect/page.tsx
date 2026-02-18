@@ -24,7 +24,7 @@ export default function FeeCollectPage() {
     const { showToast } = useToast();
     const { currentSession } = useSession();
 
-    const canCollectFees = user?.role === "ACCOUNTANT" || user?.role === "SCHOOL_ADMIN" || user?.role === "SUPER_ADMIN" || user?.role === "PLATFORM_ADMIN";
+    const canCollectFees = user?.role === "ACCOUNTANT" || user?.role === "SCHOOL_ADMIN" || user?.role === "SUPER_ADMIN";
 
     /* -------- State -------- */
     const [classes, setClasses] = useState<SchoolClass[]>([]);

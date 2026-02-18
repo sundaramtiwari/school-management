@@ -24,7 +24,7 @@ public class FeeChallanController {
      * @return PDF file as byte array
      */
     @GetMapping("/student/{studentId}")
-    @PreAuthorize("hasAnyRole('SCHOOL_ADMIN', 'ACCOUNTANT', 'SUPER_ADMIN')")
+    @PreAuthorize("hasAnyRole('SCHOOL_ADMIN', 'ACCOUNTANT', 'SUPER_ADMIN', 'PLATFORM_ADMIN')")
     public ResponseEntity<byte[]> downloadChallan(
             @PathVariable Long studentId,
             @RequestParam Long sessionId,

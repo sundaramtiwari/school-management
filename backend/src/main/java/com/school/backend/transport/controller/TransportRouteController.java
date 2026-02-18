@@ -17,7 +17,7 @@ public class TransportRouteController {
     private final TransportRouteService routeService;
 
     @PostMapping
-    @PreAuthorize("hasAnyRole('SUPER_ADMIN', 'PLATFORM_ADMIN', 'SCHOOL_ADMIN')")
+    @PreAuthorize("hasAnyRole('SUPER_ADMIN', 'SCHOOL_ADMIN')")
     public ResponseEntity<TransportRouteDto> create(@RequestBody TransportRouteDto dto) {
         return ResponseEntity.ok(routeService.createRoute(dto));
     }
@@ -29,7 +29,7 @@ public class TransportRouteController {
 
     // Add DELETE mapping for transport routes
     @DeleteMapping("/{id}")
-    @PreAuthorize("hasAnyRole('SCHOOL_ADMIN','SUPER_ADMIN','PLATFORM_ADMIN')")
+    @PreAuthorize("hasAnyRole('SCHOOL_ADMIN','SUPER_ADMIN')")
     public ResponseEntity<Void> deleteRoute(@PathVariable Long id) {
         routeService.deleteRoute(id);
         return ResponseEntity.noContent().build();

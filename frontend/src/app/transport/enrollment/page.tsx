@@ -6,6 +6,7 @@ import { api } from "@/lib/api";
 import { studentApi } from "@/lib/studentApi";
 import { useToast } from "@/components/ui/Toast";
 import { useSession } from "@/context/SessionContext";
+import { useAuth } from "@/context/AuthContext";
 import Modal from "@/components/ui/Modal";
 import { Skeleton, TableSkeleton } from "@/components/ui/Skeleton";
 
@@ -16,8 +17,10 @@ type PickupPoint = { id: number; name: string; amount: number; frequency: string
 type Enrollment = { id: number; studentId: number; pickupPointId: number; pickupPointName?: string; routeId?: number; routeName?: string; active: boolean };
 
 export default function TransportEnrollmentPage() {
+    const { user } = useAuth();
     const { showToast } = useToast();
     const { currentSession } = useSession();
+    const canMutateTransportEnrollment = user?.role === "SCHOOL_ADMIN" || user?.role === "SUPER_ADMIN" || user?.role === "ACCOUNTANT";
 
     const [classes, setClasses] = useState<SchoolClass[]>([]);
     const [selectedClass, setSelectedClass] = useState<number | "">("");
@@ -122,6 +125,7 @@ export default function TransportEnrollmentPage() {
     }
 
     async function enrollStudent() {
+        if (!canMutateTransportEnrollment) return;
         if (!currentStudent || !selectedPickupId || !selectedClass || !currentSession) return;
 
         try {
@@ -150,6 +154,7 @@ export default function TransportEnrollmentPage() {
     }
 
     async function unenrollStudent() {
+        if (!canMutateTransportEnrollment) return;
         if (!currentStudent || !currentSession) return;
 
         try {
@@ -232,7 +237,7 @@ export default function TransportEnrollmentPage() {
                                             {enrollment ? (
                                                 <button
                                                     onClick={() => openUnenrollModal(s)}
-                                                    disabled={isLoading}
+                                                    disabled={isLoading || !canMutateTransportEnrollment}
                                                     className="px-4 py-1.5 bg-red-50 text-red-600 rounded-lg text-xs font-bold border border-red-100 hover:bg-red-600 hover:text-white transition-all shadow-sm disabled:opacity-50"
                                                 >
                                                     {isLoading ? "Wait..." : "Unenroll"}
@@ -240,7 +245,7 @@ export default function TransportEnrollmentPage() {
                                             ) : (
                                                 <button
                                                     onClick={() => openEnrollModal(s)}
-                                                    disabled={isLoading}
+                                                    disabled={isLoading || !canMutateTransportEnrollment}
                                                     className="px-4 py-1.5 bg-blue-50 text-blue-600 rounded-lg text-xs font-bold border border-blue-100 hover:bg-blue-600 hover:text-white transition-all shadow-sm shadow-blue-50 disabled:opacity-50"
                                                 >
                                                     {isLoading ? "Wait..." : "Enroll in Bus"}

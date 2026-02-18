@@ -29,7 +29,7 @@ public class FeeStructureController {
 
     // List by class+session
     @GetMapping("/by-class/{classId}")
-    @PreAuthorize("hasAnyRole('SCHOOL_ADMIN', 'ACCOUNTANT', 'TEACHER', 'SUPER_ADMIN')")
+    @PreAuthorize("hasAnyRole('SCHOOL_ADMIN', 'ACCOUNTANT', 'SUPER_ADMIN', 'PLATFORM_ADMIN')")
     public List<FeeStructureDto> listByClass(
             @PathVariable Long classId,
             @RequestParam(required = false) Long sessionId) {
