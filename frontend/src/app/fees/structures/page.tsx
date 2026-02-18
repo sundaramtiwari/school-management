@@ -160,8 +160,8 @@ export default function FeeStructuresPage() {
                     >
                         <span className="text-xl">⚙️</span> Manage Heads
                     </button>
-                    {/* Role Gate: Only School Admin can create fee structures */}
-                    {user?.role?.toUpperCase() === "SCHOOL_ADMIN" && (
+                    {/* Expand FE gating to match backend permissions */}
+                    {["SCHOOL_ADMIN", "SUPER_ADMIN"].includes(user?.role?.toUpperCase() ?? "") && (
                         <button
                             disabled={!selectedClass}
                             onClick={() => setShowModal(true)}

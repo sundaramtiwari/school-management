@@ -1,6 +1,7 @@
 package com.school.backend.common;
 
 import com.school.backend.core.attendance.repository.AttendanceRepository;
+import com.school.backend.core.classsubject.repository.ClassSubjectRepository;
 import com.school.backend.core.classsubject.repository.SchoolClassRepository;
 import com.school.backend.core.student.repository.PromotionRecordRepository;
 import com.school.backend.core.student.repository.StudentEnrollmentRepository;
@@ -42,6 +43,8 @@ public abstract class BaseAuthenticatedIntegrationTest {
     protected TeacherRepository teacherRepository;
     @Autowired
     protected SchoolClassRepository schoolClassRepository;
+    @Autowired
+    protected ClassSubjectRepository classSubjectRepository;
     @Autowired
     protected StudentRepository studentRepository;
     @Autowired
@@ -106,6 +109,7 @@ public abstract class BaseAuthenticatedIntegrationTest {
         feeStructureRepository.deleteAll();
         feeTypeRepository.deleteAll();
         studentRepository.deleteAll();
+        classSubjectRepository.deleteAll();
         schoolClassRepository.deleteAll();
         teacherRepository.deleteAll();
         userRepository.deleteAll();

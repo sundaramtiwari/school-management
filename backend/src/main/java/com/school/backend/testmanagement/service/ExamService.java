@@ -170,6 +170,7 @@ public class ExamService {
                             .examId(examId) // Ensure examId is populated
                             .examSubjectId(item.getExamSubjectId())
                             .studentId(item.getStudentId())
+                            .schoolId(exam.getSchoolId())
                             .build());
 
             mark.setMarksObtained(item.getMarksObtained());

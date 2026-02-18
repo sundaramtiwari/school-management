@@ -66,8 +66,8 @@ export default function SubjectList() {
                             Show Inactive
                         </label>
                     </div>
-                    {/* Role Gate: Only School Admin can create subjects */}
-                    {user?.role?.toUpperCase() === "SCHOOL_ADMIN" && (
+                    {/* Expand FE gating to match backend permissions */}
+                    {["SCHOOL_ADMIN", "SUPER_ADMIN", "PLATFORM_ADMIN"].includes(user?.role?.toUpperCase() ?? "") && (
                         <button
                             onClick={handleCreate}
                             className="bg-blue-600 text-white px-4 py-2 rounded-md hover:bg-blue-700"
@@ -112,8 +112,8 @@ export default function SubjectList() {
                                         </span>
                                     </td>
                                     <td className="px-6 py-4">
-                                        {/* Role Gate: Only School Admin can edit subjects */}
-                                        {user?.role?.toUpperCase() === "SCHOOL_ADMIN" && (
+                                        {/* Expand FE gating to match backend permissions */}
+                                        {["SCHOOL_ADMIN", "SUPER_ADMIN", "PLATFORM_ADMIN"].includes(user?.role?.toUpperCase() ?? "") && (
                                             <button
                                                 onClick={() => handleEdit(subject)}
                                                 className="text-blue-600 hover:text-blue-800 font-medium bg-blue-50 px-3 py-1 rounded hover:bg-blue-100 transition-colors"

@@ -30,25 +30,19 @@ class DummyDataSeederTest {
     @Test
     @Transactional
     void testSeederPopulatesData() throws Exception {
-        // Arrange: Ensure DB is empty or has < 2 schools (H2 test db should be empty)
         long initialSchoolCount = schoolRepository.count();
+        long initialUserCount = userRepository.count();
+        long initialStudentCount = studentRepository.count();
 
-        // Act
         dummyDataSeeder.run();
 
-        // Assert
         long schoolCount = schoolRepository.count();
         long userCount = userRepository.count();
         long studentCount = studentRepository.count();
 
-        if (initialSchoolCount > 1) {
-            // Seeder returns early
-            assertThat(schoolCount).isEqualTo(initialSchoolCount);
-        } else {
-            // Seeder should have run
-            assertThat(schoolCount).isGreaterThanOrEqualTo(5);
-            assertThat(userCount).isGreaterThan(5); // At least 5 admins + teachers
-            assertThat(studentCount).isGreaterThan(100);
-        }
+        // DummyDataSeeder is intentionally disabled; test asserts idempotent no-op behavior.
+        assertThat(schoolCount).isEqualTo(initialSchoolCount);
+        assertThat(userCount).isEqualTo(initialUserCount);
+        assertThat(studentCount).isEqualTo(initialStudentCount);
     }
 }

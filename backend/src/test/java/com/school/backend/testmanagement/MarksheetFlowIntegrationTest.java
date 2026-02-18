@@ -7,6 +7,8 @@ import com.school.backend.core.classsubject.repository.SchoolClassRepository;
 import com.school.backend.core.classsubject.repository.SubjectRepository;
 import com.school.backend.core.student.dto.StudentCreateRequest;
 import com.school.backend.core.student.dto.StudentDto;
+import com.school.backend.core.student.dto.StudentEnrollmentDto;
+import com.school.backend.core.student.dto.StudentEnrollmentRequest;
 import com.school.backend.core.student.repository.StudentRepository;
 import com.school.backend.school.entity.AcademicSession;
 import com.school.backend.school.entity.School;
@@ -142,6 +144,22 @@ public class MarksheetFlowIntegrationTest extends BaseAuthenticatedIntegrationTe
 
                 studentId = Objects.requireNonNull(studentResp.getBody()).getId();
 
+                /* ---------- Enrollment ---------- */
+
+                StudentEnrollmentRequest enrollReq = new StudentEnrollmentRequest();
+                enrollReq.setStudentId(studentId);
+                enrollReq.setClassId(classId);
+                enrollReq.setSessionId(sessionId);
+
+                HttpEntity<StudentEnrollmentRequest> enrollEntity = new HttpEntity<>(enrollReq, headers);
+                ResponseEntity<StudentEnrollmentDto> enrollResp = restTemplate.exchange(
+                                "/api/enrollments",
+                                HttpMethod.POST,
+                                enrollEntity,
+                                StudentEnrollmentDto.class);
+
+                Assertions.assertThat(enrollResp.getStatusCode()).isEqualTo(HttpStatus.OK);
+
                 /* ---------- Exam ---------- */
 
                 ExamCreateRequest examReq = new ExamCreateRequest();
@@ -207,6 +225,17 @@ public class MarksheetFlowIntegrationTest extends BaseAuthenticatedIntegrationTe
                                 markEntity,
                                 StudentMark.class);
 
+                /* ---------- Publish Exam ---------- */
+
+                ResponseEntity<Map<String, Object>> publishResp = restTemplate.exchange(
+                                "/api/exams/" + examId + "/publish",
+                                HttpMethod.PUT,
+                                new HttpEntity<>(headers),
+                                new ParameterizedTypeReference<>() {
+                                });
+
+                Assertions.assertThat(publishResp.getStatusCode()).isEqualTo(HttpStatus.OK);
+
                 /* ---------- Marksheet ---------- */
 
                 String url = "/api/marksheets/exam/" + examId + "/student/" + studentId;
@@ -261,15 +290,20 @@ public class MarksheetFlowIntegrationTest extends BaseAuthenticatedIntegrationTe
 
                 // 4. Students
                 if (studentId != null) {
+                        studentEnrollmentRepository.deleteAll();
+                }
+
+                // 5. Students
+                if (studentId != null) {
                         studentRepo.deleteById(studentId);
                 }
 
-                // 5. Classes
+                // 6. Classes
                 if (classId != null) {
                         classRepo.deleteById(classId);
                 }
 
-                // 6. Users (IMPORTANT)
+                // 7. Users (IMPORTANT)
                 if (schoolId != null) {
                         userRepository
                                         .findAll()
@@ -279,17 +313,17 @@ public class MarksheetFlowIntegrationTest extends BaseAuthenticatedIntegrationTe
                                         .forEach(userRepository::delete);
                 }
 
-                // 7. Subject
+                // 8. Subject
                 if (subjectId != null) {
                         subjectRepo.deleteById(subjectId);
                 }
 
-                // 8. Session
+                // 9. Session
                 if (sessionId != null) {
                         sessionRepo.deleteById(sessionId);
                 }
 
-                // 9. School (LAST)
+                // 10. School (LAST)
                 if (schoolId != null) {
                         schoolRepo.deleteById(schoolId);
                 }
