@@ -8,4 +8,7 @@ public class StudentGuardianDto {
     private Long studentId;
     private Long guardianId;
     private boolean primaryGuardian;
+    private String name;
+    private String relation;
+    private String contactNumber;
 }

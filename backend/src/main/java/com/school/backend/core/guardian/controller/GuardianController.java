@@ -2,7 +2,7 @@ package com.school.backend.core.guardian.controller;
 
 import com.school.backend.common.dto.PageResponse;
 import com.school.backend.common.dto.PageResponseMapper;
-import com.school.backend.core.guardian.dto.GuardianCreateRequest;
+import com.school.backend.core.guardian.dto.GuardianRequest;
 import com.school.backend.core.guardian.dto.GuardianDto;
 import com.school.backend.core.guardian.service.GuardianService;
 import jakarta.validation.Valid;
@@ -24,8 +24,7 @@ public class GuardianController {
 
     @PostMapping
     @PreAuthorize("hasAnyRole('SCHOOL_ADMIN', 'TEACHER', 'SUPER_ADMIN')")
-    public ResponseEntity<GuardianDto> create(@Valid @RequestBody GuardianCreateRequest req) {
-        req.setSchoolId(SecurityUtil.schoolId());
+    public ResponseEntity<GuardianDto> create(@Valid @RequestBody GuardianRequest req) {
         return ResponseEntity.ok(service.create(req));
     }
 

@@ -9,10 +9,9 @@ import lombok.NoArgsConstructor;
 @NoArgsConstructor
 @AllArgsConstructor
 @Builder
-public class GuardianDto {
-    private Long id;
+public class GuardianRequest {
     private String name;
-    private String relation;
+    private String relation; // FATHER, MOTHER, GUARDIAN, OTHER
     private String contactNumber;
     private String email;
     private String address;
@@ -21,6 +20,4 @@ public class GuardianDto {
     private String qualification;
     private boolean primaryGuardian;
     private boolean whatsappEnabled;
-    private String photoUrl;
-    private boolean active;
 }

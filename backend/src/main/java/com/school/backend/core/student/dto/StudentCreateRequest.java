@@ -6,6 +6,8 @@ import jakarta.validation.constraints.NotNull;
 import lombok.Data;
 
 import java.time.LocalDate;
+import java.util.List;
+import com.school.backend.core.guardian.dto.GuardianRequest;
 
 @Data
 public class StudentCreateRequest {
@@ -43,4 +45,6 @@ public class StudentCreateRequest {
     private String reasonForLeavingPreviousSchool;
 
     private Long schoolId;
+
+    private List<GuardianRequest> guardians;
 }

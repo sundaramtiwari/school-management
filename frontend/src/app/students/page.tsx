@@ -8,6 +8,7 @@ import { useSession } from "@/context/SessionContext";
 import Modal from "@/components/ui/Modal";
 import { TableSkeleton } from "@/components/ui/Skeleton";
 import { useAuth } from "@/context/AuthContext";
+import GuardianFormSection, { GuardianFormValue } from "@/components/students/GuardianFormSection";
 
 /* ---------------- Types ---------------- */
 
@@ -84,6 +85,7 @@ export default function StudentsPage() {
     previousSchoolContact: "",
     reasonForLeavingPreviousSchool: "",
     classId: "",
+    guardians: [] as GuardianFormValue[],
   });
 
   /* ---------------- Init ---------------- */
@@ -141,6 +143,16 @@ export default function StudentsPage() {
       return;
     }
 
+    if (studentForm.guardians.length === 0) {
+      showToast("At least one guardian is required", "warning");
+      return;
+    }
+
+    if (!studentForm.guardians.some(g => g.primaryGuardian)) {
+      showToast("Please designate a primary guardian", "warning");
+      return;
+    }
+
     try {
       setIsSaving(true);
 
@@ -148,7 +160,8 @@ export default function StudentsPage() {
 
       const res = await studentApi.create({
         ...registerData,
-        previousYearOfPassing: registerData.previousYearOfPassing ? Number(registerData.previousYearOfPassing) : null
+        previousYearOfPassing: registerData.previousYearOfPassing ? Number(registerData.previousYearOfPassing) : null,
+        guardians: studentForm.guardians
       });
 
       const studentId = res.data.id;
@@ -190,6 +203,7 @@ export default function StudentsPage() {
         previousSchoolContact: "",
         reasonForLeavingPreviousSchool: "",
         classId: "",
+        guardians: [],
       });
 
       if (Number(studentForm.classId) === Number(selectedClass)) {
@@ -680,7 +694,7 @@ export default function StudentsPage() {
           </section>
 
           {/* Section 6: Remarks */}
-          <section className="space-y-4 mb-4">
+          <section className="space-y-4">
             <h3 className="text-sm font-bold text-blue-600 uppercase tracking-wider border-b pb-2 flex items-center gap-2">
               <span className="bg-blue-600 text-white w-5 h-5 rounded-full flex items-center justify-center text-[10px]">6</span>
               Additional Remarks
@@ -691,6 +705,18 @@ export default function StudentsPage() {
               value={studentForm.remarks}
               onChange={updateStudentField}
               className="input-ref min-h-[60px]"
+            />
+          </section>
+
+          {/* Section 7: Guardians */}
+          <section className="space-y-4 mb-4">
+            <h3 className="text-sm font-bold text-blue-600 uppercase tracking-wider border-b pb-2 flex items-center gap-2">
+              <span className="bg-blue-600 text-white w-5 h-5 rounded-full flex items-center justify-center text-[10px]">7</span>
+              Guardian Information
+            </h3>
+            <GuardianFormSection
+              guardians={studentForm.guardians}
+              onChange={(newGuardians) => setStudentForm({ ...studentForm, guardians: newGuardians })}
             />
           </section>
 

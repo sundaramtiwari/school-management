@@ -10,12 +10,20 @@ import com.school.backend.core.student.dto.StudentUpdateRequest;
 import com.school.backend.core.student.entity.Student;
 import com.school.backend.core.student.mapper.StudentMapper;
 import com.school.backend.core.student.repository.StudentRepository;
+import com.school.backend.core.guardian.entity.Guardian;
+import com.school.backend.core.guardian.service.GuardianService;
+import com.school.backend.core.student.dto.StudentGuardianDto;
+import com.school.backend.core.student.entity.StudentGuardian;
+import com.school.backend.core.student.repository.StudentGuardianRepository;
 import com.school.backend.school.repository.SchoolRepository;
 import lombok.RequiredArgsConstructor;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
+
+import java.util.List;
+import java.util.stream.Collectors;
 
 @Service
 @RequiredArgsConstructor
@@ -27,6 +35,8 @@ public class StudentService {
     private final SchoolClassRepository classRepository;
     private final SessionResolver sessionResolver;
     private final com.school.backend.school.service.SetupValidationService setupValidationService;
+    private final GuardianService guardianService;
+    private final StudentGuardianRepository studentGuardianRepository;
 
     private static void updateStudentDetails(StudentUpdateRequest req, Student existing) {
         if (req.getFirstName() != null)
@@ -136,7 +146,61 @@ public class StudentService {
 
         Student ent = mapper.toEntity(req);
         Student saved = repository.save(ent);
+
+        // Link Guardians
+        if (req.getGuardians() == null || req.getGuardians().isEmpty()) {
+            throw new IllegalArgumentException("At least one guardian is required");
+        }
+
+        long primaryCount = req.getGuardians().stream().filter(g -> g.isPrimaryGuardian()).count();
+        if (primaryCount > 1) {
+            throw new IllegalArgumentException("Only one primary guardian is allowed");
+        }
+
+        for (int i = 0; i < req.getGuardians().size(); i++) {
+            var gReq = req.getGuardians().get(i);
+            Guardian g = guardianService.findOrCreateByContact(schoolId, gReq);
+
+            boolean isPrimary = (primaryCount == 0 && i == 0) || gReq.isPrimaryGuardian();
+
+            StudentGuardian sg = StudentGuardian.builder()
+                    .studentId(saved.getId())
+                    .guardianId(g.getId())
+                    .primaryGuardian(isPrimary)
+                    .build();
+            sg.setSchoolId(schoolId);
+            studentGuardianRepository.save(sg);
+        }
+
         return mapper.toDto(saved);
+    }
+
+    @Transactional(readOnly = true)
+    public List<StudentGuardianDto> getGuardiansForStudent(Long studentId) {
+        Student student = repository.findById(studentId)
+                .orElseThrow(() -> new ResourceNotFoundException("Student not found"));
+
+        // Tenant Security Check
+        if (!student.getSchoolId().equals(TenantContext.getSchoolId())) {
+            throw new SecurityException("Unauthorized access to student guardians");
+        }
+
+        return studentGuardianRepository.findByStudentId(studentId).stream()
+                .map(sg -> {
+                    StudentGuardianDto dto = new StudentGuardianDto();
+                    dto.setId(sg.getId());
+                    dto.setStudentId(sg.getStudentId());
+                    dto.setGuardianId(sg.getGuardianId());
+                    dto.setPrimaryGuardian(sg.isPrimaryGuardian());
+
+                    guardianService.getOptionalById(sg.getGuardianId()).ifPresent(g -> {
+                        dto.setName(g.getName());
+                        dto.setRelation(g.getRelation());
+                        dto.setContactNumber(g.getContactNumber());
+                    });
+                    return dto;
+                })
+                .collect(Collectors.toList());
     }
 
     @Transactional(readOnly = true)

@@ -2,6 +2,7 @@ package com.school.backend.core.student.controller;
 
 import com.school.backend.common.dto.PageResponse;
 import com.school.backend.common.dto.PageResponseMapper;
+import com.school.backend.core.student.dto.StudentGuardianDto;
 import com.school.backend.core.student.dto.StudentCreateRequest;
 import com.school.backend.core.student.dto.StudentDto;
 import com.school.backend.core.student.dto.StudentUpdateRequest;
@@ -15,6 +16,8 @@ import org.springframework.http.ResponseEntity;
 import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.web.bind.annotation.*;
 import com.school.backend.user.security.SecurityUtil;
+
+import java.util.List;
 
 @RestController
 @RequestMapping("/api/students")
@@ -85,4 +88,9 @@ public class StudentController {
         return ResponseEntity.ok(PageResponseMapper.fromPage(p));
     }
 
+    @GetMapping("/{id}/guardians")
+    @PreAuthorize("hasAnyRole('SCHOOL_ADMIN', 'TEACHER', 'ACCOUNTANT', 'SUPER_ADMIN', 'PLATFORM_ADMIN')")
+    public ResponseEntity<List<StudentGuardianDto>> getGuardians(@PathVariable Long id) {
+        return ResponseEntity.ok(service.getGuardiansForStudent(id));
+    }
 }
