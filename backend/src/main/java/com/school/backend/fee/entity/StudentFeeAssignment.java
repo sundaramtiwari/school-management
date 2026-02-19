@@ -12,7 +12,9 @@ import java.time.LocalDate;
 
 @Entity
 @Table(name = "student_fee_assignments", indexes = {
-        @Index(name = "idx_student_fee_student_session", columnList = "student_id,session_id")
+        @Index(name = "idx_student_fee_student_session", columnList = "student_id,session_id"),
+        @Index(name = "idx_student_fee_school_session", columnList = "school_id,session_id,active"),
+        @Index(name = "idx_student_fee_student_active", columnList = "student_id,active")
 })
 @Getter
 @Setter

@@ -2,6 +2,7 @@ package com.school.backend.fee.service;
 
 import com.lowagie.text.*;
 import com.lowagie.text.Font;
+import com.lowagie.text.FontFactory;
 import com.lowagie.text.Rectangle;
 import com.lowagie.text.pdf.PdfPCell;
 import com.lowagie.text.pdf.PdfPTable;
@@ -90,7 +91,7 @@ public class FeeChallanService {
 
     private void addSchoolHeader(Document document, School school) throws DocumentException {
         // School Name (Large, Bold, Centered)
-        Font schoolNameFont = FontFactory.getFont(FontFactory.HELVETICA_BOLD, 18, Color.DARK_GRAY);
+        Font schoolNameFont = FontFactory.getFont(FontFactory.HELVETICA, 18, Font.BOLD, Color.DARK_GRAY);
         Paragraph schoolName = new Paragraph(
                 school.getDisplayName() != null ? school.getDisplayName() : school.getName(), schoolNameFont);
         schoolName.setAlignment(Element.ALIGN_CENTER);
@@ -132,7 +133,7 @@ public class FeeChallanService {
     }
 
     private void addChallanTitle(Document document, String session, int months) throws DocumentException {
-        Font titleFont = FontFactory.getFont(FontFactory.HELVETICA_BOLD, 14, Color.BLACK);
+        Font titleFont = FontFactory.getFont(FontFactory.HELVETICA, 14, Font.BOLD, Color.BLACK);
         String titleStr = "FEE PAYMENT CHALLAN";
         if (months > 1) {
             titleStr += " - ADVANCE (" + months + " MONTHS)";
@@ -184,7 +185,7 @@ public class FeeChallanService {
     private java.math.BigDecimal addFeeBreakdown(Document document, List<StudentFeeAssignment> assignments,
             int monthsToPay)
             throws DocumentException {
-        Font headerFont = FontFactory.getFont(FontFactory.HELVETICA_BOLD, 11, Color.WHITE);
+        Font headerFont = FontFactory.getFont(FontFactory.HELVETICA, 11, Font.BOLD, Color.WHITE);
         Font contentFont = FontFactory.getFont(FontFactory.HELVETICA, 10);
 
         PdfPTable table = new PdfPTable(4);
@@ -249,7 +250,7 @@ public class FeeChallanService {
         }
 
         // Total Row
-        Font totalFont = FontFactory.getFont(FontFactory.HELVETICA_BOLD, 11);
+        Font totalFont = FontFactory.getFont(FontFactory.HELVETICA, 11, Font.BOLD);
         PdfPCell totalLabelCell = new PdfPCell(new Phrase("Grand Total", totalFont));
         totalLabelCell.setColspan(3);
         totalLabelCell.setPadding(8);

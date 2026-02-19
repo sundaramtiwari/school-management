@@ -2,6 +2,7 @@ package com.school.backend.fee.controller;
 
 import com.school.backend.fee.dto.FeeStatsDto;
 import com.school.backend.fee.dto.FeeSummaryDto;
+import com.school.backend.fee.dto.StudentLedgerDto;
 import com.school.backend.fee.service.FeeSummaryService;
 import com.school.backend.common.tenant.SessionResolver;
 import lombok.RequiredArgsConstructor;
@@ -31,5 +32,11 @@ public class FeeSummaryController {
 
         Long effectiveSessionId = sessionId != null ? sessionId : sessionResolver.resolveForCurrentSchool();
         return service.getStudentFeeSummary(studentId, effectiveSessionId);
+    }
+
+    @GetMapping("/students/{studentId}/ledger")
+    @PreAuthorize("hasAnyRole('SCHOOL_ADMIN', 'ACCOUNTANT', 'SUPER_ADMIN', 'PLATFORM_ADMIN')")
+    public StudentLedgerDto getFullLedger(@PathVariable Long studentId) {
+        return service.getStudentFullLedger(studentId);
     }
 }

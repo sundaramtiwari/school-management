@@ -7,6 +7,7 @@ import com.school.backend.core.student.repository.StudentRepository;
 import com.school.backend.fee.dto.DefaulterDto;
 import com.school.backend.fee.dto.FeeStatsDto;
 import com.school.backend.fee.dto.FeeSummaryDto;
+import com.school.backend.fee.dto.StudentLedgerDto;
 import com.school.backend.fee.entity.StudentFeeAssignment;
 import com.school.backend.fee.repository.FeePaymentRepository;
 import com.school.backend.fee.repository.StudentFeeAssignmentRepository;
@@ -144,6 +145,50 @@ public class FeeSummaryService {
                 dto.setFeePending(pending.compareTo(java.math.BigDecimal.ZERO) > 0);
 
                 return dto;
+        }
+
+        @Transactional(readOnly = true)
+        public StudentLedgerDto getStudentFullLedger(Long studentId) {
+                Long schoolId = SecurityUtil.schoolId();
+                Student student = studentRepository.findByIdAndSchoolId(studentId, schoolId)
+                                .orElseThrow(() -> new ResourceNotFoundException("Student not found: " + studentId));
+
+                List<AcademicSession> sessions = sessionRepository.findBySchoolId(schoolId);
+                List<FeeSummaryDto> sessionSummaries = new ArrayList<>();
+
+                for (AcademicSession session : sessions) {
+                        try {
+                                FeeSummaryDto summary = getStudentFeeSummary(studentId, session.getId());
+                                if (summary.getTotalFee().compareTo(java.math.BigDecimal.ZERO) > 0 ||
+                                                summary.getTotalPaid().compareTo(java.math.BigDecimal.ZERO) > 0) {
+                                        sessionSummaries.add(summary);
+                                }
+                        } catch (Exception e) {
+                                // Ignore sessions with no assignments
+                        }
+                }
+
+                java.math.BigDecimal grandTotalFee = sessionSummaries.stream()
+                                .map(FeeSummaryDto::getTotalFee)
+                                .reduce(java.math.BigDecimal.ZERO, java.math.BigDecimal::add);
+
+                java.math.BigDecimal grandTotalPaid = sessionSummaries.stream()
+                                .map(FeeSummaryDto::getTotalPaid)
+                                .reduce(java.math.BigDecimal.ZERO, java.math.BigDecimal::add);
+
+                java.math.BigDecimal grandTotalPending = sessionSummaries.stream()
+                                .map(FeeSummaryDto::getPendingFee)
+                                .reduce(java.math.BigDecimal.ZERO, java.math.BigDecimal::add);
+
+                return StudentLedgerDto.builder()
+                                .studentId(studentId)
+                                .studentName(student.getFirstName() + " " +
+                                                (student.getLastName() != null ? student.getLastName() : ""))
+                                .sessionSummaries(sessionSummaries)
+                                .grandTotalFee(grandTotalFee.setScale(2, java.math.RoundingMode.HALF_UP))
+                                .grandTotalPaid(grandTotalPaid.setScale(2, java.math.RoundingMode.HALF_UP))
+                                .grandTotalPending(grandTotalPending.setScale(2, java.math.RoundingMode.HALF_UP))
+                                .build();
         }
 
         private java.math.BigDecimal nz(java.math.BigDecimal value) {
