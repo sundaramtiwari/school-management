@@ -9,9 +9,16 @@ import lombok.experimental.SuperBuilder;
 import java.time.LocalDate;
 
 @Entity
-@Table(name = "student_enrollments", indexes = {
-        @Index(name = "idx_enroll_student_session", columnList = "student_id,session_id")
-})
+@Table(name = "student_enrollments",
+        uniqueConstraints = {
+                @UniqueConstraint(
+                        name = "uk_student_session",
+                        columnNames = {"student_id", "session_id"}
+                )
+        },
+        indexes = {
+                @Index(name = "idx_enroll_student_session", columnList = "student_id,session_id")
+        })
 @Getter
 @Setter
 @NoArgsConstructor

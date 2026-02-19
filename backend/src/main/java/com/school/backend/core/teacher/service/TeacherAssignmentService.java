@@ -6,13 +6,13 @@ import com.school.backend.core.classsubject.entity.Subject;
 import com.school.backend.core.classsubject.repository.ClassSubjectRepository;
 import com.school.backend.core.classsubject.repository.SchoolClassRepository;
 import com.school.backend.core.classsubject.repository.SubjectRepository;
+import com.school.backend.core.teacher.dto.TeacherAssignmentListItemDto;
 import com.school.backend.core.teacher.entity.Teacher;
+import com.school.backend.core.teacher.entity.TeacherAssignment;
+import com.school.backend.core.teacher.repository.TeacherAssignmentRepository;
 import com.school.backend.core.teacher.repository.TeacherRepository;
 import com.school.backend.school.entity.AcademicSession;
 import com.school.backend.school.repository.AcademicSessionRepository;
-import com.school.backend.core.teacher.dto.TeacherAssignmentListItemDto;
-import com.school.backend.core.teacher.entity.TeacherAssignment;
-import com.school.backend.core.teacher.repository.TeacherAssignmentRepository;
 import com.school.backend.user.security.SecurityUtil;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
@@ -92,8 +92,7 @@ public class TeacherAssignmentService {
 
         validateSchool(assignment.getSchoolId(), SecurityUtil.schoolId(), "Assignment");
 
-        assignment.setActive(false);
-        repository.save(assignment);
+        repository.delete(assignment);
     }
 
     @Transactional(readOnly = true)

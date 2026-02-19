@@ -22,4 +22,5 @@ public interface TeacherAssignmentRepository extends JpaRepository<TeacherAssign
     List<TeacherAssignment> findByTeacherIdAndActiveTrue(Long teacherId);
 
     List<TeacherAssignment> findBySessionIdAndActiveTrue(Long sessionId);
+
 }
