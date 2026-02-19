@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { ChangeEvent, useCallback, useEffect, useState } from "react";
 import { api } from "@/lib/api";
 import { useAuth } from "@/context/AuthContext";
 import { useToast } from "@/components/ui/Toast";
@@ -41,24 +41,33 @@ export default function StaffPage() {
         ? ["PLATFORM_ADMIN", ...ROLES]
         : ROLES;
 
-    useEffect(() => {
-        loadUsers();
-    }, []);
+    function getErrorMessage(error: unknown): string {
+        if (error && typeof error === "object" && "response" in error) {
+            const response = (error as { response?: { data?: { message?: string } } }).response;
+            if (response?.data?.message) return response.data.message;
+        }
+        if (error instanceof Error) return error.message;
+        return "Unknown error";
+    }
 
-    async function loadUsers() {
+    const loadUsers = useCallback(async () => {
         try {
             setLoading(true);
             const res = await api.get("/api/users?size=100");
             setUsers(res.data.content || []);
-        } catch (e: any) {
-            const msg = e.response?.data?.message || e.message;
+        } catch (e: unknown) {
+            const msg = getErrorMessage(e);
             showToast("Failed to load staff: " + msg, "error");
         } finally {
             setLoading(false);
         }
-    }
+    }, [showToast]);
 
-    function updateField(e: any) {
+    useEffect(() => {
+        loadUsers();
+    }, [loadUsers]);
+
+    function updateField(e: ChangeEvent<HTMLInputElement | HTMLSelectElement>) {
         const value = e.target.type === "checkbox" ? e.target.checked : e.target.value;
         setForm({ ...form, [e.target.name]: value });
     }
@@ -114,8 +123,8 @@ export default function StaffPage() {
             setEditId(null);
             resetForm();
             loadUsers();
-        } catch (e: any) {
-            showToast("Operation failed: " + (e.response?.data?.message || e.message), "error");
+        } catch (e: unknown) {
+            showToast("Operation failed: " + getErrorMessage(e), "error");
         } finally {
             setIsSaving(false);
         }

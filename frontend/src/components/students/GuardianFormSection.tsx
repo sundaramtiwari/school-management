@@ -29,7 +29,7 @@ export default function GuardianFormSection({ guardians, onChange }: GuardianFor
             newGuardians[0].primaryGuardian = true;
             onChange(newGuardians);
         }
-    }, [guardians.length]);
+    }, [guardians, onChange]);
 
     const addGuardian = () => {
         const newGuardian: GuardianFormValue = {

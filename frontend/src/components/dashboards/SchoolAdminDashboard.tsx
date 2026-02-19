@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useCallback, useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
 import { api } from "@/lib/api";
 import { useAuth } from "@/context/AuthContext";
@@ -8,6 +8,12 @@ import { Skeleton } from "@/components/ui/Skeleton";
 import { useSession } from "@/context/SessionContext";
 
 export default function SchoolAdminDashboard() {
+  type UpcomingExam = {
+    name: string;
+    className: string;
+    date: string;
+  };
+
   const router = useRouter();
   const { user } = useAuth();
   const { currentSession, isSessionLoading: sessionLoading } = useSession();
@@ -20,16 +26,13 @@ export default function SchoolAdminDashboard() {
     feesCollected: 0,
     transportCount: 0,
     feePendingCount: 0,
-    upcomingExams: [] as any[],
+    upcomingExams: [] as UpcomingExam[],
   });
   const [loading, setLoading] = useState(true);
   const [schoolName, setSchoolName] = useState("Your School");
 
-  useEffect(() => {
-    if (!sessionLoading && currentSession) loadDashboardData();
-  }, [sessionLoading, currentSession?.id]);
-
-  async function loadDashboardData() {
+  const loadDashboardData = useCallback(async () => {
+    if (!currentSession?.id) return;
     try {
       setLoading(true);
 
@@ -41,7 +44,7 @@ export default function SchoolAdminDashboard() {
 
       // Load stats via new dedicated endpoint
       const [results, classCountRes] = await Promise.all([
-        api.get(`/api/dashboard/school-admin/stats?sessionId=${currentSession?.id}`),
+        api.get(`/api/dashboard/school-admin/stats?sessionId=${currentSession.id}`),
         api.get('/api/classes/mine?size=1'), // Classes still separate as they are global-ish
       ]);
 
@@ -64,7 +67,11 @@ export default function SchoolAdminDashboard() {
     } finally {
       setLoading(false);
     }
-  }
+  }, [currentSession?.id, user?.schoolId]);
+
+  useEffect(() => {
+    if (!sessionLoading && currentSession) loadDashboardData();
+  }, [sessionLoading, currentSession, loadDashboardData]);
 
   const cards = [
     {
@@ -166,7 +173,7 @@ export default function SchoolAdminDashboard() {
     return (
       <div className="p-10 bg-white border-2 border-dashed border-blue-200 rounded-3xl text-center">
         <span className="text-5xl mb-4 block">🎓</span>
-        <h2 className="text-2xl font-black text-gray-900">Welcome! Let's set up your school</h2>
+        <h2 className="text-2xl font-black text-gray-900">Welcome! Let&apos;s set up your school</h2>
         <p className="text-gray-500 mt-2 mb-8 max-w-sm mx-auto">Create your first academic session to start managing students, attendance, and fees.</p>
         <button
           onClick={() => router.push("/school/setup/session")}
@@ -292,7 +299,7 @@ export default function SchoolAdminDashboard() {
                 <div>
                   <p className="font-semibold">Low Attendance</p>
                   <p className="text-sm text-yellow-600">
-                    Today's attendance is {stats.attendance}% - below 80%
+                    Today&apos;s attendance is {stats.attendance}% - below 80%
                   </p>
                 </div>
               </div>

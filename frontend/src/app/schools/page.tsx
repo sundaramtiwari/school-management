@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { ChangeEvent, useCallback, useEffect, useState } from "react";
 import { schoolApi } from "@/lib/schoolApi";
 import { useAuth } from "@/context/AuthContext";
 import { useToast } from "@/components/ui/Toast";
@@ -30,8 +30,6 @@ type School = {
 /* ---------------- Regex ---------------- */
 
 const EMAIL_REGEX = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
-const URL_REGEX = /^(https?:\/\/)?([\w\d-]+\.)+[\w-]{2,}(\/.*)?$/;
-
 /* ---------------- Page ---------------- */
 
 export default function SchoolsPage() {
@@ -80,11 +78,7 @@ export default function SchoolsPage() {
 
   /* ---------------- Load ---------------- */
 
-  useEffect(() => {
-    loadSchools();
-  }, []);
-
-  async function loadSchools() {
+  const loadSchools = useCallback(async () => {
     try {
       setLoading(true);
       const res = await schoolApi.list();
@@ -95,15 +89,28 @@ export default function SchoolsPage() {
     } finally {
       setLoading(false);
     }
-  }
+  }, [showToast]);
+
+  useEffect(() => {
+    loadSchools();
+  }, [loadSchools]);
 
   /* ---------------- Helpers ---------------- */
 
-  function updateField(e: any) {
+  function updateField(e: ChangeEvent<HTMLInputElement | HTMLTextAreaElement>) {
     setForm({
       ...form,
       [e.target.name]: e.target.value,
     });
+  }
+
+  function getErrorMessage(error: unknown): string {
+    if (error && typeof error === "object" && "response" in error) {
+      const response = (error as { response?: { data?: { message?: string } } }).response;
+      if (response?.data?.message) return response.data.message;
+    }
+    if (error instanceof Error) return error.message;
+    return "Unknown error";
   }
 
   function resetForm() {
@@ -169,15 +176,15 @@ export default function SchoolsPage() {
       setEditId(null);
       resetForm();
       loadSchools();
-    } catch (e: any) {
-      showToast("Save failed: " + (e.response?.data?.message || e.message), "error");
+    } catch (e: unknown) {
+      showToast("Save failed: " + getErrorMessage(e), "error");
     } finally {
       setIsSaving(false);
     }
   }
 
   /* ---------------- Open School --------------- */
-  function openSchool(s: any) {
+  function openSchool(s: School) {
     localStorage.setItem("schoolId", String(s.id));
     localStorage.setItem("schoolName", s.name);
     // Hard refresh to trigger context bootstrap

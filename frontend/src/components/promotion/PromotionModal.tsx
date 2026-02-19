@@ -23,7 +23,8 @@ type SchoolClass = {
 };
 
 type LedgerEntry = {
-  pending: number | string;
+  pending?: number | string;
+  totalPending?: number | string;
 };
 
 type Props = {
@@ -108,7 +109,10 @@ export default function PromotionModal({
   const hasPendingFee = useCallback(async (studentId: number) => {
     const res = await api.get(`/api/students/${studentId}/ledger`);
     const entries: LedgerEntry[] = Array.isArray(res.data) ? res.data : [];
-    return entries.some((entry) => Number(entry.pending) > 0);
+    return entries.some((entry) => {
+      const pendingValue = entry.totalPending ?? entry.pending ?? 0;
+      return Number(pendingValue) > 0;
+    });
   }, []);
 
   const closeAndReset = useCallback(() => {

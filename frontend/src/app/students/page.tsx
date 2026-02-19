@@ -261,12 +261,42 @@ export default function StudentsPage() {
 
       // --- Save Funding arrangement if applicable ---
       if (studentForm.fundingType !== "NONE") {
+        // Validate funding before saving
+        const value = Number(studentForm.fundingValue);
+
+        if (studentForm.fundingType === "PARTIAL") {
+          if (isNaN(value) || value <= 0) {
+            showToast("Funding value must be greater than 0", "error");
+            setIsSaving(false);
+            return;
+          }
+          if (studentForm.fundingMode === "PERCENTAGE" && value > 100) {
+            showToast("Percentage coverage cannot exceed 100%", "error");
+            setIsSaving(false);
+            return;
+          }
+        }
+
+        if (studentForm.fundingValidFrom && !studentForm.fundingValidTo) {
+          showToast("Valid To date is required if Valid From is set", "error");
+          setIsSaving(false);
+          return;
+        }
+
+        if (studentForm.fundingValidFrom && studentForm.fundingValidTo) {
+          if (new Date(studentForm.fundingValidFrom) >= new Date(studentForm.fundingValidTo)) {
+            showToast("Valid From date must be before Valid To date", "error");
+            setIsSaving(false);
+            return;
+          }
+        }
+
         await api.post("/api/fees/funding", {
           studentId,
           sessionId: currentSession.id,
           coverageType: studentForm.fundingType,
           coverageMode: studentForm.fundingMode,
-          coverageValue: Number(studentForm.fundingValue),
+          coverageValue: value,
           validFrom: studentForm.fundingValidFrom || null,
           validTo: studentForm.fundingValidTo || null,
         });
@@ -909,15 +939,9 @@ export default function StudentsPage() {
               </div>
             </section>
           )}
-          onChange={updateStudentField}
-          className="input-ref"
-                />
-        </div>
-    </div>
-          </section >
 
-    {/* Section 6: Remarks */ }
-    < section className = "space-y-4" >
+          {/* Section 6: Remarks */}
+          <section className="space-y-4">
             <h3 className="text-sm font-bold text-blue-600 uppercase tracking-wider border-b pb-2 flex items-center gap-2">
               <span className="bg-blue-600 text-white w-5 h-5 rounded-full flex items-center justify-center text-[10px]">6</span>
               Additional Remarks
@@ -929,10 +953,10 @@ export default function StudentsPage() {
               onChange={updateStudentField}
               className="input-ref min-h-[60px]"
             />
-          </section >
+          </section>
 
-    {/* Section 7: Guardians */ }
-    < section className = "space-y-4 mb-4" >
+          {/* Section 7: Guardians */}
+          <section className="space-y-4 mb-4">
             <h3 className="text-sm font-bold text-blue-600 uppercase tracking-wider border-b pb-2 flex items-center gap-2">
               <span className="bg-blue-600 text-white w-5 h-5 rounded-full flex items-center justify-center text-[10px]">7</span>
               Guardian Information
@@ -941,10 +965,10 @@ export default function StudentsPage() {
               guardians={studentForm.guardians}
               onChange={(newGuardians) => setStudentForm({ ...studentForm, guardians: newGuardians })}
             />
-          </section >
+          </section>
 
-        </div >
-      </Modal >
+        </div>
+      </Modal>
 
       <PromotionModal
         selectedStudents={selectedStudents}

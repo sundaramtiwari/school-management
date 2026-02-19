@@ -2,7 +2,7 @@
 
 import Link from "next/link";
 
-import { useEffect, useState } from "react";
+import { useCallback, useEffect, useState, type ChangeEvent } from "react";
 import { api } from "@/lib/api";
 import { useToast } from "@/components/ui/Toast";
 import { useAuth } from "@/context/AuthContext";
@@ -39,11 +39,7 @@ export default function ClassesPage() {
         active: true,
     });
 
-    useEffect(() => {
-        loadClasses();
-    }, [currentSession]);
-
-    async function loadClasses() {
+    const loadClasses = useCallback(async () => {
         if (!user) return;
         try {
             setLoading(true);
@@ -58,9 +54,13 @@ export default function ClassesPage() {
         } finally {
             setLoading(false);
         }
-    }
+    }, [showToast, user]);
 
-    function updateField(e: any) {
+    useEffect(() => {
+        void loadClasses();
+    }, [currentSession, loadClasses]);
+
+    function updateField(e: ChangeEvent<HTMLInputElement>) {
         const value = e.target.type === "checkbox" ? e.target.checked : e.target.value;
         setForm({ ...form, [e.target.name]: value });
     }
@@ -111,9 +111,12 @@ export default function ClassesPage() {
             setShowForm(false);
             setEditId(null);
             resetForm();
-            loadClasses();
-        } catch (e: any) {
-            showToast("Save failed: " + (e.response?.data?.message || e.message), "error");
+            void loadClasses();
+        } catch (e: unknown) {
+            const message = typeof e === "object" && e !== null && "message" in e
+                ? String((e as { message?: string }).message || "Unknown error")
+                : "Unknown error";
+            showToast("Save failed: " + message, "error");
         } finally {
             setIsSaving(false);
         }
@@ -126,9 +129,11 @@ export default function ClassesPage() {
             showToast("Deleting class...", "info");
             await api.delete(`/api/classes/${id}`);
             showToast("Class deleted successfully", "success");
-            loadClasses();
-        } catch (e: any) {
-            const msg = e.response?.data?.message || e.message;
+            void loadClasses();
+        } catch (e: unknown) {
+            const msg = typeof e === "object" && e !== null && "message" in e
+                ? String((e as { message?: string }).message || "Unknown error")
+                : "Unknown error";
             showToast("Delete failed: " + msg, "error");
         } finally {
             setIsDeleting(false);
@@ -217,7 +222,7 @@ export default function ClassesPage() {
                                             <span className="text-4xl">🏫</span>
                                             <div>
                                                 <p className="font-bold text-gray-800">No Classes Defined</p>
-                                                <p className="text-sm">You haven't added any classes for this session yet.</p>
+                                                <p className="text-sm">You haven&apos;t added any classes for this session yet.</p>
                                             </div>
                                             {canManageClasses && (
                                                 <button

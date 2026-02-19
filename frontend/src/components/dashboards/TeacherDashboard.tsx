@@ -1,8 +1,7 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useCallback, useEffect, useState } from "react";
 import { api } from "@/lib/api";
-import { useAuth } from "@/context/AuthContext";
 import { Skeleton } from "@/components/ui/Skeleton";
 
 type ClassInfo = {
@@ -23,7 +22,13 @@ type PendingTask = {
 };
 
 export default function TeacherDashboard() {
-  const { user } = useAuth();
+  type ClassApiItem = {
+    id: number;
+    name: string;
+    section: string;
+    session: string;
+  };
+
   const [classes, setClasses] = useState<ClassInfo[]>([]);
   const [pendingTasks, setPendingTasks] = useState<PendingTask[]>([]);
   const [stats, setStats] = useState({
@@ -35,11 +40,7 @@ export default function TeacherDashboard() {
   const [loading, setLoading] = useState(true);
   const [todayDate] = useState(new Date().toISOString().split('T')[0]);
 
-  useEffect(() => {
-    loadTeacherDashboard();
-  }, []);
-
-  async function loadTeacherDashboard() {
+  const loadTeacherDashboard = useCallback(async () => {
     try {
       setLoading(true);
 
@@ -50,11 +51,11 @@ export default function TeacherDashboard() {
         api.get('/api/classes/mine?size=100') // Fallback
       );
 
-      const classData = classesRes.data?.content || classesRes.data || [];
+      const classData: ClassApiItem[] = classesRes.data?.content || classesRes.data || [];
 
       // Enrich each class with attendance status
       const enrichedClasses = await Promise.all(
-        classData.map(async (cls: any) => {
+        classData.map(async (cls: ClassApiItem) => {
           try {
             // Check if attendance marked today
             const attendanceRes = await api.get(
@@ -121,7 +122,11 @@ export default function TeacherDashboard() {
     } finally {
       setLoading(false);
     }
-  }
+  }, [todayDate]);
+
+  useEffect(() => {
+    loadTeacherDashboard();
+  }, [loadTeacherDashboard]);
 
   const quickActions = [
     {

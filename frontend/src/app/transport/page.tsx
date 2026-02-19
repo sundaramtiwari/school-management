@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useCallback, useEffect, useState } from "react";
 import { transportApi } from "@/lib/transportApi";
 import { useToast } from "@/components/ui/Toast";
 import Modal from "@/components/ui/Modal";
@@ -49,11 +49,16 @@ export default function TransportPage() {
 
     const [isSaving, setIsSaving] = useState(false);
 
-    useEffect(() => {
-        loadRoutes();
-    }, []);
+    function getErrorMessage(error: unknown): string {
+        if (error && typeof error === "object" && "response" in error) {
+            const response = (error as { response?: { data?: { message?: string } } }).response;
+            if (response?.data?.message) return response.data.message;
+        }
+        if (error instanceof Error) return error.message;
+        return "Unknown error";
+    }
 
-    async function loadRoutes() {
+    const loadRoutes = useCallback(async () => {
         try {
             setLoadingRoutes(true);
             const res = await transportApi.getAllRoutes();
@@ -63,7 +68,11 @@ export default function TransportPage() {
         } finally {
             setLoadingRoutes(false);
         }
-    }
+    }, [showToast]);
+
+    useEffect(() => {
+        loadRoutes();
+    }, [loadRoutes]);
 
     async function onSelectRoute(route: Route) {
         setSelectedRoute(route);
@@ -92,8 +101,8 @@ export default function TransportPage() {
             setShowRouteModal(false);
             setRouteForm({ name: "", description: "", capacity: "30" });
             showToast("Route created successfully", "success");
-        } catch (e: any) {
-            showToast("Failed to create route: " + (e.response?.data?.message || e.message), "error");
+        } catch (e: unknown) {
+            showToast("Failed to create route: " + getErrorMessage(e), "error");
         } finally {
             setIsSaving(false);
         }
@@ -108,8 +117,8 @@ export default function TransportPage() {
             if (selectedRoute?.id === id) setSelectedRoute(null);
             setRouteToDelete(null);
             showToast("Route deleted successfully", "success");
-        } catch (e: any) {
-            showToast("Failed to delete route: " + (e.response?.data?.message || e.message), "error");
+        } catch (e: unknown) {
+            showToast("Failed to delete route: " + getErrorMessage(e), "error");
         } finally {
             setIsSaving(false);
         }
@@ -129,8 +138,8 @@ export default function TransportPage() {
             setShowPickupModal(false);
             setPickupForm({ name: "", amount: "", frequency: "MONTHLY" });
             showToast("Pickup point added", "success");
-        } catch (e: any) {
-            showToast("Failed to add pickup point: " + (e.response?.data?.message || e.message), "error");
+        } catch (e: unknown) {
+            showToast("Failed to add pickup point: " + getErrorMessage(e), "error");
         } finally {
             setIsSaving(false);
         }

@@ -25,7 +25,7 @@ export default function LoginPage() {
             const { token, role, schoolId, userId } = res.data;
             login(token, { userId, schoolId, role });
 
-        } catch (err: any) {
+        } catch {
             setError("Invalid credentials or server error");
         } finally {
             setLoading(false);

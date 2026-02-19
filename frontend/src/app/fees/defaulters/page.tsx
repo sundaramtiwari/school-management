@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useCallback, useEffect, useState } from "react";
 import { api } from "@/lib/api";
 import { useToast } from "@/components/ui/Toast";
 import { Skeleton, TableSkeleton } from "@/components/ui/Skeleton";
@@ -35,37 +35,7 @@ export default function FeeDefaultersPage() {
 
   const [classes, setClasses] = useState<Array<{ id: number; name: string; section: string }>>([]);
 
-  useEffect(() => {
-    loadClassesAndDefaulters();
-  }, []);
-
-  useEffect(() => {
-    applyFilters();
-  }, [defaulters, selectedClass, minAmount, minDays, searchTerm]);
-
-  async function loadClassesAndDefaulters() {
-    try {
-      setLoading(true);
-
-      // Load classes for filter
-      const classesRes = await api.get("/api/classes/mine?size=100");
-      setClasses(classesRes.data?.content || []);
-
-      // Load defaulters
-      // Backend endpoint: GET /api/fees/defaulters
-      // Expected response: Array of Defaulter objects
-      const defaultersRes = await api.get("/api/fees/defaulters");
-      setDefaulters(defaultersRes.data || []);
-
-    } catch (err: any) {
-      showToast("Failed to load fee defaulters", "error");
-      console.error(err);
-    } finally {
-      setLoading(false);
-    }
-  }
-
-  function applyFilters() {
+  const applyFilters = useCallback(() => {
     let filtered = [...defaulters];
 
     // Filter by class
@@ -96,7 +66,37 @@ export default function FeeDefaultersPage() {
     filtered.sort((a, b) => b.amountDue - a.amountDue);
 
     setFilteredDefaulters(filtered);
-  }
+  }, [defaulters, minAmount, minDays, searchTerm, selectedClass]);
+
+  const loadClassesAndDefaulters = useCallback(async () => {
+    try {
+      setLoading(true);
+
+      // Load classes for filter
+      const classesRes = await api.get("/api/classes/mine?size=100");
+      setClasses(classesRes.data?.content || []);
+
+      // Load defaulters
+      // Backend endpoint: GET /api/fees/defaulters
+      // Expected response: Array of Defaulter objects
+      const defaultersRes = await api.get("/api/fees/defaulters");
+      setDefaulters(defaultersRes.data || []);
+
+    } catch (err: unknown) {
+      showToast("Failed to load fee defaulters", "error");
+      console.error(err);
+    } finally {
+      setLoading(false);
+    }
+  }, [showToast]);
+
+  useEffect(() => {
+    loadClassesAndDefaulters();
+  }, [loadClassesAndDefaulters]);
+
+  useEffect(() => {
+    applyFilters();
+  }, [applyFilters]);
 
   function clearFilters() {
     setSelectedClass("");

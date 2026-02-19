@@ -6,6 +6,7 @@ import com.school.backend.fee.entity.StudentFundingArrangement;
 import com.school.backend.fee.enums.FundingCoverageMode;
 import com.school.backend.fee.repository.StudentFundingArrangementRepository;
 import lombok.RequiredArgsConstructor;
+import lombok.extern.slf4j.Slf4j;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.web.bind.annotation.*;
@@ -16,13 +17,17 @@ import java.util.Optional;
 @RestController
 @RequestMapping("/api/fees/funding")
 @RequiredArgsConstructor
+@Slf4j
 public class StudentFundingArrangementController {
 
     private final StudentFundingArrangementRepository fundingRepository;
 
     @PostMapping
-    @PreAuthorize("hasRole('SCHOOL_ADMIN', 'SUPER_ADMIN')")
+    @PreAuthorize("hasAnyRole('SCHOOL_ADMIN', 'SUPER_ADMIN')")
     public ResponseEntity<StudentFundingArrangement> create(@RequestBody StudentFundingArrangement arrangement) {
+        log.info("Creating funding arrangement: studentId={}, sessionId={}, coverageType={}, coverageMode={}, value={}",
+                arrangement.getStudentId(), arrangement.getSessionId(), arrangement.getCoverageType(),
+                arrangement.getCoverageMode(), arrangement.getCoverageValue());
         // Validate
         if (arrangement.getCoverageValue() == null ||
                 arrangement.getCoverageValue().compareTo(BigDecimal.ZERO) <= 0) {
@@ -51,7 +56,10 @@ public class StudentFundingArrangementController {
 
         arrangement.setSchoolId(TenantContext.getSchoolId());
         arrangement.setActive(true);
-        return ResponseEntity.ok(fundingRepository.save(arrangement));
+        StudentFundingArrangement saved = fundingRepository.save(arrangement);
+        log.info("Funding arrangement created: id={}, studentId={}, sessionId={}",
+                saved.getId(), saved.getStudentId(), saved.getSessionId());
+        return ResponseEntity.ok(saved);
     }
 
     @GetMapping("/student/{studentId}/session/{sessionId}")
@@ -59,18 +67,21 @@ public class StudentFundingArrangementController {
     public ResponseEntity<StudentFundingArrangement> getActive(
             @PathVariable Long studentId,
             @PathVariable Long sessionId) {
+        log.debug("Fetching active funding arrangement: studentId={}, sessionId={}", studentId, sessionId);
         return fundingRepository.findActiveByStudentAndSession(studentId, sessionId)
                 .map(ResponseEntity::ok)
                 .orElse(ResponseEntity.notFound().build());
     }
 
     @DeleteMapping("/{id}")
-    @PreAuthorize("hasRole('SCHOOL_ADMIN', 'SUPER_ADMIN')")
+    @PreAuthorize("hasAnyRole('SCHOOL_ADMIN', 'SUPER_ADMIN')")
     public ResponseEntity<Void> delete(@PathVariable Long id) {
+        log.info("Deactivating funding arrangement: id={}", id);
         fundingRepository.findById(id).ifPresent(f -> {
             f.setActive(false);
             fundingRepository.save(f);
         });
+        log.info("Funding arrangement deactivated (if existed): id={}", id);
         return ResponseEntity.noContent().build();
     }
 }

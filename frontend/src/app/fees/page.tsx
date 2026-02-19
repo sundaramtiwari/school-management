@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useCallback, useEffect, useState } from "react";
 import { api } from "@/lib/api";
 import { Skeleton } from "@/components/ui/Skeleton";
 import { useSession } from "@/context/SessionContext";
@@ -16,29 +16,31 @@ export default function FeesDashboard() {
         pendingDues: 0,
         totalStudents: 0
     });
-    const [recentPayments, setRecentPayments] = useState<any[]>([]);
+    const [recentPayments, setRecentPayments] = useState<RecentPayment[]>([]);
     const [loading, setLoading] = useState(true);
+
+    const loadStats = useCallback(async () => {
+        if (!currentSession?.id) return;
+        try {
+            setLoading(true);
+            const [statsRes, paymentsRes] = await Promise.all([
+                api.get(`/api/fees/summary/stats?sessionId=${currentSession.id}`),
+                api.get("/api/fees/payments/recent")
+            ]);
+            setStats(statsRes.data);
+            setRecentPayments(paymentsRes.data || []);
+        } catch (err) {
+            console.error(err);
+        } finally {
+            setLoading(false);
+        }
+    }, [currentSession?.id]);
 
     useEffect(() => {
         if (!sessionLoading && currentSession) {
             loadStats();
         }
-        async function loadStats() {
-            try {
-                setLoading(true);
-                const [statsRes, paymentsRes] = await Promise.all([
-                    api.get(`/api/fees/summary/stats?sessionId=${currentSession?.id}`),
-                    api.get("/api/fees/payments/recent")
-                ]);
-                setStats(statsRes.data);
-                setRecentPayments(paymentsRes.data || []);
-            } catch (err) {
-                console.error(err);
-            } finally {
-                setLoading(false);
-            }
-        }
-    }, [sessionLoading, currentSession?.id]);
+    }, [sessionLoading, currentSession, loadStats]);
 
     const cards = [
         { label: "Today's Collection", value: stats.todayCollection, prefix: "₹", color: "text-green-600", bg: "bg-green-50" },
@@ -127,3 +129,10 @@ export default function FeesDashboard() {
         </div>
     );
 }
+    type RecentPayment = {
+        id: number;
+        studentId: number;
+        mode: string;
+        paymentDate: string;
+        amountPaid: number;
+    };

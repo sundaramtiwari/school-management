@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useCallback, useEffect, useState } from "react";
 import { sessionApi } from "@/lib/sessionApi";
 import { useAuth } from "@/context/AuthContext";
 
@@ -22,13 +22,7 @@ export default function SessionSelect({ value, onChange, className, placeholder 
     const [sessions, setSessions] = useState<Session[]>([]);
     const [loading, setLoading] = useState(false);
 
-    useEffect(() => {
-        if (user?.schoolId) {
-            loadSessions();
-        }
-    }, [user?.schoolId]);
-
-    async function loadSessions() {
+    const loadSessions = useCallback(async () => {
         try {
             setLoading(true);
             const res = await sessionApi.list();
@@ -44,7 +38,13 @@ export default function SessionSelect({ value, onChange, className, placeholder 
         } finally {
             setLoading(false);
         }
-    }
+    }, [onChange, value]);
+
+    useEffect(() => {
+        if (user?.schoolId) {
+            loadSessions();
+        }
+    }, [user?.schoolId, loadSessions]);
 
     return (
         <select

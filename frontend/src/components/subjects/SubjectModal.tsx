@@ -54,9 +54,16 @@ export function SubjectModal({ isOpen, onClose, initialData, onSuccess }: Subjec
             }
             onSuccess();
             onClose();
-        } catch (err: any) {
+        } catch (err: unknown) {
             console.error(err);
-            setError(err.response?.data?.message || "Failed to save subject");
+            if (err && typeof err === "object" && "response" in err) {
+                const message = (err as { response?: { data?: { message?: string } } }).response?.data?.message;
+                setError(message || "Failed to save subject");
+            } else if (err instanceof Error) {
+                setError(err.message);
+            } else {
+                setError("Failed to save subject");
+            }
         } finally {
             setLoading(false);
         }

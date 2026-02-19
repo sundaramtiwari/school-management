@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useCallback, useEffect, useState } from "react";
 import { subjectApi, SubjectData } from "@/lib/subjectApi";
 import { SubjectModal } from "./SubjectModal";
 import { useAuth } from "@/context/AuthContext";
@@ -15,7 +15,7 @@ export default function SubjectList() {
     const [isModalOpen, setIsModalOpen] = useState(false);
     const [selectedSubject, setSelectedSubject] = useState<SubjectData | null>(null);
 
-    const fetchSubjects = async () => {
+    const fetchSubjects = useCallback(async () => {
         setLoading(true);
         try {
             // If showInactive is true -> We want ALL subjects -> active=undefined
@@ -29,11 +29,11 @@ export default function SubjectList() {
         } finally {
             setLoading(false);
         }
-    };
+    }, [page, showInactive]);
 
     useEffect(() => {
         fetchSubjects();
-    }, [page, showInactive]);
+    }, [fetchSubjects]);
 
     const handleEdit = (subject: SubjectData) => {
         setSelectedSubject(subject);

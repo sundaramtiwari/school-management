@@ -13,6 +13,13 @@ type RecentSchool = {
   createdAt: string;
 };
 
+type PlatformDashboardStats = {
+  totalSchools: number;
+  activeSessions: number;
+  totalStudents: number;
+  totalTeachers: number;
+};
+
 export default function SuperAdminDashboard() {
   const { user } = useAuth();
   const [stats, setStats] = useState({
@@ -35,7 +42,7 @@ export default function SuperAdminDashboard() {
 
       // Load platform-wide statistics
       const [statsRes, schoolsRes] = await Promise.all([
-        api.get<any>('/api/platform/dashboard'),
+        api.get<PlatformDashboardStats>('/api/platform/dashboard'),
         schoolApi.list(0, 5), // Get latest 5 schools
       ]);
 

@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useCallback, useEffect, useState, type ChangeEvent } from "react";
 import { api } from "@/lib/api";
 import { useAuth } from "@/context/AuthContext";
 import { useToast } from "@/components/ui/Toast";
@@ -26,6 +26,7 @@ type SchoolClass = {
     name: string;
     section: string;
 };
+type FeeType = { id: number; name: string };
 
 const FREQUENCIES = ["ONE_TIME", "MONTHLY", "ANNUALLY"];
 
@@ -42,7 +43,7 @@ export default function FeeStructuresPage() {
 
     const [showModal, setShowModal] = useState(false);
     const [showHeadModal, setShowHeadModal] = useState(false);
-    const [feeTypes, setFeeTypes] = useState<any[]>([]);
+    const [feeTypes, setFeeTypes] = useState<FeeType[]>([]);
     const [newHeadName, setNewHeadName] = useState("");
     const [isSavingHead, setIsSavingHead] = useState(false);
 
@@ -107,32 +108,38 @@ export default function FeeStructuresPage() {
         return preview;
     })();
 
-    useEffect(() => {
-        loadClasses();
-        loadFeeTypes();
-    }, [currentSession]);
+    const getErrorMessage = (e: unknown) => {
+        if (typeof e === "object" && e !== null && "message" in e) {
+            return String((e as { message?: string }).message || "Unknown error");
+        }
+        return "Unknown error";
+    };
 
-    async function loadClasses() {
+    const loadClasses = useCallback(async () => {
         try {
             setLoadingClasses(true);
             const res = await api.get("/api/classes/mine?size=100");
             setClasses(res.data.content || []);
-        } catch (e: any) {
-            const msg = e.response?.data?.message || e.message;
-            showToast("Failed to load classes: " + msg, "error");
+        } catch (e: unknown) {
+            showToast("Failed to load classes: " + getErrorMessage(e), "error");
         } finally {
             setLoadingClasses(false);
         }
-    }
+    }, [showToast]);
 
-    async function loadFeeTypes() {
+    const loadFeeTypes = useCallback(async () => {
         try {
             const res = await api.get("/api/fees/types");
             setFeeTypes(res.data || []);
         } catch {
             // Optional fallback
         }
-    }
+    }, []);
+
+    useEffect(() => {
+        void loadClasses();
+        void loadFeeTypes();
+    }, [currentSession, loadClasses, loadFeeTypes]);
 
     async function saveFeeHead() {
         if (!newHeadName.trim()) {
@@ -148,20 +155,20 @@ export default function FeeStructuresPage() {
             });
             showToast("Fee head added!", "success");
             setNewHeadName("");
-            loadFeeTypes();
-        } catch (e: any) {
-            showToast("Failed to add head: " + (e.response?.data?.message || e.message), "error");
+            void loadFeeTypes();
+        } catch (e: unknown) {
+            showToast("Failed to add head: " + getErrorMessage(e), "error");
         } finally {
             setIsSavingHead(false);
         }
     }
 
-    async function onClassChange(e: any) {
-        const classId = e.target.value;
+    async function onClassChange(e: ChangeEvent<HTMLSelectElement>) {
+        const classId = e.target.value ? Number(e.target.value) : "";
         setSelectedClass(classId);
         setStructures([]);
         if (classId) {
-            loadStructures(classId);
+            void loadStructures(classId);
         }
     }
 
@@ -173,9 +180,8 @@ export default function FeeStructuresPage() {
             setLoading(true);
             const res = await api.get(`/api/fees/structures/by-class/${classId}?sessionId=${currentSession.id}`);
             setStructures(res.data || []);
-        } catch (e: any) {
-            const msg = e.response?.data?.message || e.message;
-            showToast("Failed to load configurations: " + msg, "error");
+        } catch (e: unknown) {
+            showToast("Failed to load configurations: " + getErrorMessage(e), "error");
         } finally {
             setLoading(false);
         }
@@ -208,9 +214,9 @@ export default function FeeStructuresPage() {
             });
             showToast("Fee configuration saved!", "success");
             setShowModal(false);
-            loadStructures(Number(selectedClass));
-        } catch (e: any) {
-            showToast("Save failed: " + (e.response?.data?.message || e.message), "error");
+            void loadStructures(Number(selectedClass));
+        } catch (e: unknown) {
+            showToast("Save failed: " + getErrorMessage(e), "error");
         } finally {
             setIsSaving(false);
         }

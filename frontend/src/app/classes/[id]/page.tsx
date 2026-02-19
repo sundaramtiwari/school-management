@@ -1,11 +1,8 @@
 "use client";
 
-import Link from "next/link";
-
-import { useEffect, useState } from "react";
+import { useCallback, useEffect, useState } from "react";
 import { useParams, useRouter } from "next/navigation";
 import { api } from "@/lib/api";
-import { useToast } from "@/components/ui/Toast";
 import ClassSubjectsManager from "@/components/classes/ClassSubjectsManager";
 import { TableSkeleton } from "@/components/ui/Skeleton";
 
@@ -21,33 +18,29 @@ type SchoolClass = {
 export default function ClassDetailsPage() {
     const params = useParams();
     const router = useRouter();
-    const { showToast } = useToast();
     const [schoolClass, setSchoolClass] = useState<SchoolClass | null>(null);
     const [loading, setLoading] = useState(true);
     const [activeTab, setActiveTab] = useState<"overview" | "subjects">("overview");
 
     const classId = Number(params.id);
 
-    useEffect(() => {
-        if (classId) {
-            loadClass();
-        }
-    }, [classId]);
-
-    async function loadClass() {
+    const loadClass = useCallback(async () => {
         try {
             setLoading(true);
             const res = await api.get(`/api/classes/${classId}`);
             setSchoolClass(res.data);
-        } catch (e: any) {
-            console.error("Failed to load class:", e);
-            // showToast("Failed to load class details", "error");
-            // router.push("/classes");
+        } catch {
             setSchoolClass(null); // Keep it null to show error
         } finally {
             setLoading(false);
         }
-    }
+    }, [classId]);
+
+    useEffect(() => {
+        if (classId) {
+            void loadClass();
+        }
+    }, [classId, loadClass]);
 
     if (loading) {
         return <div className="p-8"><TableSkeleton rows={3} cols={2} /></div>;

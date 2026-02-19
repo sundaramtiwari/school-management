@@ -1,6 +1,6 @@
 "use client";
 
-import { createContext, useContext, useEffect, useState } from "react";
+import { createContext, useCallback, useContext, useEffect, useState } from "react";
 import { api } from "@/lib/api";
 import { useAuth } from "@/context/AuthContext";
 
@@ -33,7 +33,7 @@ export function SessionProvider({ children }: { children: React.ReactNode }) {
   const [hasClasses, setHasClasses] = useState(false);
 
   // Fetch sessions from API
-  const refreshSessions = async () => {
+  const refreshSessions = useCallback(async () => {
     // Fix Platform Session Bootstrap: Respect selected school for platform roles
     const selectedSchoolId = localStorage.getItem("schoolId");
     if (!user) return;
@@ -43,8 +43,6 @@ export function SessionProvider({ children }: { children: React.ReactNode }) {
       setIsSessionLoading(false);
       return;
     }
-
-    const schoolIdToUse = user.schoolId ?? (selectedSchoolId ? Number(selectedSchoolId) : null);
 
     try {
       setIsSessionLoading(true);
@@ -80,7 +78,7 @@ export function SessionProvider({ children }: { children: React.ReactNode }) {
     } finally {
       setIsSessionLoading(false);
     }
-  };
+  }, [user]);
 
   // Load sessions when user changes or selected school changes
   useEffect(() => {
@@ -92,7 +90,7 @@ export function SessionProvider({ children }: { children: React.ReactNode }) {
       setCurrentSessionState(null);
       setIsSessionLoading(false);
     }
-  }, [user?.userId, user?.schoolId]);
+  }, [refreshSessions, user?.role, user?.schoolId, user?.userId]);
 
   function isPlatformRole(role?: string) {
     return ["SUPER_ADMIN", "PLATFORM_ADMIN"].includes(role?.toUpperCase() || "");

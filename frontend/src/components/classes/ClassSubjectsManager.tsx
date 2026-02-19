@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useCallback, useEffect, useState } from "react";
 import { classSubjectApi, ClassSubjectData } from "@/lib/classSubjectApi";
 import { subjectApi, SubjectData } from "@/lib/subjectApi";
 import Modal from "@/components/ui/Modal";
@@ -19,7 +19,16 @@ export default function ClassSubjectsManager({ classId }: ClassSubjectsManagerPr
     const [assigning, setAssigning] = useState(false);
     const { showToast } = useToast();
 
-    const fetchAssigned = async () => {
+    function getErrorMessage(error: unknown): string {
+        if (error && typeof error === "object" && "response" in error) {
+            const response = (error as { response?: { data?: { message?: string } } }).response;
+            if (response?.data?.message) return response.data.message;
+        }
+        if (error instanceof Error) return error.message;
+        return "Unknown error";
+    }
+
+    const fetchAssigned = useCallback(async () => {
         setLoading(true);
         try {
             const data = await classSubjectApi.getByClass(classId, 0, 100);
@@ -30,13 +39,13 @@ export default function ClassSubjectsManager({ classId }: ClassSubjectsManagerPr
         } finally {
             setLoading(false);
         }
-    };
+    }, [classId, showToast]);
 
     useEffect(() => {
         if (classId) {
             fetchAssigned();
         }
-    }, [classId]);
+    }, [classId, fetchAssigned]);
 
     const openAssignModal = async () => {
         setIsAssignModalOpen(true);
@@ -59,9 +68,9 @@ export default function ClassSubjectsManager({ classId }: ClassSubjectsManagerPr
             setIsAssignModalOpen(false);
             setSelectedSubjectId("");
             fetchAssigned();
-        } catch (error: any) {
+        } catch (error: unknown) {
             console.error("Failed to assign subject", error);
-            showToast(error.response?.data?.message || "Failed to assign subject", "error");
+            showToast(getErrorMessage(error) || "Failed to assign subject", "error");
         } finally {
             setAssigning(false);
         }
@@ -73,8 +82,8 @@ export default function ClassSubjectsManager({ classId }: ClassSubjectsManagerPr
             await classSubjectApi.remove(id);
             showToast("Subject removed successfully", "success");
             fetchAssigned();
-        } catch (error: any) {
-            showToast(error.response?.data?.message || "Failed to remove subject", "error");
+        } catch (error: unknown) {
+            showToast(getErrorMessage(error) || "Failed to remove subject", "error");
         }
     };
 

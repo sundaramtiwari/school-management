@@ -1,10 +1,8 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useCallback, useEffect, useState } from "react";
 import { useSession } from "@/context/SessionContext";
-import { useRouter } from "next/navigation";
 import { api } from "@/lib/api";
-import { useAuth } from "@/context/AuthContext";
 import { Skeleton } from "@/components/ui/Skeleton";
 
 type RecentPayment = {
@@ -24,8 +22,6 @@ type Defaulter = {
 };
 
 export default function AccountantDashboard() {
-  const router = useRouter();
-  const { user } = useAuth();
   const { currentSession, isSessionLoading: sessionLoading } = useSession();
   const [stats, setStats] = useState({
     collectedToday: 0,
@@ -38,17 +34,14 @@ export default function AccountantDashboard() {
   const [topDefaulters, setTopDefaulters] = useState<Defaulter[]>([]);
   const [loading, setLoading] = useState(true);
 
-  useEffect(() => {
-    if (!sessionLoading && currentSession) loadAccountantDashboard();
-  }, [sessionLoading, currentSession?.id]);
-
-  async function loadAccountantDashboard() {
+  const loadAccountantDashboard = useCallback(async () => {
+    if (!currentSession?.id) return;
     try {
       setLoading(true);
 
       // Load fee statistics
       const [statsRes, paymentsRes, defaultersRes] = await Promise.all([
-        api.get(`/api/fees/summary/stats?sessionId=${currentSession?.id}`).catch(() => ({
+        api.get(`/api/fees/summary/stats?sessionId=${currentSession.id}`).catch(() => ({
           data: {
             collectedToday: 0,
             transactionsToday: 0,
@@ -76,7 +69,11 @@ export default function AccountantDashboard() {
     } finally {
       setLoading(false);
     }
-  }
+  }, [currentSession?.id]);
+
+  useEffect(() => {
+    if (!sessionLoading && currentSession) loadAccountantDashboard();
+  }, [sessionLoading, currentSession, loadAccountantDashboard]);
 
   const quickActions = [
     {

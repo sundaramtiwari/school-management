@@ -2,10 +2,30 @@
 
 import React from "react";
 
+interface StudentItem {
+    id: number;
+    firstName: string;
+    lastName: string;
+    admissionNumber?: string;
+}
+
+interface SubjectItem {
+    id: number;
+    subjectId: number;
+    subjectName?: string;
+    maxMarks: number;
+}
+
+interface MarkItem {
+    studentId: number;
+    examSubjectId: number;
+    marksObtained: number;
+}
+
 interface MarksheetMVPProps {
-    students: any[];
-    subjects: any[];
-    marks: any[];
+    students: StudentItem[];
+    subjects: SubjectItem[];
+    marks: MarkItem[];
 }
 
 export default function MarksheetMVP({ students, subjects, marks }: MarksheetMVPProps) {

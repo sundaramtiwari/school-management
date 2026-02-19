@@ -1,9 +1,8 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useCallback, useEffect, useState, type ChangeEvent } from "react";
 import { api } from "@/lib/api";
 import { useToast } from "@/components/ui/Toast";
-import { Skeleton, TableSkeleton } from "@/components/ui/Skeleton";
 import { useSession } from "@/context/SessionContext";
 import { useAuth } from "@/context/AuthContext";
 
@@ -49,22 +48,22 @@ export default function FeeCollectPage() {
     const [months, setMonths] = useState(1);
 
     /* -------- Initial Load -------- */
-    useEffect(() => {
-        loadClasses();
-    }, [currentSession]);
-
-    async function loadClasses() {
+    const loadClasses = useCallback(async () => {
         try {
             const res = await api.get("/api/classes/mine?size=100");
             setClasses(res.data.content || []);
         } catch {
             showToast("Failed to initialize billing classes", "error");
         }
-    }
+    }, [showToast]);
+
+    useEffect(() => {
+        void loadClasses();
+    }, [currentSession, loadClasses]);
 
     /* -------- Handlers -------- */
-    async function onClassChange(e: any) {
-        const clsId = e.target.value;
+    async function onClassChange(e: ChangeEvent<HTMLSelectElement>) {
+        const clsId = e.target.value ? Number(e.target.value) : "";
         setSelectedClass(clsId);
         setStudents([]);
         setSelectedStudent("");
@@ -84,12 +83,12 @@ export default function FeeCollectPage() {
         }
     }
 
-    async function onStudentChange(e: any) {
-        const stdId = e.target.value;
+    async function onStudentChange(e: ChangeEvent<HTMLSelectElement>) {
+        const stdId = e.target.value ? Number(e.target.value) : "";
         setSelectedStudent(stdId);
         setSummary(null);
         setHistory([]);
-        if (stdId) loadStudentData(stdId);
+        if (stdId) void loadStudentData(stdId);
     }
 
     async function loadStudentData(stdId: number) {
@@ -127,8 +126,11 @@ export default function FeeCollectPage() {
             setPaymentAmount("");
             setRemarks("");
             loadStudentData(Number(selectedStudent));
-        } catch (e: any) {
-            showToast("Processing failed: " + (e.response?.data?.message || e.message), "error");
+        } catch (e: unknown) {
+            const message = typeof e === "object" && e !== null && "message" in e
+                ? String((e as { message?: string }).message || "Unknown error")
+                : "Unknown error";
+            showToast("Processing failed: " + message, "error");
         } finally {
             setIsProcessing(false);
         }
@@ -249,7 +251,7 @@ export default function FeeCollectPage() {
                                         onChange={e => setMonths(Number(e.target.value))}
                                     >
                                         {[1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12].map(m => (
-                                            <option key={m} value={m} className="bg-gray-900 text-white">{m} Month{m > 1 ? 's' : ''}</option>
+                                                    <option key={m} value={m} className="bg-gray-900 text-white">{m} Month{m > 1 ? "s" : ""}</option>
                                         ))}
                                     </select>
                                 </div>
@@ -287,7 +289,7 @@ export default function FeeCollectPage() {
                                             <option value="CASH">Liquid Cash</option>
                                             <option value="ONLINE">Digital/UPI</option>
                                             <option value="BANK_TRANSFER">Bank Transfer</option>
-                                            <option value="CHEQUE">Banker's Cheque</option>
+                                            <option value="CHEQUE">Banker&apos;s Cheque</option>
                                         </select>
                                     </div>
                                 </div>

@@ -1,5 +1,4 @@
 import { api } from "./api";
-import { SubjectData } from "./subjectApi";
 
 export interface ClassSubjectData {
     id: number;

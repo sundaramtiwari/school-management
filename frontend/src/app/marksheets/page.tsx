@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useCallback, useEffect, useState, type ChangeEvent } from "react";
 import { schoolApi } from "@/lib/schoolApi";
 import { studentApi } from "@/lib/studentApi";
 import { api } from "@/lib/api";
@@ -51,35 +51,14 @@ export default function MarksheetsPage() {
 
     /* ---------------- Init ---------------- */
 
-    useEffect(() => {
-        loadSchools();
-    }, []);
-
-    async function loadSchools() {
-        try {
-            setLoading(prev => ({ ...prev, schools: true }));
-            const res = await schoolApi.list(0, 100);
-            const loadedSchools = res.data.content || [];
-            setSchools(loadedSchools);
-
-            if (user?.schoolId) {
-                const userSchool = loadedSchools.find((s: School) => s.id === user.schoolId);
-                if (userSchool) {
-                    setSelectedSchool(userSchool.id);
-                    loadClasses(userSchool.id);
-                }
-            } else if (loadedSchools.length === 1) {
-                setSelectedSchool(loadedSchools[0].id);
-                loadClasses(loadedSchools[0].id);
-            }
-        } catch {
-            showToast("Failed to pull school list", "error");
-        } finally {
-            setLoading(prev => ({ ...prev, schools: false }));
+    const getErrorMessage = (e: unknown) => {
+        if (typeof e === "object" && e !== null && "message" in e) {
+            return String((e as { message?: string }).message || "Unknown error");
         }
-    }
+        return "Unknown error";
+    };
 
-    async function loadClasses(schoolId: number) {
+    const loadClasses = useCallback(async () => {
         try {
             setLoading(prev => ({ ...prev, classes: true }));
             setClasses([]);
@@ -95,7 +74,31 @@ export default function MarksheetsPage() {
         } finally {
             setLoading(prev => ({ ...prev, classes: false }));
         }
-    }
+    }, [showToast]);
+
+    const loadSchools = useCallback(async () => {
+        try {
+            setLoading(prev => ({ ...prev, schools: true }));
+            const res = await schoolApi.list(0, 100);
+            const loadedSchools = res.data.content || [];
+            setSchools(loadedSchools);
+
+            if (user?.schoolId) {
+                const userSchool = loadedSchools.find((s: School) => s.id === user.schoolId);
+                if (userSchool) {
+                    setSelectedSchool(userSchool.id);
+                    void loadClasses();
+                }
+            } else if (loadedSchools.length === 1) {
+                setSelectedSchool(loadedSchools[0].id);
+                void loadClasses();
+            }
+        } catch {
+            showToast("Failed to pull school list", "error");
+        } finally {
+            setLoading(prev => ({ ...prev, schools: false }));
+        }
+    }, [showToast, user?.schoolId, loadClasses]);
 
     async function loadExams(classId: number) {
         if (!currentSession) return;
@@ -155,33 +158,37 @@ export default function MarksheetsPage() {
 
     /* ---------------- Handlers ---------------- */
 
-    function onSchoolChange(e: any) {
-        const val = e.target.value;
+    useEffect(() => {
+        void loadSchools();
+    }, [loadSchools]);
+
+    function onSchoolChange(e: ChangeEvent<HTMLSelectElement>) {
+        const val = e.target.value ? Number(e.target.value) : "";
         setSelectedSchool(val);
-        if (val) loadClasses(Number(val));
+        if (val) void loadClasses();
     }
 
-    function onClassChange(e: any) {
-        const classId = e.target.value;
+    function onClassChange(e: ChangeEvent<HTMLSelectElement>) {
+        const classId = e.target.value ? Number(e.target.value) : "";
         setSelectedClass(classId);
         if (classId) {
-            loadExams(Number(classId));
-            loadStudents(Number(classId));
+            void loadExams(Number(classId));
+            void loadStudents(Number(classId));
         }
     }
 
-    function onExamChange(e: any) {
-        const examId = Number(e.target.value);
+    function onExamChange(e: ChangeEvent<HTMLSelectElement>) {
+        const examId = e.target.value ? Number(e.target.value) : "";
         setSelectedExam(examId);
         if (examId && mode === "enter") {
-            loadExamData(examId);
+            void loadExamData(Number(examId));
         }
     }
 
     function onModeToggle(newMode: "view" | "enter") {
         setMode(newMode);
         if (newMode === "enter" && selectedExam) {
-            loadExamData(Number(selectedExam));
+            void loadExamData(Number(selectedExam));
         }
     }
 
@@ -205,8 +212,8 @@ export default function MarksheetsPage() {
 
             await api.post(`/api/exams/${selectedExam}/marks/bulk`, { marks: markItems });
             showToast("All marks saved successfully", "success");
-        } catch (err: any) {
-            showToast(err.response?.data?.message || "Failed to save marks", "error");
+        } catch (err: unknown) {
+            showToast(getErrorMessage(err) || "Failed to save marks", "error");
         } finally {
             setLoading(prev => ({ ...prev, saving: false }));
         }

@@ -8,6 +8,7 @@ import com.school.backend.school.entity.AcademicSession;
 import com.school.backend.school.repository.AcademicSessionRepository;
 import com.school.backend.student.dto.LedgerSummaryDto;
 import lombok.RequiredArgsConstructor;
+import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -21,6 +22,7 @@ import java.util.stream.Collectors;
 
 @Service
 @RequiredArgsConstructor
+@Slf4j
 public class StudentLedgerService {
 
     private final StudentRepository studentRepository;
@@ -30,7 +32,9 @@ public class StudentLedgerService {
 
     @Transactional(readOnly = true)
     public List<LedgerSummaryDto> getStudentLedger(Long studentId) {
+        log.debug("Fetching financial ledger for studentId={}", studentId);
         if (!studentRepository.existsById(studentId)) {
+            log.warn("Ledger lookup failed: student not found studentId={}", studentId);
             throw new ResourceNotFoundException("Student not found: " + studentId);
         }
 
@@ -39,11 +43,12 @@ public class StudentLedgerService {
         mergePaid(studentId, ledgerMap);
 
         Set<Long> sessionIds = ledgerMap.keySet();
+        log.debug("Ledger aggregation complete for studentId={}, sessionsFound={}", studentId, sessionIds.size());
         Map<Long, String> sessionNames = academicSessionRepository.findAllById(sessionIds)
                 .stream()
                 .collect(Collectors.toMap(AcademicSession::getId, AcademicSession::getName));
 
-        return ledgerMap.values().stream()
+        List<LedgerSummaryDto> result = ledgerMap.values().stream()
                 .peek(item -> {
                     item.setSessionName(sessionNames.getOrDefault(item.getSessionId(), "Unknown Session"));
                     item.setTotalPending(item.getTotalAssigned()
@@ -54,6 +59,8 @@ public class StudentLedgerService {
                 })
                 .sorted(Comparator.comparing(LedgerSummaryDto::getSessionId))
                 .toList();
+        log.debug("Ledger response prepared for studentId={}, rowCount={}", studentId, result.size());
+        return result;
     }
 
     private void mergeAssigned(Long studentId, Map<Long, LedgerSummaryDto> ledgerMap) {

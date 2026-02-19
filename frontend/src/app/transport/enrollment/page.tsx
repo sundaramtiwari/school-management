@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { ChangeEvent, useCallback, useEffect, useState } from "react";
 import { transportApi } from "@/lib/transportApi";
 import { api } from "@/lib/api";
 import { studentApi } from "@/lib/studentApi";
@@ -8,7 +8,7 @@ import { useToast } from "@/components/ui/Toast";
 import { useSession } from "@/context/SessionContext";
 import { useAuth } from "@/context/AuthContext";
 import Modal from "@/components/ui/Modal";
-import { Skeleton, TableSkeleton } from "@/components/ui/Skeleton";
+import { TableSkeleton } from "@/components/ui/Skeleton";
 
 type SchoolClass = { id: number; name: string; section: string; sessionId: number };
 type Student = { id: number; firstName: string; lastName: string; admissionNumber: string };
@@ -39,30 +39,30 @@ export default function TransportEnrollmentPage() {
     const [selectedPickupId, setSelectedPickupId] = useState<number | "">("");
     const [isSaving, setIsSaving] = useState(false);
 
-    useEffect(() => {
-        loadClasses();
-        loadRoutes();
-    }, [currentSession]);
-
-    async function loadClasses() {
+    const loadClasses = useCallback(async () => {
         try {
             const res = await api.get("/api/classes/mine?size=100");
             setClasses(res.data.content || []);
         } catch {
             showToast("Failed to load classes", "error");
         }
-    }
+    }, [showToast]);
 
-    async function loadRoutes() {
+    const loadRoutes = useCallback(async () => {
         try {
             const res = await transportApi.getAllRoutes();
             setRoutes(res.data || []);
         } catch {
             showToast("Failed to load transport lines", "error");
         }
-    }
+    }, [showToast]);
 
-    async function onClassChange(e: any) {
+    useEffect(() => {
+        loadClasses();
+        loadRoutes();
+    }, [currentSession, loadClasses, loadRoutes]);
+
+    async function onClassChange(e: ChangeEvent<HTMLSelectElement>) {
         const clsId = e.target.value;
         setSelectedClass(clsId);
         if (clsId && currentSession) {
@@ -108,7 +108,7 @@ export default function TransportEnrollmentPage() {
         setShowUnenrollModal(true);
     }
 
-    async function onRouteSelectChange(e: any) {
+    async function onRouteSelectChange(e: ChangeEvent<HTMLSelectElement>) {
         const routeId = e.target.value;
         setSelectedRouteId(routeId);
         setSelectedPickupId("");
@@ -145,8 +145,9 @@ export default function TransportEnrollmentPage() {
 
             showToast("Student enrolled in transport!", "success");
             setShowEnrollModal(false);
-        } catch (e: any) {
-            showToast("Enrollment failed: " + (e.response?.data?.message || e.message), "error");
+        } catch (e: unknown) {
+            const message = e instanceof Error ? e.message : "Enrollment request failed";
+            showToast("Enrollment failed: " + message, "error");
         } finally {
             setIsSaving(false);
             setLoadingStudents(prev => ({ ...prev, [currentStudent.id]: false }));
@@ -174,8 +175,9 @@ export default function TransportEnrollmentPage() {
 
             showToast("Student unenrolled successfully", "success");
             setShowUnenrollModal(false);
-        } catch (e: any) {
-            showToast("Unenrollment failed: " + (e.response?.data?.message || e.message), "error");
+        } catch (e: unknown) {
+            const message = e instanceof Error ? e.message : "Unenrollment request failed";
+            showToast("Unenrollment failed: " + message, "error");
         } finally {
             setIsSaving(false);
             setLoadingStudents(prev => ({ ...prev, [currentStudent.id]: false }));
@@ -292,7 +294,7 @@ export default function TransportEnrollmentPage() {
                 <div className="space-y-6">
                     <div className="p-4 bg-orange-50 border border-orange-100 rounded-xl text-xs text-orange-800 font-medium flex gap-3">
                         <span className="text-xl">💡</span>
-                        <p>Enrollment will automatically assign the recurring transport fee to the student's ledger for the session.</p>
+                        <p>Enrollment will automatically assign the recurring transport fee to the student&apos;s ledger for the session.</p>
                     </div>
 
                     <div className="space-y-4">

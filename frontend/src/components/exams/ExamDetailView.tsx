@@ -1,10 +1,9 @@
 "use client";
 
-import { useEffect, useMemo, useState } from "react";
+import { useCallback, useEffect, useMemo, useState } from "react";
 import { examApi } from "@/lib/examApi";
 import { studentApi } from "@/lib/studentApi";
-import { classSubjectApi } from "@/lib/classSubjectApi"; // Import classSubjectApi
-import { api } from "@/lib/api";
+import { classSubjectApi } from "@/lib/classSubjectApi";
 import { useToast } from "@/components/ui/Toast";
 import Modal from "@/components/ui/Modal";
 import MarksheetMVP from "./MarksheetMVP";
@@ -24,21 +23,45 @@ interface ExamDetailViewProps {
     onClose: () => void;
 }
 
+interface ExamSubjectItem {
+    id: number;
+    subjectId: number;
+    subjectName?: string;
+    maxMarks: number;
+}
+
+interface StudentItem {
+    id: number;
+    firstName: string;
+    lastName: string;
+    admissionNumber?: string;
+}
+
+interface StudentMarkItem {
+    studentId: number;
+    examSubjectId: number;
+    marksObtained: number;
+}
+
+interface ClassSubjectItem {
+    id: number;
+    subjectId: number;
+    subjectName: string;
+}
+
 export default function ExamDetailView({ exam: initialExam, classId, onClose }: ExamDetailViewProps) {
     const { showToast } = useToast();
     const [exam, setExam] = useState<Exam>(initialExam);
     const [activeTab, setActiveTab] = useState<"subjects" | "marks" | "results">("subjects");
 
-    const [subjects, setSubjects] = useState<any[]>([]);
-    const [loadingSubjects, setLoadingSubjects] = useState(false);
+    const [subjects, setSubjects] = useState<ExamSubjectItem[]>([]);
 
-    const [students, setStudents] = useState<any[]>([]);
-    const [loadingStudents, setLoadingStudents] = useState(false);
+    const [students, setStudents] = useState<StudentItem[]>([]);
 
-    const [marksData, setMarksData] = useState<any[]>([]);
+    const [marksData, setMarksData] = useState<StudentMarkItem[]>([]);
     const [isSavingMarks, setIsSavingMarks] = useState(false);
 
-    const [availableSubjects, setAvailableSubjects] = useState<any[]>([]);
+    const [availableSubjects, setAvailableSubjects] = useState<ClassSubjectItem[]>([]);
     const [showAddSubject, setShowAddSubject] = useState(false);
     const [newSubject, setNewSubject] = useState({ subjectId: "", maxMarks: 100 });
 
@@ -50,57 +73,50 @@ export default function ExamDetailView({ exam: initialExam, classId, onClose }: 
         setExam(initialExam);
     }, [initialExam]);
 
-    useEffect(() => {
-        if (exam?.id) {
-            loadSubjects();
-            loadStudents();
-            loadAvailableSubjects();
-            loadExistingMarks();
-        }
-    }, [exam?.id]);
-
-    async function loadSubjects() {
+    const loadSubjects = useCallback(async () => {
         try {
-            setLoadingSubjects(true);
             const res = await examApi.listSubjects(exam.id);
             setSubjects(res.data || []);
         } catch {
             showToast("Failed to load exam subjects", "error");
-        } finally {
-            setLoadingSubjects(false);
         }
-    }
+    }, [exam.id, showToast]);
 
-    async function loadStudents() {
+    const loadStudents = useCallback(async () => {
         try {
-            setLoadingStudents(true);
             const res = await studentApi.byClass(classId, 0, 100);
             setStudents(res.data.content || []);
         } catch {
             showToast("Failed to load students", "error");
-        } finally {
-            setLoadingStudents(false);
         }
-    }
+    }, [classId, showToast]);
 
-    async function loadAvailableSubjects() {
+    const loadAvailableSubjects = useCallback(async () => {
         try {
-            // Fetch subjects assigned to this class
             const res = await classSubjectApi.getByClass(classId, 0, 100);
             setAvailableSubjects(res.content || []);
         } catch {
             showToast("Failed to load available subjects", "error");
         }
-    }
+    }, [classId, showToast]);
 
-    async function loadExistingMarks() {
+    const loadExistingMarks = useCallback(async () => {
         try {
             const res = await examApi.listMarks(exam.id);
             setMarksData(res.data || []);
         } catch {
             showToast("Failed to load existing marks", "error");
         }
-    }
+    }, [exam.id, showToast]);
+
+    useEffect(() => {
+        if (exam?.id) {
+            void loadSubjects();
+            void loadStudents();
+            void loadAvailableSubjects();
+            void loadExistingMarks();
+        }
+    }, [exam?.id, loadSubjects, loadStudents, loadAvailableSubjects, loadExistingMarks]);
 
     /* ---------------- Handlers ---------------- */
 
@@ -121,13 +137,13 @@ export default function ExamDetailView({ exam: initialExam, classId, onClose }: 
             });
             showToast("Subject added successfully", "success");
             setShowAddSubject(false);
-            loadSubjects();
-        } catch (err: any) {
+            void loadSubjects();
+        } catch {
             showToast("Failed to add subject", "error");
         }
     }
 
-    async function handleBulkSave(editedMarks: any[]) {
+    async function handleBulkSave(editedMarks: StudentMarkItem[]) {
         if (exam.status !== 'DRAFT') {
             showToast("Marks can only be processed when exam is in DRAFT status.", "error");
             return;
@@ -136,7 +152,7 @@ export default function ExamDetailView({ exam: initialExam, classId, onClose }: 
             setIsSavingMarks(true);
             await examApi.saveMarksBulk(exam.id, { marks: editedMarks });
             showToast("Marks saved successfully", "success");
-            loadExistingMarks();
+            void loadExistingMarks();
         } catch {
             showToast("Failed to save marks", "error");
         } finally {
@@ -150,8 +166,11 @@ export default function ExamDetailView({ exam: initialExam, classId, onClose }: 
             setExam(res.data);
             setConfirmAction(null);
             showToast("Exam published successfully!", "success");
-        } catch (e: any) {
-            showToast(e.response?.data?.message || "Failed to publish exam", "error");
+        } catch (e: unknown) {
+            const msg = typeof e === "object" && e !== null && "message" in e
+                ? String((e as { message?: string }).message || "Failed to publish exam")
+                : "Failed to publish exam";
+            showToast(msg, "error");
         }
     }
 
@@ -161,8 +180,11 @@ export default function ExamDetailView({ exam: initialExam, classId, onClose }: 
             setExam(res.data);
             setConfirmAction(null);
             showToast("Exam locked successfully!", "success");
-        } catch (e: any) {
-            showToast(e.response?.data?.message || "Failed to lock exam", "error");
+        } catch (e: unknown) {
+            const msg = typeof e === "object" && e !== null && "message" in e
+                ? String((e as { message?: string }).message || "Failed to lock exam")
+                : "Failed to lock exam";
+            showToast(msg, "error");
         }
     }
 
@@ -212,10 +234,10 @@ export default function ExamDetailView({ exam: initialExam, classId, onClose }: 
 
                 {/* Tabs */}
                 <div className="flex gap-4 border-b">
-                    {["subjects", "marks", "results"].map((tab) => (
+                    {(["subjects", "marks", "results"] as const).map((tab) => (
                         <button
                             key={tab}
-                            onClick={() => setActiveTab(tab as any)}
+                            onClick={() => setActiveTab(tab)}
                             className={`px-4 py-2 text-sm font-bold capitalize transition-all border-b-2 ${activeTab === tab
                                 ? "border-blue-600 text-blue-600"
                                 : "border-transparent text-gray-400 hover:text-gray-600"
@@ -321,7 +343,7 @@ export default function ExamDetailView({ exam: initialExam, classId, onClose }: 
                                 className="input-ref"
                             >
                                 <option value="">Select Subject</option>
-                                {availableSubjects.map((s: any) => (
+                                {availableSubjects.map((s) => (
                                     <option key={s.id} value={s.subjectId}>{s.subjectName}</option>
                                 ))}
                             </select>
@@ -376,11 +398,20 @@ export default function ExamDetailView({ exam: initialExam, classId, onClose }: 
 
 /* ---------------- Marks Entry Component ---------------- */
 
-function MarksEntryTable({ students, subjects, initialMarks, onSave, isSaving, readOnly }: any) {
+interface MarksEntryTableProps {
+    students: StudentItem[];
+    subjects: ExamSubjectItem[];
+    initialMarks: StudentMarkItem[];
+    onSave: (items: StudentMarkItem[]) => void;
+    isSaving: boolean;
+    readOnly: boolean;
+}
+
+function MarksEntryTable({ students, subjects, initialMarks, onSave, isSaving, readOnly }: MarksEntryTableProps) {
     const [editedMarks, setEditedMarks] = useState<Record<string, number>>({});
     const initialMarksMap = useMemo(() => {
         const map: Record<string, number> = {};
-        initialMarks.forEach((m: any) => {
+        initialMarks.forEach((m) => {
             map[`${m.studentId}-${m.examSubjectId}`] = m.marksObtained;
         });
         return map;
@@ -441,7 +472,7 @@ function MarksEntryTable({ students, subjects, initialMarks, onSave, isSaving, r
                     <thead className="bg-gray-50 border-b">
                         <tr>
                             <th className="p-4 text-left border-r sticky left-0 bg-gray-50 z-10 w-48">Student Name</th>
-                            {subjects.map((s: any) => (
+                            {subjects.map((s) => (
                                 <th key={s.id} className="p-4 text-center border-r min-w-[120px]">
                                     {s.subjectName || `Subject #${s.subjectId}`}
                                     <div className="text-[10px] text-gray-400 font-normal mt-1">(Max: {s.maxMarks})</div>
@@ -450,12 +481,12 @@ function MarksEntryTable({ students, subjects, initialMarks, onSave, isSaving, r
                         </tr>
                     </thead>
                     <tbody className="divide-y">
-                        {students.map((st: any) => (
+                        {students.map((st) => (
                             <tr key={st.id} className="hover:bg-gray-50/50">
                                 <td className="p-4 font-bold text-gray-800 border-r sticky left-0 bg-white z-10 shadow-[2px_0_5px_rgba(0,0,0,0.05)]">
                                     {st.firstName} {st.lastName}
                                 </td>
-                                {subjects.map((s: any) => {
+                                {subjects.map((s) => {
                                     const key = `${st.id}-${s.id}`;
                                     return (
                                         <td key={s.id} className="p-4 text-center border-r">

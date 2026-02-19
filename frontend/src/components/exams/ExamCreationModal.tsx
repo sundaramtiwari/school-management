@@ -47,8 +47,10 @@ export default function ExamCreationModal({
             });
             showToast("Exam created successfully!", "success");
             onSuccess();
-        } catch (err: any) {
-            const msg = err.response?.data?.message || "Failed to create exam";
+        } catch (err: unknown) {
+            const msg = typeof err === "object" && err !== null && "message" in err
+                ? String((err as { message?: string }).message || "Failed to create exam")
+                : "Failed to create exam";
             showToast(msg, "error");
         } finally {
             setIsSaving(false);
