@@ -1,7 +1,7 @@
-package com.school.backend.student.controller;
+package com.school.backend.core.student.controller;
 
-import com.school.backend.student.dto.LedgerSummaryDto;
-import com.school.backend.student.service.StudentLedgerService;
+import com.school.backend.core.student.dto.LedgerSummaryDto;
+import com.school.backend.core.student.service.StudentLedgerService;
 import lombok.RequiredArgsConstructor;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.access.prepost.PreAuthorize;

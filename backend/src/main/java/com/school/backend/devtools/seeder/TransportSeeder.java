@@ -2,7 +2,7 @@ package com.school.backend.devtools.seeder;
 
 import com.school.backend.core.student.entity.Student;
 import com.school.backend.core.student.entity.StudentEnrollment;
-import com.school.backend.fee.enums.FeeFrequency;
+import com.school.backend.common.enums.FeeFrequency;
 import com.school.backend.transport.entity.PickupPoint;
 import com.school.backend.transport.entity.TransportEnrollment;
 import com.school.backend.transport.entity.TransportRoute;

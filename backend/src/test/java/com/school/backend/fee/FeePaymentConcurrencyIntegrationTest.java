@@ -1,6 +1,7 @@
 package com.school.backend.fee;
 
 import com.school.backend.common.BaseAuthenticatedIntegrationTest;
+import com.school.backend.common.enums.FeeFrequency;
 import com.school.backend.common.enums.Gender;
 import com.school.backend.core.guardian.dto.GuardianCreateRequest;
 import com.school.backend.core.student.dto.StudentCreateRequest;
@@ -17,12 +18,10 @@ import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 
 import java.math.BigDecimal;
-import java.util.ArrayList;
 import java.util.List;
 import java.util.Map;
 import java.util.Objects;
 import java.util.concurrent.*;
-import java.util.concurrent.atomic.AtomicInteger;
 
 public class FeePaymentConcurrencyIntegrationTest extends BaseAuthenticatedIntegrationTest {
 
@@ -176,7 +175,7 @@ public class FeePaymentConcurrencyIntegrationTest extends BaseAuthenticatedInteg
         fsReq.setSessionId(sessionId);
         fsReq.setFeeTypeId(feeTypeId);
         fsReq.setAmount(feeAmount);
-        fsReq.setFrequency(com.school.backend.fee.enums.FeeFrequency.ONE_TIME);
+        fsReq.setFrequency(FeeFrequency.ONE_TIME);
         feeStructureId = restTemplate.exchange("/api/fees/structures", HttpMethod.POST,
                 new HttpEntity<>(fsReq, headers), FeeStructureDto.class).getBody().getId();
 

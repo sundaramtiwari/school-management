@@ -1,5 +1,6 @@
 package com.school.backend.fee.service;
 
+import com.school.backend.common.enums.LateFeeCapType;
 import com.school.backend.common.exception.ResourceNotFoundException;
 import com.school.backend.common.tenant.TenantContext;
 import com.school.backend.core.student.repository.StudentRepository;
@@ -7,13 +8,12 @@ import com.school.backend.fee.dto.StudentFeeAssignRequest;
 import com.school.backend.fee.dto.StudentFeeAssignmentDto;
 import com.school.backend.fee.entity.FeeStructure;
 import com.school.backend.fee.entity.StudentFeeAssignment;
-import com.school.backend.fee.enums.FeeFrequency;
+import com.school.backend.common.enums.FeeFrequency;
 import com.school.backend.fee.repository.FeeStructureRepository;
 import com.school.backend.fee.repository.StudentFeeAssignmentRepository;
 import com.school.backend.school.entity.AcademicSession;
 import com.school.backend.school.repository.AcademicSessionRepository;
 import com.school.backend.fee.repository.StudentFundingArrangementRepository;
-import com.school.backend.fee.service.FeeCalculationService;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
@@ -90,7 +90,7 @@ public class StudentFeeAssignmentService {
                 .lateFeeType(policy != null ? policy.getType() : null)
                 .lateFeeValue(policy != null ? policy.getAmountValue() : BigDecimal.ZERO)
                 .lateFeeGraceDays(policy != null ? policy.getGraceDays() : 0)
-                .lateFeeCapType(policy != null ? policy.getCapType() : com.school.backend.fee.enums.LateFeeCapType.NONE)
+                .lateFeeCapType(policy != null ? policy.getCapType() : LateFeeCapType.NONE)
                 .lateFeeCapValue(policy != null ? policy.getCapValue() : BigDecimal.ZERO)
                 .schoolId(TenantContext.getSchoolId())
                 .active(true)

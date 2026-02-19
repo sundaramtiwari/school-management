@@ -1,8 +1,8 @@
 package com.school.backend.fee.entity;
 
 import com.school.backend.common.entity.TenantEntity;
-import com.school.backend.fee.enums.FundingCoverageMode;
-import com.school.backend.fee.enums.FundingCoverageType;
+import com.school.backend.common.enums.FundingCoverageMode;
+import com.school.backend.common.enums.FundingCoverageType;
 import jakarta.persistence.*;
 import lombok.*;
 import lombok.experimental.SuperBuilder;

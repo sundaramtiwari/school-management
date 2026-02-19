@@ -1,8 +1,8 @@
 package com.school.backend.fee.entity;
 
 import com.school.backend.common.entity.TenantEntity;
-import com.school.backend.fee.enums.LateFeeCapType;
-import com.school.backend.fee.enums.LateFeeType;
+import com.school.backend.common.enums.LateFeeCapType;
+import com.school.backend.common.enums.LateFeeType;
 import jakarta.persistence.*;
 import lombok.*;
 import lombok.experimental.SuperBuilder;

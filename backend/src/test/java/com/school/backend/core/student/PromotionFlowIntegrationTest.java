@@ -1,6 +1,8 @@
 package com.school.backend.core.student;
 
 import com.school.backend.common.BaseAuthenticatedIntegrationTest;
+import com.school.backend.common.enums.FeeFrequency;
+import com.school.backend.common.enums.PromotionType;
 import com.school.backend.core.classsubject.dto.SchoolClassCreateRequest;
 import com.school.backend.core.classsubject.dto.SchoolClassDto;
 import com.school.backend.core.classsubject.repository.SchoolClassRepository;
@@ -19,8 +21,6 @@ import com.school.backend.school.dto.SchoolDto;
 import com.school.backend.school.entity.AcademicSession;
 import com.school.backend.school.repository.AcademicSessionRepository;
 import com.school.backend.school.repository.SchoolRepository;
-import com.school.backend.student.dto.PromotionRequest;
-import com.school.backend.student.enums.PromotionType;
 import com.school.backend.user.repository.UserRepository;
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeEach;
@@ -139,7 +139,7 @@ public class PromotionFlowIntegrationTest extends BaseAuthenticatedIntegrationTe
         fsReq.setSessionId(session2025Id);
         fsReq.setFeeTypeId(feeTypeId);
         fsReq.setAmount(java.math.BigDecimal.valueOf(10000));
-        fsReq.setFrequency(com.school.backend.fee.enums.FeeFrequency.ONE_TIME);
+        fsReq.setFrequency(FeeFrequency.ONE_TIME);
 
         HttpEntity<FeeStructureCreateRequest> fsEntity = new HttpEntity<>(fsReq, headers);
 

@@ -1,7 +1,7 @@
 package com.school.backend.fee.dto;
 
-import com.school.backend.fee.enums.LateFeeType;
-import com.school.backend.fee.enums.LateFeeCapType;
+import com.school.backend.common.enums.LateFeeType;
+import com.school.backend.common.enums.LateFeeCapType;
 import lombok.Data;
 
 import java.math.BigDecimal;

@@ -3,7 +3,7 @@ package com.school.backend.fee.controller;
 import com.school.backend.common.exception.InvalidOperationException;
 import com.school.backend.common.tenant.TenantContext;
 import com.school.backend.fee.entity.StudentFundingArrangement;
-import com.school.backend.fee.enums.FundingCoverageMode;
+import com.school.backend.common.enums.FundingCoverageMode;
 import com.school.backend.fee.repository.StudentFundingArrangementRepository;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;

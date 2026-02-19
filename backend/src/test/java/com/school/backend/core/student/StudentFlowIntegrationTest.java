@@ -2,13 +2,14 @@ package com.school.backend.core.student;
 
 import com.school.backend.common.BaseAuthenticatedIntegrationTest;
 import com.school.backend.common.dto.PageResponse;
+import com.school.backend.common.enums.FeeFrequency;
 import com.school.backend.common.enums.Gender;
+import com.school.backend.common.enums.PromotionType;
 import com.school.backend.core.guardian.dto.GuardianCreateRequest;
 import com.school.backend.core.student.dto.*;
 import com.school.backend.fee.dto.*;
 import com.school.backend.fee.entity.FeeType;
 import com.school.backend.school.entity.School;
-import com.school.backend.student.enums.PromotionType;
 import org.assertj.core.api.Assertions;
 import org.jspecify.annotations.NonNull;
 import org.junit.jupiter.api.AfterEach;
@@ -154,8 +155,8 @@ public class StudentFlowIntegrationTest extends BaseAuthenticatedIntegrationTest
         fsReq.setSessionId(session2025Id);
         fsReq.setFeeTypeId(feeTypeId);
         fsReq.setAmount(java.math.BigDecimal.valueOf(10000));
-        fsReq.setFrequency(com.school.backend.fee.enums.FeeFrequency.ONE_TIME);
-        fsReq.setFrequency(com.school.backend.fee.enums.FeeFrequency.ONE_TIME);
+        fsReq.setFrequency(FeeFrequency.ONE_TIME);
+        fsReq.setFrequency(FeeFrequency.ONE_TIME);
 
         HttpEntity<FeeStructureCreateRequest> fsEntity = new HttpEntity<>(fsReq, headers);
 
@@ -198,7 +199,7 @@ public class StudentFlowIntegrationTest extends BaseAuthenticatedIntegrationTest
 
         // ---------- Promote ----------
 
-        com.school.backend.student.dto.PromotionRequest pr = new com.school.backend.student.dto.PromotionRequest();
+        com.school.backend.core.student.dto.PromotionRequest pr = new com.school.backend.core.student.dto.PromotionRequest();
 
         pr.setStudentIds(List.of(studentId));
         pr.setTargetClassId(classId);
@@ -206,7 +207,7 @@ public class StudentFlowIntegrationTest extends BaseAuthenticatedIntegrationTest
         pr.setPromotionType(PromotionType.PROMOTE);
         pr.setRemarks("Promoted successfully");
 
-        HttpEntity<com.school.backend.student.dto.PromotionRequest> promoteEntity = new HttpEntity<>(pr, headers);
+        HttpEntity<com.school.backend.core.student.dto.PromotionRequest> promoteEntity = new HttpEntity<>(pr, headers);
 
         ResponseEntity<Void> promoteRes = restTemplate.exchange(
                 "/api/promotions",

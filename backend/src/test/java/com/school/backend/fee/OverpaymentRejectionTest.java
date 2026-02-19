@@ -1,6 +1,7 @@
 package com.school.backend.fee;
 
 import com.school.backend.common.BaseAuthenticatedIntegrationTest;
+import com.school.backend.common.enums.FeeFrequency;
 import com.school.backend.common.enums.Gender;
 import com.school.backend.core.guardian.dto.GuardianCreateRequest;
 import com.school.backend.core.student.dto.StudentCreateRequest;
@@ -92,7 +93,7 @@ public class OverpaymentRejectionTest extends BaseAuthenticatedIntegrationTest {
         fsReq.setSessionId(sessionId);
         fsReq.setFeeTypeId(feeTypeId);
         fsReq.setAmount(feeAmount);
-        fsReq.setFrequency(com.school.backend.fee.enums.FeeFrequency.ONE_TIME);
+        fsReq.setFrequency(FeeFrequency.ONE_TIME);
         Long feeStructureId = restTemplate.exchange("/api/fees/structures", HttpMethod.POST,
                 new HttpEntity<>(fsReq, headers), FeeStructureDto.class).getBody().getId();
 

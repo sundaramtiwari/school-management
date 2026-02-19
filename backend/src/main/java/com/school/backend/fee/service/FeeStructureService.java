@@ -1,5 +1,7 @@
 package com.school.backend.fee.service;
 
+import com.school.backend.common.enums.LateFeeCapType;
+import com.school.backend.common.enums.LateFeeType;
 import com.school.backend.common.exception.ResourceNotFoundException;
 import com.school.backend.core.student.entity.StudentEnrollment;
 import com.school.backend.core.student.repository.StudentEnrollmentRepository;
@@ -8,7 +10,7 @@ import com.school.backend.fee.dto.FeeStructureDto;
 import com.school.backend.fee.entity.FeeStructure;
 import com.school.backend.fee.entity.FeeType;
 import com.school.backend.fee.entity.StudentFeeAssignment;
-import com.school.backend.fee.enums.FeeFrequency;
+import com.school.backend.common.enums.FeeFrequency;
 import com.school.backend.fee.entity.LateFeePolicy;
 import com.school.backend.fee.repository.FeeStructureRepository;
 import com.school.backend.fee.repository.FeeTypeRepository;
@@ -59,14 +61,14 @@ public class FeeStructureService {
         FeeStructure saved = feeStructureRepository.save(fs);
 
         // Create Late Fee Policy if provided
-        if (req.getLateFeeType() != null && req.getLateFeeType() != com.school.backend.fee.enums.LateFeeType.NONE) {
+        if (req.getLateFeeType() != null && req.getLateFeeType() != LateFeeType.NONE) {
             LateFeePolicy policy = LateFeePolicy.builder()
                     .schoolId(saved.getSchoolId())
                     .feeStructure(saved)
                     .type(req.getLateFeeType())
                     .amountValue(req.getLateFeeAmountValue() != null ? req.getLateFeeAmountValue() : BigDecimal.ZERO)
                     .graceDays(req.getLateFeeGraceDays() != null ? req.getLateFeeGraceDays() : 0)
-                    .capType(req.getLateFeeCapType() != null ? req.getLateFeeCapType() : com.school.backend.fee.enums.LateFeeCapType.NONE)
+                    .capType(req.getLateFeeCapType() != null ? req.getLateFeeCapType() : LateFeeCapType.NONE)
                     .capValue(req.getLateFeeCapValue() != null ? req.getLateFeeCapValue() : BigDecimal.ZERO)
                     .active(true)
                     .build();
@@ -130,7 +132,7 @@ public class FeeStructureService {
                 .lateFeeType(policy != null ? policy.getType() : null)
                 .lateFeeValue(policy != null ? policy.getAmountValue() : BigDecimal.ZERO)
                 .lateFeeGraceDays(policy != null ? policy.getGraceDays() : 0)
-                .lateFeeCapType(policy != null ? policy.getCapType() : com.school.backend.fee.enums.LateFeeCapType.NONE)
+                .lateFeeCapType(policy != null ? policy.getCapType() : LateFeeCapType.NONE)
                 .lateFeeCapValue(policy != null ? policy.getCapValue() : BigDecimal.ZERO)
                 .active(true)
                 .build();

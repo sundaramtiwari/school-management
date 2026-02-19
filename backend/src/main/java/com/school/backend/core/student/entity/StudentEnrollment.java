@@ -1,7 +1,7 @@
 package com.school.backend.core.student.entity;
 
 import com.school.backend.common.entity.TenantEntity;
-import com.school.backend.student.enums.AdmissionType;
+import com.school.backend.common.enums.AdmissionType;
 import jakarta.persistence.*;
 import lombok.*;
 import lombok.experimental.SuperBuilder;

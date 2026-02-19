@@ -14,6 +14,9 @@ import com.school.backend.testmanagement.mapper.ExamMapper;
 import com.school.backend.testmanagement.repository.ExamRepository;
 import com.school.backend.testmanagement.repository.ExamSubjectRepository;
 import com.school.backend.testmanagement.repository.StudentMarkRepository;
+import com.school.backend.core.teacher.entity.Teacher;
+import com.school.backend.core.teacher.repository.TeacherRepository;
+import com.school.backend.core.teacher.repository.TeacherAssignmentRepository;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
@@ -31,6 +34,8 @@ public class ExamService {
     private final ExamSubjectRepository subjectRepository;
     private final StudentMarkRepository markRepository;
     private final StudentEnrollmentRepository studentEnrollmentRepository;
+    private final TeacherRepository teacherRepository;
+    private final TeacherAssignmentRepository teacherAssignmentRepository;
     private final ExamMapper examMapper;
     private final com.school.backend.school.service.SetupValidationService setupValidationService;
 
@@ -111,10 +116,25 @@ public class ExamService {
         return examMapper.toDto(exam);
     }
 
-    // Create exam
     @Transactional
     public Exam create(ExamCreateRequest req) {
         setupValidationService.ensureAtLeastOneClassExists(req.getSchoolId(), req.getSessionId());
+
+        // Authority Check
+        if (SecurityUtil.hasRole("TEACHER")) {
+            Long userId = SecurityUtil.current().getUserId();
+            Teacher teacher = teacherRepository.findByUserId(userId)
+                    .orElseThrow(() -> new BusinessException("Teacher record not found for user"));
+
+            // Check if teacher is assigned to this class in this session for AT LEAST ONE
+            // subject
+            boolean assigned = teacherAssignmentRepository.existsByTeacherIdAndSessionIdAndSchoolClassIdAndActiveTrue(
+                    teacher.getId(), req.getSessionId(), req.getClassId());
+
+            if (!assigned) {
+                throw new BusinessException("Access Denied: You are not assigned to this class.");
+            }
+        }
 
         Exam exam = Exam.builder()
                 .schoolId(req.getSchoolId())
@@ -141,6 +161,21 @@ public class ExamService {
         Exam exam = repository.findById(examId)
                 .orElseThrow(() -> new IllegalArgumentException("Exam not found"));
         setupValidationService.ensureAtLeastOneClassExists(exam.getSchoolId(), exam.getSessionId());
+
+        // Authority Check
+        if (SecurityUtil.hasRole("TEACHER")) {
+            Long userId = SecurityUtil.current().getUserId();
+            Teacher teacher = teacherRepository.findByUserId(userId)
+                    .orElseThrow(() -> new BusinessException("Teacher record not found for user"));
+
+            // Check if teacher is assigned to this class in this session
+            boolean assigned = teacherAssignmentRepository.existsByTeacherIdAndSessionIdAndSchoolClassIdAndActiveTrue(
+                    teacher.getId(), exam.getSessionId(), exam.getClassId());
+
+            if (!assigned) {
+                throw new BusinessException("Access Denied: You are not assigned to this class.");
+            }
+        }
 
         if (exam.getStatus() != ExamStatus.DRAFT) {
             throw new BusinessException("Marks can only be entered when exam is in DRAFT status.");

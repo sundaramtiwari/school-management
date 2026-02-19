@@ -1,5 +1,6 @@
 package com.school.backend.fee.service;
 
+import com.school.backend.common.enums.LateFeeType;
 import com.school.backend.common.exception.BusinessException;
 import com.school.backend.common.exception.ResourceNotFoundException;
 import com.school.backend.common.tenant.TenantContext;
@@ -95,8 +96,8 @@ public class FeePaymentService {
                 assignment.setLateFeeAccrued(assignment.getLateFeeAccrued().add(incrementalLateFee));
 
                 // For one-time late fees, mark as applied
-                if (assignment.getLateFeeType() == com.school.backend.fee.enums.LateFeeType.FLAT ||
-                        assignment.getLateFeeType() == com.school.backend.fee.enums.LateFeeType.PERCENTAGE) {
+                if (assignment.getLateFeeType() == LateFeeType.FLAT ||
+                        assignment.getLateFeeType() == LateFeeType.PERCENTAGE) {
                     assignment.setLateFeeApplied(true);
                 }
 

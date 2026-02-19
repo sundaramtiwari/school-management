@@ -1,18 +1,18 @@
-package com.school.backend.student.service;
+package com.school.backend.core.student.service;
 
+import com.school.backend.common.enums.AdmissionType;
+import com.school.backend.common.enums.PromotionType;
 import com.school.backend.common.exception.InvalidOperationException;
 import com.school.backend.common.exception.ResourceNotFoundException;
 import com.school.backend.core.classsubject.entity.SchoolClass;
 import com.school.backend.core.classsubject.repository.SchoolClassRepository;
+import com.school.backend.core.student.dto.PromotionRequest;
 import com.school.backend.core.student.entity.PromotionRecord;
 import com.school.backend.core.student.entity.StudentEnrollment;
 import com.school.backend.core.student.repository.PromotionRecordRepository;
 import com.school.backend.core.student.repository.StudentEnrollmentRepository;
 import com.school.backend.core.student.repository.StudentRepository;
 import com.school.backend.school.repository.AcademicSessionRepository;
-import com.school.backend.student.dto.PromotionRequest;
-import com.school.backend.student.enums.AdmissionType;
-import com.school.backend.student.enums.PromotionType;
 import com.school.backend.testmanagement.repository.ExamRepository;
 import com.school.backend.user.security.SecurityUtil;
 import lombok.RequiredArgsConstructor;

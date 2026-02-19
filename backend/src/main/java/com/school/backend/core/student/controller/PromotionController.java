@@ -1,7 +1,7 @@
-package com.school.backend.student.controller;
+package com.school.backend.core.student.controller;
 
-import com.school.backend.student.dto.PromotionRequest;
-import com.school.backend.student.service.PromotionService;
+import com.school.backend.core.student.dto.PromotionRequest;
+import com.school.backend.core.student.service.PromotionService;
 import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
 import org.springframework.http.ResponseEntity;

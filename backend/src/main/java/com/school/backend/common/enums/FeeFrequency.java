@@ -1,4 +1,4 @@
-package com.school.backend.fee.enums;
+package com.school.backend.common.enums;
 
 import lombok.Getter;
 

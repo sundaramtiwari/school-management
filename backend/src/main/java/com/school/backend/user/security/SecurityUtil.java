@@ -24,6 +24,10 @@ public class SecurityUtil {
         return current().getRole();
     }
 
+    public static Long userId() {
+        return current().getUserId();
+    }
+
     public static boolean hasRole(String roleName) {
         UserRole currentRole = role();
         return currentRole != null && currentRole.name().equals(roleName);

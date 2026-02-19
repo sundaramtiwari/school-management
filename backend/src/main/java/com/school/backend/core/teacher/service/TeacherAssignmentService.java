@@ -1,0 +1,124 @@
+package com.school.backend.core.teacher.service;
+
+import com.school.backend.common.exception.BusinessException;
+import com.school.backend.core.classsubject.entity.SchoolClass;
+import com.school.backend.core.classsubject.entity.Subject;
+import com.school.backend.core.classsubject.repository.ClassSubjectRepository;
+import com.school.backend.core.classsubject.repository.SchoolClassRepository;
+import com.school.backend.core.classsubject.repository.SubjectRepository;
+import com.school.backend.core.teacher.entity.Teacher;
+import com.school.backend.core.teacher.repository.TeacherRepository;
+import com.school.backend.school.entity.AcademicSession;
+import com.school.backend.school.repository.AcademicSessionRepository;
+import com.school.backend.core.teacher.entity.TeacherAssignment;
+import com.school.backend.core.teacher.repository.TeacherAssignmentRepository;
+import com.school.backend.user.security.SecurityUtil;
+import lombok.RequiredArgsConstructor;
+import org.springframework.stereotype.Service;
+import org.springframework.transaction.annotation.Transactional;
+
+import java.time.LocalDateTime;
+import java.util.List;
+
+@Service
+@RequiredArgsConstructor
+public class TeacherAssignmentService {
+
+    private final TeacherAssignmentRepository repository;
+    private final TeacherRepository teacherRepository;
+    private final AcademicSessionRepository sessionRepository;
+    private final SchoolClassRepository classRepository;
+    private final SubjectRepository subjectRepository;
+    private final ClassSubjectRepository classSubjectRepository;
+
+    @Transactional
+    public TeacherAssignment assignTeacher(Long teacherId, Long sessionId, Long classId, Long subjectId) {
+        Long schoolId = SecurityUtil.schoolId();
+
+        // 1. Validation: Entity existence and same-school integrity
+        Teacher teacher = teacherRepository.findById(teacherId)
+                .orElseThrow(() -> new BusinessException("Teacher not found"));
+        validateSchool(teacher.getSchoolId(), schoolId, "Teacher");
+
+        AcademicSession session = sessionRepository.findById(sessionId)
+                .orElseThrow(() -> new BusinessException("Session not found"));
+        validateSchool(session.getSchoolId(), schoolId, "Session");
+
+        SchoolClass schoolClass = classRepository.findById(classId)
+                .orElseThrow(() -> new BusinessException("Class not found"));
+        validateSchool(schoolClass.getSchoolId(), schoolId, "Class");
+
+        Subject subject = subjectRepository.findById(subjectId)
+                .orElseThrow(() -> new BusinessException("Subject not found"));
+        validateSchool(subject.getSchoolId(), schoolId, "Subject");
+
+        // 2. Logic: Class must belong to session
+        if (!schoolClass.getSessionId().equals(sessionId)) {
+            throw new BusinessException("Class does not belong to the selected session");
+        }
+
+        // 3. Logic: Subject must belong to class (via ClassSubject mapping)
+        boolean subjectExistsInClass = classSubjectRepository.existsBySchoolClassIdAndSubjectId(classId, subjectId);
+        if (!subjectExistsInClass) {
+            throw new BusinessException("Subject is not mapped to this class");
+        }
+
+        // 4. Logic: Prevent duplicate active assignment
+        if (repository.existsByTeacherIdAndSessionIdAndSchoolClassIdAndSubjectIdAndActiveTrue(teacherId, sessionId,
+                classId, subjectId)) {
+            throw new BusinessException("Active assignment already exists for this combination");
+        }
+
+        TeacherAssignment assignment = TeacherAssignment.builder()
+                .schoolId(schoolId)
+                .teacher(teacher)
+                .session(session)
+                .schoolClass(schoolClass)
+                .subject(subject)
+                .active(true)
+                .assignedAt(LocalDateTime.now())
+                .assignedBy(SecurityUtil.current().getUserId())
+                .build();
+
+        return repository.save(assignment);
+    }
+
+    @Transactional
+    public void deactivateAssignment(Long id) {
+        TeacherAssignment assignment = repository.findById(id)
+                .orElseThrow(() -> new BusinessException("Assignment not found"));
+
+        validateSchool(assignment.getSchoolId(), SecurityUtil.schoolId(), "Assignment");
+
+        assignment.setActive(false);
+        repository.save(assignment);
+    }
+
+    @Transactional(readOnly = true)
+    public List<TeacherAssignment> getTeacherAssignments(Long teacherId, Long sessionId) {
+        return repository.findByTeacherIdAndSessionIdAndActiveTrue(teacherId, sessionId);
+    }
+
+    /**
+     * Optional hook for future session rollover.
+     */
+    @Transactional
+    public void copyAssignments(Long fromSessionId, Long toSessionId) {
+        // This is a placeholder for future session copy workflow.
+        // Implementation would involve mapping old classes/subjects to new ones.
+        // Since SchoolClass is session-dependent, IDs will change.
+    }
+
+    @Transactional
+    public void deactivateAllForTeacher(Long teacherId) {
+        List<TeacherAssignment> activeAssignments = repository.findByTeacherIdAndActiveTrue(teacherId);
+        activeAssignments.forEach(a -> a.setActive(false));
+        repository.saveAll(activeAssignments);
+    }
+
+    private void validateSchool(Long entitySchoolId, Long currentSchoolId, String entityName) {
+        if (!entitySchoolId.equals(currentSchoolId)) {
+            throw new BusinessException(entityName + " does not belong to this school");
+        }
+    }
+}

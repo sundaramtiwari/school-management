@@ -1,6 +1,6 @@
 package com.school.backend.transport.dto;
 
-import com.school.backend.fee.enums.FeeFrequency;
+import com.school.backend.common.enums.FeeFrequency;
 import lombok.*;
 
 @Getter

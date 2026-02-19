@@ -1,6 +1,8 @@
 package com.school.backend.devtools.seeder;
 
+import com.school.backend.common.enums.AdmissionType;
 import com.school.backend.common.enums.Gender;
+import com.school.backend.common.enums.PromotionType;
 import com.school.backend.core.classsubject.entity.SchoolClass;
 import com.school.backend.core.student.entity.PromotionRecord;
 import com.school.backend.core.student.entity.Student;
@@ -9,20 +11,13 @@ import com.school.backend.core.student.repository.PromotionRecordRepository;
 import com.school.backend.core.student.repository.StudentEnrollmentRepository;
 import com.school.backend.core.student.repository.StudentRepository;
 import com.school.backend.school.entity.School;
-import com.school.backend.student.enums.AdmissionType;
-import com.school.backend.student.enums.PromotionType;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Component;
 import org.springframework.transaction.annotation.Transactional;
 
 import java.time.LocalDate;
 import java.time.LocalDateTime;
-import java.util.ArrayList;
-import java.util.Comparator;
-import java.util.LinkedHashMap;
-import java.util.List;
-import java.util.Map;
-import java.util.Random;
+import java.util.*;
 import java.util.function.Function;
 import java.util.stream.Collectors;
 

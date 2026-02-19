@@ -1,14 +1,15 @@
 package com.school.backend.fee;
 
 import com.school.backend.common.BaseAuthenticatedIntegrationTest;
+import com.school.backend.common.enums.FeeFrequency;
 import com.school.backend.common.enums.Gender;
 import com.school.backend.core.guardian.dto.GuardianCreateRequest;
 import com.school.backend.core.student.dto.StudentCreateRequest;
 import com.school.backend.core.student.dto.StudentDto;
 import com.school.backend.fee.dto.*;
 import com.school.backend.fee.entity.FeeType;
-import com.school.backend.fee.enums.LateFeeCapType;
-import com.school.backend.fee.enums.LateFeeType;
+import com.school.backend.common.enums.LateFeeCapType;
+import com.school.backend.common.enums.LateFeeType;
 import com.school.backend.school.entity.School;
 import org.assertj.core.api.Assertions;
 import org.junit.jupiter.api.AfterEach;
@@ -128,7 +129,7 @@ public class FeePaymentAllocationIntegrationTest extends BaseAuthenticatedIntegr
         fsReq.setSessionId(sessionId);
         fsReq.setFeeTypeId(feeTypeId);
         fsReq.setAmount(new BigDecimal("1000.00"));
-        fsReq.setFrequency(com.school.backend.fee.enums.FeeFrequency.ONE_TIME);
+        fsReq.setFrequency(FeeFrequency.ONE_TIME);
 
         // Late Fee Policy fields
         fsReq.setLateFeeType(LateFeeType.FLAT);

@@ -12,7 +12,7 @@ import com.school.backend.core.student.entity.Student;
 import com.school.backend.core.student.repository.StudentRepository;
 import com.school.backend.fee.entity.FeeStructure;
 import com.school.backend.fee.entity.StudentFeeAssignment;
-import com.school.backend.fee.enums.FeeFrequency;
+import com.school.backend.common.enums.FeeFrequency;
 import com.school.backend.fee.repository.FeeStructureRepository;
 import com.school.backend.fee.repository.StudentFeeAssignmentRepository;
 import com.school.backend.school.entity.School;

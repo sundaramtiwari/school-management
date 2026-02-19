@@ -7,6 +7,9 @@ import com.school.backend.core.attendance.repository.AttendanceRepository;
 import com.school.backend.core.classsubject.repository.SchoolClassRepository;
 import com.school.backend.core.student.entity.StudentEnrollment;
 import com.school.backend.core.student.repository.StudentEnrollmentRepository;
+import com.school.backend.core.teacher.entity.Teacher;
+import com.school.backend.core.teacher.repository.TeacherRepository;
+import com.school.backend.core.teacher.repository.TeacherAssignmentRepository;
 import com.school.backend.user.security.SecurityUtil;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
@@ -26,6 +29,8 @@ public class AttendanceService {
     private final AttendanceRepository attendanceRepository;
     private final StudentEnrollmentRepository enrollmentRepository;
     private final SchoolClassRepository classRepository;
+    private final TeacherRepository teacherRepository;
+    private final TeacherAssignmentRepository teacherAssignmentRepository;
 
     /**
      * Timezone-safe validation - Teachers can only edit today's attendance
@@ -67,7 +72,22 @@ public class AttendanceService {
         // 2. Validate tenant access
         validateClassAccess(classId, schoolId);
 
-        // 3. Fetch existing attendance for these students on this date
+        // 3. Authority Check: If user is a TEACHER, must have active assignment
+        if (SecurityUtil.hasRole("TEACHER")) {
+            Long userId = SecurityUtil.current().getUserId();
+            Teacher teacher = teacherRepository.findByUserId(userId)
+                    .orElseThrow(() -> new BusinessException("Teacher record not found for user"));
+
+            boolean assigned = teacherAssignmentRepository.existsByTeacherIdAndSessionIdAndSchoolClassIdAndActiveTrue(
+                    teacher.getId(), sessionId, classId);
+
+            if (!assigned) {
+                throw new BusinessException(
+                        "Access Denied: You are not assigned to this class in the current session.");
+            }
+        }
+
+        // 4. Fetch existing attendance for these students on this date
         List<Long> studentIds = new ArrayList<>(attendanceMap.keySet());
         List<StudentAttendance> existing = attendanceRepository.findByAttendanceDateAndStudentIdIn(date, studentIds);
         Map<Long, StudentAttendance> existingMap = existing.stream()

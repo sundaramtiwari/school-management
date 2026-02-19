@@ -1,8 +1,8 @@
 package com.school.backend.fee.service;
 
 import com.school.backend.fee.entity.StudentFundingArrangement;
-import com.school.backend.fee.enums.FundingCoverageMode;
-import com.school.backend.fee.enums.FundingCoverageType;
+import com.school.backend.common.enums.FundingCoverageMode;
+import com.school.backend.common.enums.FundingCoverageType;
 import lombok.extern.slf4j.Slf4j;
 import org.jspecify.annotations.NonNull;
 import org.springframework.stereotype.Service;

@@ -1,7 +1,9 @@
 package com.school.backend.fee.dto;
 
 import java.math.BigDecimal;
-import com.school.backend.fee.enums.FeeFrequency;
+import com.school.backend.common.enums.FeeFrequency;
+import com.school.backend.common.enums.LateFeeCapType;
+import com.school.backend.common.enums.LateFeeType;
 import jakarta.validation.constraints.NotNull;
 import lombok.Data;
 
@@ -21,9 +23,9 @@ public class FeeStructureCreateRequest {
     private Integer dueDayOfMonth;
 
     // Late Fee Policy fields
-    private com.school.backend.fee.enums.LateFeeType lateFeeType;
+    private LateFeeType lateFeeType;
     private BigDecimal lateFeeAmountValue;
     private Integer lateFeeGraceDays;
-    private com.school.backend.fee.enums.LateFeeCapType lateFeeCapType;
+    private LateFeeCapType lateFeeCapType;
     private BigDecimal lateFeeCapValue;
 }

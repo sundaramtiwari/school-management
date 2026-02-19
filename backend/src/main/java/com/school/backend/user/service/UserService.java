@@ -3,8 +3,10 @@ package com.school.backend.user.service;
 import com.school.backend.common.enums.UserRole;
 import com.school.backend.common.exception.ResourceNotFoundException;
 import com.school.backend.common.tenant.TenantContext;
+import com.school.backend.core.teacher.repository.TeacherRepository;
 import com.school.backend.school.entity.School;
 import com.school.backend.school.repository.SchoolRepository;
+import com.school.backend.core.teacher.service.TeacherAssignmentService;
 import com.school.backend.user.dto.UserDto;
 import com.school.backend.user.entity.User;
 import com.school.backend.user.repository.UserRepository;
@@ -22,6 +24,8 @@ public class UserService {
     private final UserRepository userRepository;
     private final SchoolRepository schoolRepository;
     private final PasswordEncoder passwordEncoder;
+    private final TeacherRepository teacherRepository;
+    private final TeacherAssignmentService teacherAssignmentService;
 
     @Transactional(readOnly = true)
     public Page<UserDto> listUsers(String role, Pageable pageable) {
@@ -80,7 +84,14 @@ public class UserService {
             user.setPasswordHash(passwordEncoder.encode(dto.getPassword()));
         }
         user.setRole(dto.getRole());
+
+        // If a TEACHER user is being deactivated, soft-deactivate all their assignments
+        boolean wasActive = user.isActive();
         user.setActive(dto.isActive());
+        if (wasActive && !dto.isActive() && user.getRole() == UserRole.TEACHER) {
+            teacherRepository.findByUserId(user.getId())
+                    .ifPresent(teacher -> teacherAssignmentService.deactivateAllForTeacher(teacher.getId()));
+        }
 
         return toDto(userRepository.save(user));
     }

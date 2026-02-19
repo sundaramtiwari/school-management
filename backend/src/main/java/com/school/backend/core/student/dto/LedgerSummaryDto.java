@@ -1,4 +1,4 @@
-package com.school.backend.student.dto;
+package com.school.backend.core.student.dto;
 
 import lombok.Data;
 

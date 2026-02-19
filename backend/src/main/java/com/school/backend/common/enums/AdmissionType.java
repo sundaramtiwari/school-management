@@ -1,4 +1,4 @@
-package com.school.backend.student.enums;
+package com.school.backend.common.enums;
 
 public enum AdmissionType {
     PROMOTION,

@@ -1,7 +1,7 @@
 package com.school.backend.transport.entity;
 
 import com.school.backend.common.entity.TenantEntity;
-import com.school.backend.fee.enums.FeeFrequency;
+import com.school.backend.common.enums.FeeFrequency;
 import jakarta.persistence.*;
 import lombok.*;
 import lombok.experimental.SuperBuilder;

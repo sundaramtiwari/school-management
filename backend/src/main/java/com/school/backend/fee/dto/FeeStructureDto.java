@@ -1,5 +1,8 @@
 package com.school.backend.fee.dto;
 
+import com.school.backend.common.enums.FeeFrequency;
+import com.school.backend.common.enums.LateFeeCapType;
+import com.school.backend.common.enums.LateFeeType;
 import lombok.Data;
 
 @Data
@@ -15,13 +18,13 @@ public class FeeStructureDto {
     private String feeTypeName;
 
     private java.math.BigDecimal amount;
-    private com.school.backend.fee.enums.FeeFrequency frequency;
+    private FeeFrequency frequency;
 
     private Integer dueDayOfMonth;
-    private com.school.backend.fee.enums.LateFeeType lateFeeType;
+    private LateFeeType lateFeeType;
     private java.math.BigDecimal lateFeeAmountValue;
     private Integer lateFeeGraceDays;
-    private com.school.backend.fee.enums.LateFeeCapType lateFeeCapType;
+    private LateFeeCapType lateFeeCapType;
     private java.math.BigDecimal lateFeeCapValue;
 
     private boolean active;

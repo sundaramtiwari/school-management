@@ -1,13 +1,12 @@
 package com.school.backend.fee.service;
 
 import com.school.backend.fee.entity.StudentFundingArrangement;
-import com.school.backend.fee.enums.FundingCoverageMode;
-import com.school.backend.fee.enums.FundingCoverageType;
+import com.school.backend.common.enums.FundingCoverageMode;
+import com.school.backend.common.enums.FundingCoverageType;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
 
 import java.math.BigDecimal;
-import java.math.RoundingMode;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
 

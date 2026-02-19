@@ -1,6 +1,6 @@
-package com.school.backend.student.dto;
+package com.school.backend.core.student.dto;
 
-import com.school.backend.student.enums.PromotionType;
+import com.school.backend.common.enums.PromotionType;
 import jakarta.validation.constraints.NotEmpty;
 import jakarta.validation.constraints.NotNull;
 import lombok.Data;

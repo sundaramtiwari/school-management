@@ -1,6 +1,7 @@
 package com.school.backend.fee;
 
 import com.school.backend.common.BaseAuthenticatedIntegrationTest;
+import com.school.backend.common.enums.FeeFrequency;
 import com.school.backend.common.enums.Gender;
 import com.school.backend.core.guardian.dto.GuardianCreateRequest;
 import com.school.backend.core.student.dto.StudentCreateRequest;
@@ -142,7 +143,7 @@ public class FeeFlowIntegrationTest extends BaseAuthenticatedIntegrationTest {
         fsReq.setSessionId(session2025Id);
         fsReq.setFeeTypeId(feeTypeId);
         fsReq.setAmount(java.math.BigDecimal.valueOf(12000));
-        fsReq.setFrequency(com.school.backend.fee.enums.FeeFrequency.ONE_TIME);
+        fsReq.setFrequency(FeeFrequency.ONE_TIME);
 
         HttpEntity<FeeStructureCreateRequest> fsEntity = new HttpEntity<>(fsReq, headers);
 

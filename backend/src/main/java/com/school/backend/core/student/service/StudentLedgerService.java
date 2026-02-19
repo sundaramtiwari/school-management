@@ -1,4 +1,4 @@
-package com.school.backend.student.service;
+package com.school.backend.core.student.service;
 
 import com.school.backend.common.exception.ResourceNotFoundException;
 import com.school.backend.core.student.repository.StudentRepository;
@@ -6,7 +6,7 @@ import com.school.backend.fee.repository.FeePaymentRepository;
 import com.school.backend.fee.repository.StudentFeeAssignmentRepository;
 import com.school.backend.school.entity.AcademicSession;
 import com.school.backend.school.repository.AcademicSessionRepository;
-import com.school.backend.student.dto.LedgerSummaryDto;
+import com.school.backend.core.student.dto.LedgerSummaryDto;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Service;

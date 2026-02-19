@@ -8,7 +8,7 @@ import com.school.backend.core.student.entity.StudentEnrollment;
 import com.school.backend.fee.dto.*;
 import com.school.backend.fee.entity.FeePayment;
 import com.school.backend.fee.entity.FeeType;
-import com.school.backend.fee.enums.FeeFrequency;
+import com.school.backend.common.enums.FeeFrequency;
 import com.school.backend.school.entity.School;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
