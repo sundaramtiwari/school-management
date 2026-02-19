@@ -20,6 +20,7 @@ import org.springframework.data.domain.Pageable;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
+import java.math.BigDecimal;
 import java.time.LocalDate;
 import java.time.Month;
 import java.time.temporal.ChronoUnit;
@@ -51,10 +52,10 @@ public class FeeSummaryService {
                 }
 
                 // 1. Today's Collection
-                java.math.BigDecimal todayPaid = paymentRepository
+                BigDecimal todayPaid = paymentRepository
                                 .sumTotalPaidBySchoolIdAndPaymentDate(schoolId, LocalDate.now());
 
-                java.math.BigDecimal todayCollection = todayPaid != null ? todayPaid : java.math.BigDecimal.ZERO;
+                BigDecimal todayCollection = todayPaid != null ? todayPaid : java.math.BigDecimal.ZERO;
 
                 // 2. Total Students (SESSION AWARE)
                 long totalStudents = enrollmentRepository
@@ -153,32 +154,75 @@ public class FeeSummaryService {
                 Student student = studentRepository.findByIdAndSchoolId(studentId, schoolId)
                                 .orElseThrow(() -> new ResourceNotFoundException("Student not found: " + studentId));
 
-                List<AcademicSession> sessions = sessionRepository.findBySchoolId(schoolId);
+                // Single aggregation query for all sessions
+                List<Object[]> sessionStats = assignmentRepository
+                                .sumFinancialSummaryByStudentGroupedBySession(studentId);
+
+                // Fetch session names for mapping
+                java.util.Map<Long, String> sessionNames = sessionRepository.findBySchoolId(schoolId).stream()
+                                .collect(java.util.stream.Collectors.toMap(AcademicSession::getId,
+                                                AcademicSession::getName));
+
                 List<FeeSummaryDto> sessionSummaries = new ArrayList<>();
 
-                for (AcademicSession session : sessions) {
-                        try {
-                                FeeSummaryDto summary = getStudentFeeSummary(studentId, session.getId());
-                                if (summary.getTotalFee().compareTo(java.math.BigDecimal.ZERO) > 0 ||
-                                                summary.getTotalPaid().compareTo(java.math.BigDecimal.ZERO) > 0) {
-                                        sessionSummaries.add(summary);
-                                }
-                        } catch (Exception e) {
-                                // Ignore sessions with no assignments
+                for (Object[] stats : sessionStats) {
+                        Long sessionId = (stats[0] instanceof Number) ? ((Number) stats[0]).longValue() : null;
+                        if (sessionId == null)
+                                continue;
+
+                        BigDecimal totalFee = toBigDecimal(stats[1]);
+                        BigDecimal totalDiscount = toBigDecimal(stats[2]);
+                        BigDecimal totalSponsor = toBigDecimal(stats[3]);
+                        BigDecimal totalLateFeeAccrued = toBigDecimal(stats[4]);
+                        BigDecimal totalLateFeePaid = toBigDecimal(stats[5]);
+                        BigDecimal totalLateFeeWaived = toBigDecimal(stats[6]);
+                        BigDecimal totalPrincipalPaid = toBigDecimal(stats[7]);
+
+                        String sessionName = sessionNames.getOrDefault(sessionId, "Unknown Session " + sessionId);
+
+                        FeeSummaryDto summary = new FeeSummaryDto();
+                        summary.setStudentId(studentId);
+                        summary.setStudentName(student.getFirstName() + " " +
+                                        (student.getLastName() != null ? student.getLastName() : ""));
+                        summary.setSession(sessionName);
+                        summary.setTotalFee(totalFee.setScale(2, java.math.RoundingMode.HALF_UP));
+
+                        // Total Paid = Principal Paid + Late Fee Paid
+                        BigDecimal sessionTotalPaid = totalPrincipalPaid.add(totalLateFeePaid);
+                        summary.setTotalPaid(sessionTotalPaid.setScale(2, java.math.RoundingMode.HALF_UP));
+
+                        summary.setTotalLateFeeAccrued(totalLateFeeAccrued.setScale(2, java.math.RoundingMode.HALF_UP));
+                        summary.setTotalLateFeePaid(totalLateFeePaid.setScale(2, java.math.RoundingMode.HALF_UP));
+
+                        // Pending = (Gross Fee - Discount - Sponsor) + Accrued Late Fee - (Waived Late
+                        // Fee + Paid Principal + Paid Late Fee)
+                        // Actually: Pending = (Gross - Discount - Sponsor - PrincipalPaid) + (Accrued -
+                        // Waived - PaidLateFee)
+                        BigDecimal netPrincipal = totalFee.subtract(totalDiscount).subtract(totalSponsor);
+                        BigDecimal netLateFee = totalLateFeeAccrued.subtract(totalLateFeeWaived);
+
+                        BigDecimal pending = netPrincipal.subtract(totalPrincipalPaid)
+                                        .add(netLateFee.subtract(totalLateFeePaid));
+
+                        if (pending.compareTo(BigDecimal.ZERO) < 0) {
+                                pending = BigDecimal.ZERO;
                         }
+
+                        summary.setPendingFee(pending.setScale(2, java.math.RoundingMode.HALF_UP));
+                        summary.setFeePending(pending.compareTo(BigDecimal.ZERO) > 0);
+
+                        sessionSummaries.add(summary);
                 }
 
-                java.math.BigDecimal grandTotalFee = sessionSummaries.stream()
+                BigDecimal grandTotalFee = sessionSummaries.stream()
                                 .map(FeeSummaryDto::getTotalFee)
-                                .reduce(java.math.BigDecimal.ZERO, java.math.BigDecimal::add);
-
-                java.math.BigDecimal grandTotalPaid = sessionSummaries.stream()
+                                .reduce(BigDecimal.ZERO, BigDecimal::add);
+                BigDecimal grandTotalPaid = sessionSummaries.stream()
                                 .map(FeeSummaryDto::getTotalPaid)
-                                .reduce(java.math.BigDecimal.ZERO, java.math.BigDecimal::add);
-
-                java.math.BigDecimal grandTotalPending = sessionSummaries.stream()
+                                .reduce(BigDecimal.ZERO, BigDecimal::add);
+                BigDecimal grandTotalPending = sessionSummaries.stream()
                                 .map(FeeSummaryDto::getPendingFee)
-                                .reduce(java.math.BigDecimal.ZERO, java.math.BigDecimal::add);
+                                .reduce(BigDecimal.ZERO, BigDecimal::add);
 
                 return StudentLedgerDto.builder()
                                 .studentId(studentId)
@@ -189,6 +233,14 @@ public class FeeSummaryService {
                                 .grandTotalPaid(grandTotalPaid.setScale(2, java.math.RoundingMode.HALF_UP))
                                 .grandTotalPending(grandTotalPending.setScale(2, java.math.RoundingMode.HALF_UP))
                                 .build();
+        }
+
+        private BigDecimal toBigDecimal(Object val) {
+                if (val == null)
+                        return BigDecimal.ZERO;
+                if (val instanceof BigDecimal)
+                        return (BigDecimal) val;
+                return new BigDecimal(val.toString());
         }
 
         private java.math.BigDecimal nz(java.math.BigDecimal value) {

@@ -64,7 +64,7 @@ export default function TransportEnrollmentPage() {
 
     async function onClassChange(e: ChangeEvent<HTMLSelectElement>) {
         const clsId = e.target.value;
-        setSelectedClass(clsId);
+        setSelectedClass(clsId ? Number(clsId) : "");
         if (clsId && currentSession) {
             try {
                 setLoading(true);
@@ -110,7 +110,7 @@ export default function TransportEnrollmentPage() {
 
     async function onRouteSelectChange(e: ChangeEvent<HTMLSelectElement>) {
         const routeId = e.target.value;
-        setSelectedRouteId(routeId);
+        setSelectedRouteId(routeId ? Number(routeId) : "");
         setSelectedPickupId("");
         if (routeId) {
             try {
