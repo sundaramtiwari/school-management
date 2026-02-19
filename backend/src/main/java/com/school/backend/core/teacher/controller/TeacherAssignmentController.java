@@ -1,5 +1,6 @@
 package com.school.backend.core.teacher.controller;
 
+import com.school.backend.core.teacher.dto.TeacherAssignmentListItemDto;
 import com.school.backend.core.teacher.dto.TeacherAssignmentRequest;
 import com.school.backend.core.teacher.entity.TeacherAssignment;
 import com.school.backend.core.teacher.service.TeacherAssignmentService;
@@ -28,6 +29,12 @@ public class TeacherAssignmentController {
     public ResponseEntity<Void> deactivateAssignment(@PathVariable Long id) {
         service.deactivateAssignment(id);
         return ResponseEntity.noContent().build();
+    }
+
+    @GetMapping("/teacher-assignments")
+    @PreAuthorize("hasAnyRole('SCHOOL_ADMIN', 'PLATFORM_ADMIN', 'SUPER_ADMIN')")
+    public List<TeacherAssignmentListItemDto> listAssignments(@RequestParam Long sessionId) {
+        return service.listBySession(sessionId);
     }
 
     @GetMapping("/teachers/{id}/assignments")

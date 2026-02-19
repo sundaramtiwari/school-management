@@ -10,6 +10,7 @@ import com.school.backend.core.teacher.entity.Teacher;
 import com.school.backend.core.teacher.repository.TeacherRepository;
 import com.school.backend.school.entity.AcademicSession;
 import com.school.backend.school.repository.AcademicSessionRepository;
+import com.school.backend.core.teacher.dto.TeacherAssignmentListItemDto;
 import com.school.backend.core.teacher.entity.TeacherAssignment;
 import com.school.backend.core.teacher.repository.TeacherAssignmentRepository;
 import com.school.backend.user.security.SecurityUtil;
@@ -19,6 +20,7 @@ import org.springframework.transaction.annotation.Transactional;
 
 import java.time.LocalDateTime;
 import java.util.List;
+import java.util.stream.Collectors;
 
 @Service
 @RequiredArgsConstructor
@@ -97,6 +99,30 @@ public class TeacherAssignmentService {
     @Transactional(readOnly = true)
     public List<TeacherAssignment> getTeacherAssignments(Long teacherId, Long sessionId) {
         return repository.findByTeacherIdAndSessionIdAndActiveTrue(teacherId, sessionId);
+    }
+
+    @Transactional(readOnly = true)
+    public List<TeacherAssignmentListItemDto> listBySession(Long sessionId) {
+        Long schoolId = SecurityUtil.schoolId();
+        List<TeacherAssignment> assignments = repository.findBySessionIdAndActiveTrue(sessionId);
+        return assignments.stream()
+                .filter(a -> a.getSchoolId().equals(schoolId))
+                .map(this::toListItemDto)
+                .collect(Collectors.toList());
+    }
+
+    private TeacherAssignmentListItemDto toListItemDto(TeacherAssignment a) {
+        TeacherAssignmentListItemDto dto = new TeacherAssignmentListItemDto();
+        dto.setId(a.getId());
+        dto.setTeacherName(a.getTeacher() != null && a.getTeacher().getUser() != null
+                ? a.getTeacher().getUser().getFullName() : "");
+        dto.setClassName(a.getSchoolClass() != null
+                ? a.getSchoolClass().getName() + (a.getSchoolClass().getSection() != null ? " " + a.getSchoolClass().getSection() : "")
+                : "");
+        dto.setSubjectName(a.getSubject() != null ? a.getSubject().getName() : "");
+        dto.setSessionName(a.getSession() != null ? a.getSession().getName() : "");
+        dto.setStatus("Active");
+        return dto;
     }
 
     /**
