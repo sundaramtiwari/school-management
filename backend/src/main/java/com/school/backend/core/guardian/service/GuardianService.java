@@ -2,12 +2,13 @@ package com.school.backend.core.guardian.service;
 
 import com.school.backend.common.exception.ResourceNotFoundException;
 import com.school.backend.common.tenant.TenantContext;
-import com.school.backend.core.guardian.dto.GuardianRequest;
+import com.school.backend.core.guardian.dto.GuardianCreateRequest;
 import com.school.backend.core.guardian.dto.GuardianDto;
 import com.school.backend.core.guardian.entity.Guardian;
 import com.school.backend.core.guardian.mapper.GuardianMapper;
 import com.school.backend.core.guardian.repository.GuardianRepository;
 import lombok.RequiredArgsConstructor;
+import org.jspecify.annotations.NonNull;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
 import org.springframework.stereotype.Service;
@@ -22,28 +23,33 @@ public class GuardianService {
     private final GuardianRepository repository;
     private final GuardianMapper mapper;
 
+    private static @NonNull Guardian getGuardian(GuardianCreateRequest req, Optional<Guardian> existing) {
+        Guardian g = existing.get();
+        // Update details only if they are null in DB and provided in request
+        if (g.getName() == null && req.getName() != null)
+            g.setName(req.getName());
+        if (g.getEmail() == null && req.getEmail() != null)
+            g.setEmail(req.getEmail());
+        if (g.getAddress() == null && req.getAddress() != null)
+            g.setAddress(req.getAddress());
+        if (g.getOccupation() == null && req.getOccupation() != null)
+            g.setOccupation(req.getOccupation());
+        if (g.getQualification() == null && req.getQualification() != null)
+            g.setQualification(req.getQualification());
+        if (g.getAadharNumber() == null && req.getAadharNumber() != null)
+            g.setAadharNumber(req.getAadharNumber());
+
+        if (req.isWhatsappEnabled())
+            g.setWhatsappEnabled(true);
+        return g;
+    }
+
     @Transactional
-    public Guardian findOrCreateByContact(Long schoolId, GuardianRequest req) {
+    public Guardian findOrCreateByContact(Long schoolId, GuardianCreateRequest req) {
         Optional<Guardian> existing = repository.findBySchoolIdAndContactNumber(schoolId, req.getContactNumber());
 
         if (existing.isPresent()) {
-            Guardian g = existing.get();
-            // Update details only if they are null in DB and provided in request
-            if (g.getName() == null && req.getName() != null)
-                g.setName(req.getName());
-            if (g.getEmail() == null && req.getEmail() != null)
-                g.setEmail(req.getEmail());
-            if (g.getAddress() == null && req.getAddress() != null)
-                g.setAddress(req.getAddress());
-            if (g.getOccupation() == null && req.getOccupation() != null)
-                g.setOccupation(req.getOccupation());
-            if (g.getQualification() == null && req.getQualification() != null)
-                g.setQualification(req.getQualification());
-            if (g.getAadharNumber() == null && req.getAadharNumber() != null)
-                g.setAadharNumber(req.getAadharNumber());
-
-            if (req.isWhatsappEnabled())
-                g.setWhatsappEnabled(true);
+            Guardian g = getGuardian(req, existing);
 
             return repository.save(g);
         }
@@ -65,7 +71,7 @@ public class GuardianService {
     }
 
     @Transactional
-    public GuardianDto create(GuardianRequest req) {
+    public GuardianDto create(GuardianCreateRequest req) {
         return mapper.toDto(findOrCreateByContact(TenantContext.getSchoolId(), req));
     }
 

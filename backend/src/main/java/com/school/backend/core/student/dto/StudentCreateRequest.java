@@ -1,13 +1,13 @@
 package com.school.backend.core.student.dto;
 
 import com.school.backend.common.enums.Gender;
+import com.school.backend.core.guardian.dto.GuardianCreateRequest;
 import jakarta.validation.constraints.NotBlank;
 import jakarta.validation.constraints.NotNull;
 import lombok.Data;
 
 import java.time.LocalDate;
 import java.util.List;
-import com.school.backend.core.guardian.dto.GuardianRequest;
 
 @Data
 public class StudentCreateRequest {
@@ -46,5 +46,5 @@ public class StudentCreateRequest {
 
     private Long schoolId;
 
-    private List<GuardianRequest> guardians;
+    private List<GuardianCreateRequest> guardians;
 }

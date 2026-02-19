@@ -1,6 +1,6 @@
 package com.school.backend.core.guardian.mapper;
 
-import com.school.backend.core.guardian.dto.GuardianRequest;
+import com.school.backend.core.guardian.dto.GuardianCreateRequest;
 import com.school.backend.core.guardian.dto.GuardianDto;
 import com.school.backend.core.guardian.entity.Guardian;
 import org.springframework.stereotype.Component;
@@ -29,7 +29,7 @@ public class GuardianMapperImpl implements GuardianMapper {
     }
 
     @Override
-    public Guardian toEntity(GuardianRequest dto) {
+    public Guardian toEntity(GuardianCreateRequest dto) {
         if (dto == null)
             return null;
         Guardian entity = new Guardian();

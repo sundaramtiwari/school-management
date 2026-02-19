@@ -5,7 +5,7 @@ import com.school.backend.common.tenant.SessionContext;
 import com.school.backend.common.tenant.TenantContext;
 import com.school.backend.core.classsubject.entity.SchoolClass;
 import com.school.backend.core.classsubject.repository.SchoolClassRepository;
-import com.school.backend.core.guardian.dto.GuardianRequest;
+import com.school.backend.core.guardian.dto.GuardianCreateRequest;
 import com.school.backend.core.guardian.entity.Guardian;
 import com.school.backend.core.guardian.repository.GuardianRepository;
 import com.school.backend.core.student.dto.StudentCreateRequest;
@@ -71,7 +71,7 @@ public class GuardianFlowIntegrationTest {
     @Test
     void testGuardianReuseForSiblings() {
         // 1. Create first student with a guardian
-        GuardianRequest fatherReq = GuardianRequest.builder()
+        GuardianCreateRequest fatherReq = GuardianCreateRequest.builder()
                 .name("Rajesh Sharma")
                 .contactNumber("9876543210")
                 .relation("FATHER")
@@ -117,13 +117,13 @@ public class GuardianFlowIntegrationTest {
 
     @Test
     void testPrimaryGuardianValidation() {
-        GuardianRequest g1 = GuardianRequest.builder()
+        GuardianCreateRequest g1 = GuardianCreateRequest.builder()
                 .name("G1")
                 .contactNumber("111")
                 .primaryGuardian(true)
                 .build();
 
-        GuardianRequest g2 = GuardianRequest.builder()
+        GuardianCreateRequest g2 = GuardianCreateRequest.builder()
                 .name("G2")
                 .contactNumber("222")
                 .primaryGuardian(true)

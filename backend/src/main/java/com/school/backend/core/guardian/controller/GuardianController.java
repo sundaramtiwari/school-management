@@ -2,9 +2,10 @@ package com.school.backend.core.guardian.controller;
 
 import com.school.backend.common.dto.PageResponse;
 import com.school.backend.common.dto.PageResponseMapper;
-import com.school.backend.core.guardian.dto.GuardianRequest;
+import com.school.backend.core.guardian.dto.GuardianCreateRequest;
 import com.school.backend.core.guardian.dto.GuardianDto;
 import com.school.backend.core.guardian.service.GuardianService;
+import com.school.backend.user.security.SecurityUtil;
 import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
 import org.springframework.data.domain.Page;
@@ -13,7 +14,6 @@ import org.springframework.data.domain.Pageable;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.web.bind.annotation.*;
-import com.school.backend.user.security.SecurityUtil;
 
 @RestController
 @RequestMapping("/api/guardians")
@@ -24,7 +24,7 @@ public class GuardianController {
 
     @PostMapping
     @PreAuthorize("hasAnyRole('SCHOOL_ADMIN', 'TEACHER', 'SUPER_ADMIN')")
-    public ResponseEntity<GuardianDto> create(@Valid @RequestBody GuardianRequest req) {
+    public ResponseEntity<GuardianDto> create(@Valid @RequestBody GuardianCreateRequest req) {
         return ResponseEntity.ok(service.create(req));
     }
 

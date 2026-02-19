@@ -4,7 +4,7 @@ import com.school.backend.common.BaseAuthenticatedIntegrationTest;
 import com.school.backend.core.classsubject.dto.SchoolClassCreateRequest;
 import com.school.backend.core.classsubject.dto.SchoolClassDto;
 import com.school.backend.core.classsubject.repository.SchoolClassRepository;
-import com.school.backend.core.guardian.dto.GuardianRequest;
+import com.school.backend.core.guardian.dto.GuardianCreateRequest;
 import com.school.backend.core.student.dto.*;
 import com.school.backend.core.student.repository.PromotionRecordRepository;
 import com.school.backend.core.student.repository.StudentEnrollmentRepository;
@@ -310,7 +310,7 @@ public class PromotionFlowIntegrationTest extends BaseAuthenticatedIntegrationTe
         req.setDob(LocalDate.of(2015, 1, 1));
         req.setGender(MALE);
         req.setAdmissionNumber("name" + System.currentTimeMillis());
-        req.setGuardians(List.of(GuardianRequest.builder()
+        req.setGuardians(List.of(GuardianCreateRequest.builder()
                 .name("Promotion Guardian")
                 .contactNumber("7766554433")
                 .relation("FATHER")

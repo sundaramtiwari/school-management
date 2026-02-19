@@ -3,7 +3,7 @@ package com.school.backend.core.student;
 import com.school.backend.common.BaseAuthenticatedIntegrationTest;
 import com.school.backend.common.dto.PageResponse;
 import com.school.backend.common.enums.Gender;
-import com.school.backend.core.guardian.dto.GuardianRequest;
+import com.school.backend.core.guardian.dto.GuardianCreateRequest;
 import com.school.backend.core.student.dto.*;
 import com.school.backend.fee.dto.*;
 import com.school.backend.fee.entity.FeeType;
@@ -24,361 +24,361 @@ import java.util.Objects;
 
 public class StudentFlowIntegrationTest extends BaseAuthenticatedIntegrationTest {
 
-        private Long schoolId;
-        private Long classId;
-        private Long studentId;
-        private Long feeStructureId;
-        private Long feeTypeId;
-        private Long session2025Id;
+    private Long schoolId;
+    private Long classId;
+    private Long studentId;
+    private Long feeStructureId;
+    private Long feeTypeId;
+    private Long session2025Id;
 
-        @Test
-        void student_register_enroll_promote_flow() {
+    @Test
+    void student_register_enroll_promote_flow() {
 
-                // ---------- Create School ----------
+        // ---------- Create School ----------
 
-                Map<String, Object> schoolReq = Map.of(
-                                "name", "Student Module School",
-                                "displayName", "SMS",
-                                "board", "CBSE",
-                                "schoolCode", "SMS-2025",
-                                "contactEmail", "sms@example.com",
-                                "city", "Varanasi",
-                                "state", "Uttar Pradesh");
+        Map<String, Object> schoolReq = Map.of(
+                "name", "Student Module School",
+                "displayName", "SMS",
+                "board", "CBSE",
+                "schoolCode", "SMS-2025",
+                "contactEmail", "sms@example.com",
+                "city", "Varanasi",
+                "state", "Uttar Pradesh");
 
-                HttpEntity<Map<String, Object>> schoolEntity = new HttpEntity<>(schoolReq, headers);
+        HttpEntity<Map<String, Object>> schoolEntity = new HttpEntity<>(schoolReq, headers);
 
-                ResponseEntity<School> schoolResp = restTemplate.exchange(
-                                "/api/schools",
-                                HttpMethod.POST,
-                                schoolEntity,
-                                School.class);
+        ResponseEntity<School> schoolResp = restTemplate.exchange(
+                "/api/schools",
+                HttpMethod.POST,
+                schoolEntity,
+                School.class);
 
-                Assertions.assertThat(schoolResp.getStatusCode())
-                                .isEqualTo(HttpStatus.CREATED);
+        Assertions.assertThat(schoolResp.getStatusCode())
+                .isEqualTo(HttpStatus.CREATED);
 
-                schoolId = Objects.requireNonNull(schoolResp.getBody()).getId();
+        schoolId = Objects.requireNonNull(schoolResp.getBody()).getId();
 
-                // LOGIN AS SCHOOL ADMIN NOW
-                loginAsSchoolAdmin(schoolId);
+        // LOGIN AS SCHOOL ADMIN NOW
+        loginAsSchoolAdmin(schoolId);
 
-                // Create Session
-                session2025Id = setupSession(schoolId, sessionRepository, schoolRepository);
-                setSessionHeader(session2025Id);
+        // Create Session
+        session2025Id = setupSession(schoolId, sessionRepository, schoolRepository);
+        setSessionHeader(session2025Id);
 
-                // ---------- Create Class ----------
+        // ---------- Create Class ----------
 
-                Map<String, Object> classReq = Map.of("name", "1",
-                                "sessionId", session2025Id,
-                                "schoolId", schoolId);
+        Map<String, Object> classReq = Map.of("name", "1",
+                "sessionId", session2025Id,
+                "schoolId", schoolId);
 
-                HttpEntity<Map<String, Object>> classEntity = new HttpEntity<>(classReq, headers);
+        HttpEntity<Map<String, Object>> classEntity = new HttpEntity<>(classReq, headers);
 
-                ResponseEntity<Map<String, Object>> classResp = restTemplate.exchange(
-                                "/api/classes",
-                                HttpMethod.POST,
-                                classEntity,
-                                new ParameterizedTypeReference<>() {
-                                });
+        ResponseEntity<Map<String, Object>> classResp = restTemplate.exchange(
+                "/api/classes",
+                HttpMethod.POST,
+                classEntity,
+                new ParameterizedTypeReference<>() {
+                });
 
-                Assertions.assertThat(classResp.getStatusCode())
-                                .isEqualTo(HttpStatus.OK);
+        Assertions.assertThat(classResp.getStatusCode())
+                .isEqualTo(HttpStatus.OK);
 
-                classId = Long.valueOf(
-                                String.valueOf(Objects.requireNonNull(classResp.getBody()).get("id")));
+        classId = Long.valueOf(
+                String.valueOf(Objects.requireNonNull(classResp.getBody()).get("id")));
 
-                // ---------- Register Student ----------
+        // ---------- Register Student ----------
 
-                StudentCreateRequest sreq = new StudentCreateRequest();
+        StudentCreateRequest sreq = new StudentCreateRequest();
 
-                sreq.setAdmissionNumber("ADM-100");
-                sreq.setFirstName("Test");
-                sreq.setGender(Gender.MALE);
-                sreq.setGuardians(List.of(GuardianRequest.builder()
-                                .name("Test Guardian")
-                                .contactNumber("9988776655")
-                                .relation("FATHER")
-                                .primaryGuardian(true)
-                                .build()));
+        sreq.setAdmissionNumber("ADM-100");
+        sreq.setFirstName("Test");
+        sreq.setGender(Gender.MALE);
+        sreq.setGuardians(List.of(GuardianCreateRequest.builder()
+                .name("Test Guardian")
+                .contactNumber("9988776655")
+                .relation("FATHER")
+                .primaryGuardian(true)
+                .build()));
 
-                HttpEntity<StudentCreateRequest> studentEntity = new HttpEntity<>(sreq, headers);
+        HttpEntity<StudentCreateRequest> studentEntity = new HttpEntity<>(sreq, headers);
 
-                ResponseEntity<StudentDto> sResp = restTemplate.exchange(
-                                "/api/students",
-                                HttpMethod.POST,
-                                studentEntity,
-                                StudentDto.class);
+        ResponseEntity<StudentDto> sResp = restTemplate.exchange(
+                "/api/students",
+                HttpMethod.POST,
+                studentEntity,
+                StudentDto.class);
 
-                Assertions.assertThat(sResp.getStatusCode())
-                                .isEqualTo(HttpStatus.OK);
+        Assertions.assertThat(sResp.getStatusCode())
+                .isEqualTo(HttpStatus.OK);
 
-                studentId = Objects.requireNonNull(sResp.getBody()).getId();
+        studentId = Objects.requireNonNull(sResp.getBody()).getId();
 
-                // ---------- Enroll Student ----------
+        // ---------- Enroll Student ----------
 
-                StudentEnrollmentRequest er = new StudentEnrollmentRequest();
+        StudentEnrollmentRequest er = new StudentEnrollmentRequest();
 
-                er.setStudentId(studentId);
-                er.setClassId(classId);
-                er.setSessionId(session2025Id);
+        er.setStudentId(studentId);
+        er.setClassId(classId);
+        er.setSessionId(session2025Id);
 
-                HttpEntity<StudentEnrollmentRequest> enrollEntity = new HttpEntity<>(er, headers);
+        HttpEntity<StudentEnrollmentRequest> enrollEntity = new HttpEntity<>(er, headers);
 
-                ResponseEntity<StudentEnrollmentDto> enrollResp = restTemplate.exchange(
-                                "/api/enrollments",
-                                HttpMethod.POST,
-                                enrollEntity,
-                                StudentEnrollmentDto.class);
+        ResponseEntity<StudentEnrollmentDto> enrollResp = restTemplate.exchange(
+                "/api/enrollments",
+                HttpMethod.POST,
+                enrollEntity,
+                StudentEnrollmentDto.class);
 
-                Assertions.assertThat(enrollResp.getStatusCode())
-                                .isEqualTo(HttpStatus.OK);
+        Assertions.assertThat(enrollResp.getStatusCode())
+                .isEqualTo(HttpStatus.OK);
 
-                // ---------- Fee Setup ----------
+        // ---------- Fee Setup ----------
 
-                FeeType type = new FeeType();
-                type.setName("TUITION");
+        FeeType type = new FeeType();
+        type.setName("TUITION");
 
-                HttpEntity<FeeType> typeEntity = new HttpEntity<>(type, headers);
+        HttpEntity<FeeType> typeEntity = new HttpEntity<>(type, headers);
 
-                ResponseEntity<FeeType> typeResp = restTemplate.exchange(
-                                "/api/fees/types",
-                                HttpMethod.POST,
-                                typeEntity,
-                                FeeType.class);
+        ResponseEntity<FeeType> typeResp = restTemplate.exchange(
+                "/api/fees/types",
+                HttpMethod.POST,
+                typeEntity,
+                FeeType.class);
 
-                feeTypeId = Objects.requireNonNull(typeResp.getBody()).getId();
+        feeTypeId = Objects.requireNonNull(typeResp.getBody()).getId();
 
-                FeeStructureCreateRequest fsReq = new FeeStructureCreateRequest();
+        FeeStructureCreateRequest fsReq = new FeeStructureCreateRequest();
 
-                fsReq.setClassId(classId);
-                fsReq.setSessionId(session2025Id);
-                fsReq.setFeeTypeId(feeTypeId);
-                fsReq.setAmount(java.math.BigDecimal.valueOf(10000));
-                fsReq.setFrequency(com.school.backend.fee.enums.FeeFrequency.ONE_TIME);
-                fsReq.setFrequency(com.school.backend.fee.enums.FeeFrequency.ONE_TIME);
+        fsReq.setClassId(classId);
+        fsReq.setSessionId(session2025Id);
+        fsReq.setFeeTypeId(feeTypeId);
+        fsReq.setAmount(java.math.BigDecimal.valueOf(10000));
+        fsReq.setFrequency(com.school.backend.fee.enums.FeeFrequency.ONE_TIME);
+        fsReq.setFrequency(com.school.backend.fee.enums.FeeFrequency.ONE_TIME);
 
-                HttpEntity<FeeStructureCreateRequest> fsEntity = new HttpEntity<>(fsReq, headers);
+        HttpEntity<FeeStructureCreateRequest> fsEntity = new HttpEntity<>(fsReq, headers);
 
-                ResponseEntity<FeeStructureDto> fsResp = restTemplate.exchange(
-                                "/api/fees/structures",
-                                HttpMethod.POST,
-                                fsEntity,
-                                FeeStructureDto.class);
+        ResponseEntity<FeeStructureDto> fsResp = restTemplate.exchange(
+                "/api/fees/structures",
+                HttpMethod.POST,
+                fsEntity,
+                FeeStructureDto.class);
 
-                feeStructureId = Objects.requireNonNull(fsResp.getBody()).getId();
+        feeStructureId = Objects.requireNonNull(fsResp.getBody()).getId();
 
-                StudentFeeAssignRequest assignReq = new StudentFeeAssignRequest();
+        StudentFeeAssignRequest assignReq = new StudentFeeAssignRequest();
 
-                assignReq.setStudentId(studentId);
-                assignReq.setFeeStructureId(feeStructureId);
-                assignReq.setSessionId(session2025Id);
+        assignReq.setStudentId(studentId);
+        assignReq.setFeeStructureId(feeStructureId);
+        assignReq.setSessionId(session2025Id);
 
-                HttpEntity<StudentFeeAssignRequest> assignEntity = new HttpEntity<>(assignReq, headers);
+        HttpEntity<StudentFeeAssignRequest> assignEntity = new HttpEntity<>(assignReq, headers);
 
-                restTemplate.exchange(
-                                "/api/fees/assignments",
-                                HttpMethod.POST,
-                                assignEntity,
-                                StudentFeeAssignmentDto.class);
+        restTemplate.exchange(
+                "/api/fees/assignments",
+                HttpMethod.POST,
+                assignEntity,
+                StudentFeeAssignmentDto.class);
 
-                FeePaymentRequest payReq = new FeePaymentRequest();
+        FeePaymentRequest payReq = new FeePaymentRequest();
 
-                payReq.setStudentId(studentId);
-                payReq.setSessionId(session2025Id);
-                payReq.setAmountPaid(java.math.BigDecimal.valueOf(10000));
-                payReq.setMode("CASH");
+        payReq.setStudentId(studentId);
+        payReq.setSessionId(session2025Id);
+        payReq.setAmountPaid(java.math.BigDecimal.valueOf(10000));
+        payReq.setMode("CASH");
 
-                HttpEntity<FeePaymentRequest> payEntity = new HttpEntity<>(payReq, headers);
+        HttpEntity<FeePaymentRequest> payEntity = new HttpEntity<>(payReq, headers);
 
-                restTemplate.exchange(
-                                "/api/fees/payments",
-                                HttpMethod.POST,
-                                payEntity,
-                                FeePaymentDto.class);
+        restTemplate.exchange(
+                "/api/fees/payments",
+                HttpMethod.POST,
+                payEntity,
+                FeePaymentDto.class);
 
-                // ---------- Promote ----------
+        // ---------- Promote ----------
 
-                PromotionRequest pr = new PromotionRequest();
+        PromotionRequest pr = new PromotionRequest();
 
-                pr.setToClassId(classId);
-                pr.setToSection("B");
-                pr.setSessionId(session2025Id);
-                pr.setPromoted(true);
-                pr.setFeePending(false);
-                pr.setRemarks("Promoted successfully");
+        pr.setToClassId(classId);
+        pr.setToSection("B");
+        pr.setSessionId(session2025Id);
+        pr.setPromoted(true);
+        pr.setFeePending(false);
+        pr.setRemarks("Promoted successfully");
 
-                HttpEntity<PromotionRequest> promoteEntity = new HttpEntity<>(pr, headers);
+        HttpEntity<PromotionRequest> promoteEntity = new HttpEntity<>(pr, headers);
 
-                ResponseEntity<PromotionRecordDto> promoteRes = restTemplate.exchange(
-                                "/api/students/" + studentId + "/history/promote",
-                                HttpMethod.POST,
-                                promoteEntity,
-                                PromotionRecordDto.class);
+        ResponseEntity<PromotionRecordDto> promoteRes = restTemplate.exchange(
+                "/api/students/" + studentId + "/history/promote",
+                HttpMethod.POST,
+                promoteEntity,
+                PromotionRecordDto.class);
 
-                Assertions.assertThat(promoteRes.getStatusCode())
-                                .isEqualTo(HttpStatus.OK);
+        Assertions.assertThat(promoteRes.getStatusCode())
+                .isEqualTo(HttpStatus.OK);
 
-                // ---------- List Enrollments ----------
+        // ---------- List Enrollments ----------
 
-                HttpEntity<Void> listEntity = new HttpEntity<>(headers);
+        HttpEntity<Void> listEntity = new HttpEntity<>(headers);
 
-                ResponseEntity<PageResponse<StudentEnrollmentDto>> pageResp = restTemplate.exchange(
-                                "/api/enrollments/by-class/" + classId + "?page=0&size=10",
-                                HttpMethod.GET,
-                                listEntity,
-                                new ParameterizedTypeReference<>() {
-                                });
+        ResponseEntity<PageResponse<StudentEnrollmentDto>> pageResp = restTemplate.exchange(
+                "/api/enrollments/by-class/" + classId + "?page=0&size=10",
+                HttpMethod.GET,
+                listEntity,
+                new ParameterizedTypeReference<>() {
+                });
 
-                Assertions.assertThat(pageResp.getStatusCode())
-                                .isEqualTo(HttpStatus.OK);
+        Assertions.assertThat(pageResp.getStatusCode())
+                .isEqualTo(HttpStatus.OK);
 
-                Assertions.assertThat(Objects.requireNonNull(pageResp.getBody()).content())
-                                .isNotEmpty();
-        }
+        Assertions.assertThat(Objects.requireNonNull(pageResp.getBody()).content())
+                .isNotEmpty();
+    }
 
-        // ------------------------------------------------
+    // ------------------------------------------------
 
-        @Test
-        void student_update_profile_flow() {
+    @Test
+    void student_update_profile_flow() {
 
-                // ---------- Create School ----------
+        // ---------- Create School ----------
 
-                Map<String, Object> schoolReq = Map.of(
-                                "name", "Update Test School",
-                                "displayName", "UTS",
-                                "board", "CBSE",
-                                "schoolCode", "UTS-2025",
-                                "contactEmail", "uts@example.com",
-                                "city", "Varanasi",
-                                "state", "Uttar Pradesh");
+        Map<String, Object> schoolReq = Map.of(
+                "name", "Update Test School",
+                "displayName", "UTS",
+                "board", "CBSE",
+                "schoolCode", "UTS-2025",
+                "contactEmail", "uts@example.com",
+                "city", "Varanasi",
+                "state", "Uttar Pradesh");
 
-                HttpEntity<Map<String, Object>> schoolEntity = new HttpEntity<>(schoolReq, headers);
+        HttpEntity<Map<String, Object>> schoolEntity = new HttpEntity<>(schoolReq, headers);
 
-                ResponseEntity<School> schoolResp = restTemplate.exchange(
-                                "/api/schools",
-                                HttpMethod.POST,
-                                schoolEntity,
-                                School.class);
+        ResponseEntity<School> schoolResp = restTemplate.exchange(
+                "/api/schools",
+                HttpMethod.POST,
+                schoolEntity,
+                School.class);
 
-                Assertions.assertThat(schoolResp.getStatusCode())
-                                .isEqualTo(HttpStatus.CREATED);
+        Assertions.assertThat(schoolResp.getStatusCode())
+                .isEqualTo(HttpStatus.CREATED);
 
-                schoolId = Objects.requireNonNull(schoolResp.getBody()).getId();
+        schoolId = Objects.requireNonNull(schoolResp.getBody()).getId();
 
-                loginAsSchoolAdmin(schoolId);
-                // Create Session & Set Header
-                session2025Id = setupSession(schoolId, sessionRepository, schoolRepository);
-                setSessionHeader(session2025Id);
+        loginAsSchoolAdmin(schoolId);
+        // Create Session & Set Header
+        session2025Id = setupSession(schoolId, sessionRepository, schoolRepository);
+        setSessionHeader(session2025Id);
 
-                // Create dummy class
-                schoolClassRepository.save(com.school.backend.core.classsubject.entity.SchoolClass.builder()
-                                .name("1")
-                                .schoolId(schoolId)
-                                .sessionId(session2025Id)
-                                .active(true)
-                                .build());
+        // Create dummy class
+        schoolClassRepository.save(com.school.backend.core.classsubject.entity.SchoolClass.builder()
+                .name("1")
+                .schoolId(schoolId)
+                .sessionId(session2025Id)
+                .active(true)
+                .build());
 
-                // ---------- Create Student ----------
-                StudentCreateRequest createReq = new StudentCreateRequest();
+        // ---------- Create Student ----------
+        StudentCreateRequest createReq = new StudentCreateRequest();
 
-                createReq.setAdmissionNumber("ADM-200");
-                createReq.setFirstName("Rahul");
-                createReq.setLastName("Sharma");
-                createReq.setGender(Gender.MALE);
-                createReq.setGuardians(List.of(GuardianRequest.builder()
-                                .name("Rahul Guardian")
-                                .contactNumber("8877665544")
-                                .relation("MOTHER")
-                                .primaryGuardian(true)
-                                .build()));
+        createReq.setAdmissionNumber("ADM-200");
+        createReq.setFirstName("Rahul");
+        createReq.setLastName("Sharma");
+        createReq.setGender(Gender.MALE);
+        createReq.setGuardians(List.of(GuardianCreateRequest.builder()
+                .name("Rahul Guardian")
+                .contactNumber("8877665544")
+                .relation("MOTHER")
+                .primaryGuardian(true)
+                .build()));
 
-                HttpEntity<StudentCreateRequest> createEntity = new HttpEntity<>(createReq, headers);
+        HttpEntity<StudentCreateRequest> createEntity = new HttpEntity<>(createReq, headers);
 
-                ResponseEntity<StudentDto> createResp = restTemplate.exchange(
-                                "/api/students",
-                                HttpMethod.POST,
-                                createEntity,
-                                StudentDto.class);
+        ResponseEntity<StudentDto> createResp = restTemplate.exchange(
+                "/api/students",
+                HttpMethod.POST,
+                createEntity,
+                StudentDto.class);
 
-                Assertions.assertThat(createResp.getStatusCode())
-                                .isEqualTo(HttpStatus.OK);
+        Assertions.assertThat(createResp.getStatusCode())
+                .isEqualTo(HttpStatus.OK);
 
-                studentId = Objects.requireNonNull(createResp.getBody()).getId();
+        studentId = Objects.requireNonNull(createResp.getBody()).getId();
 
-                // ---------- Update Student ----------
+        // ---------- Update Student ----------
 
-                HttpEntity<StudentUpdateRequest> updateEntity = getStudentUpdateRequestHttpEntity();
+        HttpEntity<StudentUpdateRequest> updateEntity = getStudentUpdateRequestHttpEntity();
 
-                ResponseEntity<StudentDto> updateResp = restTemplate.exchange(
-                                "/api/students/" + studentId,
-                                HttpMethod.PUT,
-                                updateEntity,
-                                StudentDto.class);
+        ResponseEntity<StudentDto> updateResp = restTemplate.exchange(
+                "/api/students/" + studentId,
+                HttpMethod.PUT,
+                updateEntity,
+                StudentDto.class);
 
-                Assertions.assertThat(updateResp.getStatusCode())
-                                .isEqualTo(HttpStatus.OK);
+        Assertions.assertThat(updateResp.getStatusCode())
+                .isEqualTo(HttpStatus.OK);
 
-                // ---------- Fetch Student ----------
+        // ---------- Fetch Student ----------
 
-                HttpEntity<Void> getEntity = new HttpEntity<>(headers);
+        HttpEntity<Void> getEntity = new HttpEntity<>(headers);
 
-                ResponseEntity<StudentDto> getResp = restTemplate.exchange(
-                                "/api/students/" + studentId,
-                                HttpMethod.GET,
-                                getEntity,
-                                StudentDto.class);
+        ResponseEntity<StudentDto> getResp = restTemplate.exchange(
+                "/api/students/" + studentId,
+                HttpMethod.GET,
+                getEntity,
+                StudentDto.class);
 
-                Assertions.assertThat(getResp.getStatusCode())
-                                .isEqualTo(HttpStatus.OK);
+        Assertions.assertThat(getResp.getStatusCode())
+                .isEqualTo(HttpStatus.OK);
 
-                StudentDto updated = Objects.requireNonNull(getResp.getBody());
+        StudentDto updated = Objects.requireNonNull(getResp.getBody());
 
-                Assertions.assertThat(updated).isNotNull();
+        Assertions.assertThat(updated).isNotNull();
 
-                // ---------- Assertions ----------
+        // ---------- Assertions ----------
 
-                Assertions.assertThat(updated.getFirstName())
-                                .isEqualTo("Rahul Updated");
+        Assertions.assertThat(updated.getFirstName())
+                .isEqualTo("Rahul Updated");
 
-                Assertions.assertThat(updated.getContactNumber())
-                                .isEqualTo("9999999999");
+        Assertions.assertThat(updated.getContactNumber())
+                .isEqualTo("9999999999");
 
-                Assertions.assertThat(updated.getCity())
-                                .isEqualTo("Lucknow");
+        Assertions.assertThat(updated.getCity())
+                .isEqualTo("Lucknow");
 
-                Assertions.assertThat(updated.getPreviousSchoolName())
-                                .isEqualTo("ABC Public School");
+        Assertions.assertThat(updated.getPreviousSchoolName())
+                .isEqualTo("ABC Public School");
 
-                Assertions.assertThat(updated.getPreviousSchoolBoard())
-                                .isEqualTo("ICSE");
+        Assertions.assertThat(updated.getPreviousSchoolBoard())
+                .isEqualTo("ICSE");
 
-                Assertions.assertThat(updated.getPreviousClass())
-                                .isEqualTo("5");
+        Assertions.assertThat(updated.getPreviousClass())
+                .isEqualTo("5");
 
-                Assertions.assertThat(updated.getPreviousYearOfPassing())
-                                .isEqualTo(2023);
+        Assertions.assertThat(updated.getPreviousYearOfPassing())
+                .isEqualTo(2023);
 
-                Assertions.assertThat(updated.getTransferCertificateNumber())
-                                .isEqualTo("TC-12345");
-        }
+        Assertions.assertThat(updated.getTransferCertificateNumber())
+                .isEqualTo("TC-12345");
+    }
 
-        private @NonNull HttpEntity<StudentUpdateRequest> getStudentUpdateRequestHttpEntity() {
-                StudentUpdateRequest updateReq = new StudentUpdateRequest();
+    private @NonNull HttpEntity<StudentUpdateRequest> getStudentUpdateRequestHttpEntity() {
+        StudentUpdateRequest updateReq = new StudentUpdateRequest();
 
-                updateReq.setFirstName("Rahul Updated");
-                updateReq.setContactNumber("9999999999");
-                updateReq.setCity("Lucknow");
+        updateReq.setFirstName("Rahul Updated");
+        updateReq.setContactNumber("9999999999");
+        updateReq.setCity("Lucknow");
 
-                updateReq.setPreviousSchoolName("ABC Public School");
-                updateReq.setPreviousSchoolBoard("ICSE");
-                updateReq.setPreviousClass("5");
-                updateReq.setPreviousYearOfPassing(2023);
-                updateReq.setTransferCertificateNumber("TC-12345");
+        updateReq.setPreviousSchoolName("ABC Public School");
+        updateReq.setPreviousSchoolBoard("ICSE");
+        updateReq.setPreviousClass("5");
+        updateReq.setPreviousYearOfPassing(2023);
+        updateReq.setTransferCertificateNumber("TC-12345");
 
-                return new HttpEntity<>(updateReq, headers);
-        }
+        return new HttpEntity<>(updateReq, headers);
+    }
 
-        @AfterEach
-        void cleanup() {
-                fullCleanup();
-        }
+    @AfterEach
+    void cleanup() {
+        fullCleanup();
+    }
 }

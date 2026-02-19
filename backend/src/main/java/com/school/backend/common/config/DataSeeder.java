@@ -9,6 +9,7 @@ import com.school.backend.core.classsubject.dto.SubjectDto;
 import com.school.backend.core.classsubject.service.ClassSubjectService;
 import com.school.backend.core.classsubject.service.SchoolClassService;
 import com.school.backend.core.classsubject.service.SubjectService;
+import com.school.backend.core.guardian.dto.GuardianCreateRequest;
 import com.school.backend.core.student.dto.StudentCreateRequest;
 import com.school.backend.core.student.dto.StudentEnrollmentRequest;
 import com.school.backend.core.student.service.EnrollmentService;
@@ -39,6 +40,7 @@ import lombok.RequiredArgsConstructor;
 import org.jspecify.annotations.NonNull;
 import org.springframework.boot.CommandLineRunner;
 import org.springframework.core.env.Environment;
+import org.springframework.data.domain.PageRequest;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Component;
 
@@ -92,6 +94,21 @@ public class DataSeeder implements CommandLineRunner {
         return req;
     }
 
+    private static @NonNull FeeStructureCreateRequest getFeeStructureCreateRequest(SchoolClassDto c, Long sessionId, Long tuitionFeeTypeId) {
+        FeeStructureCreateRequest req = new FeeStructureCreateRequest();
+        req.setClassId(c.getId());
+        req.setSessionId(sessionId);
+        req.setFeeTypeId(tuitionFeeTypeId);
+        req.setAmount(java.math.BigDecimal.valueOf(20000));
+        req.setFrequency(FeeFrequency.ANNUALLY);
+        req.setLateFeeType(LateFeeType.PERCENTAGE);
+        req.setLateFeeAmountValue(java.math.BigDecimal.valueOf(2));
+        req.setLateFeeGraceDays(7);
+        req.setLateFeeCapType(LateFeeCapType.PERCENTAGE);
+        req.setLateFeeCapValue(java.math.BigDecimal.valueOf(10));
+        return req;
+    }
+
     @Override
     public void run(String... args) {
         createSuperAdminIfMissing();
@@ -140,7 +157,7 @@ public class DataSeeder implements CommandLineRunner {
 
             TenantContext.setSchoolId(demoSchool.getId());
 
-            seedClasses(demoSchool, session);
+            seedClasses(session);
             seedStudentsAndEnrollments(demoSchool, session);
             seedFeeTypesAndStructures(demoSchool, session);
             seedFeePayments(demoSchool, session);
@@ -178,7 +195,7 @@ public class DataSeeder implements CommandLineRunner {
 
     private AcademicSession createOrGetDemoSession(School school) {
         Long schoolId = school.getId();
-        String sessionName = "2024-25";
+        String sessionName = "2025-26";
 
         // Try to find existing active session with the same name
         List<AcademicSession> sessions = academicSessionService.getSessions(schoolId);
@@ -191,14 +208,14 @@ public class DataSeeder implements CommandLineRunner {
         AcademicSession session = new AcademicSession();
         session.setSchoolId(schoolId);
         session.setName(sessionName);
-        session.setStartDate(LocalDate.of(2024, 4, 1));
-        session.setEndDate(LocalDate.of(2025, 3, 31));
+        session.setStartDate(LocalDate.of(2025, 4, 1));
+        session.setEndDate(LocalDate.of(2026, 3, 31));
         session.setActive(true);
 
         return academicSessionService.createSession(session);
     }
 
-    private void seedClasses(School school, AcademicSession session) {
+    private void seedClasses(AcademicSession session) {
         // Two demo classes: Class 1 - A and Class 2 - A
         Long sessionId = session.getId();
 
@@ -229,7 +246,7 @@ public class DataSeeder implements CommandLineRunner {
         // We assume classes were created in seedClasses; fetch them via service
         List<SchoolClassDto> classes = schoolClassService
                 .getBySchoolAndSession(schoolId, sessionId,
-                        org.springframework.data.domain.PageRequest.of(0, 10))
+                        PageRequest.of(0, 10))
                 .getContent();
 
         if (classes.isEmpty()) {
@@ -271,6 +288,15 @@ public class DataSeeder implements CommandLineRunner {
         createRequest.setState("Maharashtra");
         createRequest.setDateOfAdmission(LocalDate.now());
         createRequest.setSchoolId(schoolId);
+
+        GuardianCreateRequest guardianCreateRequest = GuardianCreateRequest.builder()
+                .name("Parent of " + firstName)
+                .relation("Father")
+                .contactNumber("9999999999")
+                .email("parent." + admissionNumber.toLowerCase() + "@example.com")
+                .primaryGuardian(true).whatsappEnabled(true).build();
+
+        createRequest.setGuardians(List.of(guardianCreateRequest));
 
         Long studentId;
         try {
@@ -340,17 +366,7 @@ public class DataSeeder implements CommandLineRunner {
                 return;
             }
 
-            FeeStructureCreateRequest req = new FeeStructureCreateRequest();
-            req.setClassId(c.getId());
-            req.setSessionId(sessionId);
-            req.setFeeTypeId(tuitionFeeTypeId);
-            req.setAmount(java.math.BigDecimal.valueOf(20000));
-            req.setFrequency(FeeFrequency.ANNUALLY);
-            req.setLateFeeType(LateFeeType.PERCENTAGE);
-            req.setLateFeeAmountValue(java.math.BigDecimal.valueOf(2));
-            req.setLateFeeGraceDays(7);
-            req.setLateFeeCapType(LateFeeCapType.PERCENTAGE);
-            req.setLateFeeCapValue(java.math.BigDecimal.valueOf(10));
+            FeeStructureCreateRequest req = getFeeStructureCreateRequest(c, sessionId, tuitionFeeTypeId);
 
             try {
                 feeStructureService.create(req);
