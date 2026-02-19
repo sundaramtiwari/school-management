@@ -35,8 +35,6 @@ import java.util.Locale;
 public class FeeChallanService {
 
     private static final DateTimeFormatter DATE_FORMATTER = DateTimeFormatter.ofPattern("dd-MMM-yyyy");
-    private static final int LATE_FEE_PER_DAY = 50; // ₹50 per day
-    private static final int GRACE_PERIOD_DAYS = 7;
     private final StudentRepository studentRepository;
     private final SchoolRepository schoolRepository;
     private final FeeStructureRepository feeStructureRepository;
@@ -297,12 +295,10 @@ public class FeeChallanService {
         dueDatePara.add(new Chunk(dueDate.format(DATE_FORMATTER), valueFont));
         document.add(dueDatePara);
 
-        // Late Fee Info
+        // Late Fee Info (Generic note as it's policy driven now)
         Paragraph lateFeePara = new Paragraph();
         lateFeePara.add(new Chunk("Late Fee: ", labelFont));
-        lateFeePara.add(new Chunk(
-                "₹ " + LATE_FEE_PER_DAY + " per day after due date (Grace period: " + GRACE_PERIOD_DAYS + " days)",
-                valueFont));
+        lateFeePara.add(new Chunk("Applicable as per school policy if paid after due date.", valueFont));
         document.add(lateFeePara);
 
         document.add(new Paragraph(" "));
@@ -401,21 +397,4 @@ public class FeeChallanService {
         }
     }
 
-    /**
-     * Calculate late fee based on days overdue
-     */
-    public java.math.BigDecimal calculateLateFee(LocalDate dueDate, java.math.BigDecimal baseFee) {
-        LocalDate now = LocalDate.now();
-
-        if (now.isAfter(dueDate.plusDays(GRACE_PERIOD_DAYS))) {
-            long daysOverdue = java.time.temporal.ChronoUnit.DAYS.between(dueDate.plusDays(GRACE_PERIOD_DAYS), now);
-            java.math.BigDecimal lateFee = java.math.BigDecimal.valueOf(daysOverdue * LATE_FEE_PER_DAY);
-
-            // Cap late fee at 10% of base fee
-            java.math.BigDecimal maxLateFee = baseFee.multiply(java.math.BigDecimal.valueOf(0.10));
-            return lateFee.min(maxLateFee);
-        }
-
-        return java.math.BigDecimal.ZERO;
-    }
 }

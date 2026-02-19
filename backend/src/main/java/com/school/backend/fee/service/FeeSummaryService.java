@@ -99,26 +99,27 @@ public class FeeSummaryService {
                                 sessionId);
 
                 java.math.BigDecimal totalFeeAccrued = assignments.stream()
-                                .map(StudentFeeAssignment::getAmount)
+                                .map(a -> nz(a.getAmount()))
                                 .reduce(java.math.BigDecimal.ZERO, java.math.BigDecimal::add);
 
                 java.math.BigDecimal totalLateFeeAccrued = assignments.stream()
                                 .map(sfa -> {
-                                        java.math.BigDecimal unpaid = sfa.getAmount()
-                                                        .subtract(sfa.getPrincipalPaid())
-                                                        .subtract(sfa.getTotalDiscountAmount());
+                                        java.math.BigDecimal unpaid = nz(sfa.getAmount())
+                                                        .subtract(nz(sfa.getPrincipalPaid()))
+                                                        .subtract(nz(sfa.getTotalDiscountAmount()))
+                                                        .subtract(nz(sfa.getSponsorCoveredAmount()));
                                         java.math.BigDecimal incremental = lateFeeCalculator.calculateLateFee(sfa,
                                                         unpaid, LocalDate.now());
-                                        return sfa.getLateFeeAccrued().add(incremental);
+                                        return nz(sfa.getLateFeeAccrued()).add(incremental);
                                 })
                                 .reduce(java.math.BigDecimal.ZERO, java.math.BigDecimal::add);
 
                 java.math.BigDecimal totalLateFeePaid = assignments.stream()
-                                .map(StudentFeeAssignment::getLateFeePaid)
+                                .map(a -> nz(a.getLateFeePaid()))
                                 .reduce(java.math.BigDecimal.ZERO, java.math.BigDecimal::add);
 
                 java.math.BigDecimal totalPrincipalPaid = assignments.stream()
-                                .map(StudentFeeAssignment::getPrincipalPaid)
+                                .map(a -> nz(a.getPrincipalPaid()))
                                 .reduce(java.math.BigDecimal.ZERO, java.math.BigDecimal::add);
 
                 java.math.BigDecimal totalPaid = totalPrincipalPaid.add(totalLateFeePaid);
@@ -135,14 +136,18 @@ public class FeeSummaryService {
                 dto.setStudentName(student.getFirstName() + " " +
                                 (student.getLastName() != null ? student.getLastName() : ""));
                 dto.setSession(session.getName());
-                dto.setTotalFee(totalFeeAccrued);
-                dto.setTotalPaid(totalPaid);
-                dto.setTotalLateFeeAccrued(totalLateFeeAccrued);
-                dto.setTotalLateFeePaid(totalLateFeePaid);
-                dto.setPendingFee(pending);
+                dto.setTotalFee(totalFeeAccrued.setScale(2, java.math.RoundingMode.HALF_UP));
+                dto.setTotalPaid(totalPaid.setScale(2, java.math.RoundingMode.HALF_UP));
+                dto.setTotalLateFeeAccrued(totalLateFeeAccrued.setScale(2, java.math.RoundingMode.HALF_UP));
+                dto.setTotalLateFeePaid(totalLateFeePaid.setScale(2, java.math.RoundingMode.HALF_UP));
+                dto.setPendingFee(pending.setScale(2, java.math.RoundingMode.HALF_UP));
                 dto.setFeePending(pending.compareTo(java.math.BigDecimal.ZERO) > 0);
 
                 return dto;
+        }
+
+        private java.math.BigDecimal nz(java.math.BigDecimal value) {
+                return value != null ? value : java.math.BigDecimal.ZERO;
         }
 
         // ---------------------------------------------------

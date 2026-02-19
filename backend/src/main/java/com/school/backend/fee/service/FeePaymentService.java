@@ -82,7 +82,8 @@ public class FeePaymentService {
 
             BigDecimal principalDue = assignment.getAmount()
                     .subtract(assignment.getPrincipalPaid())
-                    .subtract(assignment.getTotalDiscountAmount());
+                    .subtract(assignment.getTotalDiscountAmount())
+                    .subtract(assignment.getSponsorCoveredAmount());
             if (principalDue.compareTo(BigDecimal.ZERO) < 0) {
                 principalDue = BigDecimal.ZERO;
             }
@@ -126,7 +127,8 @@ public class FeePaymentService {
             // Allocate to principal
             principalDue = assignment.getAmount()
                     .subtract(assignment.getPrincipalPaid())
-                    .subtract(assignment.getTotalDiscountAmount());
+                    .subtract(assignment.getTotalDiscountAmount())
+                    .subtract(assignment.getSponsorCoveredAmount());
             if (principalDue.compareTo(BigDecimal.ZERO) > 0) {
                 BigDecimal principalAllocation = remainingIncoming.min(principalDue);
                 assignment.setPrincipalPaid(assignment.getPrincipalPaid().add(principalAllocation));

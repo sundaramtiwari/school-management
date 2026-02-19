@@ -87,6 +87,12 @@ public class StudentLedgerService {
     private LedgerSummaryDto newLedgerEntry(Long sessionId) {
         LedgerSummaryDto dto = new LedgerSummaryDto();
         dto.setSessionId(sessionId);
+        dto.setTotalAssigned(BigDecimal.ZERO);
+        dto.setTotalDiscount(BigDecimal.ZERO);
+        dto.setTotalFunding(BigDecimal.ZERO);
+        dto.setTotalLateFee(BigDecimal.ZERO);
+        dto.setTotalPaid(BigDecimal.ZERO);
+        dto.setTotalPending(BigDecimal.ZERO);
         return dto;
     }
 }
