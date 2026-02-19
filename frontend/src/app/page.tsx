@@ -25,10 +25,10 @@ export default function DashboardPage() {
   // Show loading state while auth is initializing
   if (isLoading) {
     return (
-      <div className="flex items-center justify-center min-h-screen">
+      <div className="flex items-center justify-center min-h-screen mx-auto px-6 py-6">
         <div className="text-center">
           <div className="w-16 h-16 border-4 border-blue-600 border-t-transparent rounded-full animate-spin mx-auto mb-4"></div>
-          <p className="text-gray-600">Loading dashboard...</p>
+          <p className="text-gray-500 text-base">Loading dashboard...</p>
         </div>
       </div>
     );
@@ -37,9 +37,9 @@ export default function DashboardPage() {
   // Ensure user is logged in
   if (!user) {
     return (
-      <div className="flex items-center justify-center min-h-screen">
+      <div className="flex items-center justify-center min-h-screen mx-auto px-6 py-6">
         <div className="text-center">
-          <p className="text-gray-600">Please log in to view dashboard</p>
+          <p className="text-gray-500 text-base">Please log in to view dashboard</p>
         </div>
       </div>
     );
@@ -65,18 +65,18 @@ export default function DashboardPage() {
     case "PARENT":
       // Future: Parent Dashboard
       return (
-        <div className="text-center py-20">
-          <h1 className="text-2xl font-bold text-gray-800 mb-4">Parent Portal</h1>
-          <p className="text-gray-600">Coming soon!</p>
+        <div className="text-center py-20 mx-auto px-6">
+          <h1 className="text-lg font-semibold mb-4">Parent Portal</h1>
+          <p className="text-gray-500 text-base">Coming soon!</p>
         </div>
       );
 
     default:
       // Fallback for unknown roles
       return (
-        <div className="text-center py-20">
-          <h1 className="text-2xl font-bold text-gray-800 mb-4">Welcome!</h1>
-          <p className="text-gray-600">
+        <div className="text-center py-20 mx-auto px-6">
+          <h1 className="text-lg font-semibold mb-4">Welcome!</h1>
+          <p className="text-gray-500 text-base">
             Your role ({user.role}) does not have a dashboard configured yet.
           </p>
         </div>

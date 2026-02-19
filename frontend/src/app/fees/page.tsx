@@ -49,19 +49,19 @@ export default function FeesDashboard() {
     ];
 
     return (
-        <div className="space-y-8">
+        <div className="mx-auto px-6 py-6 space-y-8">
             <header className="flex justify-between items-end">
                 <div>
-                    <h1 className="text-3xl font-bold text-gray-800">Fee Dashboard</h1>
-                    <p className="text-gray-500 mt-1">Institutional financial overview and collection status for <span className="text-blue-600 font-bold">{currentSession?.name || "current session"}</span>.</p>
+                    <h1 className="text-lg font-semibold">Fee Dashboard</h1>
+                    <p className="text-gray-500 text-base mt-1">Institutional financial overview and collection status for <span className="text-blue-600 font-bold">{currentSession?.name || "current session"}</span>.</p>
                 </div>
                 <div className="flex gap-3">
                     {canManageFees && (
                         <>
-                            <button onClick={() => window.location.href = '/fees/structures'} className="px-5 py-2.5 bg-white border rounded-xl font-bold shadow-sm hover:bg-gray-50 transition-all text-gray-700">
+                            <button onClick={() => window.location.href = '/fees/structures'} className="px-5 py-2.5 bg-white border border-gray-300 rounded-md font-medium hover:bg-gray-50 text-base">
                                 Edit Structures
                             </button>
-                            <button onClick={() => window.location.href = '/fees/collect'} className="px-5 py-2.5 bg-blue-600 text-white rounded-xl font-bold shadow-lg hover:bg-blue-700 transition-all">
+                            <button onClick={() => window.location.href = '/fees/collect'} className="px-5 py-2.5 bg-blue-600 text-white rounded-md font-medium hover:bg-blue-700 text-base">
                                 Collect Fees
                             </button>
                         </>
@@ -69,10 +69,10 @@ export default function FeesDashboard() {
                 </div>
             </header>
 
-            <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+            <div className="grid grid-cols-1 md:grid-cols-3 gap-6 mt-4 mb-6">
                 {cards.map((card, i) => (
-                    <div key={i} className="bg-white p-8 rounded-2xl border shadow-sm transition-transform hover:scale-[1.02]">
-                        <h3 className="text-xs font-black uppercase tracking-widest text-gray-400 mb-4">{card.label}</h3>
+                    <div key={i} className="bg-white rounded-lg shadow border border-gray-100 p-6">
+                        <h3 className="text-lg font-semibold mb-4">{card.label}</h3>
                         {loading ? (
                             <Skeleton className="h-10 w-32" />
                         ) : (
@@ -88,11 +88,11 @@ export default function FeesDashboard() {
             </div>
 
             <div className="grid grid-cols-1 lg:grid-cols-2 gap-8">
-                <div className="bg-white p-8 rounded-2xl border shadow-sm space-y-4">
-                    <h3 className="text-xl font-bold text-gray-800">Recent Collections</h3>
+                <div className="bg-white rounded-lg shadow border border-gray-100 p-6 space-y-4">
+                    <h3 className="text-lg font-semibold">Recent Collections</h3>
                     <div className="space-y-3">
                         {recentPayments.map(p => (
-                            <div key={p.id} className="flex justify-between items-center p-4 bg-gray-50 rounded-xl border border-transparent hover:border-blue-200 hover:bg-white transition-all">
+                            <div key={p.id} className="flex justify-between items-center p-4 bg-gray-50 rounded-lg border border-gray-100 hover:bg-white">
                                 <div>
                                     <p className="font-bold text-gray-800">Student ID #{p.studentId}</p>
                                     <p className="text-xs text-gray-400 font-medium uppercase tracking-tighter">
@@ -103,7 +103,7 @@ export default function FeesDashboard() {
                             </div>
                         ))}
                         {recentPayments.length === 0 && !loading && (
-                            <div className="p-8 text-center text-gray-400 italic bg-gray-50 rounded-xl border border-dashed">
+                            <div className="p-8 text-center text-gray-500 bg-white rounded-lg shadow border border-gray-100">
                                 No recent transactions recorded.
                             </div>
                         )}
@@ -113,15 +113,15 @@ export default function FeesDashboard() {
                     </button>
                 </div>
 
-                <div className="bg-white p-8 rounded-2xl border shadow-sm flex flex-col justify-center items-center text-center space-y-4">
+                <div className="bg-white rounded-lg shadow border border-gray-100 p-6 flex flex-col justify-center items-center text-center space-y-4">
                     <div className="w-20 h-20 bg-blue-50 text-blue-600 rounded-full flex items-center justify-center text-3xl shadow-inner">
                         📊
                     </div>
                     <div>
-                        <h3 className="text-xl font-bold text-gray-800">Collection Reports</h3>
-                        <p className="text-sm text-gray-400 mt-1 max-w-xs">Generate monthly, quarterly, or annual fee collection reports in PDF or Excel.</p>
+                        <h3 className="text-lg font-semibold">Collection Reports</h3>
+                        <p className="text-base text-gray-500 mt-1 max-w-xs">Generate monthly, quarterly, or annual fee collection reports in PDF or Excel.</p>
                     </div>
-                    <button disabled className="px-8 py-3 bg-gray-400 text-white rounded-xl font-bold cursor-not-allowed opacity-70">
+                    <button disabled className="px-8 py-3 bg-gray-400 text-white rounded-md font-medium cursor-not-allowed opacity-70">
                         Generate Report (Coming soon)
                     </button>
                 </div>

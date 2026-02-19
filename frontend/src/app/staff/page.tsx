@@ -131,11 +131,11 @@ export default function StaffPage() {
     }
 
     return (
-        <div className="space-y-6">
+        <div className="mx-auto px-6 py-6 space-y-6">
             <div className="flex justify-between items-center text-wrap">
                 <div>
-                    <h1 className="text-3xl font-bold text-gray-800">Staff & Faculty</h1>
-                    <p className="text-gray-500">Manage institutional users, roles, and access credentials.</p>
+                    <h1 className="text-lg font-semibold">Staff & Faculty</h1>
+                    <p className="text-gray-500 text-base mt-1">Manage institutional users, roles, and access credentials.</p>
                 </div>
                 <button
                     onClick={() => {
@@ -143,26 +143,26 @@ export default function StaffPage() {
                         setEditId(null);
                         setShowForm(true);
                     }}
-                    className="bg-blue-600 text-white px-6 py-2.5 rounded-xl font-bold shadow-lg hover:bg-blue-700 transition-all flex items-center gap-2"
+                    className="bg-blue-600 text-white px-6 py-2.5 rounded-md font-medium hover:bg-blue-700 flex items-center gap-2 text-base"
                 >
                     <span className="text-xl">+</span> Invite Staff
                 </button>
             </div>
 
             {loading ? (
-                <div className="bg-white p-8 rounded-2xl border">
+                <div className="bg-white rounded-lg shadow border border-gray-100 p-6">
                     <TableSkeleton rows={10} cols={5} />
                 </div>
             ) : (
-                <div className="bg-white border rounded-2xl shadow-sm overflow-hidden">
-                    <table className="w-full text-sm">
-                        <thead className="bg-gray-50 text-gray-600 font-bold border-b">
+                <div className="bg-white rounded-lg shadow border border-gray-100 overflow-hidden mt-4">
+                    <table className="w-full text-base">
+                        <thead className="bg-gray-50 text-gray-600 text-lg font-semibold border-b border-gray-100">
                             <tr>
-                                <th className="p-4 text-left">Full Name</th>
-                                <th className="p-4 text-left">Email Identity</th>
-                                <th className="p-4 text-center">Assigned Role</th>
-                                <th className="p-4 text-center">Status</th>
-                                <th className="p-4 text-center w-24">Actions</th>
+                                <th className="px-6 py-4 text-left">Full Name</th>
+                                <th className="px-6 py-4 text-left">Email Identity</th>
+                                <th className="px-6 py-4 text-center">Assigned Role</th>
+                                <th className="px-6 py-4 text-center">Status</th>
+                                <th className="px-6 py-4 text-center w-24">Actions</th>
                             </tr>
                         </thead>
                         <tbody className="divide-y divide-gray-100">
@@ -184,7 +184,7 @@ export default function StaffPage() {
                                     <td className="p-4 text-center">
                                         <button
                                             onClick={() => openEdit(u)}
-                                            className="p-2 text-blue-600 hover:bg-blue-50 rounded-lg transition-all"
+                                            className="p-2 text-blue-600 hover:bg-blue-50 rounded-md"
                                         >
                                             <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                                                 <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M11 5H6a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2v-5M16.5 3.5a2.121 2.121 0 113 3L11.707 15.364a2 2 0 01-.88.524l-4 1a1 1 0 01-1.213-1.213l1-4a2 2 0 01.524-.88L16.5 3.5z" />
@@ -207,14 +207,14 @@ export default function StaffPage() {
                     <div className="flex gap-2">
                         <button
                             onClick={() => setShowForm(false)}
-                            className="px-6 py-2 rounded-xl border font-medium text-gray-600 hover:bg-gray-50 transition-all"
+                            className="px-6 py-2 rounded-md bg-white border border-gray-300 font-medium text-gray-600 hover:bg-gray-50"
                         >
                             Cancel
                         </button>
                         <button
                             onClick={saveUser}
                             disabled={isSaving}
-                            className="px-8 py-2 rounded-xl bg-blue-600 text-white font-bold shadow-lg hover:bg-blue-700 disabled:bg-gray-400 transition-all"
+                            className="px-8 py-2 rounded-md bg-blue-600 text-white font-medium hover:bg-blue-700 disabled:opacity-50"
                         >
                             {isSaving ? "Processing..." : "Commit User Data"}
                         </button>
@@ -271,7 +271,7 @@ export default function StaffPage() {
                             </select>
                         </div>
                         <div className="flex items-end">
-                            <label className="flex items-center gap-3 cursor-pointer p-2.5 bg-gray-50 rounded-xl border border-dashed border-gray-300 w-full">
+                            <label className="flex items-center gap-3 cursor-pointer p-4 rounded-lg border border-gray-100 bg-gray-50 w-full">
                                 <input
                                     type="checkbox"
                                     name="active"

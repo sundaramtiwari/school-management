@@ -127,16 +127,16 @@ export default function SessionsPage() {
     }
 
     return (
-        <div className="space-y-6">
+        <div className="mx-auto px-6 py-6 space-y-6">
             <div className="flex justify-between items-center">
                 <div>
-                    <h1 className="text-3xl font-bold text-gray-800">Academic Sessions</h1>
-                    <p className="text-gray-500">Manage school years and current active session.</p>
+                    <h1 className="text-lg font-semibold">Academic Sessions</h1>
+                    <p className="text-gray-500 text-base mt-1">Manage school years and current active session.</p>
                 </div>
                 {canManage && (
                     <button
                         onClick={openCreate}
-                        className="bg-blue-600 text-white px-6 py-2.5 rounded-xl font-bold shadow-lg hover:bg-blue-700 transition-all flex items-center gap-2"
+                        className="bg-blue-600 text-white px-6 py-2.5 rounded-md font-medium hover:bg-blue-700 flex items-center gap-2 text-base"
                     >
                         <span className="text-xl">+</span> New Session
                     </button>
@@ -144,7 +144,7 @@ export default function SessionsPage() {
             </div>
 
             {canManage && showInlineCreate && (
-                <div className="bg-white border rounded-2xl shadow-sm p-6">
+                <div className="bg-white rounded-lg shadow border border-gray-100 p-6">
                     <div className="flex items-center justify-between mb-4">
                         <h2 className="text-lg font-bold text-gray-800">Create New Session</h2>
                         <button
@@ -161,7 +161,7 @@ export default function SessionsPage() {
                                 value={createForm.name}
                                 onChange={(e) => setCreateForm({ ...createForm, name: e.target.value })}
                                 placeholder="e.g. 2026-2027"
-                                className="w-full px-4 py-3 rounded-xl border bg-gray-50 focus:bg-white focus:outline-none focus:ring-2 focus:ring-blue-500 transition-all font-bold"
+                                className="w-full rounded-md border border-gray-300 px-3 py-2 text-base focus:ring-2 focus:ring-blue-500"
                             />
                         </div>
                         <div>
@@ -170,7 +170,7 @@ export default function SessionsPage() {
                                 type="date"
                                 value={createForm.startDate}
                                 onChange={(e) => setCreateForm({ ...createForm, startDate: e.target.value })}
-                                className="w-full px-4 py-3 rounded-xl border bg-gray-50 focus:bg-white focus:outline-none focus:ring-2 focus:ring-blue-500 transition-all font-bold"
+                                className="w-full rounded-md border border-gray-300 px-3 py-2 text-base focus:ring-2 focus:ring-blue-500"
                             />
                         </div>
                         <div>
@@ -179,14 +179,14 @@ export default function SessionsPage() {
                                 type="date"
                                 value={createForm.endDate}
                                 onChange={(e) => setCreateForm({ ...createForm, endDate: e.target.value })}
-                                className="w-full px-4 py-3 rounded-xl border bg-gray-50 focus:bg-white focus:outline-none focus:ring-2 focus:ring-blue-500 transition-all font-bold"
+                                className="w-full rounded-md border border-gray-300 px-3 py-2 text-base focus:ring-2 focus:ring-blue-500"
                             />
                         </div>
                         <div>
                             <button
                                 onClick={saveNewSessionInline}
                                 disabled={isSaving}
-                                className="w-full px-6 py-3 rounded-xl bg-blue-600 text-white font-bold shadow-lg hover:bg-blue-700 disabled:bg-gray-400 transition-all"
+                                className="w-full px-6 py-3 rounded-md bg-blue-600 text-white font-medium hover:bg-blue-700 disabled:opacity-50"
                             >
                                 {isSaving ? "Creating..." : "Create Session"}
                             </button>
@@ -196,18 +196,18 @@ export default function SessionsPage() {
             )}
 
             {isLoading ? (
-                <div className="bg-white p-8 rounded-2xl border">
+                <div className="bg-white rounded-lg shadow border border-gray-100 p-6">
                     <TableSkeleton rows={5} cols={4} />
                 </div>
             ) : (
-                <div className="bg-white border rounded-2xl shadow-sm overflow-hidden">
-                    <table className="w-full text-sm">
-                        <thead className="bg-gray-50 text-gray-600 font-bold border-b">
+                <div className="bg-white rounded-lg shadow border border-gray-100 overflow-hidden mt-4">
+                    <table className="w-full text-base">
+                        <thead className="bg-gray-50 text-gray-600 text-lg font-semibold border-b border-gray-100">
                             <tr>
-                                <th className="p-4 text-left">Academic Year</th>
-                                <th className="p-4 text-center">Period</th>
-                                <th className="p-4 text-center">Status Flag</th>
-                                <th className="p-4 text-center w-48">Actions</th>
+                                <th className="px-6 py-4 text-left">Academic Year</th>
+                                <th className="px-6 py-4 text-center">Period</th>
+                                <th className="px-6 py-4 text-center">Status Flag</th>
+                                <th className="px-6 py-4 text-center w-48">Actions</th>
                             </tr>
                         </thead>
                         <tbody className="divide-y divide-gray-100">
@@ -275,14 +275,14 @@ export default function SessionsPage() {
                     <div className="flex gap-2">
                         <button
                             onClick={() => setShowForm(false)}
-                            className="px-6 py-2 rounded-xl border font-medium text-gray-600 hover:bg-gray-50 transition-all"
+                            className="px-6 py-2 rounded-md bg-white border border-gray-300 font-medium text-gray-600 hover:bg-gray-50"
                         >
                             Cancel
                         </button>
                         <button
                             onClick={saveSessionEdit}
                             disabled={isSaving}
-                            className="px-8 py-2 rounded-xl bg-blue-600 text-white font-bold shadow-lg hover:bg-blue-700 disabled:bg-gray-400 transition-all"
+                            className="px-8 py-2 rounded-md bg-blue-600 text-white font-medium hover:bg-blue-700 disabled:opacity-50"
                         >
                             {isSaving ? "Saving..." : "Save Changes"}
                         </button>
@@ -296,14 +296,14 @@ export default function SessionsPage() {
                             value={form.name}
                             onChange={(e) => setForm({ ...form, name: e.target.value })}
                             placeholder="e.g. 2025-2026"
-                            className="w-full px-4 py-3 rounded-xl border bg-gray-50 focus:bg-white focus:outline-none focus:ring-2 focus:ring-blue-500 transition-all font-bold"
+                            className="w-full rounded-md border border-gray-300 px-3 py-2 text-base focus:ring-2 focus:ring-blue-500"
                         />
                     </div>
-                    <div className="p-3 bg-gray-50 rounded-xl border text-xs text-gray-600 font-semibold">
+                    <div className="p-4 rounded-lg border border-gray-100 bg-gray-50 text-gray-500 text-base">
                         Session dates are fixed after creation and cannot be edited.
                     </div>
 
-                    <label className="flex items-center gap-3 cursor-pointer p-4 bg-blue-50 rounded-2xl border border-dashed border-blue-200">
+                    <label className="flex items-center gap-3 cursor-pointer p-4 rounded-lg border border-gray-100 bg-gray-50">
                         <input
                             type="checkbox"
                             checked={form.active}

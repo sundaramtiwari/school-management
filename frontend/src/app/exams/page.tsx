@@ -115,7 +115,7 @@ export default function ExamsPage() {
     if (!currentSession) {
         return (
             <div className="flex items-center justify-center min-h-[60vh]">
-                <div className="text-center p-12 bg-white rounded-3xl border shadow-sm">
+                <div className="text-center p-12 bg-white rounded-lg shadow border border-gray-100">
                     <span className="text-5xl mb-4 block">📅</span>
                     <h2 className="text-xl font-bold text-gray-800">No Academic Session Selected</h2>
                     <p className="text-gray-500 mt-2">Please select an academic session to manage exams.</p>
@@ -125,11 +125,11 @@ export default function ExamsPage() {
     }
 
     return (
-        <div className="space-y-6">
+        <div className="mx-auto px-6 py-6 space-y-6">
             <div className="flex justify-between items-center">
                 <div>
-                    <h1 className="text-3xl font-bold text-gray-800">Exam Management</h1>
-                    <p className="text-gray-500">Manage exam schedules and marks for <span className="text-blue-600 font-bold">{currentSession.name}</span>.</p>
+                    <h1 className="text-lg font-semibold">Exam Management</h1>
+                    <p className="text-gray-500 text-base mt-1">Manage exam schedules and marks for <span className="text-blue-600 font-bold">{currentSession.name}</span>.</p>
                 </div>
 
                 {canCreateExam && (
@@ -137,7 +137,7 @@ export default function ExamsPage() {
                         onClick={() => setShowAddModal(true)}
                         disabled={!selectedClass}
                         className={`
-                            px-6 py-2.5 rounded-xl font-bold shadow-lg transition-all flex items-center gap-2
+                            px-6 py-2.5 rounded-md font-medium transition-all flex items-center gap-2 text-base
                             ${selectedClass
                                 ? "bg-blue-600 text-white hover:bg-blue-700"
                                 : "bg-gray-200 text-gray-400 cursor-not-allowed"}
@@ -148,14 +148,14 @@ export default function ExamsPage() {
                 )}
             </div>
 
-            <div className="bg-white p-6 border rounded-2xl shadow-sm flex flex-wrap gap-4 items-end">
+            <div className="bg-white rounded-lg shadow border border-gray-100 p-6 flex flex-wrap gap-4 items-end">
                 <div className="flex-1 min-w-[300px]">
-                    <label className="block text-xs font-bold uppercase text-gray-400 mb-2 ml-1">Current Class</label>
+                    <label className="block text-sm font-medium text-gray-500 mb-2">Current Class</label>
                     <select
                         value={selectedClass}
                         onChange={onClassChange}
                         disabled={loadingClasses}
-                        className="input-ref"
+                        className="w-full rounded-md border border-gray-300 focus:ring-2 focus:ring-blue-500 px-3 py-2 text-base"
                     >
                         <option value="">Select Class</option>
                         {classes.map((c) => (
@@ -168,18 +168,18 @@ export default function ExamsPage() {
             </div>
 
             {loadingExams ? (
-                <div className="bg-white p-8 rounded-2xl border">
+                <div className="bg-white rounded-lg shadow border border-gray-100 p-6">
                     <TableSkeleton rows={5} cols={4} />
                 </div>
             ) : selectedClass ? (
-                <div className="bg-white border rounded-2xl shadow-sm overflow-hidden">
-                    <table className="w-full text-sm">
-                        <thead className="bg-gray-50 text-gray-600 font-bold border-b">
+                <div className="bg-white rounded-lg shadow border border-gray-100 overflow-hidden mt-4">
+                    <table className="w-full text-base">
+                        <thead className="bg-gray-50 text-gray-600 text-lg font-semibold border-b border-gray-100">
                             <tr>
-                                <th className="p-4 text-left">Exam Name</th>
-                                <th className="p-4 text-center">Type</th>
-                                <th className="p-4 text-center">Status</th>
-                                <th className="p-4 text-center w-32">Actions</th>
+                                <th className="px-6 py-4 text-left">Exam Name</th>
+                                <th className="px-6 py-4 text-center">Type</th>
+                                <th className="px-6 py-4 text-center">Status</th>
+                                <th className="px-6 py-4 text-center w-32">Actions</th>
                             </tr>
                         </thead>
                         <tbody className="divide-y divide-gray-100">
@@ -221,7 +221,7 @@ export default function ExamsPage() {
                                             {canCreateExam && (
                                                 <button
                                                     onClick={() => setShowAddModal(true)}
-                                                    className="mt-2 bg-blue-50 text-blue-600 px-6 py-2 rounded-xl font-bold hover:bg-blue-100 transition-all border border-blue-200"
+                                                    className="mt-2 bg-blue-600 text-white px-6 py-2 rounded-md font-medium hover:bg-blue-700"
                                                 >
                                                     Schedule First Exam →
                                                 </button>
@@ -234,7 +234,7 @@ export default function ExamsPage() {
                     </table>
                 </div>
             ) : (
-                <div className="p-20 text-center bg-gray-50 rounded-2xl border border-dashed border-gray-300 text-gray-400 italic">
+                <div className="p-20 text-center bg-white rounded-lg shadow border border-gray-100 text-gray-500 mb-6">
                     Please select a class to view and manage exams.
                 </div>
             )}

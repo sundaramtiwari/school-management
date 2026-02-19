@@ -141,11 +141,11 @@ export default function ClassesPage() {
     }
 
     return (
-        <div className="space-y-6">
+        <div className="mx-auto px-6 py-6 space-y-6">
             <div className="flex justify-between items-center">
                 <div>
-                    <h1 className="text-3xl font-bold text-gray-800">Class Management</h1>
-                    <p className="text-gray-500">Define and organize academic classes for <span className="text-blue-600 font-bold">{currentSession?.name || "current session"}</span>.</p>
+                    <h1 className="text-lg font-semibold">Class Management</h1>
+                    <p className="text-gray-500 text-base mt-1">Define and organize academic classes for <span className="text-blue-600 font-bold">{currentSession?.name || "current session"}</span>.</p>
                 </div>
                 {canManageClasses && (
                     <button
@@ -154,7 +154,7 @@ export default function ClassesPage() {
                             setEditId(null);
                             setShowForm(true);
                         }}
-                        className="bg-blue-600 text-white px-6 py-2.5 rounded-xl font-bold shadow-lg hover:bg-blue-700 transition-all flex items-center gap-2"
+                        className="bg-blue-600 text-white px-6 py-2.5 rounded-md font-medium hover:bg-blue-700 flex items-center gap-2 text-base"
                     >
                         <span className="text-xl">+</span> Add Class
                     </button>
@@ -162,18 +162,18 @@ export default function ClassesPage() {
             </div>
 
             {loading ? (
-                <div className="bg-white p-8 rounded-2xl border">
+                <div className="bg-white rounded-lg shadow border border-gray-100 p-6">
                     <TableSkeleton rows={8} cols={4} />
                 </div>
             ) : (
-                <div className="bg-white border rounded-2xl shadow-sm overflow-hidden">
-                    <table className="w-full text-sm">
-                        <thead className="bg-gray-50 text-gray-600 font-bold border-b">
+                <div className="bg-white rounded-lg shadow border border-gray-100 overflow-hidden mt-4">
+                    <table className="w-full text-base">
+                        <thead className="bg-gray-50 text-gray-600 text-lg font-semibold border-b border-gray-100">
                             <tr>
-                                <th className="p-4 text-left">Class Name</th>
-                                <th className="p-4 text-center">Section</th>
-                                <th className="p-4 text-center">Stream</th>
-                                <th className="p-4 text-center w-32">Actions</th>
+                                <th className="px-6 py-4 text-left">Class Name</th>
+                                <th className="px-6 py-4 text-center">Section</th>
+                                <th className="px-6 py-4 text-center">Stream</th>
+                                <th className="px-6 py-4 text-center w-32">Actions</th>
                             </tr>
                         </thead>
                         <tbody className="divide-y divide-gray-100">
@@ -193,7 +193,7 @@ export default function ClassesPage() {
                                             <div className="flex justify-center gap-2">
                                                 <button
                                                     onClick={() => openEdit(c)}
-                                                    className="p-2 text-blue-600 hover:bg-blue-50 rounded-lg transition-all"
+                                                    className="p-2 text-blue-600 hover:bg-blue-50 rounded-md"
                                                 >
                                                     <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                                                         <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M11 5H6a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2v-5M16.5 3.5a2.121 2.121 0 113 3L11.707 15.364a2 2 0 01-.88.524l-4 1a1 1 0 01-1.213-1.213l1-4a2 2 0 01.524-.88L16.5 3.5z" />
@@ -202,7 +202,7 @@ export default function ClassesPage() {
                                                 <button
                                                     onClick={() => deleteClass(c.id)}
                                                     disabled={isDeleting}
-                                                    className="p-2 text-red-600 hover:bg-red-50 rounded-lg transition-all disabled:opacity-30"
+                                                    className="p-2 text-red-600 hover:bg-red-50 rounded-md disabled:opacity-30"
                                                 >
                                                     <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                                                         <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" />
@@ -227,7 +227,7 @@ export default function ClassesPage() {
                                             {canManageClasses && (
                                                 <button
                                                     onClick={() => setShowForm(true)}
-                                                    className="mt-2 bg-blue-50 text-blue-600 px-6 py-2 rounded-xl font-bold hover:bg-blue-100 transition-all border border-blue-200"
+                                                    className="mt-2 bg-blue-600 text-white px-6 py-2 rounded-md font-medium hover:bg-blue-700"
                                                 >
                                                     Add First Class →
                                                 </button>
@@ -250,14 +250,14 @@ export default function ClassesPage() {
                     <div className="flex gap-2">
                         <button
                             onClick={() => setShowForm(false)}
-                            className="px-6 py-2 rounded-xl border font-medium text-gray-600 hover:bg-gray-50 transition-all"
+                            className="px-6 py-2 rounded-md bg-white border border-gray-300 font-medium text-gray-600 hover:bg-gray-50"
                         >
                             Cancel
                         </button>
                         <button
                             onClick={saveClass}
                             disabled={isSaving}
-                            className="px-8 py-2 rounded-xl bg-blue-600 text-white font-bold shadow-lg hover:bg-blue-700 disabled:bg-gray-400 transition-all"
+                            className="px-8 py-2 rounded-md bg-blue-600 text-white font-medium hover:bg-blue-700 disabled:opacity-50"
                         >
                             {isSaving ? "Saving..." : "Save Class"}
                         </button>
@@ -300,11 +300,11 @@ export default function ClassesPage() {
                             </div>
                         </div>
 
-                        <div className="p-3 bg-blue-50 rounded-xl border border-blue-100 italic text-xs text-blue-600 font-medium">
+                        <div className="p-4 rounded-lg border border-gray-100 bg-gray-50 text-gray-500 text-base italic">
                             This class will be associated with the active session: <span className="font-bold">{currentSession?.name || "None"}</span>
                         </div>
 
-                        <label className="flex items-center gap-3 cursor-pointer p-3 bg-gray-50 rounded-xl border border-dashed border-gray-300">
+                        <label className="flex items-center gap-3 cursor-pointer p-4 rounded-lg border border-gray-100 bg-gray-50">
                             <input
                                 type="checkbox"
                                 name="active"

@@ -50,9 +50,9 @@ export default function SubjectList() {
     };
 
     return (
-        <div className="p-6">
+        <div className="mx-auto px-6 py-6">
             <div className="flex justify-between items-center mb-6">
-                <h1 className="text-2xl font-bold">Subject Master</h1>
+                <h1 className="text-lg font-semibold">Subject Master</h1>
                 <div className="flex items-center gap-4">
                     <div className="flex items-center space-x-2">
                         <input
@@ -78,9 +78,9 @@ export default function SubjectList() {
                 </div>
             </div>
 
-            <div className="rounded-md border bg-white shadow-sm overflow-hidden">
-                <table className="w-full text-sm text-left">
-                    <thead className="bg-gray-50 text-gray-700 uppercase">
+            <div className="bg-white rounded-lg shadow border border-gray-100 overflow-hidden mt-4">
+                <table className="w-full text-base text-left">
+                    <thead className="bg-gray-50 text-gray-600 text-lg font-semibold border-b border-gray-100">
                         <tr>
                             <th className="px-6 py-3">Name</th>
                             <th className="px-6 py-3">Code</th>
@@ -133,15 +133,15 @@ export default function SubjectList() {
                 <button
                     disabled={page === 0}
                     onClick={() => setPage(page - 1)}
-                    className="px-4 py-2 border rounded-md text-gray-600 hover:bg-gray-50 disabled:opacity-50"
+                    className="px-4 py-2 rounded-md bg-white border border-gray-300 text-gray-600 hover:bg-gray-50 disabled:opacity-50"
                 >
                     Previous
                 </button>
-                <span className="text-sm text-gray-600">Page {page + 1} of {totalPages === 0 ? 1 : totalPages}</span>
+                <span className="text-base text-gray-500">Page {page + 1} of {totalPages === 0 ? 1 : totalPages}</span>
                 <button
                     disabled={page >= totalPages - 1}
                     onClick={() => setPage(page + 1)}
-                    className="px-4 py-2 border rounded-md text-gray-600 hover:bg-gray-50 disabled:opacity-50"
+                    className="px-4 py-2 rounded-md bg-white border border-gray-300 text-gray-600 hover:bg-gray-50 disabled:opacity-50"
                 >
                     Next
                 </button>

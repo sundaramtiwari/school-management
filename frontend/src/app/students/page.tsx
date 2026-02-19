@@ -414,11 +414,11 @@ export default function StudentsPage() {
   /* ---------------- UI ---------------- */
 
   return (
-    <div className="space-y-6">
+    <div className="mx-auto px-6 py-6 space-y-6">
       <div className="flex justify-between items-center">
         <div>
-          <h1 className="text-3xl font-bold text-gray-800">Student Directory</h1>
-          <p className="text-gray-500">Manage students for <span className="text-blue-600 font-bold">{currentSession?.name || "current session"}</span>.</p>
+          <h1 className="text-lg font-semibold">Student Directory</h1>
+          <p className="text-gray-500 text-base mt-1">Manage students for <span className="text-blue-600 font-bold">{currentSession?.name || "current session"}</span>.</p>
         </div>
 
         {canAddStudent && (
@@ -427,7 +427,7 @@ export default function StudentsPage() {
               <button
                 onClick={() => setShowPromotionModal(true)}
                 disabled={selectedStudents.length === 0}
-                className="bg-emerald-600 text-white px-6 py-2.5 rounded-xl font-bold shadow-lg hover:bg-emerald-700 disabled:bg-gray-400 disabled:cursor-not-allowed transition-all"
+                className="bg-white border border-gray-300 px-6 py-2.5 rounded-md font-medium hover:bg-gray-50 disabled:opacity-50 disabled:cursor-not-allowed text-base"
               >
                 Promote Students
               </button>
@@ -439,7 +439,7 @@ export default function StudentsPage() {
                 }
                 setShowAddModal(true);
               }}
-              className="bg-blue-600 text-white px-6 py-2.5 rounded-xl font-bold shadow-lg hover:bg-blue-700 transition-all flex items-center gap-2"
+              className="bg-blue-600 text-white px-6 py-2.5 rounded-md font-medium hover:bg-blue-700 flex items-center gap-2 text-base"
             >
               <span className="text-xl">+</span> Add Student
             </button>
@@ -447,14 +447,14 @@ export default function StudentsPage() {
         )}
       </div>
 
-      <div className="bg-white p-6 border rounded-2xl shadow-sm flex flex-wrap gap-4 items-end">
+      <div className="bg-white rounded-lg shadow border border-gray-100 p-6 flex flex-wrap gap-4 items-end">
         <div className="flex-1 min-w-[300px]">
-          <label className="block text-xs font-bold uppercase text-gray-400 mb-2 ml-1">Filter by Class</label>
+          <label className="block text-sm font-medium text-gray-500 mb-2">Filter by Class</label>
           <select
             value={selectedClass}
             onChange={onClassChange}
             disabled={loadingClasses}
-            className="input-ref"
+            className="w-full rounded-md border border-gray-300 focus:ring-2 focus:ring-blue-500 px-3 py-2 text-base"
           >
             <option value="">Select Class</option>
             {classes.map((c) => (
@@ -467,26 +467,26 @@ export default function StudentsPage() {
       </div>
 
       {loadingStudents ? (
-        <div className="bg-white p-8 rounded-2xl border">
+        <div className="bg-white rounded-lg shadow border border-gray-100 p-6">
           <TableSkeleton rows={10} cols={4} />
         </div>
       ) : selectedClass ? (
-        <div className="bg-white border rounded-2xl shadow-sm overflow-hidden">
-          <table className="w-full text-sm">
-            <thead className="bg-gray-50 text-gray-600 font-bold border-b">
+        <div className="bg-white rounded-lg shadow border border-gray-100 overflow-hidden mt-4">
+          <table className="w-full text-base">
+            <thead className="bg-gray-50 text-gray-600 text-lg font-semibold border-b border-gray-100">
               <tr>
-                <th className="p-4 text-center w-12">
+                <th className="px-6 py-4 text-center w-12">
                   <input
                     type="checkbox"
                     checked={students.length > 0 && selectedIds.size === students.length}
                     onChange={toggleSelectAll}
                   />
                 </th>
-                <th className="p-4 text-left">Student Name</th>
-                <th className="p-4 text-center">Admission No</th>
-                <th className="p-4 text-center">Gender</th>
-                <th className="p-4 text-center">Contact</th>
-                <th className="p-4 text-center w-24">Actions</th>
+                <th className="px-6 py-4 text-left">Student Name</th>
+                <th className="px-6 py-4 text-center">Admission No</th>
+                <th className="px-6 py-4 text-center">Gender</th>
+                <th className="px-6 py-4 text-center">Contact</th>
+                <th className="px-6 py-4 text-center w-24">Actions</th>
               </tr>
             </thead>
             <tbody className="divide-y divide-gray-100">
@@ -542,7 +542,7 @@ export default function StudentsPage() {
                             }
                             setShowAddModal(true);
                           }}
-                          className="mt-2 bg-blue-50 text-blue-600 px-6 py-2 rounded-xl font-bold hover:bg-blue-100 transition-all border border-blue-200"
+                          className="mt-2 bg-blue-600 text-white px-6 py-2 rounded-md font-medium hover:bg-blue-700"
                         >
                           Enroll First Student →
                         </button>
@@ -555,7 +555,7 @@ export default function StudentsPage() {
           </table>
         </div>
       ) : (
-        <div className="p-20 text-center bg-gray-50 rounded-2xl border border-dashed border-gray-300 text-gray-400 italic">
+        <div className="p-20 text-center bg-white rounded-lg shadow border border-gray-100 text-gray-500 mb-6">
           Please select a class to view and manage students.
         </div>
       )}
@@ -569,14 +569,14 @@ export default function StudentsPage() {
           <div className="flex gap-2">
             <button
               onClick={() => { setShowAddModal(false); setIsEditing(false); }}
-              className="px-6 py-2 rounded-xl border font-medium text-gray-600 hover:bg-gray-50 transition-all"
+              className="px-6 py-2 rounded-md bg-white border border-gray-300 font-medium text-gray-600 hover:bg-gray-50"
             >
               Cancel
             </button>
             <button
               onClick={saveStudent}
               disabled={isSaving}
-              className="px-8 py-2 rounded-xl bg-blue-600 text-white font-bold shadow-lg hover:bg-blue-700 disabled:bg-gray-400 transition-all"
+              className="px-8 py-2 rounded-md bg-blue-600 text-white font-medium hover:bg-blue-700 disabled:opacity-50"
             >
               {isSaving ? "Saving..." : (isEditing ? "Update Student" : "Enroll Student")}
             </button>
@@ -586,8 +586,8 @@ export default function StudentsPage() {
         <div className="flex flex-col gap-8 max-h-[70vh] overflow-y-auto px-1 pr-4 custom-scrollbar">
 
           {/* Section 1: Admission & Enrollment */}
-          <section className="space-y-4">
-            <h3 className="text-sm font-bold text-blue-600 uppercase tracking-wider border-b pb-2 flex items-center gap-2">
+          <section className="space-y-4 mb-6">
+            <h3 className="text-lg font-semibold border-b border-gray-100 pb-2 flex items-center gap-2">
               <span className="bg-blue-600 text-white w-5 h-5 rounded-full flex items-center justify-center text-[10px]">1</span>
               Enrollment Details
             </h3>
@@ -632,8 +632,8 @@ export default function StudentsPage() {
           </section>
 
           {/* Section 2: Personal Information */}
-          <section className="space-y-4">
-            <h3 className="text-sm font-bold text-blue-600 uppercase tracking-wider border-b pb-2 flex items-center gap-2">
+          <section className="space-y-4 mb-6">
+            <h3 className="text-lg font-semibold border-b border-gray-100 pb-2 flex items-center gap-2">
               <span className="bg-blue-600 text-white w-5 h-5 rounded-full flex items-center justify-center text-[10px]">2</span>
               Personal Information
             </h3>
@@ -705,8 +705,8 @@ export default function StudentsPage() {
           </section>
 
           {/* Section 3: Identity & Demographics */}
-          <section className="space-y-4">
-            <h3 className="text-sm font-bold text-blue-600 uppercase tracking-wider border-b pb-2 flex items-center gap-2">
+          <section className="space-y-4 mb-6">
+            <h3 className="text-lg font-semibold border-b border-gray-100 pb-2 flex items-center gap-2">
               <span className="bg-blue-600 text-white w-5 h-5 rounded-full flex items-center justify-center text-[10px]">3</span>
               Identity & Demographics
             </h3>
@@ -771,8 +771,8 @@ export default function StudentsPage() {
           </section>
 
           {/* Section 4: Contact & Address */}
-          <section className="space-y-4">
-            <h3 className="text-sm font-bold text-blue-600 uppercase tracking-wider border-b pb-2 flex items-center gap-2">
+          <section className="space-y-4 mb-6">
+            <h3 className="text-lg font-semibold border-b border-gray-100 pb-2 flex items-center gap-2">
               <span className="bg-blue-600 text-white w-5 h-5 rounded-full flex items-center justify-center text-[10px]">4</span>
               Contact & Address
             </h3>
@@ -844,8 +844,8 @@ export default function StudentsPage() {
           </section>
 
           {/* Section 5: Previous School Details */}
-          <section className="space-y-4">
-            <h3 className="text-sm font-bold text-blue-600 uppercase tracking-wider border-b pb-2 flex items-center gap-2">
+          <section className="space-y-4 mb-6">
+            <h3 className="text-lg font-semibold border-b border-gray-100 pb-2 flex items-center gap-2">
               <span className="bg-blue-600 text-white w-5 h-5 rounded-full flex items-center justify-center text-[10px]">5</span>
               Previous School History
             </h3>
@@ -916,8 +916,8 @@ export default function StudentsPage() {
 
           {/* Section 6: Funding / Sponsorship (New) */}
           {canAddStudent && (
-            <section className="space-y-4 bg-blue-50/30 p-4 rounded-2xl border border-blue-100">
-              <h3 className="text-sm font-bold text-blue-600 uppercase tracking-wider border-b border-blue-100 pb-2 flex items-center gap-2">
+            <section className="space-y-4 bg-gray-50 p-4 rounded-lg border border-gray-100 mb-6">
+              <h3 className="text-lg font-semibold border-b border-gray-100 pb-2 flex items-center gap-2">
                 <span className="bg-blue-600 text-white w-5 h-5 rounded-full flex items-center justify-center text-[10px]">6</span>
                 Funding / Sponsorship
               </h3>
@@ -993,8 +993,8 @@ export default function StudentsPage() {
           )}
 
           {/* Section 6: Remarks */}
-          <section className="space-y-4">
-            <h3 className="text-sm font-bold text-blue-600 uppercase tracking-wider border-b pb-2 flex items-center gap-2">
+          <section className="space-y-4 mb-6">
+            <h3 className="text-lg font-semibold border-b border-gray-100 pb-2 flex items-center gap-2">
               <span className="bg-blue-600 text-white w-5 h-5 rounded-full flex items-center justify-center text-[10px]">6</span>
               Additional Remarks
             </h3>
@@ -1010,7 +1010,7 @@ export default function StudentsPage() {
           {/* Section 7: Guardians */}
           {!isEditing && (
             <section className="space-y-4 mb-4">
-              <h3 className="text-sm font-bold text-blue-600 uppercase tracking-wider border-b pb-2 flex items-center gap-2">
+              <h3 className="text-lg font-semibold border-b border-gray-100 pb-2 flex items-center gap-2">
                 <span className="bg-blue-600 text-white w-5 h-5 rounded-full flex items-center justify-center text-[10px]">7</span>
                 Guardian Information
               </h3>
@@ -1041,13 +1041,13 @@ export default function StudentsPage() {
           <div className="flex gap-2 border-b pb-2">
             <button
               onClick={() => setProfileTab("overview")}
-              className={`px-3 py-1.5 rounded-lg text-sm font-semibold ${profileTab === "overview" ? "bg-blue-600 text-white" : "bg-gray-100 text-gray-700"}`}
+              className={`px-3 py-1.5 rounded-md text-base font-medium ${profileTab === "overview" ? "bg-blue-600 text-white hover:bg-blue-700" : "bg-white border border-gray-300 text-gray-700 hover:bg-gray-50"}`}
             >
               Overview
             </button>
             <button
               onClick={() => setProfileTab("ledger")}
-              className={`px-3 py-1.5 rounded-lg text-sm font-semibold ${profileTab === "ledger" ? "bg-blue-600 text-white" : "bg-gray-100 text-gray-700"}`}
+              className={`px-3 py-1.5 rounded-md text-base font-medium ${profileTab === "ledger" ? "bg-blue-600 text-white hover:bg-blue-700" : "bg-white border border-gray-300 text-gray-700 hover:bg-gray-50"}`}
             >
               Financial Ledger
             </button>
@@ -1166,7 +1166,7 @@ export default function StudentsPage() {
                         setShowProfileModal(false);
                         setShowAddModal(true);
                       }}
-                      className="bg-blue-600 text-white px-6 py-2 rounded-xl font-bold shadow-lg hover:bg-blue-700 transition-all flex items-center gap-2"
+                      className="bg-blue-600 text-white px-6 py-2 rounded-md font-medium hover:bg-blue-700 flex items-center gap-2"
                     >
                       <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                         <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.172-2.172a2.828 2.828 0 114 4L11.828 15H9v-2.828l8.586-8.586z" />

@@ -146,16 +146,16 @@ export default function TransportPage() {
     }
 
     return (
-        <div className="space-y-6">
+        <div className="mx-auto px-6 py-6 space-y-6">
             <header className="flex justify-between items-center">
                 <div>
-                    <h1 className="text-3xl font-bold text-gray-800">Transport Management</h1>
-                    <p className="text-gray-500">Define routes and associated pickup point fees.</p>
+                    <h1 className="text-lg font-semibold">Transport Management</h1>
+                    <p className="text-gray-500 text-base mt-1">Define routes and associated pickup point fees.</p>
                 </div>
                 <button
                     onClick={() => setShowRouteModal(true)}
                     disabled={!canMutateTransport}
-                    className="bg-blue-600 text-white px-6 py-2.5 rounded-xl font-bold shadow-lg hover:bg-blue-700 transition-all flex items-center gap-2"
+                    className="bg-blue-600 text-white px-6 py-2.5 rounded-md font-medium hover:bg-blue-700 flex items-center gap-2 text-base"
                 >
                     <span>+</span> New Route
                 </button>
@@ -163,8 +163,8 @@ export default function TransportPage() {
 
             <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
                 {/* Routes List */}
-                <div className="bg-white border rounded-2xl shadow-sm overflow-hidden flex flex-col h-[70vh]">
-                    <div className="p-4 border-b bg-gray-50 text-xs font-black uppercase text-gray-400 tracking-widest">
+                <div className="bg-white rounded-lg shadow border border-gray-100 overflow-hidden flex flex-col h-[70vh]">
+                    <div className="p-4 border-b border-gray-100 bg-gray-50 text-lg font-semibold">
                         Active Routes
                     </div>
                     <div className="flex-1 overflow-y-auto divide-y">
@@ -225,11 +225,11 @@ export default function TransportPage() {
                     title="Confirm Deletion"
                     footer={
                         <div className="flex gap-2">
-                            <button onClick={() => setRouteToDelete(null)} className="btn-secondary">Cancel</button>
+                            <button onClick={() => setRouteToDelete(null)} className="px-6 py-2 rounded-md bg-white border border-gray-300 font-medium text-gray-600 hover:bg-gray-50">Cancel</button>
                             <button
                                 onClick={() => routeToDelete && deleteRoute(routeToDelete)}
                                 disabled={isSaving}
-                                className="bg-red-600 text-white px-6 py-2 rounded-xl font-bold hover:bg-red-700"
+                                className="bg-red-600 text-white px-6 py-2 rounded-md font-medium hover:bg-red-700 disabled:opacity-50"
                             >
                                 {isSaving ? "Deleting..." : "Delete Route"}
                             </button>
@@ -242,9 +242,9 @@ export default function TransportPage() {
                 {/* Pickup Points */}
                 <div className="lg:col-span-2 space-y-6">
                     {selectedRoute ? (
-                        <div className="bg-white border rounded-2xl shadow-sm overflow-hidden flex flex-col h-[70vh]">
-                            <div className="p-4 border-b bg-gray-50 flex justify-between items-center">
-                                <span className="text-xs font-black uppercase text-gray-400 tracking-widest">
+                        <div className="bg-white rounded-lg shadow border border-gray-100 overflow-hidden flex flex-col h-[70vh]">
+                            <div className="p-4 border-b border-gray-100 bg-gray-50 flex justify-between items-center">
+                                <span className="text-lg font-semibold">
                                     Stops for {selectedRoute.name}
                                 </span>
                                 <button
@@ -296,7 +296,7 @@ export default function TransportPage() {
                             </div>
                         </div>
                     ) : (
-                        <div className="h-[70vh] flex flex-col items-center justify-center bg-gray-50 border rounded-2xl border-dashed space-y-4 text-gray-400">
+                        <div className="h-[70vh] flex flex-col items-center justify-center bg-white rounded-lg shadow border border-gray-100 space-y-4 text-gray-500">
                             <span className="text-4xl opacity-20">🚌</span>
                             <p className="italic">Select a route to configure pickup stops and fees.</p>
                         </div>
@@ -311,8 +311,8 @@ export default function TransportPage() {
                 title="Create Transport Route"
                 footer={
                     <div className="flex gap-2">
-                        <button onClick={() => setShowRouteModal(false)} className="btn-secondary">Cancel</button>
-                        <button onClick={saveRoute} disabled={isSaving} className="btn-primary">
+                        <button onClick={() => setShowRouteModal(false)} className="px-6 py-2 rounded-md bg-white border border-gray-300 font-medium text-gray-600 hover:bg-gray-50">Cancel</button>
+                        <button onClick={saveRoute} disabled={isSaving} className="px-6 py-2 rounded-md bg-blue-600 text-white font-medium hover:bg-blue-700 disabled:opacity-50">
                             {isSaving ? "Saving..." : "Create Route"}
                         </button>
                     </div>
@@ -320,7 +320,7 @@ export default function TransportPage() {
             >
                 <div className="space-y-4">
                     <div>
-                        <label className="label-ref">Route Name *</label>
+                        <label className="block text-sm font-medium text-gray-500 mb-2">Route Name *</label>
                         <input
                             className="input-ref"
                             placeholder="e.g. South Campus Express"
@@ -329,7 +329,7 @@ export default function TransportPage() {
                         />
                     </div>
                     <div>
-                        <label className="label-ref">Capacity (Seats) *</label>
+                        <label className="block text-sm font-medium text-gray-500 mb-2">Capacity (Seats) *</label>
                         <input
                             type="number"
                             className="input-ref"
@@ -339,7 +339,7 @@ export default function TransportPage() {
                         />
                     </div>
                     <div>
-                        <label className="label-ref">Description</label>
+                        <label className="block text-sm font-medium text-gray-500 mb-2">Description</label>
                         <textarea
                             className="input-ref h-24"
                             placeholder="Primary landmarks or areas covered..."
@@ -358,8 +358,8 @@ export default function TransportPage() {
                 title="Add Pickup Point Stop"
                 footer={
                     <div className="flex gap-2">
-                        <button onClick={() => setShowPickupModal(false)} className="btn-secondary">Cancel</button>
-                        <button onClick={savePickup} disabled={isSaving} className="btn-primary">
+                        <button onClick={() => setShowPickupModal(false)} className="px-6 py-2 rounded-md bg-white border border-gray-300 font-medium text-gray-600 hover:bg-gray-50">Cancel</button>
+                        <button onClick={savePickup} disabled={isSaving} className="px-6 py-2 rounded-md bg-blue-600 text-white font-medium hover:bg-blue-700 disabled:opacity-50">
                             {isSaving ? "Adding..." : "Add Stop"}
                         </button>
                     </div>
@@ -367,7 +367,7 @@ export default function TransportPage() {
             >
                 <div className="space-y-4">
                     <div>
-                        <label className="label-ref">Stop Name *</label>
+                        <label className="block text-sm font-medium text-gray-500 mb-2">Stop Name *</label>
                         <input
                             className="input-ref"
                             placeholder="e.g. Green Park Circle"
@@ -377,7 +377,7 @@ export default function TransportPage() {
                     </div>
                     <div className="grid grid-cols-2 gap-4">
                         <div>
-                            <label className="label-ref">Fee Frequency *</label>
+                            <label className="block text-sm font-medium text-gray-500 mb-2">Fee Frequency *</label>
                             <select
                                 className="input-ref"
                                 value={pickupForm.frequency}
@@ -387,7 +387,7 @@ export default function TransportPage() {
                             </select>
                         </div>
                         <div>
-                            <label className="label-ref">Amount (₹) *</label>
+                            <label className="block text-sm font-medium text-gray-500 mb-2">Amount (₹) *</label>
                             <input
                                 type="number"
                                 className="input-ref"
@@ -400,44 +400,6 @@ export default function TransportPage() {
                 </div>
             </Modal>
 
-            <style jsx>{`
-        .label-ref {
-          display: block;
-          font-size: 0.75rem;
-          font-weight: 700;
-          text-transform: uppercase;
-          color: #9ca3af;
-          margin-bottom: 0.5rem;
-          margin-left: 0.25rem;
-        }
-        .btn-primary {
-          background-color: #2563eb;
-          color: white;
-          padding: 0.625rem 1.5rem;
-          border-radius: 0.75rem;
-          font-weight: 700;
-          box-shadow: 0 10px 15px -3px rgba(37, 99, 235, 0.2);
-          transition: all 0.2s;
-        }
-        .btn-primary:hover {
-          background-color: #1d4ed8;
-        }
-        .btn-primary:disabled {
-          background-color: #9ca3af;
-          box-shadow: none;
-        }
-        .btn-secondary {
-          padding: 0.625rem 1.5rem;
-          border-radius: 0.75rem;
-          border-width: 1px;
-          font-weight: 500;
-          color: #4b5563;
-          transition: all 0.2s;
-        }
-        .btn-secondary:hover {
-          background-color: #f9fafb;
-        }
-      `}</style>
         </div>
     );
 }

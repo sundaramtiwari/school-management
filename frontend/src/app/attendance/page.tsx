@@ -214,11 +214,11 @@ export default function AttendancePage() {
     /* ---------------- UI ---------------- */
 
     return (
-        <div className="space-y-6">
+        <div className="mx-auto px-6 py-6 space-y-6">
             <div className="flex justify-between items-center text-wrap">
                 <div>
-                    <h1 className="text-3xl font-bold text-gray-800">Student Attendance</h1>
-                    <p className="text-gray-500">Track and record daily student presence for <span className="text-blue-600 font-bold">{currentSession?.name || "current session"}</span>.</p>
+                    <h1 className="text-lg font-semibold">Student Attendance</h1>
+                    <p className="text-gray-500 text-base mt-1">Track and record daily student presence for <span className="text-blue-600 font-bold">{currentSession?.name || "current session"}</span>.</p>
                 </div>
 
                 <div className="flex gap-3">
@@ -226,14 +226,14 @@ export default function AttendancePage() {
                         <>
                             <button
                                 onClick={markAllPresent}
-                                className="bg-green-50 text-green-700 px-5 py-2.5 rounded-xl hover:bg-green-100 transition-all font-bold border border-green-200 shadow-sm"
+                                className="bg-white border border-gray-300 px-5 py-2.5 rounded-md font-medium hover:bg-gray-50 text-base"
                             >
                                 Mark Page Present
                             </button>
                             <button
                                 onClick={saveAttendance}
                                 disabled={loading.saving}
-                                className="bg-blue-600 text-white px-8 py-2.5 rounded-xl hover:bg-blue-700 transition-all font-bold shadow-lg disabled:bg-gray-400"
+                                className="bg-blue-600 text-white px-8 py-2.5 rounded-md font-medium hover:bg-blue-700 disabled:opacity-50 text-base"
                             >
                                 {loading.saving ? "Saving..." : "Commit Attendance"}
                             </button>
@@ -243,9 +243,9 @@ export default function AttendancePage() {
             </div>
 
             {/* ---------------- Filters ---------------- */}
-            <div className="bg-white p-6 border rounded-2xl shadow-sm flex flex-wrap gap-6 items-end">
+            <div className="bg-white rounded-lg shadow border border-gray-100 p-6 flex flex-wrap gap-6 items-end">
                 <div className="flex-1 min-w-[250px]">
-                    <label className="block text-xs font-bold uppercase text-gray-400 mb-2 ml-1">Class Selection</label>
+                    <label className="block text-sm font-medium text-gray-500 mb-2">Class Selection</label>
                     <select
                         value={selectedClass}
                         onChange={onClassChange}
@@ -262,7 +262,7 @@ export default function AttendancePage() {
                 </div>
 
                 <div className="flex-1 min-w-[250px]">
-                    <label className="block text-xs font-bold uppercase text-gray-400 mb-2 ml-1">Attendance Date</label>
+                    <label className="block text-sm font-medium text-gray-500 mb-2">Attendance Date</label>
                     <input
                         type="date"
                         value={selectedDate}
@@ -274,7 +274,7 @@ export default function AttendancePage() {
 
             {/* ---------------- Attendance Table ---------------- */}
             {!editable && selectedClass && (
-                <div className="bg-yellow-50 border border-yellow-200 text-yellow-800 px-6 py-4 rounded-xl flex items-center justify-between gap-3">
+                <div className="bg-yellow-50 border border-yellow-200 text-yellow-800 px-6 py-4 rounded-lg flex items-center justify-between gap-3 mt-4 mb-6">
                     <div className="flex items-center gap-3">
                         <span className="text-2xl">⚠️</span>
                         <div>
@@ -286,7 +286,7 @@ export default function AttendancePage() {
             )}
 
             {editable && committed && !isModifying && (
-                <div className="bg-blue-50 border border-blue-200 text-blue-800 px-6 py-4 rounded-xl flex items-center justify-between gap-3">
+                <div className="bg-blue-50 border border-blue-200 text-blue-800 px-6 py-4 rounded-lg flex items-center justify-between gap-3 mt-4 mb-6">
                     <div className="flex items-center gap-3">
                         <span className="text-2xl">ℹ️</span>
                         <div>
@@ -297,7 +297,7 @@ export default function AttendancePage() {
                     {canModify && (
                         <button
                             onClick={() => setIsModifying(true)}
-                            className="bg-blue-600 text-white px-4 py-2 rounded-lg font-semibold hover:bg-blue-700 transition shadow-sm"
+                            className="bg-blue-600 text-white px-4 py-2 rounded-md font-medium hover:bg-blue-700"
                         >
                             Modify Attendance
                         </button>
@@ -306,19 +306,19 @@ export default function AttendancePage() {
             )}
 
             {selectedClass && loading.students ? (
-                <div className="bg-white p-8 rounded-2xl border">
+                <div className="bg-white rounded-lg shadow border border-gray-100 p-6">
                     <TableSkeleton rows={12} cols={4} />
                 </div>
             ) : selectedClass ? (
                 <fieldset disabled={!editable || (committed && !isModifying)} className="space-y-4">
-                    <div className="bg-white border rounded-2xl shadow-sm overflow-hidden">
-                        <table className="w-full text-sm">
-                            <thead className="bg-gray-50 text-gray-600 font-bold border-b">
+                    <div className="bg-white rounded-lg shadow border border-gray-100 overflow-hidden mt-4">
+                        <table className="w-full text-base">
+                            <thead className="bg-gray-50 text-gray-600 text-lg font-semibold border-b border-gray-100">
                                 <tr>
-                                    <th className="p-4 text-center w-24">Presence</th>
-                                    <th className="p-4 text-left">Student Info</th>
-                                    <th className="p-4 text-center">Admission No</th>
-                                    <th className="p-4 text-center">Status Flag</th>
+                                    <th className="px-6 py-4 text-center w-24">Presence</th>
+                                    <th className="px-6 py-4 text-left">Student Info</th>
+                                    <th className="px-6 py-4 text-center">Admission No</th>
+                                    <th className="px-6 py-4 text-center">Status Flag</th>
                                 </tr>
                             </thead>
                             <tbody className="divide-y divide-gray-100">
@@ -377,7 +377,7 @@ export default function AttendancePage() {
 
                     {/* ---------- Pagination Controls ---------- */}
                     {totalPages > 1 && (
-                        <div className="flex justify-between items-center bg-white px-6 py-4 border rounded-2xl shadow-sm">
+                        <div className="flex justify-between items-center bg-white rounded-lg shadow border border-gray-100 px-6 py-4 mt-4">
                             <span className="text-sm font-medium text-gray-500">
                                 Page <span className="text-blue-600 font-bold">{currentPage + 1}</span> of <span className="font-bold">{totalPages}</span>
                             </span>
@@ -385,14 +385,14 @@ export default function AttendancePage() {
                                 <button
                                     disabled={currentPage === 0}
                                     onClick={() => changePage(currentPage - 1)}
-                                    className="px-4 py-2 border rounded-xl hover:bg-gray-50 disabled:opacity-50 transition-all font-semibold"
+                                    className="px-4 py-2 rounded-md bg-white border border-gray-300 hover:bg-gray-50 disabled:opacity-50 font-medium"
                                 >
                                     Previous
                                 </button>
                                 <button
                                     disabled={currentPage === totalPages - 1}
                                     onClick={() => changePage(currentPage + 1)}
-                                    className="px-4 py-2 border rounded-xl hover:bg-gray-50 disabled:opacity-50 transition-all font-semibold"
+                                    className="px-4 py-2 rounded-md bg-white border border-gray-300 hover:bg-gray-50 disabled:opacity-50 font-medium"
                                 >
                                     Next
                                 </button>
@@ -401,7 +401,7 @@ export default function AttendancePage() {
                     )}
                 </fieldset>
             ) : (
-                <div className="p-20 text-center bg-gray-50 rounded-2xl border border-dashed border-gray-300 text-gray-400 italic">
+                <div className="p-20 text-center bg-white rounded-lg shadow border border-gray-100 text-gray-500 mb-6">
                     Select a class and date to manage attendance records.
                 </div>
             )}

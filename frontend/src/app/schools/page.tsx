@@ -220,11 +220,11 @@ export default function SchoolsPage() {
   /* ---------------- UI ---------------- */
 
   return (
-    <div className="space-y-6">
+    <div className="mx-auto px-6 py-6 space-y-6">
       <div className="flex justify-between items-center">
         <div>
-          <h1 className="text-3xl font-bold text-gray-800">Schools</h1>
-          <p className="text-gray-500">Manage school institutions and their configurations.</p>
+          <h1 className="text-lg font-semibold">Schools</h1>
+          <p className="text-gray-500 text-base mt-1">Manage school institutions and their configurations.</p>
         </div>
 
         {(user?.role === "SUPER_ADMIN" || user?.role === "PLATFORM_ADMIN") && (
@@ -234,7 +234,7 @@ export default function SchoolsPage() {
               setEditId(null);
               setShowForm(true);
             }}
-            className="bg-blue-600 text-white px-6 py-2.5 rounded-xl font-semibold shadow-lg hover:bg-blue-700 transition-all flex items-center gap-2"
+            className="bg-blue-600 text-white px-6 py-2.5 rounded-md font-medium hover:bg-blue-700 flex items-center gap-2 text-base"
           >
             <span className="text-xl">+</span> Add School
           </button>
@@ -242,23 +242,23 @@ export default function SchoolsPage() {
       </div>
 
       {loading ? (
-        <div className="bg-white p-8 rounded-2xl border">
+        <div className="bg-white rounded-lg shadow border border-gray-100 p-6">
           <TableSkeleton rows={8} cols={5} />
         </div>
       ) : error ? (
-        <div className="bg-red-50 p-6 rounded-2xl border border-red-100 text-red-600 font-medium">
+        <div className="bg-red-50 p-6 rounded-lg border border-red-100 text-red-600 font-medium">
           {error}
         </div>
       ) : (
-        <div className="bg-white border rounded-2xl shadow-sm overflow-hidden">
-          <table className="w-full text-sm">
-            <thead className="bg-gray-50 text-gray-600 font-bold border-b">
+        <div className="bg-white rounded-lg shadow border border-gray-100 overflow-hidden mt-4">
+          <table className="w-full text-base">
+            <thead className="bg-gray-50 text-gray-600 text-lg font-semibold border-b border-gray-100">
               <tr>
-                <th className="p-4 text-left">School Name</th>
-                <th className="p-4 text-center w-24">Code</th>
-                <th className="p-4 text-center">Board</th>
-                <th className="p-4 text-center">Location</th>
-                <th className="p-4 text-center w-32">Actions</th>
+                <th className="px-6 py-4 text-left">School Name</th>
+                <th className="px-6 py-4 text-center w-24">Code</th>
+                <th className="px-6 py-4 text-center">Board</th>
+                <th className="px-6 py-4 text-center">Location</th>
+                <th className="px-6 py-4 text-center w-32">Actions</th>
               </tr>
             </thead>
             <tbody className="divide-y">
@@ -327,14 +327,14 @@ export default function SchoolsPage() {
           <div className="flex gap-2">
             <button
               onClick={() => setShowForm(false)}
-              className="px-6 py-2 rounded-xl border font-medium text-gray-600 hover:bg-gray-50 transition-all"
+              className="px-6 py-2 rounded-md bg-white border border-gray-300 font-medium text-gray-600 hover:bg-gray-50"
             >
               Cancel
             </button>
             <button
               onClick={saveSchool}
               disabled={isSaving}
-              className="px-8 py-2 rounded-xl bg-blue-600 text-white font-bold shadow-lg hover:bg-blue-700 disabled:bg-gray-400 transition-all"
+              className="px-8 py-2 rounded-md bg-blue-600 text-white font-medium hover:bg-blue-700 disabled:opacity-50"
             >
               {isSaving ? "Saving..." : editId ? "Update Changes" : "Create & Provision"}
             </button>
