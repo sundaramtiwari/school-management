@@ -14,4 +14,6 @@ public class StudentFeeAssignRequest {
 
     @NotNull
     private Long sessionId;
+
+    private java.time.LocalDate dueDate;
 }

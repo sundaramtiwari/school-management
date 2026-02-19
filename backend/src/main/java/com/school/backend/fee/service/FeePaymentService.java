@@ -88,9 +88,17 @@ public class FeePaymentService {
             }
 
             // Calculate and accrue late fee from snapshot at payment time
-            BigDecimal incrementalLateFee = lateFeeCalculator.calculateLateFee(assignment, principalDue, effectivePaymentDate);
+            BigDecimal incrementalLateFee = lateFeeCalculator.calculateLateFee(assignment, principalDue,
+                    effectivePaymentDate);
             if (incrementalLateFee.compareTo(BigDecimal.ZERO) > 0) {
                 assignment.setLateFeeAccrued(assignment.getLateFeeAccrued().add(incrementalLateFee));
+
+                // For one-time late fees, mark as applied
+                if (assignment.getLateFeeType() == com.school.backend.fee.enums.LateFeeType.FLAT ||
+                        assignment.getLateFeeType() == com.school.backend.fee.enums.LateFeeType.PERCENTAGE) {
+                    assignment.setLateFeeApplied(true);
+                }
+
                 lateFeeLogRepository.save(LateFeeLog.builder()
                         .schoolId(TenantContext.getSchoolId())
                         .assignmentId(assignment.getId())

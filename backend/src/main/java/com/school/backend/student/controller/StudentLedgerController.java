@@ -24,4 +24,10 @@ public class StudentLedgerController {
     public ResponseEntity<List<LedgerSummaryDto>> getLedger(@PathVariable Long id) {
         return ResponseEntity.ok(studentLedgerService.getStudentLedger(id));
     }
+
+    @GetMapping("/{id}/ledger-summary")
+    @PreAuthorize("hasAnyRole('SCHOOL_ADMIN', 'TEACHER', 'ACCOUNTANT', 'SUPER_ADMIN', 'PLATFORM_ADMIN')")
+    public ResponseEntity<List<LedgerSummaryDto>> getLedgerSummary(@PathVariable Long id) {
+        return ResponseEntity.ok(studentLedgerService.getStudentLedger(id));
+    }
 }

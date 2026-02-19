@@ -16,8 +16,7 @@ public class LateFeeCalculator {
     public BigDecimal calculateLateFee(
             StudentFeeAssignment assignment,
             BigDecimal unpaidAmount,
-            LocalDate paymentDate
-    ) {
+            LocalDate paymentDate) {
         LateFeeType type = assignment.getLateFeeType() != null ? assignment.getLateFeeType() : LateFeeType.NONE;
         if (type == LateFeeType.NONE) {
             return BigDecimal.ZERO;
@@ -48,14 +47,13 @@ public class LateFeeCalculator {
                     return BigDecimal.ZERO;
                 }
                 computedIncrement = value;
-                assignment.setLateFeeApplied(true);
             }
             case PERCENTAGE -> {
                 if (assignment.isLateFeeApplied()) {
                     return BigDecimal.ZERO;
                 }
-                computedIncrement = principalUnpaid.multiply(value).divide(BigDecimal.valueOf(100), 8, RoundingMode.HALF_UP);
-                assignment.setLateFeeApplied(true);
+                computedIncrement = principalUnpaid.multiply(value).divide(BigDecimal.valueOf(100), 8,
+                        RoundingMode.HALF_UP);
             }
             case DAILY_PERCENTAGE -> {
                 long daysLate = ChronoUnit.DAYS.between(lateStartDate, paymentDate);

@@ -11,6 +11,8 @@ type SchoolClass = { id: number; name: string; section: string; sessionId: numbe
 type Student = { id: number; firstName: string; lastName: string; admissionNumber: string };
 type FeeSummary = {
     totalFee: number;
+    totalDiscount: number;
+    totalFunding: number;
     totalPaid: number;
     pendingFee: number;
     totalLateFeeAccrued: number;
@@ -219,6 +221,14 @@ export default function FeeCollectPage() {
                                 <div className="flex justify-between">
                                     <span className="text-gray-400">Principal Amount:</span>
                                     <span className="text-white">₹ {summary.totalFee.toLocaleString()}</span>
+                                </div>
+                                <div className="flex justify-between">
+                                    <span className="text-gray-400">Total Discount:</span>
+                                    <span className="text-blue-400">₹ {(summary.totalDiscount ?? 0).toLocaleString()}</span>
+                                </div>
+                                <div className="flex justify-between">
+                                    <span className="text-gray-400">Sponsor Covered:</span>
+                                    <span className="text-indigo-400">₹ {(summary.totalFunding ?? 0).toLocaleString()}</span>
                                 </div>
                                 <div className="flex justify-between">
                                     <span className="text-gray-400">Accrued Late Fees:</span>

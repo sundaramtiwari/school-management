@@ -36,8 +36,15 @@ public class StudentFeeAssignment extends TenantEntity {
     @Column(name = "session_id", nullable = false)
     private Long sessionId;
 
-    @Column(nullable = false, precision = 15, scale = 2)
+    @Column(nullable = false, precision = 19, scale = 2)
     private BigDecimal amount;
+
+    @Column(nullable = false, precision = 19, scale = 2)
+    @Builder.Default
+    private BigDecimal sponsorCoveredAmount = BigDecimal.ZERO;
+
+    @Version
+    private Long version;
 
     // --- Snapshot Fields ---
     private LocalDate dueDate;
@@ -46,7 +53,7 @@ public class StudentFeeAssignment extends TenantEntity {
     @Column(length = 20)
     private LateFeeType lateFeeType;
 
-    @Column(precision = 15, scale = 2)
+    @Column(precision = 19, scale = 2)
     private BigDecimal lateFeeValue;
 
     private Integer lateFeeGraceDays;
@@ -56,30 +63,30 @@ public class StudentFeeAssignment extends TenantEntity {
     @Builder.Default
     private LateFeeCapType lateFeeCapType = LateFeeCapType.NONE;
 
-    @Column(precision = 15, scale = 2)
+    @Column(precision = 19, scale = 2)
     private BigDecimal lateFeeCapValue;
 
     // --- Aggregate / Tracking Fields ---
     @Builder.Default
     private boolean lateFeeApplied = false;
 
-    @Column(precision = 15, scale = 2)
+    @Column(precision = 19, scale = 2)
     @Builder.Default
     private BigDecimal lateFeeAccrued = BigDecimal.ZERO;
 
-    @Column(precision = 15, scale = 2)
+    @Column(precision = 19, scale = 2)
     @Builder.Default
     private BigDecimal principalPaid = BigDecimal.ZERO;
 
-    @Column(precision = 15, scale = 2)
+    @Column(precision = 19, scale = 2)
     @Builder.Default
     private BigDecimal lateFeePaid = BigDecimal.ZERO;
 
-    @Column(precision = 15, scale = 2)
+    @Column(precision = 19, scale = 2)
     @Builder.Default
     private BigDecimal lateFeeWaived = BigDecimal.ZERO;
 
-    @Column(precision = 15, scale = 2)
+    @Column(precision = 19, scale = 2)
     @Builder.Default
     private BigDecimal totalDiscountAmount = BigDecimal.ZERO;
 

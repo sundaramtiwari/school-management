@@ -32,8 +32,11 @@ type LedgerEntry = {
   sessionId: number;
   sessionName: string;
   totalAssigned: number | string;
+  totalDiscount: number | string;
+  totalFunding: number | string;
+  totalLateFee: number | string;
   totalPaid: number | string;
-  pending: number | string;
+  totalPending: number | string;
 };
 
 /* ---------------- Page ---------------- */
@@ -102,6 +105,12 @@ export default function StudentsPage() {
     reasonForLeavingPreviousSchool: "",
     classId: "",
     guardians: [] as GuardianFormValue[],
+    // Funding / Sponsorship
+    fundingType: "NONE" as "NONE" | "FULL" | "PARTIAL",
+    fundingMode: "FIXED_AMOUNT" as "FIXED_AMOUNT" | "PERCENTAGE",
+    fundingValue: "0",
+    fundingValidFrom: "",
+    fundingValidTo: "",
   });
 
   /* ---------------- Init ---------------- */
@@ -139,7 +148,7 @@ export default function StudentsPage() {
   const loadStudentLedger = useCallback(async (studentId: number) => {
     try {
       setLedgerLoading(true);
-      const res = await api.get(`/api/students/${studentId}/ledger`);
+      const res = await api.get(`/api/students/${studentId}/ledger-summary`);
       setLedgerData(Array.isArray(res.data) ? res.data : []);
     } catch {
       showToast("Failed to load financial ledger", "error");
@@ -250,6 +259,19 @@ export default function StudentsPage() {
         sessionId: currentSession.id,
       });
 
+      // --- Save Funding arrangement if applicable ---
+      if (studentForm.fundingType !== "NONE") {
+        await api.post("/api/fees/funding", {
+          studentId,
+          sessionId: currentSession.id,
+          coverageType: studentForm.fundingType,
+          coverageMode: studentForm.fundingMode,
+          coverageValue: Number(studentForm.fundingValue),
+          validFrom: studentForm.fundingValidFrom || null,
+          validTo: studentForm.fundingValidTo || null,
+        });
+      }
+
       showToast("Student enrolled successfully!", "success");
       setShowAddModal(false);
 
@@ -283,6 +305,11 @@ export default function StudentsPage() {
         reasonForLeavingPreviousSchool: "",
         classId: "",
         guardians: [],
+        fundingType: "NONE",
+        fundingMode: "FIXED_AMOUNT",
+        fundingValue: "0",
+        fundingValidFrom: "",
+        fundingValidTo: "",
       });
 
       if (Number(classId) === Number(selectedClass)) {
@@ -805,8 +832,92 @@ export default function StudentsPage() {
             </div>
           </section>
 
-          {/* Section 6: Remarks */}
-          <section className="space-y-4">
+          {/* Section 6: Funding / Sponsorship (New) */}
+          {canAddStudent && (
+            <section className="space-y-4 bg-blue-50/30 p-4 rounded-2xl border border-blue-100">
+              <h3 className="text-sm font-bold text-blue-600 uppercase tracking-wider border-b border-blue-100 pb-2 flex items-center gap-2">
+                <span className="bg-blue-600 text-white w-5 h-5 rounded-full flex items-center justify-center text-[10px]">6</span>
+                Funding / Sponsorship
+              </h3>
+              <div className="grid grid-cols-3 gap-4">
+                <div className="space-y-1">
+                  <label className="text-[10px] font-bold text-gray-400 ml-1">Coverage Type</label>
+                  <select
+                    name="fundingType"
+                    value={studentForm.fundingType}
+                    onChange={updateStudentField}
+                    className="input-ref"
+                  >
+                    <option value="NONE">None / Self-Paid</option>
+                    <option value="FULL">Full Scholarship (100%)</option>
+                    <option value="PARTIAL">Partial Sponsorship</option>
+                  </select>
+                </div>
+
+                {studentForm.fundingType === "PARTIAL" && (
+                  <>
+                    <div className="space-y-1">
+                      <label className="text-[10px] font-bold text-gray-400 ml-1">Mode</label>
+                      <select
+                        name="fundingMode"
+                        value={studentForm.fundingMode}
+                        onChange={updateStudentField}
+                        className="input-ref"
+                      >
+                        <option value="FIXED_AMOUNT">Fixed Amount ($)</option>
+                        <option value="PERCENTAGE">Percentage (%)</option>
+                      </select>
+                    </div>
+                    <div className="space-y-1">
+                      <label className="text-[10px] font-bold text-gray-400 ml-1">Value</label>
+                      <input
+                        name="fundingValue"
+                        type="number"
+                        placeholder="0.00"
+                        value={studentForm.fundingValue}
+                        onChange={updateStudentField}
+                        className="input-ref"
+                      />
+                    </div>
+                  </>
+                )}
+
+                {studentForm.fundingType !== "NONE" && (
+                  <>
+                    <div className="space-y-1">
+                      <label className="text-[10px] font-bold text-gray-400 ml-1">Valid From</label>
+                      <input
+                        name="fundingValidFrom"
+                        type="date"
+                        value={studentForm.fundingValidFrom}
+                        onChange={updateStudentField}
+                        className="input-ref"
+                      />
+                    </div>
+                    <div className="space-y-1">
+                      <label className="text-[10px] font-bold text-gray-400 ml-1">Valid To</label>
+                      <input
+                        name="fundingValidTo"
+                        type="date"
+                        value={studentForm.fundingValidTo}
+                        onChange={updateStudentField}
+                        className="input-ref"
+                      />
+                    </div>
+                  </>
+                )}
+              </div>
+            </section>
+          )}
+          onChange={updateStudentField}
+          className="input-ref"
+                />
+        </div>
+    </div>
+          </section >
+
+    {/* Section 6: Remarks */ }
+    < section className = "space-y-4" >
             <h3 className="text-sm font-bold text-blue-600 uppercase tracking-wider border-b pb-2 flex items-center gap-2">
               <span className="bg-blue-600 text-white w-5 h-5 rounded-full flex items-center justify-center text-[10px]">6</span>
               Additional Remarks
@@ -818,10 +929,10 @@ export default function StudentsPage() {
               onChange={updateStudentField}
               className="input-ref min-h-[60px]"
             />
-          </section>
+          </section >
 
-          {/* Section 7: Guardians */}
-          <section className="space-y-4 mb-4">
+    {/* Section 7: Guardians */ }
+    < section className = "space-y-4 mb-4" >
             <h3 className="text-sm font-bold text-blue-600 uppercase tracking-wider border-b pb-2 flex items-center gap-2">
               <span className="bg-blue-600 text-white w-5 h-5 rounded-full flex items-center justify-center text-[10px]">7</span>
               Guardian Information
@@ -830,10 +941,10 @@ export default function StudentsPage() {
               guardians={studentForm.guardians}
               onChange={(newGuardians) => setStudentForm({ ...studentForm, guardians: newGuardians })}
             />
-          </section>
+          </section >
 
-        </div>
-      </Modal>
+        </div >
+      </Modal >
 
       <PromotionModal
         selectedStudents={selectedStudents}
@@ -882,11 +993,33 @@ export default function StudentsPage() {
                 ledgerData.map((entry) => (
                   <details key={`${entry.sessionId}-${entry.sessionName}`} className="border rounded-xl p-3">
                     <summary className="font-semibold cursor-pointer">{entry.sessionName}</summary>
-                    <div className="mt-3 grid grid-cols-2 gap-3 text-sm">
-                      <div><span className="text-gray-500">Session ID:</span> {entry.sessionId}</div>
-                      <div><span className="text-gray-500">Total Assigned:</span> {entry.totalAssigned}</div>
-                      <div><span className="text-gray-500">Total Paid:</span> {entry.totalPaid}</div>
-                      <div><span className="text-gray-500">Pending:</span> {entry.pending}</div>
+                    <div className="mt-3 grid grid-cols-2 lg:grid-cols-4 gap-4 text-[11px] font-bold tracking-tight">
+                      <div className="bg-gray-50 p-2 rounded-lg border border-gray-100">
+                        <span className="block text-gray-400 uppercase text-[9px] mb-1">Total Assigned</span>
+                        <span className="text-gray-800">₹{Number(entry.totalAssigned).toLocaleString()}</span>
+                      </div>
+                      <div className="bg-blue-50 p-2 rounded-lg border border-blue-100">
+                        <span className="block text-blue-400 uppercase text-[9px] mb-1">Discount (-)</span>
+                        <span className="text-blue-600">₹{Number(entry.totalDiscount).toLocaleString()}</span>
+                      </div>
+                      <div className="bg-indigo-50 p-2 rounded-lg border border-indigo-100">
+                        <span className="block text-indigo-400 uppercase text-[9px] mb-1">Sponsor Covered (-)</span>
+                        <span className="text-indigo-600">₹{Number(entry.totalFunding).toLocaleString()}</span>
+                      </div>
+                      <div className="bg-orange-50 p-2 rounded-lg border border-orange-100">
+                        <span className="block text-orange-400 uppercase text-[9px] mb-1">Late Fee (+)</span>
+                        <span className="text-orange-600">₹{Number(entry.totalLateFee).toLocaleString()}</span>
+                      </div>
+                      <div className="bg-green-50 p-2 rounded-lg border border-green-100">
+                        <span className="block text-green-400 uppercase text-[9px] mb-1">Total Paid</span>
+                        <span className="text-green-600">₹{Number(entry.totalPaid).toLocaleString()}</span>
+                      </div>
+                      <div className="bg-gray-900 p-2 rounded-lg col-span-2">
+                        <span className="block text-gray-400 uppercase text-[9px] mb-1">Current Balance</span>
+                        <span className="text-white">
+                          {Number(entry.totalPending) > 0 ? `₹${Number(entry.totalPending).toLocaleString()}` : "SETTLED"}
+                        </span>
+                      </div>
                     </div>
                   </details>
                 ))
@@ -895,6 +1028,6 @@ export default function StudentsPage() {
           )}
         </div>
       </Modal>
-    </div>
+    </div >
   );
 }

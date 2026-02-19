@@ -12,6 +12,8 @@ import com.school.backend.fee.repository.FeeStructureRepository;
 import com.school.backend.fee.repository.StudentFeeAssignmentRepository;
 import com.school.backend.school.entity.AcademicSession;
 import com.school.backend.school.repository.AcademicSessionRepository;
+import com.school.backend.fee.repository.StudentFundingArrangementRepository;
+import com.school.backend.fee.service.FeeCalculationService;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
@@ -31,6 +33,8 @@ public class StudentFeeAssignmentService {
     private final StudentRepository studentRepository;
     private final LateFeePolicyRepository lateFeePolicyRepository;
     private final AcademicSessionRepository academicSessionRepository;
+    private final StudentFundingArrangementRepository fundingRepository;
+    private final FeeCalculationService feeCalculationService;
 
     // ---------------- ASSIGN ----------------
     @Transactional
@@ -54,23 +58,34 @@ public class StudentFeeAssignmentService {
             throw new IllegalStateException("Fee already assigned to student for this session");
         }
 
-        BigDecimal finalAmount = fs.getAmount();
+        BigDecimal calculatedAmount = fs.getAmount();
         if (fs.getFrequency() == FeeFrequency.MONTHLY) {
-            finalAmount = finalAmount.multiply(new BigDecimal(12));
+            calculatedAmount = calculatedAmount.multiply(new BigDecimal(12));
         }
+        final BigDecimal finalAmount = calculatedAmount;
 
-        // --- Derive Due Date from session start/end ---
-        int dueDay = fs.getDueDayOfMonth() != null ? fs.getDueDayOfMonth() : 10;
-        LocalDate dueDate = resolveDerivedDueDate(req.getSessionId(), fs.getSchoolId(), dueDay);
+        // --- Derive Due Date from session start/end or use request override ---
+        LocalDate dueDate = req.getDueDate();
+        if (dueDate == null) {
+            int dueDay = fs.getDueDayOfMonth() != null ? fs.getDueDayOfMonth() : 10;
+            dueDate = resolveDerivedDueDate(req.getSessionId(), fs.getSchoolId(), dueDay);
+        }
 
         // --- Snapshot Late Fee Policy ---
         LateFeePolicy policy = lateFeePolicyRepository.findByFeeStructureId(fs.getId()).orElse(null);
+
+        // --- Snapshot Funding ---
+        BigDecimal fundingSnapshot = fundingRepository
+                .findActiveByStudentAndSession(req.getStudentId(), req.getSessionId())
+                .map(f -> feeCalculationService.calculateFundingSnapshot(finalAmount, BigDecimal.ZERO, f))
+                .orElse(BigDecimal.ZERO);
 
         StudentFeeAssignment assignment = StudentFeeAssignment.builder()
                 .studentId(req.getStudentId())
                 .feeStructureId(fs.getId())
                 .sessionId(req.getSessionId())
                 .amount(finalAmount)
+                .sponsorCoveredAmount(fundingSnapshot)
                 .dueDate(dueDate)
                 .lateFeeType(policy != null ? policy.getType() : null)
                 .lateFeeValue(policy != null ? policy.getAmountValue() : BigDecimal.ZERO)
