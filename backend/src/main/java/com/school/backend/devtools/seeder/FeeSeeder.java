@@ -302,7 +302,8 @@ public class FeeSeeder {
 
         switch (bucket) {
             case FULLY_PAID -> principalPaid = payable;
-            case PARTIAL_PAID -> principalPaid = payable.multiply(BigDecimal.valueOf(0.50)).setScale(2, RoundingMode.HALF_UP);
+            case PARTIAL_PAID ->
+                    principalPaid = payable.multiply(BigDecimal.valueOf(0.50)).setScale(2, RoundingMode.HALF_UP);
             case PARTIAL_SPONSORSHIP -> principalPaid = payable;
             case OVERDUE_WITH_LATE_FEE -> {
                 lateFeeApplied = true;

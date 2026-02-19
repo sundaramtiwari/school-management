@@ -183,14 +183,14 @@ public class FeeChallanService {
     }
 
     private java.math.BigDecimal addFeeBreakdown(Document document, List<StudentFeeAssignment> assignments,
-            int monthsToPay)
+                                                 int monthsToPay)
             throws DocumentException {
         Font headerFont = FontFactory.getFont(FontFactory.HELVETICA, 11, Font.BOLD, Color.WHITE);
         Font contentFont = FontFactory.getFont(FontFactory.HELVETICA, 10);
 
         PdfPTable table = new PdfPTable(4);
         table.setWidthPercentage(100);
-        table.setWidths(new float[] { 3f, 1.2f, 0.8f, 1.5f });
+        table.setWidths(new float[]{3f, 1.2f, 0.8f, 1.5f});
 
         // Header Row
         PdfPCell headerCell1 = new PdfPCell(new Phrase("Fee Type", headerFont));

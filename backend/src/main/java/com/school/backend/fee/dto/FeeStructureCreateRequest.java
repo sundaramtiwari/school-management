@@ -1,6 +1,7 @@
 package com.school.backend.fee.dto;
 
 import java.math.BigDecimal;
+
 import com.school.backend.common.enums.FeeFrequency;
 import com.school.backend.common.enums.LateFeeCapType;
 import com.school.backend.common.enums.LateFeeType;
