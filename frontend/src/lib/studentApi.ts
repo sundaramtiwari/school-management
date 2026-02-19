@@ -1,5 +1,8 @@
 import { api } from "./api";
 
+type StudentPayload = Record<string, unknown>;
+type EnrollmentPayload = Record<string, unknown>;
+
 export const studentApi = {
 
     listBySchool: (page = 0, size = 20) =>
@@ -11,13 +14,13 @@ export const studentApi = {
     byClass: (classId: number, page = 0, size = 20) =>
         api.get(`/api/students/by-class/${classId}?page=${page}&size=${size}`),
 
-    create: (data: any) =>
+    create: (data: StudentPayload) =>
         api.post("/api/students", data),
 
-    enroll: (data: any) =>
+    enroll: (data: EnrollmentPayload) =>
         api.post("/api/enrollments", data),
 
-    update: (id: number, data: any) =>
+    update: (id: number, data: StudentPayload) =>
         api.put(`/api/students/${id}`, data),
 
     delete: (id: number) =>

@@ -1,6 +1,5 @@
 "use client";
 
-import { useEffect, useState } from "react";
 import Link from "next/link";
 import { usePathname, useRouter } from "next/navigation";
 import { useAuth } from "@/context/AuthContext";
@@ -42,11 +41,7 @@ export default function Sidebar() {
   const { currentSession, hasClasses } = useSession();
   const { showToast } = useToast();
 
-  const [schoolName, setSchoolName] = useState<string | null>(null);
-
-  useEffect(() => {
-    setSchoolName(localStorage.getItem("schoolName"));
-  }, []);
+  const schoolName = typeof window !== "undefined" ? localStorage.getItem("schoolName") : null;
 
   const clearContext = () => {
     localStorage.removeItem("schoolId");

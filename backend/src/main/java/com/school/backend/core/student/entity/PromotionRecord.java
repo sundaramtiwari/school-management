@@ -1,15 +1,16 @@
 package com.school.backend.core.student.entity;
 
 import com.school.backend.common.entity.TenantEntity;
+import com.school.backend.student.enums.PromotionType;
 import jakarta.persistence.*;
 import lombok.*;
 import lombok.experimental.SuperBuilder;
 
-import java.time.LocalDate;
+import java.time.LocalDateTime;
 
 @Entity
 @Table(name = "promotion_records", indexes = {
-        @Index(name = "idx_promotion_student_session", columnList = "student_id,session_id")
+        @Index(name = "idx_promotion_student_target_session", columnList = "student_id,target_session_id")
 })
 @Getter
 @Setter
@@ -27,24 +28,27 @@ public class PromotionRecord extends TenantEntity {
     @Column(nullable = false)
     private Long studentId;
 
-    private Long fromClassId;
-    private String fromSection;
+    @Column(name = "source_session_id", nullable = false)
+    private Long sourceSessionId;
 
-    @Column(nullable = false)
-    private Long toClassId;
-    private String toSection;
+    @Column(name = "target_session_id", nullable = false)
+    private Long targetSessionId;
 
-    @Column(name = "session_id", nullable = false)
-    private Long sessionId;
+    @Column(name = "source_class_id", nullable = false)
+    private Long sourceClassId;
 
-    @Builder.Default
-    private LocalDate promotedOn = LocalDate.now();
+    @Column(name = "target_class_id", nullable = false)
+    private Long targetClassId;
 
-    @Builder.Default
-    private boolean promoted = true;
+    @Enumerated(EnumType.STRING)
+    @Column(name = "promotion_type", nullable = false, length = 20)
+    private PromotionType promotionType;
 
-    @Builder.Default
-    private boolean feePending = false;
+    @Column(name = "promoted_by", nullable = false, length = 255)
+    private String promotedBy;
+
+    @Column(name = "promoted_at", nullable = false)
+    private LocalDateTime promotedAt;
 
     private String remarks;
 }

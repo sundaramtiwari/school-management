@@ -19,6 +19,8 @@ import com.school.backend.school.dto.SchoolDto;
 import com.school.backend.school.entity.AcademicSession;
 import com.school.backend.school.repository.AcademicSessionRepository;
 import com.school.backend.school.repository.SchoolRepository;
+import com.school.backend.student.dto.PromotionRequest;
+import com.school.backend.student.enums.PromotionType;
 import com.school.backend.user.repository.UserRepository;
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeEach;
@@ -183,52 +185,28 @@ public class PromotionFlowIntegrationTest extends BaseAuthenticatedIntegrationTe
         // Promote
         PromotionRequest promoteReq = new PromotionRequest();
 
-        promoteReq.setToClassId(toClassId);
-        promoteReq.setToSection("B");
-        promoteReq.setSessionId(session2025Id);
-        promoteReq.setPromoted(true);
-        promoteReq.setFeePending(false);
+        promoteReq.setStudentIds(List.of(studentId));
+        promoteReq.setTargetClassId(toClassId);
+        promoteReq.setTargetSessionId(session2025Id);
+        promoteReq.setPromotionType(PromotionType.PROMOTE);
         promoteReq.setRemarks("Promoted successfully");
 
         HttpEntity<PromotionRequest> promoteEntity = new HttpEntity<>(promoteReq, headers);
 
-        ResponseEntity<PromotionRecordDto> promoteResponse = restTemplate.exchange(
-                "/api/students/" + studentId + "/history/promote",
+        ResponseEntity<Void> promoteResponse = restTemplate.exchange(
+                "/api/promotions",
                 HttpMethod.POST,
                 promoteEntity,
-                PromotionRecordDto.class);
+                Void.class);
 
         assertThat(promoteResponse.getStatusCode())
                 .isEqualTo(HttpStatus.OK);
 
-        PromotionRecordDto pr = Objects.requireNonNull(promoteResponse.getBody());
-
-        assertThat(pr).isNotNull();
-        assertThat(pr.getStudentId()).isEqualTo(studentId);
-        assertThat(pr.getToClassId()).isEqualTo(toClassId);
-        assertThat(pr.getToSection()).isEqualTo("B");
-        assertThat(pr.getSessionId()).isEqualTo(session2025Id);
-        assertThat(pr.isPromoted()).isTrue();
-        assertThat(pr.isFeePending()).isFalse();
-
-
-        // Promotion history
-        HttpEntity<Void> historyEntity = new HttpEntity<>(headers);
-
-        ResponseEntity<java.util.List<PromotionRecordDto>> promotionListResponse = restTemplate.exchange(
-                "/api/students/" + studentId + "/history/promotions",
-                HttpMethod.GET,
-                historyEntity,
-                new ParameterizedTypeReference<>() {
-                });
-
-        assertThat(promotionListResponse.getStatusCode())
-                .isEqualTo(HttpStatus.OK);
-
-        assertThat(Objects.requireNonNull(promotionListResponse.getBody()))
+        assertThat(promotionRecordRepository.findByStudentIdOrderByPromotedAtAsc(studentId))
                 .hasSize(1);
 
         // Enrollment history
+        HttpEntity<Void> historyEntity = new HttpEntity<>(headers);
         ResponseEntity<java.util.List<StudentEnrollmentDto>> enrollmentListResponse = restTemplate.exchange(
                 "/api/students/" + studentId + "/history/enrollments",
                 HttpMethod.GET,

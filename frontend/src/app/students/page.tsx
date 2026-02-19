@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useCallback, useEffect, useMemo, useState, type ChangeEvent } from "react";
 import { studentApi } from "@/lib/studentApi";
 import { api } from "@/lib/api";
 import { useToast } from "@/components/ui/Toast";
@@ -9,6 +9,7 @@ import Modal from "@/components/ui/Modal";
 import { TableSkeleton } from "@/components/ui/Skeleton";
 import { useAuth } from "@/context/AuthContext";
 import GuardianFormSection, { GuardianFormValue } from "@/components/students/GuardianFormSection";
+import PromotionModal from "@/components/promotion/PromotionModal";
 
 /* ---------------- Types ---------------- */
 
@@ -27,6 +28,14 @@ type Student = {
   contactNumber: string;
 };
 
+type LedgerEntry = {
+  sessionId: number;
+  sessionName: string;
+  totalAssigned: number | string;
+  totalPaid: number | string;
+  pending: number | string;
+};
+
 /* ---------------- Page ---------------- */
 
 export default function StudentsPage() {
@@ -34,7 +43,9 @@ export default function StudentsPage() {
   const { showToast } = useToast();
   const { currentSession } = useSession();
 
-  const canAddStudent = user?.role === "SCHOOL_ADMIN" || user?.role === "SUPER_ADMIN" || user?.role === "PLATFORM_ADMIN";
+  const role = user?.role?.toUpperCase();
+  const canAddStudent = role === "SCHOOL_ADMIN" || role === "SUPER_ADMIN" || role === "PLATFORM_ADMIN";
+  const canPromoteStudents = role === "SCHOOL_ADMIN" || role === "SUPER_ADMIN" || role === "PLATFORM_ADMIN";
 
   /* ---------- Filters ---------- */
 
@@ -45,15 +56,20 @@ export default function StudentsPage() {
 
   const [students, setStudents] = useState<Student[]>([]);
   const [loadingStudents, setLoadingStudents] = useState(false);
+  const [selectedIds, setSelectedIds] = useState<Set<number>>(new Set());
+  const [showPromotionModal, setShowPromotionModal] = useState(false);
 
   /* ---------- Loading ---------- */
 
   const [loadingClasses, setLoadingClasses] = useState(true);
-  const [error, setError] = useState("");
-
   /* ---------- Form State ---------- */
 
   const [showAddModal, setShowAddModal] = useState(false);
+  const [showProfileModal, setShowProfileModal] = useState(false);
+  const [profileStudent, setProfileStudent] = useState<Student | null>(null);
+  const [profileTab, setProfileTab] = useState<"overview" | "ledger">("overview");
+  const [ledgerLoading, setLedgerLoading] = useState(false);
+  const [ledgerData, setLedgerData] = useState<LedgerEntry[]>([]);
   const [isSaving, setIsSaving] = useState(false);
   const [studentForm, setStudentForm] = useState({
     admissionNumber: "",
@@ -90,47 +106,110 @@ export default function StudentsPage() {
 
   /* ---------------- Init ---------------- */
 
-  useEffect(() => {
-    loadClasses();
-  }, [currentSession]);
+  const selectedStudents = useMemo(
+    () => students.filter((s) => selectedIds.has(s.id)),
+    [students, selectedIds]
+  );
 
-  async function loadClasses() {
+  const loadClasses = useCallback(async () => {
     try {
       setLoadingClasses(true);
       const res = await api.get("/api/classes/mine");
       setClasses(res.data.content || []);
     } catch {
-      setError("Failed to load classes");
       showToast("Error loading classes", "error");
     } finally {
       setLoadingClasses(false);
     }
-  }
+  }, [showToast]);
 
-  async function loadStudents(classId: number) {
+  const loadStudents = useCallback(async (classId: number) => {
     try {
       setLoadingStudents(true);
       const res = await studentApi.byClass(classId, 0, 50);
       setStudents(res.data.content || []);
+      setSelectedIds(new Set());
     } catch {
       showToast("Failed to load students", "error");
     } finally {
       setLoadingStudents(false);
     }
-  }
+  }, [showToast]);
+
+  const loadStudentLedger = useCallback(async (studentId: number) => {
+    try {
+      setLedgerLoading(true);
+      const res = await api.get(`/api/students/${studentId}/ledger`);
+      setLedgerData(Array.isArray(res.data) ? res.data : []);
+    } catch {
+      showToast("Failed to load financial ledger", "error");
+      setLedgerData([]);
+    } finally {
+      setLedgerLoading(false);
+    }
+  }, [showToast]);
+
+  useEffect(() => {
+    loadClasses();
+  }, [currentSession, loadClasses]);
+
+  useEffect(() => {
+    if (!showProfileModal || profileTab !== "ledger" || !profileStudent?.id) return;
+    void loadStudentLedger(profileStudent.id);
+  }, [showProfileModal, profileTab, profileStudent?.id, loadStudentLedger]);
 
   /* ---------------- Handlers ---------------- */
 
-  function onClassChange(e: any) {
+  const onClassChange = useCallback((e: ChangeEvent<HTMLSelectElement>) => {
     const value = e.target.value;
-    setSelectedClass(value);
+    const classValue = value ? Number(value) : "";
+    setSelectedClass(classValue);
     setStudents([]);
-    if (value) {
-      loadStudents(Number(value));
+    setSelectedIds(new Set());
+    if (classValue) {
+      void loadStudents(Number(classValue));
     }
-  }
+  }, [loadStudents]);
 
-  function updateStudentField(e: any) {
+  const toggleStudentSelection = useCallback((studentId: number) => {
+    setSelectedIds((prev) => {
+      const next = new Set(prev);
+      if (next.has(studentId)) next.delete(studentId);
+      else next.add(studentId);
+      return next;
+    });
+  }, []);
+
+  const toggleSelectAll = useCallback(() => {
+    setSelectedIds((prev) => {
+      if (students.length > 0 && prev.size === students.length) return new Set();
+      return new Set(students.map((s) => s.id));
+    });
+  }, [students]);
+
+  const openProfile = useCallback((student: Student) => {
+    setProfileStudent(student);
+    setProfileTab("overview");
+    setLedgerData([]);
+    setShowProfileModal(true);
+  }, []);
+
+  const closeProfile = useCallback(() => {
+    setShowProfileModal(false);
+    setProfileStudent(null);
+    setLedgerData([]);
+    setProfileTab("overview");
+  }, []);
+
+  const onPromotionSuccess = useCallback(() => {
+    setShowPromotionModal(false);
+    setSelectedIds(new Set());
+    if (selectedClass) {
+      void loadStudents(Number(selectedClass));
+    }
+  }, [selectedClass, loadStudents]);
+
+  function updateStudentField(e: ChangeEvent<HTMLInputElement | HTMLSelectElement | HTMLTextAreaElement>) {
     setStudentForm({
       ...studentForm,
       [e.target.name]: e.target.value,
@@ -167,7 +246,7 @@ export default function StudentsPage() {
       const studentId = res.data.id;
       await studentApi.enroll({
         studentId,
-        classId: studentForm.classId,
+        classId,
         sessionId: currentSession.id,
       });
 
@@ -206,11 +285,16 @@ export default function StudentsPage() {
         guardians: [],
       });
 
-      if (Number(studentForm.classId) === Number(selectedClass)) {
-        loadStudents(Number(selectedClass));
+      if (Number(classId) === Number(selectedClass)) {
+        void loadStudents(Number(selectedClass));
       }
-    } catch (err: any) {
-      const msg = err.response?.data?.message || err.response?.data || err.message;
+    } catch (err: unknown) {
+      const msg = (typeof err === "object" && err !== null && "response" in err)
+        ? (err as { response?: { data?: { message?: string } | string }; message?: string }).response?.data &&
+          typeof (err as { response?: { data?: { message?: string } | string } }).response?.data === "object"
+          ? ((err as { response?: { data?: { message?: string } } }).response?.data?.message || "Unknown error")
+          : ((err as { response?: { data?: string }; message?: string }).response?.data || (err as { message?: string }).message || "Unknown error")
+        : "Unknown error";
       showToast("Failed to save student: " + msg, "error");
     } finally {
       setIsSaving(false);
@@ -228,17 +312,28 @@ export default function StudentsPage() {
         </div>
 
         {canAddStudent && (
-          <button
-            onClick={() => {
-              if (selectedClass) {
-                setStudentForm(prev => ({ ...prev, classId: selectedClass.toString() }));
-              }
-              setShowAddModal(true);
-            }}
-            className="bg-blue-600 text-white px-6 py-2.5 rounded-xl font-bold shadow-lg hover:bg-blue-700 transition-all flex items-center gap-2"
-          >
-            <span className="text-xl">+</span> Add Student
-          </button>
+          <div className="flex gap-2">
+            {canPromoteStudents && (
+              <button
+                onClick={() => setShowPromotionModal(true)}
+                disabled={selectedStudents.length === 0}
+                className="bg-emerald-600 text-white px-6 py-2.5 rounded-xl font-bold shadow-lg hover:bg-emerald-700 disabled:bg-gray-400 disabled:cursor-not-allowed transition-all"
+              >
+                Promote Students
+              </button>
+            )}
+            <button
+              onClick={() => {
+                if (selectedClass) {
+                  setStudentForm(prev => ({ ...prev, classId: selectedClass.toString() }));
+                }
+                setShowAddModal(true);
+              }}
+              className="bg-blue-600 text-white px-6 py-2.5 rounded-xl font-bold shadow-lg hover:bg-blue-700 transition-all flex items-center gap-2"
+            >
+              <span className="text-xl">+</span> Add Student
+            </button>
+          </div>
         )}
       </div>
 
@@ -270,6 +365,13 @@ export default function StudentsPage() {
           <table className="w-full text-sm">
             <thead className="bg-gray-50 text-gray-600 font-bold border-b">
               <tr>
+                <th className="p-4 text-center w-12">
+                  <input
+                    type="checkbox"
+                    checked={students.length > 0 && selectedIds.size === students.length}
+                    onChange={toggleSelectAll}
+                  />
+                </th>
                 <th className="p-4 text-left">Student Name</th>
                 <th className="p-4 text-center">Admission No</th>
                 <th className="p-4 text-center">Gender</th>
@@ -280,6 +382,13 @@ export default function StudentsPage() {
             <tbody className="divide-y divide-gray-100">
               {students.map((s) => (
                 <tr key={s.id} className="hover:bg-gray-50/50 transition-colors">
+                  <td className="p-4 text-center">
+                    <input
+                      type="checkbox"
+                      checked={selectedIds.has(s.id)}
+                      onChange={() => toggleStudentSelection(s.id)}
+                    />
+                  </td>
                   <td className="p-4 text-gray-800 font-bold">
                     {s.firstName} {s.lastName}
                   </td>
@@ -294,7 +403,10 @@ export default function StudentsPage() {
                   </td>
                   <td className="p-4 text-center text-gray-500 text-xs italic">{s.contactNumber || "No info"}</td>
                   <td className="p-4 text-center">
-                    <button className="text-gray-400 hover:text-blue-600 p-1">
+                    <button
+                      onClick={() => openProfile(s)}
+                      className="text-gray-400 hover:text-blue-600 p-1"
+                    >
                       <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                         <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 12a3 3 0 11-6 0 3 3 0 016 0z" />
                         <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M2.458 12C3.732 7.943 7.523 5 12 5c4.478 0 8.268 2.943 9.542 7-1.274 4.057-5.064 7-9.542 7-4.477 0-8.268-2.943-9.542-7z" />
@@ -305,7 +417,7 @@ export default function StudentsPage() {
               ))}
               {students.length === 0 && (
                 <tr>
-                  <td colSpan={5} className="p-20 text-center text-gray-400 italic bg-gray-50/30">
+                  <td colSpan={6} className="p-20 text-center text-gray-400 italic bg-gray-50/30">
                     <div className="flex flex-col items-center gap-3">
                       <span className="text-4xl">📂</span>
                       <div>
@@ -720,6 +832,67 @@ export default function StudentsPage() {
             />
           </section>
 
+        </div>
+      </Modal>
+
+      <PromotionModal
+        selectedStudents={selectedStudents}
+        isOpen={showPromotionModal}
+        onClose={() => setShowPromotionModal(false)}
+        onSuccess={onPromotionSuccess}
+      />
+
+      <Modal
+        isOpen={showProfileModal}
+        onClose={closeProfile}
+        title={profileStudent ? `${profileStudent.firstName} ${profileStudent.lastName}` : "Student Profile"}
+        maxWidth="max-w-3xl"
+      >
+        <div className="space-y-4">
+          <div className="flex gap-2 border-b pb-2">
+            <button
+              onClick={() => setProfileTab("overview")}
+              className={`px-3 py-1.5 rounded-lg text-sm font-semibold ${profileTab === "overview" ? "bg-blue-600 text-white" : "bg-gray-100 text-gray-700"}`}
+            >
+              Overview
+            </button>
+            <button
+              onClick={() => setProfileTab("ledger")}
+              className={`px-3 py-1.5 rounded-lg text-sm font-semibold ${profileTab === "ledger" ? "bg-blue-600 text-white" : "bg-gray-100 text-gray-700"}`}
+            >
+              Financial Ledger
+            </button>
+          </div>
+
+          {profileTab === "overview" && profileStudent && (
+            <div className="grid grid-cols-2 gap-3 text-sm">
+              <div><span className="text-gray-500">Admission:</span> {profileStudent.admissionNumber || "-"}</div>
+              <div><span className="text-gray-500">Gender:</span> {profileStudent.gender || "-"}</div>
+              <div><span className="text-gray-500">Contact:</span> {profileStudent.contactNumber || "-"}</div>
+            </div>
+          )}
+
+          {profileTab === "ledger" && (
+            <div className="space-y-3">
+              {ledgerLoading ? (
+                <TableSkeleton rows={3} cols={4} />
+              ) : ledgerData.length === 0 ? (
+                <div className="text-sm text-gray-500">No ledger entries found.</div>
+              ) : (
+                ledgerData.map((entry) => (
+                  <details key={`${entry.sessionId}-${entry.sessionName}`} className="border rounded-xl p-3">
+                    <summary className="font-semibold cursor-pointer">{entry.sessionName}</summary>
+                    <div className="mt-3 grid grid-cols-2 gap-3 text-sm">
+                      <div><span className="text-gray-500">Session ID:</span> {entry.sessionId}</div>
+                      <div><span className="text-gray-500">Total Assigned:</span> {entry.totalAssigned}</div>
+                      <div><span className="text-gray-500">Total Paid:</span> {entry.totalPaid}</div>
+                      <div><span className="text-gray-500">Pending:</span> {entry.pending}</div>
+                    </div>
+                  </details>
+                ))
+              )}
+            </div>
+          )}
         </div>
       </Modal>
     </div>

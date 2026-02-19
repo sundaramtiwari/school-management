@@ -7,5 +7,5 @@ import java.util.List;
 
 public interface PromotionRecordRepository extends JpaRepository<PromotionRecord, Long> {
 
-    List<PromotionRecord> findByStudentIdOrderBySessionIdAsc(Long studentId);
+    List<PromotionRecord> findByStudentIdOrderByPromotedAtAsc(Long studentId);
 }

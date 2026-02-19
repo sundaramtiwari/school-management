@@ -8,6 +8,7 @@ import com.school.backend.core.student.dto.*;
 import com.school.backend.fee.dto.*;
 import com.school.backend.fee.entity.FeeType;
 import com.school.backend.school.entity.School;
+import com.school.backend.student.enums.PromotionType;
 import org.assertj.core.api.Assertions;
 import org.jspecify.annotations.NonNull;
 import org.junit.jupiter.api.AfterEach;
@@ -197,22 +198,21 @@ public class StudentFlowIntegrationTest extends BaseAuthenticatedIntegrationTest
 
         // ---------- Promote ----------
 
-        PromotionRequest pr = new PromotionRequest();
+        com.school.backend.student.dto.PromotionRequest pr = new com.school.backend.student.dto.PromotionRequest();
 
-        pr.setToClassId(classId);
-        pr.setToSection("B");
-        pr.setSessionId(session2025Id);
-        pr.setPromoted(true);
-        pr.setFeePending(false);
+        pr.setStudentIds(List.of(studentId));
+        pr.setTargetClassId(classId);
+        pr.setTargetSessionId(session2025Id);
+        pr.setPromotionType(PromotionType.PROMOTE);
         pr.setRemarks("Promoted successfully");
 
-        HttpEntity<PromotionRequest> promoteEntity = new HttpEntity<>(pr, headers);
+        HttpEntity<com.school.backend.student.dto.PromotionRequest> promoteEntity = new HttpEntity<>(pr, headers);
 
-        ResponseEntity<PromotionRecordDto> promoteRes = restTemplate.exchange(
-                "/api/students/" + studentId + "/history/promote",
+        ResponseEntity<Void> promoteRes = restTemplate.exchange(
+                "/api/promotions",
                 HttpMethod.POST,
                 promoteEntity,
-                PromotionRecordDto.class);
+                Void.class);
 
         Assertions.assertThat(promoteRes.getStatusCode())
                 .isEqualTo(HttpStatus.OK);

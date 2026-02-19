@@ -1,6 +1,7 @@
 package com.school.backend.core.student.entity;
 
 import com.school.backend.common.entity.TenantEntity;
+import com.school.backend.student.enums.AdmissionType;
 import jakarta.persistence.*;
 import lombok.*;
 import lombok.experimental.SuperBuilder;
@@ -38,6 +39,16 @@ public class StudentEnrollment extends TenantEntity {
     private Integer rollNumber;
 
     private LocalDate enrollmentDate;
+
+    @Column(name = "start_date")
+    private LocalDate startDate;
+
+    @Column(name = "end_date")
+    private LocalDate endDate;
+
+    @Enumerated(EnumType.STRING)
+    @Column(name = "admission_type", length = 20)
+    private AdmissionType admissionType;
 
     @Builder.Default
     private boolean active = true;

@@ -1,7 +1,5 @@
 package com.school.backend.core.student.controller;
 
-import com.school.backend.core.student.dto.PromotionRecordDto;
-import com.school.backend.core.student.dto.PromotionRequest;
 import com.school.backend.core.student.dto.StudentEnrollmentDto;
 import com.school.backend.core.student.service.StudentHistoryService;
 import lombok.RequiredArgsConstructor;
@@ -25,20 +23,4 @@ public class StudentHistoryController {
         return ResponseEntity.ok(service.getEnrollmentHistory(studentId));
     }
 
-    // ----------------- Promotion Timeline ------------------
-    @GetMapping("/promotions")
-    public ResponseEntity<List<PromotionRecordDto>> getPromotions(
-            @PathVariable Long studentId) {
-
-        return ResponseEntity.ok(service.getPromotionHistory(studentId));
-    }
-
-    // ----------------- Promote Student ---------------------
-    @PostMapping("/promote")
-    public ResponseEntity<PromotionRecordDto> promoteStudent(
-            @PathVariable Long studentId,
-            @RequestBody PromotionRequest request) {
-
-        return ResponseEntity.ok(service.promoteStudent(studentId, request));
-    }
 }

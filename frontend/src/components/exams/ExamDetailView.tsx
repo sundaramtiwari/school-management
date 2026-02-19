@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { examApi } from "@/lib/examApi";
 import { studentApi } from "@/lib/studentApi";
 import { classSubjectApi } from "@/lib/classSubjectApi"; // Import classSubjectApi
@@ -377,23 +377,26 @@ export default function ExamDetailView({ exam: initialExam, classId, onClose }: 
 /* ---------------- Marks Entry Component ---------------- */
 
 function MarksEntryTable({ students, subjects, initialMarks, onSave, isSaving, readOnly }: any) {
-    const [localMarks, setLocalMarks] = useState<Record<string, number>>({});
-
-    useEffect(() => {
+    const [editedMarks, setEditedMarks] = useState<Record<string, number>>({});
+    const initialMarksMap = useMemo(() => {
         const map: Record<string, number> = {};
         initialMarks.forEach((m: any) => {
             map[`${m.studentId}-${m.examSubjectId}`] = m.marksObtained;
         });
-        setLocalMarks(map);
+        return map;
     }, [initialMarks]);
+    const localMarks = useMemo(
+        () => ({ ...initialMarksMap, ...editedMarks }),
+        [initialMarksMap, editedMarks]
+    );
 
     function handleMarkChange(studentId: number, examSubjectId: number, val: string) {
         if (readOnly) return;
         const num = parseInt(val) || 0;
-        setLocalMarks({
-            ...localMarks,
+        setEditedMarks((prev) => ({
+            ...prev,
             [`${studentId}-${examSubjectId}`]: num
-        });
+        }));
     }
 
     function doSave() {

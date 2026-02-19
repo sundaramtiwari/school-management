@@ -1,5 +1,7 @@
 import { api } from "./api";
 
+type SchoolPayload = Record<string, unknown>;
+
 export const schoolApi = {
 
     list: (page = 0, size = 10) =>
@@ -8,16 +10,16 @@ export const schoolApi = {
     getByCode: (code: string) =>
         api.get(`/api/schools/${code}`),
 
-    create: (data: any) =>
+    create: (data: SchoolPayload) =>
         api.post("/api/schools", data),
 
-    update: (schoolCode: string, data: any) =>
+    update: (schoolCode: string, data: SchoolPayload) =>
         api.patch(`/api/schools/${schoolCode}`, data),
 
     delete: (id: number) =>
         api.delete(`/api/schools/${id}`),
 
-    onboard: (data: any) =>
+    onboard: (data: SchoolPayload) =>
         api.post("/api/schools/onboard", data),
 
 };
