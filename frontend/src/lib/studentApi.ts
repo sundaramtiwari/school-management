@@ -26,4 +26,7 @@ export const studentApi = {
     delete: (id: number) =>
         api.delete(`/api/students/${id}`),
 
+    getGuardians: (id: number) =>
+        api.get(`/api/students/${id}/guardians`),
+
 };

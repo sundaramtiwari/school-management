@@ -25,7 +25,30 @@ type Student = {
   lastName: string;
   admissionNumber: string;
   gender: string;
+  dob?: string;
+  pen?: string;
+  aadharNumber?: string;
+  religion?: string;
+  caste?: string;
+  category?: string;
+  address?: string;
+  city?: string;
+  state?: string;
+  pincode?: string;
   contactNumber: string;
+  email?: string;
+  bloodGroup?: string;
+  dateOfAdmission?: string;
+  remarks?: string;
+  previousSchoolName?: string;
+  previousSchoolBoard?: string;
+  previousClass?: string;
+  previousYearOfPassing?: number;
+  transferCertificateNumber?: string;
+  previousSchoolAddress?: string;
+  previousSchoolContact?: string;
+  reasonForLeavingPreviousSchool?: string;
+  guardians?: GuardianFormValue[];
 };
 
 type LedgerEntry = {
@@ -49,6 +72,7 @@ export default function StudentsPage() {
   const role = user?.role?.toUpperCase();
   const canAddStudent = role === "SCHOOL_ADMIN" || role === "SUPER_ADMIN" || role === "PLATFORM_ADMIN";
   const canPromoteStudents = role === "SCHOOL_ADMIN" || role === "SUPER_ADMIN" || role === "PLATFORM_ADMIN";
+  const canEdit = role === "SUPER_ADMIN" || role === "ACCOUNTANT";
 
   /* ---------- Filters ---------- */
 
@@ -70,6 +94,8 @@ export default function StudentsPage() {
   const [showAddModal, setShowAddModal] = useState(false);
   const [showProfileModal, setShowProfileModal] = useState(false);
   const [profileStudent, setProfileStudent] = useState<Student | null>(null);
+  const [loadingProfile, setLoadingProfile] = useState(false);
+  const [isEditing, setIsEditing] = useState(false);
   const [profileTab, setProfileTab] = useState<"overview" | "ledger">("overview");
   const [ledgerLoading, setLedgerLoading] = useState(false);
   const [ledgerData, setLedgerData] = useState<LedgerEntry[]>([]);
@@ -196,12 +222,30 @@ export default function StudentsPage() {
     });
   }, [students]);
 
-  const openProfile = useCallback((student: Student) => {
-    setProfileStudent(student);
-    setProfileTab("overview");
-    setLedgerData([]);
-    setShowProfileModal(true);
-  }, []);
+  const openProfile = useCallback(async (summary: any) => {
+    try {
+      setLoadingProfile(true);
+      setProfileTab("overview");
+      setLedgerData([]);
+      setShowProfileModal(true);
+
+      // Fetch full student details
+      const [res, gRes] = await Promise.all([
+        studentApi.getById(summary.id),
+        studentApi.getGuardians(summary.id)
+      ]);
+
+      setProfileStudent({
+        ...res.data,
+        guardians: gRes.data
+      });
+    } catch {
+      showToast("Failed to load student profile", "error");
+      setProfileStudent(summary); // Fallback to list summary
+    } finally {
+      setLoadingProfile(false);
+    }
+  }, [showToast]);
 
   const closeProfile = useCallback(() => {
     setShowProfileModal(false);
@@ -244,66 +288,75 @@ export default function StudentsPage() {
     try {
       setIsSaving(true);
 
-      const { classId, ...registerData } = studentForm;
+      const { classId, ...formData } = studentForm;
 
-      const res = await studentApi.create({
-        ...registerData,
-        previousYearOfPassing: registerData.previousYearOfPassing ? Number(registerData.previousYearOfPassing) : null,
-        guardians: studentForm.guardians
-      });
-
-      const studentId = res.data.id;
-      await studentApi.enroll({
-        studentId,
-        classId,
-        sessionId: currentSession.id,
-      });
-
-      // --- Save Funding arrangement if applicable ---
-      if (studentForm.fundingType !== "NONE") {
-        // Validate funding before saving
-        const value = Number(studentForm.fundingValue);
-
-        if (studentForm.fundingType === "PARTIAL") {
-          if (isNaN(value) || value <= 0) {
-            showToast("Funding value must be greater than 0", "error");
-            setIsSaving(false);
-            return;
-          }
-          if (studentForm.fundingMode === "PERCENTAGE" && value > 100) {
-            showToast("Percentage coverage cannot exceed 100%", "error");
-            setIsSaving(false);
-            return;
-          }
-        }
-
-        if (studentForm.fundingValidFrom && !studentForm.fundingValidTo) {
-          showToast("Valid To date is required if Valid From is set", "error");
-          setIsSaving(false);
-          return;
-        }
-
-        if (studentForm.fundingValidFrom && studentForm.fundingValidTo) {
-          if (new Date(studentForm.fundingValidFrom) >= new Date(studentForm.fundingValidTo)) {
-            showToast("Valid From date must be before Valid To date", "error");
-            setIsSaving(false);
-            return;
-          }
-        }
-
-        await api.post("/api/fees/funding", {
-          studentId,
-          sessionId: currentSession.id,
-          coverageType: studentForm.fundingType,
-          coverageMode: studentForm.fundingMode,
-          coverageValue: value,
-          validFrom: studentForm.fundingValidFrom || null,
-          validTo: studentForm.fundingValidTo || null,
+      if (isEditing && profileStudent) {
+        await studentApi.update(profileStudent.id, {
+          ...formData,
+          previousYearOfPassing: formData.previousYearOfPassing ? Number(formData.previousYearOfPassing) : null,
         });
-      }
+        showToast("Student updated successfully!", "success");
+      } else {
+        const res = await studentApi.create({
+          ...formData,
+          previousYearOfPassing: formData.previousYearOfPassing ? Number(formData.previousYearOfPassing) : null,
+          guardians: studentForm.guardians
+        });
 
-      showToast("Student enrolled successfully!", "success");
+        const studentId = res.data.id;
+        await studentApi.enroll({
+          studentId,
+          classId,
+          sessionId: currentSession.id,
+        });
+
+        // --- Save Funding arrangement if applicable ---
+        if (studentForm.fundingType !== "NONE") {
+          // Validate funding before saving
+          const value = Number(studentForm.fundingValue);
+
+          if (studentForm.fundingType === "PARTIAL") {
+            if (isNaN(value) || value <= 0) {
+              showToast("Funding value must be greater than 0", "error");
+              setIsSaving(false);
+              return;
+            }
+            if (studentForm.fundingMode === "PERCENTAGE" && value > 100) {
+              showToast("Percentage coverage cannot exceed 100%", "error");
+              setIsSaving(false);
+              return;
+            }
+          }
+
+          if (studentForm.fundingValidFrom && !studentForm.fundingValidTo) {
+            showToast("Valid To date is required if Valid From is set", "error");
+            setIsSaving(false);
+            return;
+          }
+
+          if (studentForm.fundingValidFrom && studentForm.fundingValidTo) {
+            if (new Date(studentForm.fundingValidFrom) >= new Date(studentForm.fundingValidTo)) {
+              showToast("Valid From date must be before Valid To date", "error");
+              setIsSaving(false);
+              return;
+            }
+          }
+
+          await api.post("/api/fees/funding", {
+            studentId,
+            sessionId: currentSession.id,
+            coverageType: studentForm.fundingType,
+            coverageMode: studentForm.fundingMode,
+            coverageValue: value,
+            validFrom: studentForm.fundingValidFrom || null,
+            validTo: studentForm.fundingValidTo || null,
+          });
+        }
+
+        showToast("Student enrolled successfully!", "success");
+      }
       setShowAddModal(false);
+      setIsEditing(false);
 
       setStudentForm({
         admissionNumber: "",
@@ -507,16 +560,15 @@ export default function StudentsPage() {
         </div>
       )}
 
-      {/* Add Modal */}
       <Modal
         isOpen={showAddModal}
-        onClose={() => setShowAddModal(false)}
-        title="Enroll New Student"
+        onClose={() => { setShowAddModal(false); setIsEditing(false); }}
+        title={isEditing ? "Edit Student Details" : "Enroll New Student"}
         maxWidth="max-w-4xl"
         footer={
           <div className="flex gap-2">
             <button
-              onClick={() => setShowAddModal(false)}
+              onClick={() => { setShowAddModal(false); setIsEditing(false); }}
               className="px-6 py-2 rounded-xl border font-medium text-gray-600 hover:bg-gray-50 transition-all"
             >
               Cancel
@@ -526,7 +578,7 @@ export default function StudentsPage() {
               disabled={isSaving}
               className="px-8 py-2 rounded-xl bg-blue-600 text-white font-bold shadow-lg hover:bg-blue-700 disabled:bg-gray-400 transition-all"
             >
-              {isSaving ? "Enrolling..." : "Enroll Student"}
+              {isSaving ? "Saving..." : (isEditing ? "Update Student" : "Enroll Student")}
             </button>
           </div>
         }
@@ -956,16 +1008,18 @@ export default function StudentsPage() {
           </section>
 
           {/* Section 7: Guardians */}
-          <section className="space-y-4 mb-4">
-            <h3 className="text-sm font-bold text-blue-600 uppercase tracking-wider border-b pb-2 flex items-center gap-2">
-              <span className="bg-blue-600 text-white w-5 h-5 rounded-full flex items-center justify-center text-[10px]">7</span>
-              Guardian Information
-            </h3>
-            <GuardianFormSection
-              guardians={studentForm.guardians}
-              onChange={(newGuardians) => setStudentForm({ ...studentForm, guardians: newGuardians })}
-            />
-          </section>
+          {!isEditing && (
+            <section className="space-y-4 mb-4">
+              <h3 className="text-sm font-bold text-blue-600 uppercase tracking-wider border-b pb-2 flex items-center gap-2">
+                <span className="bg-blue-600 text-white w-5 h-5 rounded-full flex items-center justify-center text-[10px]">7</span>
+                Guardian Information
+              </h3>
+              <GuardianFormSection
+                guardians={studentForm.guardians}
+                onChange={(newGuardians) => setStudentForm({ ...studentForm, guardians: newGuardians })}
+              />
+            </section>
+          )}
 
         </div>
       </Modal>
@@ -999,12 +1053,134 @@ export default function StudentsPage() {
             </button>
           </div>
 
-          {profileTab === "overview" && profileStudent && (
-            <div className="grid grid-cols-2 gap-3 text-sm">
-              <div><span className="text-gray-500">Admission:</span> {profileStudent.admissionNumber || "-"}</div>
-              <div><span className="text-gray-500">Gender:</span> {profileStudent.gender || "-"}</div>
-              <div><span className="text-gray-500">Contact:</span> {profileStudent.contactNumber || "-"}</div>
-            </div>
+          {profileTab === "overview" && (
+            loadingProfile ? (
+              <div className="py-10 text-center text-gray-400 italic">Loading details...</div>
+            ) : profileStudent ? (
+              <div className="space-y-6">
+                <div className="grid grid-cols-2 lg:grid-cols-3 gap-6 text-sm">
+                  <div className="space-y-1">
+                    <span className="text-[10px] font-bold text-gray-400 uppercase block tracking-wider">Admission No</span>
+                    <span className="text-gray-900 font-medium">{profileStudent.admissionNumber || "-"}</span>
+                  </div>
+                  <div className="space-y-1">
+                    <span className="text-[10px] font-bold text-gray-400 uppercase block tracking-wider">Admission Date</span>
+                    <span className="text-gray-900 font-medium">{profileStudent.dateOfAdmission || "-"}</span>
+                  </div>
+                  <div className="space-y-1">
+                    <span className="text-[10px] font-bold text-gray-400 uppercase block tracking-wider">Gender</span>
+                    <span className="text-gray-900 font-medium uppercase">{profileStudent.gender || "-"}</span>
+                  </div>
+                  <div className="space-y-1">
+                    <span className="text-[10px] font-bold text-gray-400 uppercase block tracking-wider">Date of Birth</span>
+                    <span className="text-gray-900 font-medium">{profileStudent.dob || "-"}</span>
+                  </div>
+                  <div className="space-y-1">
+                    <span className="text-[10px] font-bold text-gray-400 uppercase block tracking-wider">Contact</span>
+                    <span className="text-gray-900 font-medium">{profileStudent.contactNumber || "-"}</span>
+                  </div>
+                  <div className="space-y-1">
+                    <span className="text-[10px] font-bold text-gray-400 uppercase block tracking-wider">Email</span>
+                    <span className="text-gray-900 font-medium">{profileStudent.email || "-"}</span>
+                  </div>
+                </div>
+
+                <div className="bg-gray-50/50 p-4 rounded-2xl border space-y-4">
+                  <h4 className="text-[10px] font-bold text-blue-600 uppercase tracking-widest border-b pb-2">Identity & Demographics</h4>
+                  <div className="grid grid-cols-2 lg:grid-cols-3 gap-4 text-xs">
+                    <div><span className="text-gray-400 block mb-0.5">Aadhar Number:</span> <span className="font-mono">{profileStudent.aadharNumber || "-"}</span></div>
+                    <div><span className="text-gray-400 block mb-0.5">PEN:</span> <span className="font-mono">{profileStudent.pen || "-"}</span></div>
+                    <div><span className="text-gray-400 block mb-0.5">Blood Group:</span> {profileStudent.bloodGroup || "-"}</div>
+                    <div><span className="text-gray-400 block mb-0.5">Religion:</span> {profileStudent.religion || "-"}</div>
+                    <div><span className="text-gray-400 block mb-0.5">Category:</span> {profileStudent.category || "-"}</div>
+                    <div><span className="text-gray-400 block mb-0.5">Caste:</span> {profileStudent.caste || "-"}</div>
+                  </div>
+                </div>
+
+                <div className="space-y-2">
+                  <span className="text-[10px] font-bold text-gray-400 uppercase block tracking-wider">Address</span>
+                  <p className="text-gray-700 leading-relaxed text-xs">
+                    {[profileStudent.address, profileStudent.city, profileStudent.state, profileStudent.pincode].filter(Boolean).join(", ")}
+                    {!profileStudent.address && "-"}
+                  </p>
+                </div>
+
+                {profileStudent.guardians && profileStudent.guardians.length > 0 && (
+                  <div className="space-y-3">
+                    <h4 className="text-[10px] font-bold text-gray-400 uppercase tracking-widest border-b pb-2">Guardians</h4>
+                    <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
+                      {profileStudent.guardians.map((g, idx) => (
+                        <div key={idx} className={`p-3 rounded-xl border flex justify-between items-center ${g.primaryGuardian ? 'bg-blue-50/50 border-blue-100' : 'bg-white border-gray-100'}`}>
+                          <div>
+                            <p className="text-xs font-bold text-gray-800">{g.name} <span className="text-[9px] text-gray-400 font-normal">({g.relation})</span></p>
+                            <p className="text-[10px] text-gray-500">{g.contactNumber}</p>
+                          </div>
+                          {g.primaryGuardian && <span className="text-[8px] bg-blue-600 text-white px-1.5 py-0.5 rounded-full font-bold uppercase">Primary</span>}
+                        </div>
+                      ))}
+                    </div>
+                  </div>
+                )}
+
+                {canEdit && (
+                  <div className="flex justify-end pt-4 border-t">
+                    <button
+                      onClick={() => {
+                        setIsEditing(true);
+                        setStudentForm({
+                          admissionNumber: profileStudent.admissionNumber || "",
+                          firstName: profileStudent.firstName || "",
+                          lastName: profileStudent.lastName || "",
+                          dob: profileStudent.dob || "",
+                          gender: profileStudent.gender || "",
+                          pen: profileStudent.pen || "",
+                          aadharNumber: profileStudent.aadharNumber || "",
+                          religion: profileStudent.religion || "",
+                          caste: profileStudent.caste || "",
+                          category: profileStudent.category || "",
+                          address: profileStudent.address || "",
+                          city: profileStudent.city || "",
+                          state: profileStudent.state || "",
+                          pincode: profileStudent.pincode || "",
+                          contactNumber: profileStudent.contactNumber || "",
+                          email: profileStudent.email || "",
+                          bloodGroup: profileStudent.bloodGroup || "",
+                          dateOfAdmission: profileStudent.dateOfAdmission || new Date().toISOString().split('T')[0],
+                          remarks: profileStudent.remarks || "",
+                          previousSchoolName: profileStudent.previousSchoolName || "",
+                          previousSchoolBoard: profileStudent.previousSchoolBoard || "",
+                          previousClass: profileStudent.previousClass || "",
+                          previousYearOfPassing: profileStudent.previousYearOfPassing?.toString() || "",
+                          transferCertificateNumber: profileStudent.transferCertificateNumber || "",
+                          previousSchoolAddress: profileStudent.previousSchoolAddress || "",
+                          previousSchoolContact: profileStudent.previousSchoolContact || "",
+                          reasonForLeavingPreviousSchool: profileStudent.reasonForLeavingPreviousSchool || "",
+                          classId: selectedClass?.toString() || "",
+                          guardians: profileStudent.guardians || [],
+                          fundingType: "NONE", // Funding editing might need more logic
+                          fundingMode: "FIXED_AMOUNT",
+                          fundingValue: "0",
+                          fundingValidFrom: "",
+                          fundingValidTo: "",
+                        });
+                        setShowProfileModal(false);
+                        setShowAddModal(true);
+                      }}
+                      className="bg-blue-600 text-white px-6 py-2 rounded-xl font-bold shadow-lg hover:bg-blue-700 transition-all flex items-center gap-2"
+                    >
+                      <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.172-2.172a2.828 2.828 0 114 4L11.828 15H9v-2.828l8.586-8.586z" />
+                      </svg>
+                      Edit Student Details
+                    </button>
+                  </div>
+                )}
+              </div>
+            ) : (
+              <div className="py-20 text-center text-gray-400 italic bg-gray-50 rounded-2xl border border-dashed">
+                Student data could not be loaded.
+              </div>
+            )
           )}
 
           {profileTab === "ledger" && (
