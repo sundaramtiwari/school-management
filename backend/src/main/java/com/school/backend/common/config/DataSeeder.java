@@ -111,14 +111,14 @@ public class DataSeeder implements CommandLineRunner {
 
     @Override
     public void run(String... args) {
-        createSuperAdminIfMissing();
+        // createSuperAdminIfMissing();
 
         // Seed rich demo data only on dev-like profiles
         if (!isDevProfile()) {
             return;
         }
 
-        seedDemoAcademicAndFeeData();
+        // seedDemoAcademicAndFeeData();
     }
 
     private void createSuperAdminIfMissing() {
