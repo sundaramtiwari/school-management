@@ -1,6 +1,7 @@
 "use client";
 
 import { ChangeEvent, useCallback, useEffect, useState } from "react";
+import { useRouter } from "next/navigation";
 import { schoolApi } from "@/lib/schoolApi";
 import { useAuth } from "@/context/AuthContext";
 import { useToast } from "@/components/ui/Toast";
@@ -35,6 +36,7 @@ const EMAIL_REGEX = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
 export default function SchoolsPage() {
   const { user } = useAuth();
   const { showToast } = useToast();
+  const router = useRouter();
 
   /* -------- UI State -------- */
 
@@ -45,9 +47,9 @@ export default function SchoolsPage() {
   useEffect(() => {
     const currentRole = user?.role?.toUpperCase();
     if (user && currentRole !== "SUPER_ADMIN" && currentRole !== "PLATFORM_ADMIN") {
-      window.location.href = "/";
+      router.push("/");
     }
-  }, [user]);
+  }, [router, user]);
 
   /* -------- Data State -------- */
 
@@ -188,7 +190,7 @@ export default function SchoolsPage() {
     localStorage.setItem("schoolId", String(s.id));
     localStorage.setItem("schoolName", s.name);
     // Hard refresh to trigger context bootstrap
-    window.location.href = "/students";
+    router.push("/students");
   }
 
   /* ---------------- Edit ---------------- */

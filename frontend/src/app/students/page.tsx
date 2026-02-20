@@ -1,8 +1,11 @@
 "use client";
 
 import { useCallback, useEffect, useMemo, useState, type ChangeEvent } from "react";
+import axios from "axios";
 import { studentApi } from "@/lib/studentApi";
 import { api } from "@/lib/api";
+import { getErrorMessage } from "@/lib/error";
+import { canAddStudent, canEditStudent, canPromoteStudents } from "@/lib/permissions";
 import { useToast } from "@/components/ui/Toast";
 import { useSession } from "@/context/SessionContext";
 import Modal from "@/components/ui/Modal";
@@ -54,6 +57,7 @@ type Student = {
 type LedgerEntry = {
   sessionId: number;
   sessionName: string;
+  active?: boolean;
   totalAssigned: number | string;
   totalDiscount: number | string;
   totalFunding: number | string;
@@ -69,10 +73,9 @@ export default function StudentsPage() {
   const { showToast } = useToast();
   const { currentSession } = useSession();
 
-  const role = user?.role?.toUpperCase();
-  const canAddStudent = role === "SCHOOL_ADMIN" || role === "SUPER_ADMIN" || role === "PLATFORM_ADMIN";
-  const canPromoteStudents = role === "SCHOOL_ADMIN" || role === "SUPER_ADMIN" || role === "PLATFORM_ADMIN";
-  const canEdit = role === "SUPER_ADMIN" || role === "ACCOUNTANT";
+  const canUserAddStudent = canAddStudent(user?.role);
+  const canUserPromoteStudents = canPromoteStudents(user?.role);
+  const canUserEditStudent = canEditStudent(user?.role);
 
   /* ---------- Filters ---------- */
 
@@ -82,6 +85,10 @@ export default function StudentsPage() {
   /* ---------- Students ---------- */
 
   const [students, setStudents] = useState<Student[]>([]);
+  const [currentPage, setCurrentPage] = useState(0);
+  const [totalPages, setTotalPages] = useState(0);
+  const [sortOrder, setSortOrder] = useState<"asc" | "desc">("asc");
+  const [searchTerm, setSearchTerm] = useState("");
   const [loadingStudents, setLoadingStudents] = useState(false);
   const [selectedIds, setSelectedIds] = useState<Set<number>>(new Set());
   const [showPromotionModal, setShowPromotionModal] = useState(false);
@@ -145,6 +152,27 @@ export default function StudentsPage() {
     () => students.filter((s) => selectedIds.has(s.id)),
     [students, selectedIds]
   );
+  const filteredStudents = useMemo(() => {
+    let list = [...students];
+
+    if (searchTerm.trim()) {
+      const normalizedSearch = searchTerm.toLowerCase();
+      list = list.filter((s) =>
+        `${s.firstName} ${s.lastName}`.toLowerCase().includes(normalizedSearch)
+      );
+    }
+
+    list.sort((a, b) => {
+      const nameA = `${a.firstName} ${a.lastName}`.toLowerCase();
+      const nameB = `${b.firstName} ${b.lastName}`.toLowerCase();
+      return sortOrder === "asc"
+        ? nameA.localeCompare(nameB)
+        : nameB.localeCompare(nameA);
+    });
+
+    return list;
+  }, [students, searchTerm, sortOrder]);
+  const allFilteredSelected = filteredStudents.length > 0 && filteredStudents.every((s) => selectedIds.has(s.id));
 
   const loadClasses = useCallback(async () => {
     try {
@@ -158,11 +186,12 @@ export default function StudentsPage() {
     }
   }, [showToast]);
 
-  const loadStudents = useCallback(async (classId: number) => {
+  const loadStudents = useCallback(async (classId: number, page = 0) => {
     try {
       setLoadingStudents(true);
-      const res = await studentApi.byClass(classId, 0, 50);
+      const res = await studentApi.byClass(classId, page, 50);
       setStudents(res.data.content || []);
+      setTotalPages(res.data.totalPages || 0);
       setSelectedIds(new Set());
     } catch {
       showToast("Failed to load students", "error");
@@ -199,10 +228,12 @@ export default function StudentsPage() {
     const value = e.target.value;
     const classValue = value ? Number(value) : "";
     setSelectedClass(classValue);
+    setCurrentPage(0);
     setStudents([]);
+    setTotalPages(0);
     setSelectedIds(new Set());
     if (classValue) {
-      void loadStudents(Number(classValue));
+      void loadStudents(Number(classValue), 0);
     }
   }, [loadStudents]);
 
@@ -217,10 +248,16 @@ export default function StudentsPage() {
 
   const toggleSelectAll = useCallback(() => {
     setSelectedIds((prev) => {
-      if (students.length > 0 && prev.size === students.length) return new Set();
-      return new Set(students.map((s) => s.id));
+      const next = new Set(prev);
+      const everySelected = filteredStudents.length > 0 && filteredStudents.every((s) => next.has(s.id));
+      if (everySelected) {
+        filteredStudents.forEach((s) => next.delete(s.id));
+      } else {
+        filteredStudents.forEach((s) => next.add(s.id));
+      }
+      return next;
     });
-  }, [students]);
+  }, [filteredStudents]);
 
   const openProfile = useCallback(async (summary: Student) => {
     try {
@@ -258,9 +295,15 @@ export default function StudentsPage() {
     setShowPromotionModal(false);
     setSelectedIds(new Set());
     if (selectedClass) {
-      void loadStudents(Number(selectedClass));
+      void loadStudents(Number(selectedClass), currentPage);
     }
-  }, [selectedClass, loadStudents]);
+  }, [selectedClass, currentPage, loadStudents]);
+
+  function goToPage(nextPage: number) {
+    if (!selectedClass || nextPage < 0 || nextPage >= totalPages || nextPage === currentPage) return;
+    setCurrentPage(nextPage);
+    void loadStudents(Number(selectedClass), nextPage);
+  }
 
   function updateStudentField(e: ChangeEvent<HTMLInputElement | HTMLSelectElement | HTMLTextAreaElement>) {
     setStudentForm({
@@ -275,12 +318,12 @@ export default function StudentsPage() {
       return;
     }
 
-    if (studentForm.guardians.length === 0) {
+    if (!isEditing && studentForm.guardians.length === 0) {
       showToast("At least one guardian is required", "warning");
       return;
     }
 
-    if (!studentForm.guardians.some(g => g.primaryGuardian)) {
+    if (!isEditing && !studentForm.guardians.some(g => g.primaryGuardian)) {
       showToast("Please designate a primary guardian", "warning");
       return;
     }
@@ -291,9 +334,10 @@ export default function StudentsPage() {
       const { classId, ...formData } = studentForm;
 
       if (isEditing && profileStudent) {
+        const { guardians, ...studentUpdateData } = formData;
         await studentApi.update(profileStudent.id, {
-          ...formData,
-          previousYearOfPassing: formData.previousYearOfPassing ? Number(formData.previousYearOfPassing) : null,
+          ...studentUpdateData,
+          previousYearOfPassing: studentUpdateData.previousYearOfPassing ? Number(studentUpdateData.previousYearOfPassing) : null,
         });
         showToast("Student updated successfully!", "success");
       } else {
@@ -396,16 +440,15 @@ export default function StudentsPage() {
       });
 
       if (Number(classId) === Number(selectedClass)) {
-        void loadStudents(Number(selectedClass));
+        void loadStudents(Number(selectedClass), currentPage);
       }
     } catch (err: unknown) {
-      const msg = (typeof err === "object" && err !== null && "response" in err)
-        ? (err as { response?: { data?: { message?: string } | string }; message?: string }).response?.data &&
-          typeof (err as { response?: { data?: { message?: string } | string } }).response?.data === "object"
-          ? ((err as { response?: { data?: { message?: string } } }).response?.data?.message || "Unknown error")
-          : ((err as { response?: { data?: string }; message?: string }).response?.data || (err as { message?: string }).message || "Unknown error")
-        : "Unknown error";
-      showToast("Failed to save student: " + msg, "error");
+      if (axios.isAxiosError(err)) {
+        const msg = getErrorMessage(err);
+        showToast(msg, "error");
+      } else {
+        showToast("Unknown error", "error");
+      }
     } finally {
       setIsSaving(false);
     }
@@ -421,9 +464,9 @@ export default function StudentsPage() {
           <p className="text-gray-500 text-base mt-1">Manage students for <span className="text-blue-600 font-bold">{currentSession?.name || "current session"}</span>.</p>
         </div>
 
-        {canAddStudent && (
+        {canUserAddStudent && (
           <div className="flex gap-2">
-            {canPromoteStudents && (
+            {canUserPromoteStudents && (
               <button
                 onClick={() => setShowPromotionModal(true)}
                 disabled={selectedStudents.length === 0}
@@ -472,16 +515,37 @@ export default function StudentsPage() {
         </div>
       ) : selectedClass ? (
         <div className="bg-white rounded-lg shadow border border-gray-100 overflow-hidden mt-4">
+          <div className="px-6 py-4 border-b border-gray-100 flex flex-col gap-3 md:flex-row md:items-center md:justify-between">
+            <div className="flex items-center gap-3">
+              <input
+                type="text"
+                value={searchTerm}
+                onChange={(e) => setSearchTerm(e.target.value)}
+                placeholder="Search by student name"
+                className="w-64 rounded-md border border-gray-300 px-3 py-2 text-sm focus:ring-2 focus:ring-blue-500"
+              />
+              <button
+                onClick={() => setSortOrder((prev) => (prev === "asc" ? "desc" : "asc"))}
+                className="px-3 py-2 text-sm border border-gray-300 rounded-md bg-white hover:bg-gray-50"
+              >
+                Sort: {sortOrder === "asc" ? "Asc" : "Desc"}
+              </button>
+            </div>
+            <span className="text-gray-500 text-sm">
+              Showing {filteredStudents.length} students
+            </span>
+          </div>
           <table className="w-full text-base">
             <thead className="bg-gray-50 text-gray-600 text-lg font-semibold border-b border-gray-100">
               <tr>
                 <th className="px-6 py-4 text-center w-12">
                   <input
                     type="checkbox"
-                    checked={students.length > 0 && selectedIds.size === students.length}
+                    checked={allFilteredSelected}
                     onChange={toggleSelectAll}
                   />
                 </th>
+                <th className="px-6 py-4 text-center w-16">Sr</th>
                 <th className="px-6 py-4 text-left">Student Name</th>
                 <th className="px-6 py-4 text-center">Admission No</th>
                 <th className="px-6 py-4 text-center">Gender</th>
@@ -490,7 +554,7 @@ export default function StudentsPage() {
               </tr>
             </thead>
             <tbody className="divide-y divide-gray-100">
-              {students.map((s) => (
+              {filteredStudents.map((s, index) => (
                 <tr key={s.id} className="hover:bg-gray-50/50 transition-colors">
                   <td className="p-4 text-center">
                     <input
@@ -499,6 +563,7 @@ export default function StudentsPage() {
                       onChange={() => toggleStudentSelection(s.id)}
                     />
                   </td>
+                  <td className="p-4 text-center text-gray-500">{index + 1}</td>
                   <td className="p-4 text-gray-800 font-bold">
                     {s.firstName} {s.lastName}
                   </td>
@@ -525,16 +590,20 @@ export default function StudentsPage() {
                   </td>
                 </tr>
               ))}
-              {students.length === 0 && (
+              {filteredStudents.length === 0 && (
                 <tr>
-                  <td colSpan={6} className="p-20 text-center text-gray-400 italic bg-gray-50/30">
+                  <td colSpan={7} className="p-20 text-center text-gray-400 italic bg-gray-50/30">
                     <div className="flex flex-col items-center gap-3">
                       <span className="text-4xl">📂</span>
                       <div>
-                        <p className="font-bold text-gray-800">Class is Empty</p>
-                        <p className="text-sm">No students have been enrolled in this class for the current session.</p>
+                        <p className="font-bold text-gray-800">{students.length === 0 ? "Class is Empty" : "No students match your search"}</p>
+                        <p className="text-sm">
+                          {students.length === 0
+                            ? "No students have been enrolled in this class for the current session."
+                            : "Try a different name or clear search to see all students."}
+                        </p>
                       </div>
-                      {canAddStudent && (
+                      {canUserAddStudent && students.length === 0 && (
                         <button
                           onClick={() => {
                             if (selectedClass) {
@@ -553,6 +622,27 @@ export default function StudentsPage() {
               )}
             </tbody>
           </table>
+          {totalPages > 1 && (
+            <div className="px-6 py-3 border-t border-gray-100 flex items-center justify-between">
+              <button
+                onClick={() => goToPage(currentPage - 1)}
+                disabled={currentPage === 0}
+                className="px-3 py-1.5 text-sm border border-gray-300 rounded-md bg-white hover:bg-gray-50 disabled:opacity-50"
+              >
+                Previous
+              </button>
+              <span className="text-sm text-gray-600">
+                Page {currentPage + 1} of {totalPages}
+              </span>
+              <button
+                onClick={() => goToPage(currentPage + 1)}
+                disabled={currentPage >= totalPages - 1}
+                className="px-3 py-1.5 text-sm border border-gray-300 rounded-md bg-white hover:bg-gray-50 disabled:opacity-50"
+              >
+                Next
+              </button>
+            </div>
+          )}
         </div>
       ) : (
         <div className="p-20 text-center bg-white rounded-lg shadow border border-gray-100 text-gray-500 mb-6">
@@ -565,6 +655,7 @@ export default function StudentsPage() {
         onClose={() => { setShowAddModal(false); setIsEditing(false); }}
         title={isEditing ? "Edit Student Details" : "Enroll New Student"}
         maxWidth="max-w-4xl"
+        bodyClassName="px-6 py-4 overflow-y-auto flex-1"
         footer={
           <div className="flex gap-2">
             <button
@@ -583,7 +674,7 @@ export default function StudentsPage() {
           </div>
         }
       >
-        <div className="flex flex-col gap-8 max-h-[70vh] overflow-y-auto px-1 pr-4 custom-scrollbar">
+        <div className="flex flex-col gap-8 custom-scrollbar">
 
           {/* Section 1: Admission & Enrollment */}
           <section className="space-y-4 mb-6">
@@ -915,7 +1006,7 @@ export default function StudentsPage() {
           </section>
 
           {/* Section 6: Funding / Sponsorship (New) */}
-          {canAddStudent && (
+          {canUserAddStudent && (
             <section className="space-y-4 bg-gray-50 p-4 rounded-lg border border-gray-100 mb-6">
               <h3 className="text-lg font-semibold border-b border-gray-100 pb-2 flex items-center gap-2">
                 <span className="bg-blue-600 text-white w-5 h-5 rounded-full flex items-center justify-center text-[10px]">6</span>
@@ -992,10 +1083,10 @@ export default function StudentsPage() {
             </section>
           )}
 
-          {/* Section 6: Remarks */}
+          {/* Section 7: Remarks */}
           <section className="space-y-4 mb-6">
             <h3 className="text-lg font-semibold border-b border-gray-100 pb-2 flex items-center gap-2">
-              <span className="bg-blue-600 text-white w-5 h-5 rounded-full flex items-center justify-center text-[10px]">6</span>
+              <span className="bg-blue-600 text-white w-5 h-5 rounded-full flex items-center justify-center text-[10px]">7</span>
               Additional Remarks
             </h3>
             <textarea
@@ -1007,11 +1098,11 @@ export default function StudentsPage() {
             />
           </section>
 
-          {/* Section 7: Guardians */}
+          {/* Section 8: Guardians */}
           {!isEditing && (
             <section className="space-y-4 mb-4">
               <h3 className="text-lg font-semibold border-b border-gray-100 pb-2 flex items-center gap-2">
-                <span className="bg-blue-600 text-white w-5 h-5 rounded-full flex items-center justify-center text-[10px]">7</span>
+                <span className="bg-blue-600 text-white w-5 h-5 rounded-full flex items-center justify-center text-[10px]">8</span>
                 Guardian Information
               </h3>
               <GuardianFormSection
@@ -1122,7 +1213,7 @@ export default function StudentsPage() {
                   </div>
                 )}
 
-                {canEdit && (
+                {canUserEditStudent && (
                   <div className="flex justify-end pt-4 border-t">
                     <button
                       onClick={() => {
@@ -1191,7 +1282,11 @@ export default function StudentsPage() {
                 <div className="text-sm text-gray-500">No ledger entries found.</div>
               ) : (
                 ledgerData.map((entry) => (
-                  <details key={`${entry.sessionId}-${entry.sessionName}`} className="border rounded-xl p-3">
+                  <details
+                    key={`${entry.sessionId}-${entry.sessionName}`}
+                    className="border rounded-xl p-3"
+                    open={entry.active === true}
+                  >
                     <summary className="font-semibold cursor-pointer">{entry.sessionName}</summary>
                     <div className="mt-3 grid grid-cols-2 lg:grid-cols-4 gap-4 text-[11px] font-bold tracking-tight">
                       <div className="bg-gray-50 p-2 rounded-lg border border-gray-100">

@@ -19,7 +19,7 @@ type AcademicSessionItem = {
 export default function SessionsPage() {
     const { user } = useAuth();
     const { showToast } = useToast();
-    const { sessions, currentSession, setCurrentSession, refreshSessions, isSessionLoading: isLoading } = useSession();
+    const { sessions, currentSession, refreshSessions, isSessionLoading: isLoading } = useSession();
     const canManage = user?.role === "SCHOOL_ADMIN" || user?.role === "SUPER_ADMIN" || user?.role === "PLATFORM_ADMIN";
     const [isSaving, setIsSaving] = useState(false);
     const [showForm, setShowForm] = useState(false);
@@ -96,12 +96,6 @@ export default function SessionsPage() {
             await sessionApi.setCurrent(sessionId);
             showToast("Current session updated!", "success");
             await refreshSessions();
-
-            // Update context immediately
-            const target = sessions.find(s => s.id === sessionId);
-            if (target) {
-                setCurrentSession(target);
-            }
         } catch (e: unknown) {
             const msg = (e as { response?: { data?: { message?: string } }; message?: string })?.response?.data?.message
                 || (e as { message?: string })?.message

@@ -2,6 +2,7 @@
 
 import { useCallback, useEffect, useState } from "react";
 import { api } from "@/lib/api";
+import { canMutateFinance } from "@/lib/permissions";
 import { useToast } from "@/components/ui/Toast";
 import { Skeleton, TableSkeleton } from "@/components/ui/Skeleton";
 import { useAuth } from "@/context/AuthContext";
@@ -21,7 +22,7 @@ type Defaulter = {
 export default function FeeDefaultersPage() {
   const { user } = useAuth();
   const { showToast } = useToast();
-  const canMutateFinance = user?.role === "SCHOOL_ADMIN" || user?.role === "ACCOUNTANT" || user?.role === "SUPER_ADMIN";
+  const canManageFinance = canMutateFinance(user?.role);
 
   const [defaulters, setDefaulters] = useState<Defaulter[]>([]);
   const [filteredDefaulters, setFilteredDefaulters] = useState<Defaulter[]>([]);
@@ -145,7 +146,9 @@ export default function FeeDefaultersPage() {
     const message = encodeURIComponent(
       `Dear Parent,\n\nThis is a reminder that ${defaulter.studentName} (${defaulter.admissionNumber}) has pending school fees of ₹${defaulter.amountDue.toLocaleString('en-IN')}.\n\nPlease clear the dues at the earliest.\n\nThank you,\nSchool Administration`
     );
-    window.open(`https://wa.me/${defaulter.parentContact}?text=${message}`, '_blank');
+    const normalizedContact = defaulter.parentContact.replace(/\D/g, "");
+    const waNumber = normalizedContact.startsWith("91") ? normalizedContact : `91${normalizedContact}`;
+    window.open(`https://wa.me/${waNumber}?text=${message}`, '_blank');
   }
 
   const totalDue = filteredDefaulters.reduce((sum, d) => sum + d.amountDue, 0);
@@ -358,7 +361,7 @@ export default function FeeDefaultersPage() {
                     </a>
                   </td>
                   <td className="p-4">
-                    {canMutateFinance ? (
+                    {canManageFinance ? (
                       <div className="flex gap-2 justify-center">
                         <button
                           onClick={() => goToCollectFee(defaulter.studentId)}

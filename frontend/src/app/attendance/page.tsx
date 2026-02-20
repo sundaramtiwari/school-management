@@ -3,6 +3,7 @@
 import { ChangeEvent, useCallback, useEffect, useState } from "react";
 import { studentApi } from "@/lib/studentApi";
 import { api } from "@/lib/api";
+import { canCommitAttendance, canModifyAttendance, isPlatformAdminRole } from "@/lib/permissions";
 import { useToast } from "@/components/ui/Toast";
 import { TableSkeleton } from "@/components/ui/Skeleton";
 import { useSession } from "@/context/SessionContext";
@@ -39,9 +40,9 @@ export default function AttendancePage() {
     const { showToast } = useToast();
     const { currentSession } = useSession();
 
-    const isPlatformAdmin = user?.role === "SUPER_ADMIN" || user?.role === "PLATFORM_ADMIN";
-    const canCommit = user?.role === "SCHOOL_ADMIN" || user?.role === "TEACHER" || isPlatformAdmin;
-    const canModify = user?.role === "SCHOOL_ADMIN" || isPlatformAdmin;
+    const isPlatformAdmin = isPlatformAdminRole(user?.role);
+    const canCommit = canCommitAttendance(user?.role);
+    const canModify = canModifyAttendance(user?.role);
 
     /* ---------- Filters ---------- */
 
@@ -104,6 +105,7 @@ export default function AttendancePage() {
     async function loadStudentsAndAttendance(classId: number, date: string, page: number) {
         try {
             setLoading(prev => ({ ...prev, students: true }));
+            setAttendanceMap({});
 
             if (!currentSession) return;
 
@@ -120,7 +122,7 @@ export default function AttendancePage() {
             setCommitted(isCommitted);
             setIsModifying(false); // Reset modifying state on new load
 
-            const newMap = { ...attendanceMap };
+            const newMap: Record<number, AttendanceStatus> = {};
 
             // Default students on current page to PRESENT if not already in map
             studentList.forEach((s: Student) => {
@@ -187,7 +189,7 @@ export default function AttendancePage() {
     }
 
     function markAllPresent() {
-        const newMap = { ...attendanceMap };
+        const newMap: Record<number, AttendanceStatus> = {};
         students.forEach(s => {
             newMap[s.id] = "PRESENT";
         });

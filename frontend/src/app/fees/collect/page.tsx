@@ -2,6 +2,7 @@
 
 import { useCallback, useEffect, useState, type ChangeEvent } from "react";
 import { api } from "@/lib/api";
+import { canCollectFees } from "@/lib/permissions";
 import { useToast } from "@/components/ui/Toast";
 import { useSession } from "@/context/SessionContext";
 import { useAuth } from "@/context/AuthContext";
@@ -25,7 +26,7 @@ export default function FeeCollectPage() {
     const { showToast } = useToast();
     const { currentSession } = useSession();
 
-    const canCollectFees = user?.role === "ACCOUNTANT" || user?.role === "SCHOOL_ADMIN" || user?.role === "SUPER_ADMIN";
+    const canUserCollectFees = canCollectFees(user?.role);
 
     /* -------- State -------- */
     const [classes, setClasses] = useState<SchoolClass[]>([]);
@@ -111,12 +112,17 @@ export default function FeeCollectPage() {
 
     async function makePayment() {
         if (!selectedStudent || !paymentAmount) return;
+        const amount = Number(paymentAmount);
+        if (amount <= 0) {
+            showToast("Please enter valid amount", "warning");
+            return;
+        }
 
         try {
             setIsProcessing(true);
             await api.post("/api/fees/payments", {
                 studentId: selectedStudent,
-                amountPaid: Number(paymentAmount),
+                amountPaid: amount,
                 mode: paymentMode,
                 remarks,
                 paymentDate: new Date().toISOString().split('T')[0]
@@ -302,7 +308,7 @@ export default function FeeCollectPage() {
                                         onChange={e => setRemarks(e.target.value)}
                                     />
                                 </div>
-                                {canCollectFees ? (
+                                {canUserCollectFees ? (
                                     <button
                                         onClick={makePayment}
                                         disabled={!paymentAmount || isProcessing}

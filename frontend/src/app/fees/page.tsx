@@ -1,7 +1,9 @@
 "use client";
 
 import { useCallback, useEffect, useState } from "react";
+import { useRouter } from "next/navigation";
 import { api } from "@/lib/api";
+import { canManageFees } from "@/lib/permissions";
 import { Skeleton } from "@/components/ui/Skeleton";
 import { useSession } from "@/context/SessionContext";
 import { useAuth } from "@/context/AuthContext";
@@ -9,8 +11,9 @@ import { useAuth } from "@/context/AuthContext";
 export default function FeesDashboard() {
     const { user } = useAuth();
     const { currentSession, isSessionLoading: sessionLoading } = useSession();
+    const router = useRouter();
 
-    const canManageFees = user?.role === "ACCOUNTANT" || user?.role === "SCHOOL_ADMIN" || user?.role === "SUPER_ADMIN";
+    const canUserManageFees = canManageFees(user?.role);
     const [stats, setStats] = useState({
         todayCollection: 0,
         pendingDues: 0,
@@ -56,12 +59,12 @@ export default function FeesDashboard() {
                     <p className="text-gray-500 text-base mt-1">Institutional financial overview and collection status for <span className="text-blue-600 font-bold">{currentSession?.name || "current session"}</span>.</p>
                 </div>
                 <div className="flex gap-3">
-                    {canManageFees && (
+                    {canUserManageFees && (
                         <>
-                            <button onClick={() => window.location.href = '/fees/structures'} className="px-5 py-2.5 bg-white border border-gray-300 rounded-md font-medium hover:bg-gray-50 text-base">
+                            <button onClick={() => router.push('/fees/structures')} className="px-5 py-2.5 bg-white border border-gray-300 rounded-md font-medium hover:bg-gray-50 text-base">
                                 Edit Structures
                             </button>
-                            <button onClick={() => window.location.href = '/fees/collect'} className="px-5 py-2.5 bg-blue-600 text-white rounded-md font-medium hover:bg-blue-700 text-base">
+                            <button onClick={() => router.push('/fees/collect')} className="px-5 py-2.5 bg-blue-600 text-white rounded-md font-medium hover:bg-blue-700 text-base">
                                 Collect Fees
                             </button>
                         </>

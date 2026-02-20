@@ -1,6 +1,6 @@
 "use client";
 
-import React, { ReactNode } from "react";
+import React, { ReactNode, useEffect, useId } from "react";
 
 interface ModalProps {
     isOpen: boolean;
@@ -9,6 +9,7 @@ interface ModalProps {
     children: ReactNode;
     footer?: ReactNode;
     maxWidth?: string;
+    bodyClassName?: string;
 }
 
 export default function Modal({
@@ -17,8 +18,24 @@ export default function Modal({
     title,
     children,
     footer,
-    maxWidth = "max-w-xl"
+    maxWidth = "max-w-xl",
+    bodyClassName = "p-6 overflow-y-auto flex-1"
 }: ModalProps) {
+    const titleId = useId();
+
+    useEffect(() => {
+        if (!isOpen) return;
+
+        const handleEscape = (event: KeyboardEvent) => {
+            if (event.key === "Escape") {
+                onClose();
+            }
+        };
+
+        window.addEventListener("keydown", handleEscape);
+        return () => window.removeEventListener("keydown", handleEscape);
+    }, [isOpen, onClose]);
+
     if (!isOpen) return null;
 
     return (
@@ -30,10 +47,15 @@ export default function Modal({
             />
 
             {/* Content */}
-            <div className={`relative bg-white w-full ${maxWidth} rounded-2xl shadow-2xl overflow-hidden flex flex-col max-h-[90vh]`}>
+            <div
+                className={`relative bg-white w-full ${maxWidth} rounded-2xl shadow-2xl overflow-hidden flex flex-col max-h-[90vh]`}
+                role="dialog"
+                aria-modal="true"
+                aria-labelledby={titleId}
+            >
                 {/* Header */}
                 <div className="px-6 py-4 border-b flex justify-between items-center bg-gray-50/50">
-                    <h2 className="text-xl font-bold text-gray-800">{title}</h2>
+                    <h2 id={titleId} className="text-xl font-bold text-gray-800">{title}</h2>
                     <button
                         onClick={onClose}
                         className="text-gray-400 hover:text-gray-600 transition-colors p-1"
@@ -45,7 +67,7 @@ export default function Modal({
                 </div>
 
                 {/* Body */}
-                <div className="p-6 overflow-y-auto flex-1">
+                <div className={bodyClassName}>
                     {children}
                 </div>
 

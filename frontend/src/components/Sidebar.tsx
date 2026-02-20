@@ -1,6 +1,7 @@
 "use client";
 
 import Link from "next/link";
+import { useEffect, useState } from "react";
 import { usePathname, useRouter } from "next/navigation";
 import { useAuth } from "@/context/AuthContext";
 import { useSession } from "@/context/SessionContext";
@@ -41,8 +42,13 @@ export default function Sidebar() {
   const { user, logout } = useAuth();
   const { currentSession, hasClasses } = useSession();
   const { showToast } = useToast();
+  const [schoolId, setSchoolId] = useState<string | null>(null);
+  const [schoolName, setSchoolName] = useState<string | null>(null);
 
-  const schoolName = typeof window !== "undefined" ? localStorage.getItem("schoolName") : null;
+  useEffect(() => {
+    setSchoolId(localStorage.getItem("schoolId"));
+    setSchoolName(localStorage.getItem("schoolName"));
+  }, []);
 
   const clearContext = () => {
     localStorage.removeItem("schoolId");
@@ -105,7 +111,7 @@ export default function Sidebar() {
 
           // Platform Role Gating: If no school selected, block school-specific links
           const isSchoolModule = !["Dashboard", "Schools", "Staff"].includes(item.name);
-          if (isPlatformRole && isSchoolModule && !localStorage.getItem("schoolId")) {
+          if (isPlatformRole && isSchoolModule && !schoolId) {
             isRestricted = true;
             restrictionMessage = "Please select a school first from the Schools list.";
             redirectPath = "/schools";

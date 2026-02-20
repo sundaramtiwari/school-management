@@ -16,7 +16,6 @@ type AcademicSession = {
 type SessionContextType = {
   currentSession: AcademicSession | null;
   sessions: AcademicSession[];
-  setCurrentSession: (session: AcademicSession) => void;
   refreshSessions: () => Promise<void>;
   isSessionLoading: boolean;
   hasClasses: boolean;
@@ -96,17 +95,6 @@ export function SessionProvider({ children }: { children: React.ReactNode }) {
     return ["SUPER_ADMIN", "PLATFORM_ADMIN"].includes(role?.toUpperCase() || "");
   }
 
-  const setCurrentSession = (session: AcademicSession | null) => {
-    // We strictly use backend source of truth, so setting manually might be temporary or for optimistic UI?
-    // User wants "Session source of truth must be backend school.currentSessionId".
-    // This implies we shouldn't really be manually setting currentSession separate from backend.
-    // However, if we switch sessions, we probably call an API to update school.currentSessionId?
-    // The instructions don't mention session switching logic updates, just "Fix SessionContext".
-    // Assuming setCurrentSession updates local state for now, but maybe it should be removed or strictly strictly coupled?
-    // For now, let's keep it but remove localStorage as requested.
-    setCurrentSessionState(session);
-  };
-
   // Axios interceptor to inject X-Session-Id header
   useEffect(() => {
     const interceptor = api.interceptors.request.use((config) => {
@@ -119,7 +107,7 @@ export function SessionProvider({ children }: { children: React.ReactNode }) {
     return () => {
       api.interceptors.request.eject(interceptor);
     };
-  }, [currentSession]);
+  }, [currentSession?.id]);
 
   // Fetch class count when session changes
   useEffect(() => {
@@ -144,7 +132,6 @@ export function SessionProvider({ children }: { children: React.ReactNode }) {
       value={{
         currentSession,
         sessions,
-        setCurrentSession, // This function might need to call backend to switch session in future, but out of scope now
         refreshSessions,
         isSessionLoading,
         hasClasses,
