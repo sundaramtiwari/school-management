@@ -4,7 +4,6 @@ import com.school.backend.core.classsubject.entity.SchoolClass;
 import com.school.backend.core.classsubject.entity.Subject;
 import com.school.backend.core.teacher.dto.TeacherAssignmentListItemDto;
 import com.school.backend.core.teacher.dto.TeacherAssignmentRequest;
-import com.school.backend.core.teacher.entity.TeacherAssignment;
 import com.school.backend.core.teacher.service.TeacherAssignmentService;
 import lombok.RequiredArgsConstructor;
 import org.springframework.http.ResponseEntity;
@@ -22,7 +21,7 @@ public class TeacherAssignmentController {
 
     @PostMapping("/teacher-assignments")
     @PreAuthorize("hasAnyRole('SCHOOL_ADMIN', 'PLATFORM_ADMIN', 'SUPER_ADMIN')")
-    public TeacherAssignment assignTeacher(@RequestBody TeacherAssignmentRequest req) {
+    public TeacherAssignmentListItemDto assignTeacher(@RequestBody TeacherAssignmentRequest req) {
         return service.assignTeacher(req.getTeacherId(), req.getSessionId(), req.getClassId(), req.getSubjectId());
     }
 
@@ -41,7 +40,7 @@ public class TeacherAssignmentController {
 
     @GetMapping("/teachers/{id}/assignments")
     @PreAuthorize("hasAnyRole('SCHOOL_ADMIN', 'PLATFORM_ADMIN', 'SUPER_ADMIN')")
-    public List<TeacherAssignment> getTeacherAssignments(
+    public List<TeacherAssignmentListItemDto> getTeacherAssignments(
             @PathVariable Long id,
             @RequestParam Long sessionId) {
         return service.getTeacherAssignments(id, sessionId);

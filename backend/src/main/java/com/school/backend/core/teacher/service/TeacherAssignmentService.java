@@ -34,7 +34,7 @@ public class TeacherAssignmentService {
     private final ClassSubjectRepository classSubjectRepository;
 
     @Transactional
-    public TeacherAssignment assignTeacher(Long teacherId, Long sessionId, Long classId, Long subjectId) {
+    public TeacherAssignmentListItemDto assignTeacher(Long teacherId, Long sessionId, Long classId, Long subjectId) {
         Long schoolId = SecurityUtil.schoolId();
 
         // 1. Validation: Entity existence and same-school integrity
@@ -82,7 +82,7 @@ public class TeacherAssignmentService {
                 .assignedBy(SecurityUtil.current().getUserId())
                 .build();
 
-        return repository.save(assignment);
+        return toListItemDto(repository.save(assignment));
     }
 
     @Transactional
@@ -92,12 +92,15 @@ public class TeacherAssignmentService {
 
         validateSchool(assignment.getSchoolId(), SecurityUtil.schoolId(), "Assignment");
 
-        repository.delete(assignment);
+        assignment.setActive(false);
+        repository.save(assignment);
     }
 
     @Transactional(readOnly = true)
-    public List<TeacherAssignment> getTeacherAssignments(Long teacherId, Long sessionId) {
-        return repository.findByTeacherIdAndSessionIdAndActiveTrue(teacherId, sessionId);
+    public List<TeacherAssignmentListItemDto> getTeacherAssignments(Long teacherId, Long sessionId) {
+        return repository.findByTeacherIdAndSessionIdAndActiveTrue(teacherId, sessionId).stream()
+                .map(this::toListItemDto)
+                .collect(Collectors.toList());
     }
 
     @Transactional(readOnly = true)

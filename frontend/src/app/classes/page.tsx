@@ -9,6 +9,7 @@ import { useAuth } from "@/context/AuthContext";
 import { useSession } from "@/context/SessionContext";
 import Modal from "@/components/ui/Modal";
 import { TableSkeleton } from "@/components/ui/Skeleton";
+import ClassSubjectsManager from "@/components/classes/ClassSubjectsManager";
 
 type SchoolClass = {
     id: number;
@@ -31,6 +32,7 @@ export default function ClassesPage() {
     const [isDeleting, setIsDeleting] = useState(false);
     const [showForm, setShowForm] = useState(false);
     const [editId, setEditId] = useState<number | null>(null);
+    const [postCreateClass, setPostCreateClass] = useState<{ id: number; name: string } | null>(null);
 
     const [form, setForm] = useState({
         className: "",
@@ -102,14 +104,22 @@ export default function ClassesPage() {
             if (editId) {
                 await api.put(`/api/classes/${editId}`, payload);
                 showToast("Class updated successfully!", "success");
+                setShowForm(false);
+                setEditId(null);
+                resetForm();
+                void loadClasses();
             } else {
-                await api.post("/api/classes", payload);
-                showToast("Class created successfully!", "success");
+                const res = await api.post("/api/classes", payload);
+                showToast("Class created! Now assign subjects.", "success");
+                setShowForm(false);
+                setEditId(null);
+                resetForm();
+                void loadClasses();
+                
+                setTimeout(() => {
+                    setPostCreateClass({ id: res.data.id, name: res.data.name });
+                }, 150);
             }
-            setShowForm(false);
-            setEditId(null);
-            resetForm();
-            void loadClasses();
         } catch (e: unknown) {
             const message = typeof e === "object" && e !== null && "message" in e
                 ? String((e as { message?: string }).message || "Unknown error")
@@ -314,6 +324,27 @@ export default function ClassesPage() {
                         </label>
                     </div>
                 </div>
+            </Modal>
+
+            <Modal
+                isOpen={postCreateClass !== null}
+                onClose={() => setPostCreateClass(null)}
+                title={postCreateClass ? `Assign Subjects to Class: ${postCreateClass.name}` : "Assign Subjects"}
+                maxWidth="max-w-4xl"
+                footer={
+                    <button
+                        onClick={() => setPostCreateClass(null)}
+                        className="px-6 py-2 rounded-md bg-blue-600 text-white font-medium hover:bg-blue-700"
+                    >
+                        Done Setting Subjects
+                    </button>
+                }
+            >
+                {postCreateClass && (
+                    <div className="p-4 bg-gray-50 rounded-lg border border-gray-100">
+                        <ClassSubjectsManager classId={postCreateClass.id} />
+                    </div>
+                )}
             </Modal>
         </div>
     );

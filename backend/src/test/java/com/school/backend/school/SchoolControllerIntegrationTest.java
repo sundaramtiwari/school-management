@@ -172,7 +172,7 @@ public class SchoolControllerIntegrationTest extends BaseAuthenticatedIntegratio
     }
 
     @Test
-    void testSchoolAdmin_canAccessOwnSchool_viaGetAll() {
+    void testSchoolAdmin_cannotAccessGetAll() {
         // 1. Create a school (will be done by super admin)
         SchoolDto s = createSample("My Admin School", "MAS001", "Delhi");
 
@@ -188,14 +188,8 @@ public class SchoolControllerIntegrationTest extends BaseAuthenticatedIntegratio
                 new HttpEntity<>(headers),
                 ptr);
 
-        // 4. Verify Success and Content
-        assertEquals(HttpStatus.OK, response.getStatusCode());
-        PageResponse<SchoolDto> page = Objects.requireNonNull(response.getBody());
-
-        assertNotNull(page);
-        assertEquals(1, page.totalElements(), "School Admin should see exactly 1 school");
-        assertEquals(1, page.content().size());
-        assertEquals("MAS001", page.content().get(0).getSchoolCode());
+        // 4. Verify forbidden access as SCHOOL_ADMIN is no longer allowed on GET /api/schools
+        assertEquals(HttpStatus.FORBIDDEN, response.getStatusCode());
     }
 
     @Test
