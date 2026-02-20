@@ -62,18 +62,25 @@ export default function ExamsPage() {
 
     /* ---------------- Load Data ---------------- */
 
+    const isTeacher = user?.role === "TEACHER";
+
     const loadClasses = useCallback(async () => {
+        if (!currentSession) return;
         try {
             setLoadingClasses(true);
-            const res = await api.get("/api/classes/mine");
-            // For some reason /api/classes/mine returns Page<SchoolClassDto>
-            setClasses(res.data.content || []);
+            if (isTeacher) {
+                const res = await api.get<SchoolClass[]>(`/api/teacher-assignments/my-classes?sessionId=${currentSession.id}`);
+                setClasses(res.data || []);
+            } else {
+                const res = await api.get("/api/classes/mine");
+                setClasses(res.data.content || []);
+            }
         } catch {
             showToast("Failed to load classes", "error");
         } finally {
             setLoadingClasses(false);
         }
-    }, [showToast]);
+    }, [showToast, currentSession, isTeacher]);
 
     useEffect(() => {
         if (currentSession) {

@@ -83,6 +83,7 @@ export default function AttendancePage() {
     /* ---------------- Init ---------------- */
 
     const loadClasses = useCallback(async () => {
+        if (!currentSession) return;
         try {
             setLoading(prev => ({ ...prev, classes: true }));
             const res = await api.get("/api/classes/mine");
@@ -92,7 +93,7 @@ export default function AttendancePage() {
         } finally {
             setLoading(prev => ({ ...prev, classes: false }));
         }
-    }, [showToast]);
+    }, [showToast, currentSession]);
 
     useEffect(() => {
         void loadClasses();

@@ -1,5 +1,7 @@
 package com.school.backend.core.teacher.controller;
 
+import com.school.backend.core.classsubject.entity.SchoolClass;
+import com.school.backend.core.classsubject.entity.Subject;
 import com.school.backend.core.teacher.dto.TeacherAssignmentListItemDto;
 import com.school.backend.core.teacher.dto.TeacherAssignmentRequest;
 import com.school.backend.core.teacher.entity.TeacherAssignment;
@@ -43,5 +45,17 @@ public class TeacherAssignmentController {
             @PathVariable Long id,
             @RequestParam Long sessionId) {
         return service.getTeacherAssignments(id, sessionId);
+    }
+
+    @GetMapping("/teacher-assignments/my-classes")
+    @PreAuthorize("hasAnyRole('TEACHER', 'SCHOOL_ADMIN', 'PLATFORM_ADMIN', 'SUPER_ADMIN')")
+    public List<SchoolClass> getMyAssignedClasses(@RequestParam Long sessionId) {
+        return service.getMyAssignedClasses(sessionId);
+    }
+
+    @GetMapping("/teacher-assignments/my-subjects")
+    @PreAuthorize("hasAnyRole('TEACHER', 'SCHOOL_ADMIN', 'PLATFORM_ADMIN', 'SUPER_ADMIN')")
+    public List<Subject> getMyAssignedSubjects(@RequestParam Long sessionId, @RequestParam Long classId) {
+        return service.getMyAssignedSubjects(sessionId, classId);
     }
 }

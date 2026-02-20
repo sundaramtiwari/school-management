@@ -58,7 +58,10 @@ export default function MarksheetsPage() {
         return "Unknown error";
     };
 
+    const isTeacher = user?.role === "TEACHER";
+
     const loadClasses = useCallback(async () => {
+        if (!currentSession) return;
         try {
             setLoading(prev => ({ ...prev, classes: true }));
             setClasses([]);
@@ -67,14 +70,19 @@ export default function MarksheetsPage() {
             setSelectedExam("");
             setStudents([]);
 
-            const res = await api.get("/api/classes/mine?size=100");
-            setClasses(res.data.content || []);
+            if (isTeacher) {
+                const res = await api.get<SchoolClass[]>(`/api/teacher-assignments/my-classes?sessionId=${currentSession.id}`);
+                setClasses(res.data || []);
+            } else {
+                const res = await api.get("/api/classes/mine?size=100");
+                setClasses(res.data.content || []);
+            }
         } catch {
             showToast("Failed to fetch classes for school", "error");
         } finally {
             setLoading(prev => ({ ...prev, classes: false }));
         }
-    }, [showToast]);
+    }, [showToast, currentSession, isTeacher]);
 
     const loadSchools = useCallback(async () => {
         try {

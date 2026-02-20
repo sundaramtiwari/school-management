@@ -30,28 +30,25 @@ public class MarkEntryService {
     private final TeacherRepository teacherRepository;
     private final TeacherAssignmentRepository teacherAssignmentRepository;
     private final com.school.backend.school.service.SetupValidationService setupValidationService;
-    private final com.school.backend.common.tenant.SessionResolver sessionResolver;
 
     @Transactional
     public StudentMark enterMarks(MarkEntryRequest req) {
         Long schoolId = TenantContext.getSchoolId();
-        Long sessionId = sessionResolver.resolveForCurrentSchool();
-        setupValidationService.ensureAtLeastOneClassExists(schoolId, sessionId);
 
         ExamSubject subject = subjectRepository.findById(req.getExamSubjectId())
                 .orElseThrow(() -> new ResourceNotFoundException("ExamSubject not found"));
+        Exam exam = examRepository.findById(subject.getExamId())
+                .orElseThrow(() -> new BusinessException("Exam not found"));
+        setupValidationService.ensureAtLeastOneClassExists(schoolId, exam.getSessionId());
 
         if (SecurityUtil.hasRole("TEACHER")) {
             Long userId = SecurityUtil.current().getUserId();
             Teacher teacher = teacherRepository.findByUserId(userId)
                     .orElseThrow(() -> new BusinessException("Teacher record not found for user"));
 
-            Exam exam = examRepository.findById(subject.getExamId())
-                    .orElseThrow(() -> new BusinessException("Exam not found"));
-
             boolean assigned = teacherAssignmentRepository
                     .existsByTeacherIdAndSessionIdAndSchoolClassIdAndSubjectIdAndActiveTrue(
-                            teacher.getId(), sessionId, exam.getClassId(), subject.getSubjectId());
+                            teacher.getId(), exam.getSessionId(), exam.getClassId(), subject.getSubjectId());
 
             if (!assigned) {
                 throw new BusinessException(

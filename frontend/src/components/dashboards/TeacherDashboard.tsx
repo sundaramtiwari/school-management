@@ -3,6 +3,7 @@
 import { useCallback, useEffect, useState } from "react";
 import { api } from "@/lib/api";
 import { Skeleton } from "@/components/ui/Skeleton";
+import { useSession } from "@/context/SessionContext";
 
 type ClassInfo = {
   id: number;
@@ -29,6 +30,8 @@ export default function TeacherDashboard() {
     session: string;
   };
 
+  const { currentSession } = useSession();
+
   const [classes, setClasses] = useState<ClassInfo[]>([]);
   const [pendingTasks, setPendingTasks] = useState<PendingTask[]>([]);
   const [stats, setStats] = useState({
@@ -41,17 +44,13 @@ export default function TeacherDashboard() {
   const [todayDate] = useState(new Date().toISOString().split('T')[0]);
 
   const loadTeacherDashboard = useCallback(async () => {
+    if (!currentSession) return;
     try {
       setLoading(true);
 
-      // Load teacher's assigned classes
-      // Note: Backend needs /api/teachers/my-classes endpoint
-      // For now, we'll simulate or use /api/classes with teacher filter
-      const classesRes = await api.get('/api/classes/my-classes').catch(() =>
-        api.get('/api/classes/mine?size=100') // Fallback
-      );
-
-      const classData: ClassApiItem[] = classesRes.data?.content || classesRes.data || [];
+      // Load teacher's assigned classes using explicit sessionId
+      const classesRes = await api.get<ClassApiItem[]>(`/api/teacher-assignments/my-classes?sessionId=${currentSession.id}`);
+      const classData: ClassApiItem[] = classesRes.data || [];
 
       // Enrich each class with attendance status
       const enrichedClasses = await Promise.all(
@@ -59,7 +58,7 @@ export default function TeacherDashboard() {
           try {
             // Check if attendance marked today
             const attendanceRes = await api.get(
-              `/api/attendance/class/${cls.id}?date=${todayDate}`
+              `/api/attendance/class/${cls.id}?sessionId=${currentSession.id}&date=${todayDate}`
             );
             const hasAttendance = (attendanceRes.data || []).length > 0;
 
@@ -122,7 +121,7 @@ export default function TeacherDashboard() {
     } finally {
       setLoading(false);
     }
-  }, [todayDate]);
+  }, [todayDate, currentSession]);
 
   useEffect(() => {
     loadTeacherDashboard();

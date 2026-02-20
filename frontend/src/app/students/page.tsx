@@ -222,7 +222,7 @@ export default function StudentsPage() {
     });
   }, [students]);
 
-  const openProfile = useCallback(async (summary: any) => {
+  const openProfile = useCallback(async (summary: Student) => {
     try {
       setLoadingProfile(true);
       setProfileTab("overview");

@@ -162,21 +162,6 @@ public class ExamService {
                 .orElseThrow(() -> new IllegalArgumentException("Exam not found"));
         setupValidationService.ensureAtLeastOneClassExists(exam.getSchoolId(), exam.getSessionId());
 
-        // Authority Check
-        if (SecurityUtil.hasRole("TEACHER")) {
-            Long userId = SecurityUtil.current().getUserId();
-            Teacher teacher = teacherRepository.findByUserId(userId)
-                    .orElseThrow(() -> new BusinessException("Teacher record not found for user"));
-
-            // Check if teacher is assigned to this class in this session
-            boolean assigned = teacherAssignmentRepository.existsByTeacherIdAndSessionIdAndSchoolClassIdAndActiveTrue(
-                    teacher.getId(), exam.getSessionId(), exam.getClassId());
-
-            if (!assigned) {
-                throw new BusinessException("Access Denied: You are not assigned to this class.");
-            }
-        }
-
         if (exam.getStatus() != ExamStatus.DRAFT) {
             throw new BusinessException("Marks can only be entered when exam is in DRAFT status.");
         }
@@ -185,6 +170,22 @@ public class ExamService {
         List<ExamSubject> subjects = subjectRepository.findByExamId(examId);
         Map<Long, ExamSubject> subjectMap = subjects.stream()
                 .collect(Collectors.toMap(ExamSubject::getId, Function.identity()));
+
+        if (SecurityUtil.hasRole("TEACHER")) {
+            Long userId = SecurityUtil.current().getUserId();
+            Teacher teacher = teacherRepository.findByUserId(userId)
+                    .orElseThrow(() -> new BusinessException("Teacher record not found for user"));
+
+            for (ExamSubject examSubject : subjects) {
+                boolean assigned = teacherAssignmentRepository
+                        .existsByTeacherIdAndSessionIdAndSchoolClassIdAndSubjectIdAndActiveTrue(
+                                teacher.getId(), exam.getSessionId(), exam.getClassId(), examSubject.getSubjectId());
+                if (!assigned) {
+                    throw new BusinessException(
+                            "Access Denied: You are not assigned to one or more subjects in this exam.");
+                }
+            }
+        }
 
         // 2. Process and save marks
         for (BulkMarksDto.MarkItem item : dto.getMarks()) {

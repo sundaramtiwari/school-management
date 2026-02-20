@@ -4,9 +4,11 @@ import { useCallback, useEffect, useMemo, useState } from "react";
 import { examApi } from "@/lib/examApi";
 import { studentApi } from "@/lib/studentApi";
 import { classSubjectApi } from "@/lib/classSubjectApi";
+import { api } from "@/lib/api";
 import { useToast } from "@/components/ui/Toast";
 import Modal from "@/components/ui/Modal";
 import MarksheetMVP from "./MarksheetMVP";
+import { useAuth } from "@/context/AuthContext";
 
 interface Exam {
     id: number;
@@ -50,6 +52,7 @@ interface ClassSubjectItem {
 }
 
 export default function ExamDetailView({ exam: initialExam, classId, onClose }: ExamDetailViewProps) {
+    const { user } = useAuth();
     const { showToast } = useToast();
     const [exam, setExam] = useState<Exam>(initialExam);
     const [activeTab, setActiveTab] = useState<"subjects" | "marks" | "results">("subjects");
@@ -93,12 +96,24 @@ export default function ExamDetailView({ exam: initialExam, classId, onClose }: 
 
     const loadAvailableSubjects = useCallback(async () => {
         try {
-            const res = await classSubjectApi.getByClass(classId, 0, 100);
-            setAvailableSubjects(res.content || []);
+            if (user?.role === "TEACHER") {
+                const res = await api.get<{ id: number; name: string }[]>(
+                    `/api/teacher-assignments/my-subjects?sessionId=${exam.sessionId}&classId=${classId}`
+                );
+                const mapped = (res.data || []).map((s) => ({
+                    id: s.id,
+                    subjectId: s.id,
+                    subjectName: s.name,
+                }));
+                setAvailableSubjects(mapped);
+            } else {
+                const res = await classSubjectApi.getByClass(classId, 0, 100);
+                setAvailableSubjects(res.content || []);
+            }
         } catch {
             showToast("Failed to load available subjects", "error");
         }
-    }, [classId, showToast]);
+    }, [classId, showToast, user?.role, exam.sessionId]);
 
     const loadExistingMarks = useCallback(async () => {
         try {

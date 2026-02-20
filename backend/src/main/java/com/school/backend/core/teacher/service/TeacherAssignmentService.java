@@ -103,9 +103,8 @@ public class TeacherAssignmentService {
     @Transactional(readOnly = true)
     public List<TeacherAssignmentListItemDto> listBySession(Long sessionId) {
         Long schoolId = SecurityUtil.schoolId();
-        List<TeacherAssignment> assignments = repository.findBySessionIdAndActiveTrue(sessionId);
+        List<TeacherAssignment> assignments = repository.findBySessionIdAndSchoolIdAndActiveTrue(sessionId, schoolId);
         return assignments.stream()
-                .filter(a -> a.getSchoolId().equals(schoolId))
                 .map(this::toListItemDto)
                 .collect(Collectors.toList());
     }
@@ -114,9 +113,11 @@ public class TeacherAssignmentService {
         TeacherAssignmentListItemDto dto = new TeacherAssignmentListItemDto();
         dto.setId(a.getId());
         dto.setTeacherName(a.getTeacher() != null && a.getTeacher().getUser() != null
-                ? a.getTeacher().getUser().getFullName() : "");
+                ? a.getTeacher().getUser().getFullName()
+                : "");
         dto.setClassName(a.getSchoolClass() != null
-                ? a.getSchoolClass().getName() + (a.getSchoolClass().getSection() != null ? " " + a.getSchoolClass().getSection() : "")
+                ? a.getSchoolClass().getName()
+                        + (a.getSchoolClass().getSection() != null ? " " + a.getSchoolClass().getSection() : "")
                 : "");
         dto.setSubjectName(a.getSubject() != null ? a.getSubject().getName() : "");
         dto.setSessionName(a.getSession() != null ? a.getSession().getName() : "");
@@ -139,6 +140,24 @@ public class TeacherAssignmentService {
         List<TeacherAssignment> activeAssignments = repository.findByTeacherIdAndActiveTrue(teacherId);
         activeAssignments.forEach(a -> a.setActive(false));
         repository.saveAll(activeAssignments);
+    }
+
+    @Transactional(readOnly = true)
+    public List<SchoolClass> getMyAssignedClasses(Long sessionId) {
+        Long schoolId = SecurityUtil.schoolId();
+        Long userId = SecurityUtil.userId();
+        Teacher teacher = teacherRepository.findByUserId(userId)
+                .orElseThrow(() -> new BusinessException("Teacher profile not found for current user"));
+        return repository.findDistinctClassesByTeacherAndSession(teacher.getId(), sessionId, schoolId);
+    }
+
+    @Transactional(readOnly = true)
+    public List<Subject> getMyAssignedSubjects(Long sessionId, Long classId) {
+        Long schoolId = SecurityUtil.schoolId();
+        Long userId = SecurityUtil.userId();
+        Teacher teacher = teacherRepository.findByUserId(userId)
+                .orElseThrow(() -> new BusinessException("Teacher profile not found for current user"));
+        return repository.findDistinctSubjectsByTeacherSessionAndClass(teacher.getId(), sessionId, classId, schoolId);
     }
 
     private void validateSchool(Long entitySchoolId, Long currentSchoolId, String entityName) {
