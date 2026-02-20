@@ -12,8 +12,8 @@ import java.time.LocalDate;
 
 @Entity
 @Table(name = "student_attendance", uniqueConstraints = {
-                @UniqueConstraint(name = "uk_attendance", columnNames = { "class_id", "student_id", "attendance_date",
-                                "session_id" })
+                @UniqueConstraint(name = "uk_attendance", columnNames = { "school_id", "class_id", "student_id",
+                                "attendance_date", "session_id" })
 }, indexes = {
                 @Index(name = "idx_attendance_school_date", columnList = "school_id, attendance_date"),
                 @Index(name = "idx_attendance_student_date", columnList = "student_id, attendance_date")

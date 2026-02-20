@@ -5,26 +5,30 @@ import io.jsonwebtoken.Claims;
 import io.jsonwebtoken.Jwts;
 import io.jsonwebtoken.SignatureAlgorithm;
 import io.jsonwebtoken.security.Keys;
+import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Component;
 
 import javax.crypto.SecretKey;
 import java.nio.charset.StandardCharsets;
+import java.util.Arrays;
 import java.util.Date;
 
 @Component
 public class JwtUtil {
 
-    private static final String SECRET =
-            "school-management-jwt-secret-key-2026-very-secure-123456";
+    @Value("${jwt.secret}")
+    private String secret;
 
     private static final long EXPIRY =
             24 * 60 * 60 * 1000;
 
-    private final SecretKey key;
-
-    public JwtUtil() {
-        this.key = Keys.hmacShaKeyFor(
-                SECRET.getBytes(StandardCharsets.UTF_8)
+    private SecretKey getKey() {
+        byte[] keyBytes = secret.getBytes(StandardCharsets.UTF_8);
+        if (keyBytes.length < 32) {
+            keyBytes = Arrays.copyOf(keyBytes, 32);
+        }
+        return Keys.hmacShaKeyFor(
+                keyBytes
         );
     }
 
@@ -49,7 +53,7 @@ public class JwtUtil {
                         new Date(System.currentTimeMillis() + EXPIRY)
                 )
 
-                .signWith(key, SignatureAlgorithm.HS256)
+                .signWith(getKey(), SignatureAlgorithm.HS256)
 
                 .compact();
     }
@@ -57,7 +61,7 @@ public class JwtUtil {
     public Claims parse(String token) {
 
         return Jwts.parserBuilder()
-                .setSigningKey(key)
+                .setSigningKey(getKey())
                 .build()
                 .parseClaimsJws(token)
                 .getBody();

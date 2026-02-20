@@ -1,7 +1,7 @@
 package com.school.backend.fee.entity;
 
 import com.school.backend.common.entity.TenantEntity;
-import com.school.backend.common.enums.LateFeeType;
+import com.school.backend.common.enums.DiscountType;
 import jakarta.persistence.*;
 import lombok.*;
 import lombok.experimental.SuperBuilder;
@@ -28,7 +28,7 @@ public class DiscountDefinition extends TenantEntity {
 
     @Enumerated(EnumType.STRING)
     @Column(nullable = false, length = 20)
-    private LateFeeType type; // Reuse LateFeeType for FLAT/PERCENTAGE
+    private DiscountType type;
 
     @Column(nullable = false, precision = 15, scale = 2)
     private BigDecimal amountValue;

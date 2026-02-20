@@ -8,7 +8,10 @@ import lombok.*;
 import lombok.experimental.SuperBuilder;
 
 @Entity
-@Table(name = "school_classes", indexes = {
+@Table(name = "school_classes", uniqueConstraints = {
+        @UniqueConstraint(name = "uk_school_class_school_name_section_session", columnNames = { "school_id", "name",
+                "section", "session_id" })
+}, indexes = {
         @Index(name = "idx_schoolclass_schoolid_name_session", columnList = "school_id,name,session_id")
 })
 @Getter

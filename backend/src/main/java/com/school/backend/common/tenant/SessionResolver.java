@@ -40,4 +40,18 @@ public class SessionResolver {
 
         return school.getCurrentSessionId();
     }
+
+    public Long validateForCurrentSchool(Long sessionId) {
+        Long schoolId = TenantContext.getSchoolId();
+        if (schoolId == null) {
+            throw new InvalidOperationException("School context is missing in request");
+        }
+        if (sessionId == null) {
+            throw new InvalidOperationException("Session context is missing in request");
+        }
+        if (!sessionRepository.existsByIdAndSchoolId(sessionId, schoolId)) {
+            throw new InvalidOperationException("Session does not belong to this school");
+        }
+        return sessionId;
+    }
 }

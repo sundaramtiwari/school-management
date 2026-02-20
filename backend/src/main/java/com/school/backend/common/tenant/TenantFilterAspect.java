@@ -1,40 +1,30 @@
 package com.school.backend.common.tenant;
 
 import jakarta.persistence.EntityManager;
-import org.aspectj.lang.annotation.AfterReturning;
+import jakarta.persistence.PersistenceContext;
 import org.aspectj.lang.annotation.Aspect;
+import org.aspectj.lang.annotation.Before;
 import org.hibernate.Session;
+import org.springframework.core.Ordered;
+import org.springframework.core.annotation.Order;
 import org.springframework.stereotype.Component;
+import org.springframework.transaction.support.TransactionSynchronizationManager;
 
 @Aspect
 @Component
+@Order(Ordered.LOWEST_PRECEDENCE)
 public class TenantFilterAspect {
 
-    private final EntityManager entityManager;
+    @PersistenceContext
+    private EntityManager entityManager;
 
-    public TenantFilterAspect(EntityManager entityManager) {
-        this.entityManager = entityManager;
-    }
-
-    /**
-     * Run after any method that opens a Hibernate Session to ensure the filter is
-     * enabled.
-     * This targets Service methods or Transactional boundaries.
-     */
-    @AfterReturning(pointcut = "execution(* com.school.backend..service..*(..))" +
-            " || @annotation(org.springframework.transaction.annotation.Transactional)", returning = "result")
-    public void enableTenantFilter(Object result) {
-        // We actually need this to run BEFORE queries, so @AfterReturning is likely too
-        // late for the current transaction
-        // if the session was opened just for this method.
-        // However, standard practice is to use an Interceptor or run it on Session
-        // creation.
-        // A better approach for Spring Boot is using AOP 'Before'.
-    }
-
-    @org.aspectj.lang.annotation.Before("execution(* com.school.backend..service..*(..))" +
+    @Before("execution(* com.school.backend..service..*(..))" +
             " || @annotation(org.springframework.transaction.annotation.Transactional)")
     public void enableFilter() {
+        if (!TransactionSynchronizationManager.isActualTransactionActive()) {
+            return;
+        }
+
         Long schoolId = TenantContext.getSchoolId();
 
         if (schoolId != null) {

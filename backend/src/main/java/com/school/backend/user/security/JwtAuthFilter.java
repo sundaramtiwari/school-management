@@ -2,9 +2,11 @@ package com.school.backend.user.security;
 
 import com.school.backend.common.tenant.TenantContext;
 import com.school.backend.common.tenant.SessionContext;
+import com.school.backend.common.tenant.SessionResolver;
 import com.school.backend.user.entity.User;
 import com.school.backend.user.repository.UserRepository;
 import io.jsonwebtoken.Claims;
+import io.jsonwebtoken.JwtException;
 import jakarta.servlet.FilterChain;
 import jakarta.servlet.ServletException;
 import jakarta.servlet.http.HttpServletRequest;
@@ -22,10 +24,12 @@ public class JwtAuthFilter extends OncePerRequestFilter {
 
     private final JwtUtil jwtUtil;
     private final UserRepository userRepository;
+    private final SessionResolver sessionResolver;
 
-    public JwtAuthFilter(JwtUtil jwtUtil, UserRepository userRepository) {
+    public JwtAuthFilter(JwtUtil jwtUtil, UserRepository userRepository, SessionResolver sessionResolver) {
         this.jwtUtil = jwtUtil;
         this.userRepository = userRepository;
+        this.sessionResolver = sessionResolver;
     }
 
     @Override
@@ -62,12 +66,9 @@ public class JwtAuthFilter extends OncePerRequestFilter {
 
                 String sessionHeader = request.getHeader("X-Session-Id");
                 if (sessionHeader != null && !sessionHeader.isBlank()) {
-                    try {
-                        SessionContext.setSessionId(Long.valueOf(sessionHeader));
-                    } catch (NumberFormatException e) {
-                        // Log and ignore invalid session header to prevent request failure
-                        logger.warn("Invalid X-Session-Id header: " + sessionHeader);
-                    }
+                    Long requestedSessionId = Long.valueOf(sessionHeader);
+                    Long validSessionId = sessionResolver.validateForCurrentSchool(requestedSessionId);
+                    SessionContext.setSessionId(validSessionId);
                 }
 
                 String email = claims.getSubject();
@@ -91,7 +92,7 @@ public class JwtAuthFilter extends OncePerRequestFilter {
 
             chain.doFilter(request, response);
 
-        } catch (Exception e) {
+        } catch (JwtException | IllegalArgumentException e) {
             response.setStatus(HttpServletResponse.SC_UNAUTHORIZED);
             response.getWriter().write("{\"error\":\"Invalid or expired token\"}");
             return; // Don't continue chain

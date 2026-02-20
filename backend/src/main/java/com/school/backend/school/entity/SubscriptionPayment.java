@@ -4,6 +4,8 @@ import com.school.backend.common.entity.TenantEntity;
 import jakarta.persistence.*;
 import lombok.*;
 
+import java.math.BigDecimal;
+import java.math.RoundingMode;
 import java.time.LocalDate;
 
 @Entity
@@ -23,9 +25,18 @@ public class SubscriptionPayment extends TenantEntity {
     @JoinColumn(name = "subscription_id", nullable = false)
     private Subscription subscription;
 
-    private Double amountPaid;
+    @Column(precision = 15, scale = 2)
+    private BigDecimal amountPaid;
     private LocalDate paymentDate;
     private String paymentMode; // ONLINE, OFFLINE
     private String transactionReference;
     private String invoiceUrl;
+
+    @PrePersist
+    @PreUpdate
+    private void normalizeMoney() {
+        if (amountPaid != null) {
+            amountPaid = amountPaid.setScale(2, RoundingMode.HALF_UP);
+        }
+    }
 }

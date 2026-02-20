@@ -4,6 +4,8 @@ import com.school.backend.common.entity.TenantEntity;
 import jakarta.persistence.*;
 import lombok.*;
 
+import java.math.BigDecimal;
+import java.math.RoundingMode;
 import java.time.LocalDate;
 
 @Entity
@@ -27,11 +29,20 @@ public class Subscription extends TenantEntity {
     private String planName; // e.g., Basic, Pro, Premium
 
     private Integer studentLimit;
-    private Double monthlyPrice;
+    @Column(precision = 15, scale = 2)
+    private BigDecimal monthlyPrice;
 
     private LocalDate startDate;
     private LocalDate endDate;
 
     private boolean active;
     private boolean autoRenew;
+
+    @PrePersist
+    @PreUpdate
+    private void normalizeMoney() {
+        if (monthlyPrice != null) {
+            monthlyPrice = monthlyPrice.setScale(2, RoundingMode.HALF_UP);
+        }
+    }
 }
