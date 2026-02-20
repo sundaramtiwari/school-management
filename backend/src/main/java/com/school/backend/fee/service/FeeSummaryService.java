@@ -17,6 +17,8 @@ import com.school.backend.school.repository.AcademicSessionRepository;
 import com.school.backend.school.repository.SchoolRepository;
 import com.school.backend.user.security.SecurityUtil;
 import lombok.RequiredArgsConstructor;
+import org.springframework.data.domain.Page;
+import org.springframework.data.domain.PageRequest;
 import org.springframework.data.domain.Pageable;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
@@ -34,433 +36,537 @@ import java.util.stream.Collectors;
 @RequiredArgsConstructor
 public class FeeSummaryService {
 
-    private static final int INT_ZERO = 0;
-    private static final int SCALE_2 = 2;
-    private static final BigDecimal ZERO = BigDecimal.ZERO;
-    private static final RoundingMode ROUNDING_MODE_HALF_UP = RoundingMode.HALF_UP;
+        private static final int INT_ZERO = 0;
+        private static final int SCALE_2 = 2;
+        private static final BigDecimal ZERO = BigDecimal.ZERO;
+        private static final RoundingMode ROUNDING_MODE_HALF_UP = RoundingMode.HALF_UP;
 
-    private final StudentRepository studentRepository;
-    private final StudentEnrollmentRepository enrollmentRepository;
-    private final StudentFeeAssignmentRepository assignmentRepository;
-    private final FeePaymentRepository paymentRepository;
-    private final AcademicSessionRepository sessionRepository;
-    private final SchoolRepository schoolRepository;
-    private final LateFeeCalculator lateFeeCalculator;
+        private final StudentRepository studentRepository;
+        private final StudentEnrollmentRepository enrollmentRepository;
+        private final StudentFeeAssignmentRepository assignmentRepository;
+        private final FeePaymentRepository paymentRepository;
+        private final AcademicSessionRepository sessionRepository;
+        private final SchoolRepository schoolRepository;
+        private final LateFeeCalculator lateFeeCalculator;
 
-    // ---------------------------------------------------
-    // DASHBOARD STATS
-    // ---------------------------------------------------
-    @Transactional(readOnly = true)
-    public FeeStatsDto getDashboardStats(Long sessionId) {
+        // ---------------------------------------------------
+        // DASHBOARD STATS
+        // ---------------------------------------------------
+        @Transactional(readOnly = true)
+        public FeeStatsDto getDashboardStats(Long sessionId) {
 
-        Long schoolId = SecurityUtil.schoolId();
+                Long schoolId = SecurityUtil.schoolId();
 
-        if (!sessionRepository.existsByIdAndSchoolId(sessionId, schoolId)) {
-            throw new ResourceNotFoundException("Session not found: " + sessionId);
+                if (!sessionRepository.existsByIdAndSchoolId(sessionId, schoolId)) {
+                        throw new ResourceNotFoundException("Session not found: " + sessionId);
+                }
+
+                // 1. Today's Collection
+                BigDecimal todayPaid = paymentRepository
+                                .sumTotalPaidBySchoolIdAndPaymentDate(schoolId, LocalDate.now());
+
+                BigDecimal todayCollection = todayPaid != null ? todayPaid : ZERO;
+
+                // 2. Total Students (SESSION AWARE)
+                long totalStudents = enrollmentRepository
+                                .countBySchoolIdAndSessionIdAndActiveTrue(schoolId, sessionId);
+
+                // 3. Optimized Pending Calculation (NO N+1)
+                BigDecimal totalAssigned = assignmentRepository
+                                .sumTotalAssignedBySchoolAndSession(schoolId, sessionId);
+
+                BigDecimal totalPaid = paymentRepository
+                                .sumTotalPaidBySchoolAndSession(schoolId, sessionId);
+
+                BigDecimal totalPending = (totalAssigned != null ? totalAssigned : ZERO)
+                                .subtract(totalPaid != null ? totalPaid : ZERO);
+
+                if (totalPending.compareTo(ZERO) < INT_ZERO) {
+                        totalPending = ZERO;
+                }
+
+                return FeeStatsDto.builder()
+                                .todayCollection(todayCollection)
+                                .totalStudents(totalStudents)
+                                .pendingDues(totalPending)
+                                .build();
         }
 
-        // 1. Today's Collection
-        BigDecimal todayPaid = paymentRepository
-                .sumTotalPaidBySchoolIdAndPaymentDate(schoolId, LocalDate.now());
+        // ---------------------------------------------------
+        // STUDENT SUMMARY
+        // ---------------------------------------------------
+        @Transactional(readOnly = true)
+        public FeeSummaryDto getStudentFeeSummary(Long studentId, Long sessionId) {
 
-        BigDecimal todayCollection = todayPaid != null ? todayPaid : ZERO;
+                Long schoolId = SecurityUtil.schoolId();
 
-        // 2. Total Students (SESSION AWARE)
-        long totalStudents = enrollmentRepository
-                .countBySchoolIdAndSessionIdAndActiveTrue(schoolId, sessionId);
+                Student student = studentRepository
+                                .findByIdAndSchoolId(studentId, schoolId)
+                                .orElseThrow(() -> new ResourceNotFoundException("Student not found: " + studentId));
 
-        // 3. Optimized Pending Calculation (NO N+1)
-        BigDecimal totalAssigned = assignmentRepository
-                .sumTotalAssignedBySchoolAndSession(schoolId, sessionId);
+                AcademicSession session = sessionRepository.findById(sessionId)
+                                .orElseThrow(() -> new ResourceNotFoundException("Session not found: " + sessionId));
 
-        BigDecimal totalPaid = paymentRepository
-                .sumTotalPaidBySchoolAndSession(schoolId, sessionId);
+                List<StudentFeeAssignment> assignments = assignmentRepository.findByStudentIdAndSessionId(studentId,
+                                sessionId);
 
-        BigDecimal totalPending = (totalAssigned != null ? totalAssigned : ZERO)
-                .subtract(totalPaid != null ? totalPaid : ZERO);
+                BigDecimal totalFeeAccrued = assignments.stream()
+                                .map(a -> nz(a.getAmount()))
+                                .reduce(ZERO, java.math.BigDecimal::add);
 
-        if (totalPending.compareTo(ZERO) < INT_ZERO) {
-            totalPending = ZERO;
+                BigDecimal totalLateFeeAccrued = assignments.stream()
+                                .map(sfa -> {
+                                        BigDecimal unpaid = nz(sfa.getAmount())
+                                                        .subtract(nz(sfa.getPrincipalPaid()))
+                                                        .subtract(nz(sfa.getTotalDiscountAmount()))
+                                                        .subtract(nz(sfa.getSponsorCoveredAmount()));
+                                        BigDecimal incremental = lateFeeCalculator.calculateLateFee(sfa,
+                                                        unpaid, LocalDate.now());
+                                        return nz(sfa.getLateFeeAccrued()).add(incremental);
+                                })
+                                .reduce(ZERO, BigDecimal::add);
+
+                BigDecimal totalLateFeePaid = assignments.stream()
+                                .map(a -> nz(a.getLateFeePaid()))
+                                .reduce(ZERO, BigDecimal::add);
+
+                BigDecimal totalPrincipalPaid = assignments.stream()
+                                .map(a -> nz(a.getPrincipalPaid()))
+                                .reduce(ZERO, BigDecimal::add);
+
+                BigDecimal totalPaid = totalPrincipalPaid.add(totalLateFeePaid);
+
+                BigDecimal pending = totalFeeAccrued.add(totalLateFeeAccrued)
+                                .subtract(totalPaid);
+
+                if (pending.compareTo(ZERO) < INT_ZERO) {
+                        pending = ZERO;
+                }
+
+                FeeSummaryDto dto = new FeeSummaryDto();
+                dto.setStudentId(studentId);
+                dto.setStudentName(student.getFirstName() + " " +
+                                (student.getLastName() != null ? student.getLastName() : ""));
+                dto.setSession(session.getName());
+                dto.setTotalFee(totalFeeAccrued.setScale(SCALE_2, ROUNDING_MODE_HALF_UP));
+                dto.setTotalPaid(totalPaid.setScale(SCALE_2, ROUNDING_MODE_HALF_UP));
+                dto.setTotalLateFeeAccrued(totalLateFeeAccrued.setScale(SCALE_2, ROUNDING_MODE_HALF_UP));
+                dto.setTotalLateFeePaid(totalLateFeePaid.setScale(SCALE_2, ROUNDING_MODE_HALF_UP));
+                dto.setPendingFee(pending.setScale(SCALE_2, ROUNDING_MODE_HALF_UP));
+                dto.setFeePending(pending.compareTo(ZERO) > INT_ZERO);
+
+                return dto;
         }
 
-        return FeeStatsDto.builder()
-                .todayCollection(todayCollection)
-                .totalStudents(totalStudents)
-                .pendingDues(totalPending)
-                .build();
-    }
+        @Transactional(readOnly = true)
+        public StudentLedgerDto getStudentFullLedger(Long studentId) {
+                Long schoolId = SecurityUtil.schoolId();
+                Student student = studentRepository.findByIdAndSchoolId(studentId, schoolId)
+                                .orElseThrow(() -> new ResourceNotFoundException("Student not found: " + studentId));
 
-    // ---------------------------------------------------
-    // STUDENT SUMMARY
-    // ---------------------------------------------------
-    @Transactional(readOnly = true)
-    public FeeSummaryDto getStudentFeeSummary(Long studentId, Long sessionId) {
+                // Single aggregation query for all sessions
+                List<Object[]> sessionStats = assignmentRepository
+                                .sumFinancialSummaryByStudentGroupedBySession(studentId);
 
-        Long schoolId = SecurityUtil.schoolId();
+                // Fetch session names for mapping
+                java.util.Map<Long, String> sessionNames = sessionRepository.findBySchoolId(schoolId).stream()
+                                .collect(java.util.stream.Collectors.toMap(AcademicSession::getId,
+                                                AcademicSession::getName));
 
-        Student student = studentRepository
-                .findByIdAndSchoolId(studentId, schoolId)
-                .orElseThrow(() -> new ResourceNotFoundException("Student not found: " + studentId));
+                List<FeeSummaryDto> sessionSummaries = new ArrayList<>();
 
-        AcademicSession session = sessionRepository.findById(sessionId)
-                .orElseThrow(() -> new ResourceNotFoundException("Session not found: " + sessionId));
+                for (Object[] stats : sessionStats) {
+                        Long sessionId = (stats[INT_ZERO] instanceof Number) ? ((Number) stats[INT_ZERO]).longValue()
+                                        : null;
+                        if (sessionId == null)
+                                continue;
 
-        List<StudentFeeAssignment> assignments = assignmentRepository.findByStudentIdAndSessionId(studentId,
-                sessionId);
+                        BigDecimal totalFee = toBigDecimal(stats[1]);
+                        BigDecimal totalDiscount = toBigDecimal(stats[SCALE_2]);
+                        BigDecimal totalSponsor = toBigDecimal(stats[3]);
+                        BigDecimal totalLateFeeAccrued = toBigDecimal(stats[4]);
+                        BigDecimal totalLateFeePaid = toBigDecimal(stats[5]);
+                        BigDecimal totalLateFeeWaived = toBigDecimal(stats[6]);
+                        BigDecimal totalPrincipalPaid = toBigDecimal(stats[7]);
 
-        BigDecimal totalFeeAccrued = assignments.stream()
-                .map(a -> nz(a.getAmount()))
-                .reduce(ZERO, java.math.BigDecimal::add);
+                        String sessionName = sessionNames.getOrDefault(sessionId, "Unknown Session " + sessionId);
 
-        BigDecimal totalLateFeeAccrued = assignments.stream()
-                .map(sfa -> {
-                    BigDecimal unpaid = nz(sfa.getAmount())
-                            .subtract(nz(sfa.getPrincipalPaid()))
-                            .subtract(nz(sfa.getTotalDiscountAmount()))
-                            .subtract(nz(sfa.getSponsorCoveredAmount()));
-                    BigDecimal incremental = lateFeeCalculator.calculateLateFee(sfa,
-                            unpaid, LocalDate.now());
-                    return nz(sfa.getLateFeeAccrued()).add(incremental);
-                })
-                .reduce(ZERO, BigDecimal::add);
+                        FeeSummaryDto summary = new FeeSummaryDto();
+                        summary.setStudentId(studentId);
+                        summary.setStudentName(student.getFirstName() + " " +
+                                        (student.getLastName() != null ? student.getLastName() : ""));
+                        summary.setSession(sessionName);
+                        summary.setTotalFee(totalFee.setScale(SCALE_2, ROUNDING_MODE_HALF_UP));
 
-        BigDecimal totalLateFeePaid = assignments.stream()
-                .map(a -> nz(a.getLateFeePaid()))
-                .reduce(ZERO, BigDecimal::add);
+                        // Total Paid = Principal Paid + Late Fee Paid
+                        BigDecimal sessionTotalPaid = totalPrincipalPaid.add(totalLateFeePaid);
+                        summary.setTotalPaid(sessionTotalPaid.setScale(SCALE_2, ROUNDING_MODE_HALF_UP));
 
-        BigDecimal totalPrincipalPaid = assignments.stream()
-                .map(a -> nz(a.getPrincipalPaid()))
-                .reduce(ZERO, BigDecimal::add);
+                        summary.setTotalLateFeeAccrued(totalLateFeeAccrued.setScale(SCALE_2, ROUNDING_MODE_HALF_UP));
+                        summary.setTotalLateFeePaid(totalLateFeePaid.setScale(SCALE_2, ROUNDING_MODE_HALF_UP));
 
-        BigDecimal totalPaid = totalPrincipalPaid.add(totalLateFeePaid);
+                        // Pending = (Gross Fee - Discount - Sponsor) + Accrued Late Fee - (Waived Late
+                        // Fee + Paid Principal + Paid Late Fee)
+                        // Actually: Pending = (Gross - Discount - Sponsor - PrincipalPaid) + (Accrued -
+                        // Waived - PaidLateFee)
+                        BigDecimal netPrincipal = totalFee.subtract(totalDiscount).subtract(totalSponsor);
+                        BigDecimal netLateFee = totalLateFeeAccrued.subtract(totalLateFeeWaived);
 
-        BigDecimal pending = totalFeeAccrued.add(totalLateFeeAccrued)
-                .subtract(totalPaid);
+                        BigDecimal pending = netPrincipal.subtract(totalPrincipalPaid)
+                                        .add(netLateFee.subtract(totalLateFeePaid));
 
-        if (pending.compareTo(ZERO) < INT_ZERO) {
-            pending = ZERO;
+                        if (pending.compareTo(ZERO) < INT_ZERO) {
+                                pending = ZERO;
+                        }
+
+                        summary.setPendingFee(pending.setScale(SCALE_2, ROUNDING_MODE_HALF_UP));
+                        summary.setFeePending(pending.compareTo(ZERO) > INT_ZERO);
+
+                        sessionSummaries.add(summary);
+                }
+
+                BigDecimal grandTotalFee = sessionSummaries.stream()
+                                .map(FeeSummaryDto::getTotalFee)
+                                .reduce(ZERO, BigDecimal::add);
+                BigDecimal grandTotalPaid = sessionSummaries.stream()
+                                .map(FeeSummaryDto::getTotalPaid)
+                                .reduce(ZERO, BigDecimal::add);
+                BigDecimal grandTotalPending = sessionSummaries.stream()
+                                .map(FeeSummaryDto::getPendingFee)
+                                .reduce(ZERO, BigDecimal::add);
+
+                return StudentLedgerDto.builder()
+                                .studentId(studentId)
+                                .studentName(student.getFirstName() + " " +
+                                                (student.getLastName() != null ? student.getLastName() : ""))
+                                .sessionSummaries(sessionSummaries)
+                                .grandTotalFee(grandTotalFee.setScale(SCALE_2, ROUNDING_MODE_HALF_UP))
+                                .grandTotalPaid(grandTotalPaid.setScale(SCALE_2, ROUNDING_MODE_HALF_UP))
+                                .grandTotalPending(grandTotalPending.setScale(SCALE_2, ROUNDING_MODE_HALF_UP))
+                                .build();
         }
 
-        FeeSummaryDto dto = new FeeSummaryDto();
-        dto.setStudentId(studentId);
-        dto.setStudentName(student.getFirstName() + " " +
-                (student.getLastName() != null ? student.getLastName() : ""));
-        dto.setSession(session.getName());
-        dto.setTotalFee(totalFeeAccrued.setScale(SCALE_2, ROUNDING_MODE_HALF_UP));
-        dto.setTotalPaid(totalPaid.setScale(SCALE_2, ROUNDING_MODE_HALF_UP));
-        dto.setTotalLateFeeAccrued(totalLateFeeAccrued.setScale(SCALE_2, ROUNDING_MODE_HALF_UP));
-        dto.setTotalLateFeePaid(totalLateFeePaid.setScale(SCALE_2, ROUNDING_MODE_HALF_UP));
-        dto.setPendingFee(pending.setScale(SCALE_2, ROUNDING_MODE_HALF_UP));
-        dto.setFeePending(pending.compareTo(ZERO) > INT_ZERO);
-
-        return dto;
-    }
-
-    @Transactional(readOnly = true)
-    public StudentLedgerDto getStudentFullLedger(Long studentId) {
-        Long schoolId = SecurityUtil.schoolId();
-        Student student = studentRepository.findByIdAndSchoolId(studentId, schoolId)
-                .orElseThrow(() -> new ResourceNotFoundException("Student not found: " + studentId));
-
-        // Single aggregation query for all sessions
-        List<Object[]> sessionStats = assignmentRepository
-                .sumFinancialSummaryByStudentGroupedBySession(studentId);
-
-        // Fetch session names for mapping
-        java.util.Map<Long, String> sessionNames = sessionRepository.findBySchoolId(schoolId).stream()
-                .collect(java.util.stream.Collectors.toMap(AcademicSession::getId,
-                        AcademicSession::getName));
-
-        List<FeeSummaryDto> sessionSummaries = new ArrayList<>();
-
-        for (Object[] stats : sessionStats) {
-            Long sessionId = (stats[INT_ZERO] instanceof Number) ? ((Number) stats[INT_ZERO]).longValue() : null;
-            if (sessionId == null)
-                continue;
-
-            BigDecimal totalFee = toBigDecimal(stats[1]);
-            BigDecimal totalDiscount = toBigDecimal(stats[SCALE_2]);
-            BigDecimal totalSponsor = toBigDecimal(stats[3]);
-            BigDecimal totalLateFeeAccrued = toBigDecimal(stats[4]);
-            BigDecimal totalLateFeePaid = toBigDecimal(stats[5]);
-            BigDecimal totalLateFeeWaived = toBigDecimal(stats[6]);
-            BigDecimal totalPrincipalPaid = toBigDecimal(stats[7]);
-
-            String sessionName = sessionNames.getOrDefault(sessionId, "Unknown Session " + sessionId);
-
-            FeeSummaryDto summary = new FeeSummaryDto();
-            summary.setStudentId(studentId);
-            summary.setStudentName(student.getFirstName() + " " +
-                    (student.getLastName() != null ? student.getLastName() : ""));
-            summary.setSession(sessionName);
-            summary.setTotalFee(totalFee.setScale(SCALE_2, ROUNDING_MODE_HALF_UP));
-
-            // Total Paid = Principal Paid + Late Fee Paid
-            BigDecimal sessionTotalPaid = totalPrincipalPaid.add(totalLateFeePaid);
-            summary.setTotalPaid(sessionTotalPaid.setScale(SCALE_2, ROUNDING_MODE_HALF_UP));
-
-            summary.setTotalLateFeeAccrued(totalLateFeeAccrued.setScale(SCALE_2, ROUNDING_MODE_HALF_UP));
-            summary.setTotalLateFeePaid(totalLateFeePaid.setScale(SCALE_2, ROUNDING_MODE_HALF_UP));
-
-            // Pending = (Gross Fee - Discount - Sponsor) + Accrued Late Fee - (Waived Late
-            // Fee + Paid Principal + Paid Late Fee)
-            // Actually: Pending = (Gross - Discount - Sponsor - PrincipalPaid) + (Accrued -
-            // Waived - PaidLateFee)
-            BigDecimal netPrincipal = totalFee.subtract(totalDiscount).subtract(totalSponsor);
-            BigDecimal netLateFee = totalLateFeeAccrued.subtract(totalLateFeeWaived);
-
-            BigDecimal pending = netPrincipal.subtract(totalPrincipalPaid)
-                    .add(netLateFee.subtract(totalLateFeePaid));
-
-            if (pending.compareTo(ZERO) < INT_ZERO) {
-                pending = ZERO;
-            }
-
-            summary.setPendingFee(pending.setScale(SCALE_2, ROUNDING_MODE_HALF_UP));
-            summary.setFeePending(pending.compareTo(ZERO) > INT_ZERO);
-
-            sessionSummaries.add(summary);
+        private BigDecimal toBigDecimal(Object val) {
+                if (val == null)
+                        return ZERO;
+                if (val instanceof BigDecimal)
+                        return (BigDecimal) val;
+                return new BigDecimal(val.toString());
         }
 
-        BigDecimal grandTotalFee = sessionSummaries.stream()
-                .map(FeeSummaryDto::getTotalFee)
-                .reduce(ZERO, BigDecimal::add);
-        BigDecimal grandTotalPaid = sessionSummaries.stream()
-                .map(FeeSummaryDto::getTotalPaid)
-                .reduce(ZERO, BigDecimal::add);
-        BigDecimal grandTotalPending = sessionSummaries.stream()
-                .map(FeeSummaryDto::getPendingFee)
-                .reduce(ZERO, BigDecimal::add);
-
-        return StudentLedgerDto.builder()
-                .studentId(studentId)
-                .studentName(student.getFirstName() + " " +
-                        (student.getLastName() != null ? student.getLastName() : ""))
-                .sessionSummaries(sessionSummaries)
-                .grandTotalFee(grandTotalFee.setScale(SCALE_2, ROUNDING_MODE_HALF_UP))
-                .grandTotalPaid(grandTotalPaid.setScale(SCALE_2, ROUNDING_MODE_HALF_UP))
-                .grandTotalPending(grandTotalPending.setScale(SCALE_2, ROUNDING_MODE_HALF_UP))
-                .build();
-    }
-
-    private BigDecimal toBigDecimal(Object val) {
-        if (val == null)
-            return ZERO;
-        if (val instanceof BigDecimal)
-            return (BigDecimal) val;
-        return new BigDecimal(val.toString());
-    }
-
-    private BigDecimal nz(BigDecimal value) {
-        return value != null ? value : ZERO;
-    }
-
-    // ---------------------------------------------------
-    // TOP DEFAULTERS
-    // ---------------------------------------------------
-    @Transactional(readOnly = true)
-    public List<FeeSummaryDto> getTopDefaulters(Long sessionId, int limit) {
-
-        Long schoolId = SecurityUtil.schoolId();
-
-        if (!sessionRepository.existsByIdAndSchoolId(sessionId, schoolId)) {
-            throw new ResourceNotFoundException("Session not found: " + sessionId);
+        private BigDecimal nz(BigDecimal value) {
+                return value != null ? value : ZERO;
         }
 
-        // 1. Load students (session aware)
-        List<Student> students = studentRepository
-                .findBySchoolIdAndSessionId(schoolId, sessionId, Pageable.unpaged())
-                .getContent();
+        // ---------------------------------------------------
+        // TOP DEFAULTERS
+        // ---------------------------------------------------
+        @Transactional(readOnly = true)
+        public List<FeeSummaryDto> getTopDefaulters(Long sessionId, int limit) {
 
-        if (students.isEmpty())
-            return List.of();
+                Long schoolId = SecurityUtil.schoolId();
 
-        // 2. Aggregated Assigned
-        var assignedRaw = assignmentRepository
-                .sumAssignedGroupedByStudent(schoolId, sessionId);
+                if (!sessionRepository.existsByIdAndSchoolId(sessionId, schoolId)) {
+                        throw new ResourceNotFoundException("Session not found: " + sessionId);
+                }
 
-        var assignedMap = assignedRaw.stream()
-                .collect(Collectors.toMap(
-                        r -> (Long) r[INT_ZERO],
-                        r -> (java.math.BigDecimal) r[1]));
+                // 1. Load students (session aware)
+                List<Student> students = studentRepository
+                                .findBySchoolIdAndSessionId(schoolId, sessionId, Pageable.unpaged())
+                                .getContent();
 
-        // 3. Aggregated Paid
-        var paidRaw = paymentRepository
-                .sumPaidGroupedByStudent(schoolId, sessionId);
+                if (students.isEmpty())
+                        return List.of();
 
-        var paidMap = paidRaw.stream()
-                .collect(Collectors.toMap(
-                        r -> (Long) r[INT_ZERO],
-                        r -> (java.math.BigDecimal) r[1]));
+                // 2. Aggregated Assigned
+                var assignedRaw = assignmentRepository
+                                .sumAssignedGroupedByStudent(schoolId, sessionId);
 
-        String sessionName = sessionRepository.findById(sessionId)
-                .map(AcademicSession::getName)
-                .orElse("");
+                var assignedMap = assignedRaw.stream()
+                                .collect(Collectors.toMap(
+                                                r -> (Long) r[INT_ZERO],
+                                                r -> (java.math.BigDecimal) r[1]));
 
-        List<FeeSummaryDto> results = new ArrayList<>();
+                // 3. Aggregated Paid
+                var paidRaw = paymentRepository
+                                .sumPaidGroupedByStudent(schoolId, sessionId);
 
-        for (Student student : students) {
+                var paidMap = paidRaw.stream()
+                                .collect(Collectors.toMap(
+                                                r -> (Long) r[INT_ZERO],
+                                                r -> (java.math.BigDecimal) r[1]));
 
-            Long studentId = student.getId();
+                String sessionName = sessionRepository.findById(sessionId)
+                                .map(AcademicSession::getName)
+                                .orElse("");
 
-            BigDecimal totalAssigned = assignedMap.getOrDefault(studentId,
-                    ZERO);
-            BigDecimal totalPaid = paidMap.getOrDefault(studentId, ZERO);
+                List<FeeSummaryDto> results = new ArrayList<>();
 
-            BigDecimal pending = totalAssigned.subtract(totalPaid);
-            if (pending.compareTo(ZERO) < INT_ZERO) {
-                pending = ZERO;
-            }
+                for (Student student : students) {
 
-            if (pending.compareTo(ZERO) <= INT_ZERO)
-                continue;
+                        Long studentId = student.getId();
 
-            FeeSummaryDto dto = new FeeSummaryDto();
-            dto.setStudentId(studentId);
-            dto.setStudentName(student.getFirstName() + " " +
-                    (student.getLastName() != null ? student.getLastName() : ""));
-            dto.setSession(sessionName);
-            dto.setTotalFee(totalAssigned);
-            dto.setTotalPaid(totalPaid);
-            dto.setPendingFee(pending);
-            dto.setFeePending(true);
+                        BigDecimal totalAssigned = assignedMap.getOrDefault(studentId,
+                                        ZERO);
+                        BigDecimal totalPaid = paidMap.getOrDefault(studentId, ZERO);
 
-            results.add(dto);
+                        BigDecimal pending = totalAssigned.subtract(totalPaid);
+                        if (pending.compareTo(ZERO) < INT_ZERO) {
+                                pending = ZERO;
+                        }
+
+                        if (pending.compareTo(ZERO) <= INT_ZERO)
+                                continue;
+
+                        FeeSummaryDto dto = new FeeSummaryDto();
+                        dto.setStudentId(studentId);
+                        dto.setStudentName(student.getFirstName() + " " +
+                                        (student.getLastName() != null ? student.getLastName() : ""));
+                        dto.setSession(sessionName);
+                        dto.setTotalFee(totalAssigned);
+                        dto.setTotalPaid(totalPaid);
+                        dto.setPendingFee(pending);
+                        dto.setFeePending(true);
+
+                        results.add(dto);
+                }
+
+                return results.stream()
+                                .sorted((a, b) -> b.getPendingFee().compareTo(a.getPendingFee()))
+                                .limit(limit)
+                                .toList();
         }
 
-        return results.stream()
-                .sorted((a, b) -> b.getPendingFee().compareTo(a.getPendingFee()))
-                .limit(limit)
-                .toList();
-    }
-
-    // ---------------------------------------------------
-    // ALL DEFAULTERS
-    // ---------------------------------------------------
-    @Transactional(readOnly = true)
-    public List<DefaulterDto> getAllDefaulters() {
-
-        Long schoolId = SecurityUtil.schoolId();
-
-        School school = schoolRepository.findById(schoolId)
-                .orElseThrow(() -> new ResourceNotFoundException("School not found"));
-
-        if (school.getCurrentSessionId() == null) {
-            return List.of();
+        // ---------------------------------------------------
+        // DEFAULTERS PAGINATION & EXPORT
+        // ---------------------------------------------------
+        @Transactional(readOnly = true)
+        public Page<DefaulterDto> getPaginatedDefaulters(String search, Long classId, BigDecimal minAmountDue,
+                        Integer minDaysOverdue, Pageable pageable) {
+                return getDefaultersPage(search, classId, minAmountDue, minDaysOverdue, pageable);
         }
 
-        Long sessionId = school.getCurrentSessionId();
-
-        AcademicSession session = sessionRepository.findById(sessionId)
-                .orElseThrow(() -> new ResourceNotFoundException("Session not found"));
-
-        LocalDate sessionStart;
-        try {
-            int startYear = Integer.parseInt(session.getName().split("-")[INT_ZERO]);
-            sessionStart = LocalDate.of(startYear, Month.APRIL, 1);
-        } catch (Exception e) {
-            sessionStart = LocalDate.now().minusMonths(6);
+        @Transactional(readOnly = true)
+        public List<DefaulterDto> exportDefaulters(String search, Long classId, BigDecimal minAmountDue,
+                        Integer minDaysOverdue) {
+                Page<DefaulterDto> page = getDefaultersPage(search, classId, minAmountDue, minDaysOverdue,
+                                PageRequest.of(0, 10001));
+                if (page.getTotalElements() > 10000) {
+                        throw new com.school.backend.common.exception.BusinessException(
+                                        "Export exceeds maximum limit of 10,000 rows. Please apply filters.");
+                }
+                return page.getContent();
         }
 
-        LocalDate today = LocalDate.now();
+        private Page<DefaulterDto> getDefaultersPage(String search, Long classId, BigDecimal minAmountDue,
+                        Integer minDaysOverdue, Pageable pageable) {
 
-        // 1. Load students (session aware)
-        List<Student> students = studentRepository
-                .findBySchoolIdAndSessionId(schoolId, sessionId, Pageable.unpaged())
-                .getContent();
+                Long schoolId = SecurityUtil.schoolId();
 
-        if (students.isEmpty())
-            return List.of();
+                School school = schoolRepository.findById(schoolId)
+                                .orElseThrow(() -> new ResourceNotFoundException("School not found"));
 
-        // 2. Aggregated Assigned Amounts
-        var assignedRaw = assignmentRepository
-                .sumAssignedGroupedByStudent(schoolId, sessionId);
+                if (school.getCurrentSessionId() == null) {
+                        return Page.empty(pageable);
+                }
 
-        var assignedMap = assignedRaw.stream()
-                .collect(Collectors.toMap(
-                        r -> (Long) r[INT_ZERO],
-                        r -> (java.math.BigDecimal) r[1]));
+                Long sessionId = school.getCurrentSessionId();
+                AcademicSession session = sessionRepository.findById(sessionId)
+                                .orElseThrow(() -> new ResourceNotFoundException("Session not found"));
 
-        var lateFeeAccruedMap = assignedRaw.stream()
-                .collect(Collectors.toMap(
-                        r -> (Long) r[INT_ZERO],
-                        r -> (java.math.BigDecimal) r[SCALE_2]));
+                LocalDate sessionStart;
+                try {
+                        int startYear = Integer.parseInt(session.getName().split("-")[INT_ZERO]);
+                        sessionStart = LocalDate.of(startYear, Month.APRIL, 1);
+                } catch (Exception e) {
+                        sessionStart = LocalDate.now().minusMonths(6);
+                }
 
-        // 3. Aggregated Paid Amounts
-        var paidRaw = paymentRepository
-                .sumPaidGroupedByStudent(schoolId, sessionId);
+                LocalDate maxPaymentDate = null;
+                if (minDaysOverdue != null && minDaysOverdue > 0) {
+                        maxPaymentDate = LocalDate.now().minusDays(minDaysOverdue);
+                }
 
-        var paidMap = paidRaw.stream()
-                .collect(Collectors.toMap(
-                        r -> (Long) r[INT_ZERO],
-                        r -> (java.math.BigDecimal) r[1]));
+                BigDecimal effectiveMinAmountDue = (minAmountDue != null && minAmountDue.compareTo(ZERO) > 0)
+                                ? minAmountDue
+                                : new BigDecimal("0.01");
 
-        // 4. Last Payment Dates
-        var lastPaymentRaw = paymentRepository
-                .findLastPaymentDateGroupedByStudent(schoolId, sessionId);
+                Page<Object[]> rawPage = studentRepository.findDefaulterDetails(
+                                schoolId,
+                                sessionId,
+                                classId,
+                                (search != null && search.trim().isEmpty()) ? null : search,
+                                effectiveMinAmountDue,
+                                maxPaymentDate,
+                                sessionStart,
+                                pageable);
 
-        var lastPaymentMap = lastPaymentRaw.stream()
-                .collect(Collectors.toMap(
-                        r -> (Long) r[INT_ZERO],
-                        r -> (LocalDate) r[1]));
+                LocalDate today = LocalDate.now();
 
-        List<DefaulterDto> defaulters = new ArrayList<>();
+                final LocalDate finalSessionStart = sessionStart;
 
-        for (Student student : students) {
+                return rawPage.map(row -> {
+                        Long studentId = ((Number) row[0]).longValue();
+                        String firstName = (String) row[1];
+                        String lastName = (String) row[2];
+                        String admissionNumber = (String) row[3];
+                        String contactNumber = (String) row[4];
+                        String className = (String) row[5];
+                        String classSection = (String) row[6];
 
-            Long studentId = student.getId();
+                        BigDecimal totalAssigned = toBigDecimal(row[7]);
+                        BigDecimal totalLateFeeAccrued = toBigDecimal(row[8]);
+                        BigDecimal totalPaid = toBigDecimal(row[9]);
+                        LocalDate lastPaymentDate = row[10] instanceof java.sql.Date
+                                        ? ((java.sql.Date) row[10]).toLocalDate()
+                                        : (LocalDate) row[10];
 
-            BigDecimal totalAssigned = assignedMap.getOrDefault(studentId,
-                    ZERO);
-            BigDecimal totalLateFeeAccrued = lateFeeAccruedMap.getOrDefault(studentId,
-                    ZERO);
-            BigDecimal totalPaid = paidMap.getOrDefault(studentId, ZERO);
+                        BigDecimal pending = totalAssigned.add(totalLateFeeAccrued).subtract(totalPaid);
+                        if (pending.compareTo(ZERO) < 0)
+                                pending = ZERO;
 
-            BigDecimal pending = totalAssigned.add(totalLateFeeAccrued).subtract(totalPaid);
-            if (pending.compareTo(ZERO) < INT_ZERO) {
-                pending = ZERO;
-            }
+                        LocalDate overdueFrom = lastPaymentDate != null ? lastPaymentDate : finalSessionStart;
+                        long daysOverdue = Math.max(ChronoUnit.DAYS.between(overdueFrom, today), 0);
 
-            if (pending.compareTo(ZERO) <= INT_ZERO)
-                continue;
-
-            LocalDate lastPaymentDate = lastPaymentMap.get(studentId);
-
-            LocalDate overdueFrom = lastPaymentDate != null
-                    ? lastPaymentDate
-                    : sessionStart;
-
-            long daysOverdue = Math.max(
-                    ChronoUnit.DAYS.between(overdueFrom, today), INT_ZERO);
-
-            String className = "";
-            String classSection = "";
-
-            if (student.getCurrentClass() != null) {
-                className = student.getCurrentClass().getName();
-                classSection = student.getCurrentClass().getSection();
-            }
-
-            defaulters.add(DefaulterDto.builder()
-                    .studentId(studentId)
-                    .studentName(student.getFirstName() + " " +
-                            (student.getLastName() != null ? student.getLastName() : ""))
-                    .admissionNumber(student.getAdmissionNumber())
-                    .className(className)
-                    .classSection(classSection != null ? classSection : "")
-                    .amountDue(pending)
-                    .lateFeeAccrued(totalLateFeeAccrued)
-                    .lastPaymentDate(lastPaymentDate)
-                    .daysOverdue(daysOverdue)
-                    .parentContact(student.getContactNumber() != null
-                            ? student.getContactNumber()
-                            : "")
-                    .build());
+                        return DefaulterDto.builder()
+                                        .studentId(studentId)
+                                        .studentName(firstName + " " + (lastName != null ? lastName : ""))
+                                        .admissionNumber(admissionNumber)
+                                        .className(className != null ? className : "")
+                                        .classSection(classSection != null ? classSection : "")
+                                        .amountDue(pending)
+                                        .lateFeeAccrued(totalLateFeeAccrued)
+                                        .lastPaymentDate(lastPaymentDate)
+                                        .daysOverdue(daysOverdue)
+                                        .parentContact(contactNumber != null ? contactNumber : "")
+                                        .build();
+                });
         }
 
-        defaulters.sort((a, b) -> b.getAmountDue().compareTo(a.getAmountDue()));
+        @Transactional(readOnly = true)
+        public List<DefaulterDto> getAllDefaulters() {
 
-        return defaulters;
-    }
+                Long schoolId = SecurityUtil.schoolId();
+
+                School school = schoolRepository.findById(schoolId)
+                                .orElseThrow(() -> new ResourceNotFoundException("School not found"));
+
+                if (school.getCurrentSessionId() == null) {
+                        return List.of();
+                }
+
+                Long sessionId = school.getCurrentSessionId();
+
+                AcademicSession session = sessionRepository.findById(sessionId)
+                                .orElseThrow(() -> new ResourceNotFoundException("Session not found"));
+
+                LocalDate sessionStart;
+                try {
+                        int startYear = Integer.parseInt(session.getName().split("-")[INT_ZERO]);
+                        sessionStart = LocalDate.of(startYear, Month.APRIL, 1);
+                } catch (Exception e) {
+                        sessionStart = LocalDate.now().minusMonths(6);
+                }
+
+                LocalDate today = LocalDate.now();
+
+                // 1. Load students (session aware)
+                List<Student> students = studentRepository
+                                .findBySchoolIdAndSessionId(schoolId, sessionId, Pageable.unpaged())
+                                .getContent();
+
+                if (students.isEmpty())
+                        return List.of();
+
+                // 2. Aggregated Assigned Amounts
+                var assignedRaw = assignmentRepository
+                                .sumAssignedGroupedByStudent(schoolId, sessionId);
+
+                var assignedMap = assignedRaw.stream()
+                                .collect(Collectors.toMap(
+                                                r -> (Long) r[INT_ZERO],
+                                                r -> (java.math.BigDecimal) r[1]));
+
+                var lateFeeAccruedMap = assignedRaw.stream()
+                                .collect(Collectors.toMap(
+                                                r -> (Long) r[INT_ZERO],
+                                                r -> (java.math.BigDecimal) r[SCALE_2]));
+
+                // 3. Aggregated Paid Amounts
+                var paidRaw = paymentRepository
+                                .sumPaidGroupedByStudent(schoolId, sessionId);
+
+                var paidMap = paidRaw.stream()
+                                .collect(Collectors.toMap(
+                                                r -> (Long) r[INT_ZERO],
+                                                r -> (java.math.BigDecimal) r[1]));
+
+                // 4. Last Payment Dates
+                var lastPaymentRaw = paymentRepository
+                                .findLastPaymentDateGroupedByStudent(schoolId, sessionId);
+
+                var lastPaymentMap = lastPaymentRaw.stream()
+                                .collect(Collectors.toMap(
+                                                r -> (Long) r[INT_ZERO],
+                                                r -> (LocalDate) r[1]));
+
+                List<DefaulterDto> defaulters = new ArrayList<>();
+
+                for (Student student : students) {
+
+                        Long studentId = student.getId();
+
+                        BigDecimal totalAssigned = assignedMap.getOrDefault(studentId,
+                                        ZERO);
+                        BigDecimal totalLateFeeAccrued = lateFeeAccruedMap.getOrDefault(studentId,
+                                        ZERO);
+                        BigDecimal totalPaid = paidMap.getOrDefault(studentId, ZERO);
+
+                        BigDecimal pending = totalAssigned.add(totalLateFeeAccrued).subtract(totalPaid);
+                        if (pending.compareTo(ZERO) < INT_ZERO) {
+                                pending = ZERO;
+                        }
+
+                        if (pending.compareTo(ZERO) <= INT_ZERO)
+                                continue;
+
+                        LocalDate lastPaymentDate = lastPaymentMap.get(studentId);
+
+                        LocalDate overdueFrom = lastPaymentDate != null
+                                        ? lastPaymentDate
+                                        : sessionStart;
+
+                        long daysOverdue = Math.max(
+                                        ChronoUnit.DAYS.between(overdueFrom, today), INT_ZERO);
+
+                        String className = "";
+                        String classSection = "";
+
+                        if (student.getCurrentClass() != null) {
+                                className = student.getCurrentClass().getName();
+                                classSection = student.getCurrentClass().getSection();
+                        }
+
+                        defaulters.add(DefaulterDto.builder()
+                                        .studentId(studentId)
+                                        .studentName(student.getFirstName() + " " +
+                                                        (student.getLastName() != null ? student.getLastName() : ""))
+                                        .admissionNumber(student.getAdmissionNumber())
+                                        .className(className)
+                                        .classSection(classSection != null ? classSection : "")
+                                        .amountDue(pending)
+                                        .lateFeeAccrued(totalLateFeeAccrued)
+                                        .lastPaymentDate(lastPaymentDate)
+                                        .daysOverdue(daysOverdue)
+                                        .parentContact(student.getContactNumber() != null
+                                                        ? student.getContactNumber()
+                                                        : "")
+                                        .build());
+                }
+
+                defaulters.sort((a, b) -> b.getAmountDue().compareTo(a.getAmountDue()));
+
+                return defaulters;
+        }
 
 }

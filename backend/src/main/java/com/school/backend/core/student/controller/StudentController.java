@@ -49,7 +49,7 @@ public class StudentController {
     }
 
     @PutMapping("/{id}")
-    @PreAuthorize("hasAnyRole('SCHOOL_ADMIN', 'TEACHER', 'SUPER_ADMIN', 'PLATFORM_ADMIN')")
+    @PreAuthorize("hasAnyRole('SUPER_ADMIN', 'SCHOOL_ADMIN', 'ACCOUNTANT', 'PLATFORM_ADMIN')")
     public ResponseEntity<StudentDto> update(
             @PathVariable Long id,
             @Valid @RequestBody StudentUpdateRequest req) {

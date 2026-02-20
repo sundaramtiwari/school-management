@@ -143,7 +143,8 @@ public class StudentService {
         }
     }
 
-    private void linkGuardians(Long studentId, Long schoolId, List<com.school.backend.core.guardian.dto.GuardianCreateRequest> guardians) {
+    private void linkGuardians(Long studentId, Long schoolId,
+            List<com.school.backend.core.guardian.dto.GuardianCreateRequest> guardians) {
         long primaryCount = guardians.stream().filter(GuardianCreateRequest::isPrimaryGuardian).count();
 
         for (int i = 0; i < guardians.size(); i++) {
@@ -248,8 +249,7 @@ public class StudentService {
         }
 
         // ── 3. Load existing mappings once ─────────────────────────────────────
-        List<StudentGuardian> existingMappings =
-                studentGuardianRepository.findByStudentId(studentId);
+        List<StudentGuardian> existingMappings = studentGuardianRepository.findByStudentId(studentId);
 
         Map<Long, StudentGuardian> existingByGuardianId = existingMappings.stream()
                 .collect(Collectors.toMap(StudentGuardian::getGuardianId, sg -> sg));
@@ -266,7 +266,7 @@ public class StudentService {
                 // Update primary flag and save explicitly
                 StudentGuardian sg = existingByGuardianId.get(guardianId);
                 sg.setPrimaryGuardian(req.isPrimaryGuardian());
-                studentGuardianRepository.save(sg);        // ← was missing before
+                studentGuardianRepository.save(sg); // ← was missing before
             } else {
                 // New mapping
                 StudentGuardian sg = new StudentGuardian();
@@ -284,15 +284,14 @@ public class StudentService {
                 .collect(Collectors.toList());
 
         if (!toDelete.isEmpty()) {
-            studentGuardianRepository.deleteAll(toDelete);  // single batch delete
+            studentGuardianRepository.deleteAll(toDelete); // single batch delete
         }
 
         // ── 6. Final integrity check ───────────────────────────────────────────
         // Guard against edge case where findOrCreateByContact merged two
         // incoming requests into the same guardian (same contact number,
         // different relation), which could result in zero or two primaries.
-        List<StudentGuardian> finalMappings =
-                studentGuardianRepository.findByStudentId(studentId);
+        List<StudentGuardian> finalMappings = studentGuardianRepository.findByStudentId(studentId);
 
         long finalPrimaryCount = finalMappings.stream()
                 .filter(StudentGuardian::isPrimaryGuardian)
@@ -318,6 +317,10 @@ public class StudentService {
     public StudentDto getById(Long id) {
         Student s = repository.findById(id)
                 .orElseThrow(() -> new ResourceNotFoundException("Student not found: " + id));
+
+        if (!s.getSchoolId().equals(TenantContext.getSchoolId())) {
+            throw new SecurityException("Unauthorized access to student");
+        }
         return mapper.toDto(s);
     }
 
@@ -333,6 +336,10 @@ public class StudentService {
         Student existing = repository.findById(id)
                 .orElseThrow(() -> new ResourceNotFoundException("Student not found: " + id));
 
+        if (!existing.getSchoolId().equals(TenantContext.getSchoolId())) {
+            throw new SecurityException("Unauthorized access to student");
+        }
+
         updateStudentDetails(req, existing);
 
         return mapper.toDto(repository.save(existing));
@@ -342,6 +349,10 @@ public class StudentService {
     public void delete(Long id) {
         Student s = repository.findById(id)
                 .orElseThrow(() -> new ResourceNotFoundException("Student not found: " + id));
+
+        if (!s.getSchoolId().equals(TenantContext.getSchoolId())) {
+            throw new SecurityException("Unauthorized access to student");
+        }
 
         // Soft delete by marking as inactive
         s.setActive(false);

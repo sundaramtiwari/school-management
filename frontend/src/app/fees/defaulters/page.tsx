@@ -25,79 +25,78 @@ export default function FeeDefaultersPage() {
   const canManageFinance = canMutateFinance(user?.role);
 
   const [defaulters, setDefaulters] = useState<Defaulter[]>([]);
-  const [filteredDefaulters, setFilteredDefaulters] = useState<Defaulter[]>([]);
   const [loading, setLoading] = useState(true);
+
+  // Pagination
+  const [page, setPage] = useState(0);
+  const size = 25;
+  const [totalElements, setTotalElements] = useState(0);
+  const [totalPages, setTotalPages] = useState(0);
 
   // Filters
   const [selectedClass, setSelectedClass] = useState<string>("");
   const [minAmount, setMinAmount] = useState<string>("");
   const [minDays, setMinDays] = useState<string>("");
+
+  // Search
   const [searchTerm, setSearchTerm] = useState<string>("");
+  const [debouncedSearch, setDebouncedSearch] = useState<string>("");
 
   const [classes, setClasses] = useState<Array<{ id: number; name: string; section: string }>>([]);
 
-  const applyFilters = useCallback(() => {
-    let filtered = [...defaulters];
+  useEffect(() => {
+    const timer = setTimeout(() => {
+      setDebouncedSearch(searchTerm);
+      setPage(0);
+    }, 300);
+    return () => clearTimeout(timer);
+  }, [searchTerm]);
 
-    // Filter by class
-    if (selectedClass) {
-      filtered = filtered.filter(d => `${d.className}-${d.classSection}` === selectedClass);
-    }
+  useEffect(() => {
+    setPage(0);
+  }, [selectedClass, minAmount, minDays]);
 
-    // Filter by minimum amount
-    if (minAmount) {
-      filtered = filtered.filter(d => d.amountDue >= Number(minAmount));
-    }
-
-    // Filter by minimum days overdue
-    if (minDays) {
-      filtered = filtered.filter(d => d.daysOverdue >= Number(minDays));
-    }
-
-    // Search by name or admission number
-    if (searchTerm) {
-      const term = searchTerm.toLowerCase();
-      filtered = filtered.filter(d =>
-        d.studentName.toLowerCase().includes(term) ||
-        d.admissionNumber.toLowerCase().includes(term)
-      );
-    }
-
-    // Sort by amount due (highest first)
-    filtered.sort((a, b) => b.amountDue - a.amountDue);
-
-    setFilteredDefaulters(filtered);
-  }, [defaulters, minAmount, minDays, searchTerm, selectedClass]);
-
-  const loadClassesAndDefaulters = useCallback(async () => {
+  const loadClasses = useCallback(async () => {
     try {
-      setLoading(true);
-
-      // Load classes for filter
       const classesRes = await api.get("/api/classes/mine?size=100");
       setClasses(classesRes.data?.content || []);
+    } catch {
+      showToast("Failed to load classes", "error");
+    }
+  }, [showToast]);
 
-      // Load defaulters
-      // Backend endpoint: GET /api/fees/defaulters
-      // Expected response: Array of Defaulter objects
-      const defaultersRes = await api.get("/api/fees/defaulters");
-      setDefaulters(defaultersRes.data || []);
+  const loadDefaulters = useCallback(async () => {
+    try {
+      setLoading(true);
+      const params = new URLSearchParams();
+      params.append("page", page.toString());
+      params.append("size", size.toString());
 
+      if (debouncedSearch) params.append("search", debouncedSearch);
+      if (selectedClass) params.append("classId", selectedClass);
+      if (minAmount) params.append("minAmountDue", minAmount);
+      if (minDays) params.append("minDaysOverdue", minDays);
+
+      const res = await api.get(`/api/fees/defaulters?${params.toString()}`);
+
+      setDefaulters(res.data?.content || []);
+      setTotalElements(res.data?.totalElements || 0);
+      setTotalPages(res.data?.totalPages || 0);
     } catch (err: unknown) {
       showToast("Failed to load fee defaulters", "error");
       console.error(err);
     } finally {
       setLoading(false);
     }
-  }, [showToast]);
+  }, [page, size, debouncedSearch, selectedClass, minAmount, minDays, showToast]);
 
   useEffect(() => {
-    loadClassesAndDefaulters();
-  }, [loadClassesAndDefaulters]);
+    loadClasses();
+  }, [loadClasses]);
 
   useEffect(() => {
-    applyFilters();
-  }, [applyFilters]);
+    loadDefaulters();
+  }, [loadDefaulters]);
 
   function clearFilters() {
     setSelectedClass("");
@@ -106,34 +105,55 @@ export default function FeeDefaultersPage() {
     setSearchTerm("");
   }
 
-  function exportToExcel() {
-    // Convert to CSV format
-    const headers = ["Student Name", "Admission No", "Class", "Amount Due", "Days Overdue", "Last Payment", "Parent Contact"];
-    const rows = filteredDefaulters.map(d => [
-      d.studentName,
-      d.admissionNumber,
-      `${d.className}-${d.classSection}`,
-      d.amountDue,
-      d.daysOverdue,
-      d.lastPaymentDate || "Never",
-      d.parentContact
-    ]);
+  async function exportToExcel() {
+    try {
+      showToast("Exporting data...", "info");
+      const params = new URLSearchParams();
+      if (debouncedSearch) params.append("search", debouncedSearch);
+      if (selectedClass) params.append("classId", selectedClass);
+      if (minAmount) params.append("minAmountDue", minAmount);
+      if (minDays) params.append("minDaysOverdue", minDays);
 
-    const csv = [
-      headers.join(","),
-      ...rows.map(row => row.join(","))
-    ].join("\n");
+      const res = await api.get(`/api/fees/defaulters/export?${params.toString()}`);
+      const exportData: Defaulter[] = res.data || [];
 
-    // Download
-    const blob = new Blob([csv], { type: "text/csv" });
-    const url = URL.createObjectURL(blob);
-    const a = document.createElement("a");
-    a.href = url;
-    a.download = `fee-defaulters-${new Date().toISOString().split('T')[0]}.csv`;
-    a.click();
-    URL.revokeObjectURL(url);
+      if (exportData.length === 0) {
+        showToast("No data to export", "warning");
+        return;
+      }
 
-    showToast("Exported to CSV", "success");
+      const headers = ["Student Name", "Admission No", "Class", "Amount Due", "Days Overdue", "Last Payment", "Parent Contact"];
+      const rows = exportData.map(d => [
+        `"${d.studentName}"`,
+        `"${d.admissionNumber}"`,
+        `"${d.className}-${d.classSection}"`,
+        d.amountDue,
+        d.daysOverdue,
+        d.lastPaymentDate || "Never",
+        `"${d.parentContact}"`
+      ]);
+
+      const csv = [
+        headers.join(","),
+        ...rows.map(row => row.join(","))
+      ].join("\n");
+
+      const blob = new Blob([csv], { type: "text/csv;charset=utf-8;" });
+      const url = URL.createObjectURL(blob);
+      const a = document.createElement("a");
+      a.href = url;
+      a.download = `fee-defaulters-${new Date().toISOString().split('T')[0]}.csv`;
+      a.click();
+      URL.revokeObjectURL(url);
+
+      showToast("Exported to CSV successfully", "success");
+    } catch (err: any) {
+      if (err.response?.data?.message) {
+        showToast(err.response.data.message, "error");
+      } else {
+        showToast("Export failed", "error");
+      }
+    }
   }
 
   function goToCollectFee(studentId: number) {
@@ -151,7 +171,7 @@ export default function FeeDefaultersPage() {
     window.open(`https://wa.me/${waNumber}?text=${message}`, '_blank');
   }
 
-  const totalDue = filteredDefaulters.reduce((sum, d) => sum + d.amountDue, 0);
+  const totalDue = defaulters.reduce((sum, d) => sum + d.amountDue, 0);
 
   return (
     <div className="space-y-6">
@@ -163,7 +183,7 @@ export default function FeeDefaultersPage() {
         </div>
         <button
           onClick={exportToExcel}
-          disabled={filteredDefaulters.length === 0}
+          disabled={totalElements === 0}
           className="bg-green-600 text-white px-6 py-2.5 rounded-xl font-bold shadow-lg hover:bg-green-700 transition-all disabled:bg-gray-400"
         >
           📊 Export to Excel
@@ -179,7 +199,7 @@ export default function FeeDefaultersPage() {
               {loading ? (
                 <Skeleton className="h-10 w-16 mt-2" />
               ) : (
-                <p className="text-3xl font-bold text-gray-900 mt-2">{filteredDefaulters.length}</p>
+                <p className="text-3xl font-bold text-gray-900 mt-2">{totalElements}</p>
               )}
               <p className="text-xs text-gray-400 mt-1">Students with pending dues</p>
             </div>
@@ -200,7 +220,7 @@ export default function FeeDefaultersPage() {
                   ₹ {totalDue.toLocaleString('en-IN')}
                 </p>
               )}
-              <p className="text-xs text-gray-400 mt-1">Outstanding fees</p>
+              <p className="text-xs text-gray-400 mt-1">Outstanding fees (this page)</p>
             </div>
             <div className="w-12 h-12 bg-orange-500 text-white rounded-xl flex items-center justify-center text-xl">
               💰
@@ -216,10 +236,10 @@ export default function FeeDefaultersPage() {
                 <Skeleton className="h-10 w-16 mt-2" />
               ) : (
                 <p className="text-3xl font-bold text-gray-900 mt-2">
-                  {filteredDefaulters.filter(d => d.daysOverdue > 60).length}
+                  {defaulters.filter(d => d.daysOverdue > 60).length}
                 </p>
               )}
-              <p className="text-xs text-gray-400 mt-1">&gt; 60 days overdue</p>
+              <p className="text-xs text-gray-400 mt-1">&gt; 60 days overdue (this page)</p>
             </div>
             <div className="w-12 h-12 bg-yellow-500 text-white rounded-xl flex items-center justify-center text-xl">
               🚨
@@ -263,7 +283,7 @@ export default function FeeDefaultersPage() {
             >
               <option value="">All Classes</option>
               {classes.map(c => (
-                <option key={c.id} value={`${c.name}-${c.section}`}>
+                <option key={c.id} value={c.id}>
                   {c.name}-{c.section}
                 </option>
               ))}
@@ -300,7 +320,7 @@ export default function FeeDefaultersPage() {
           <div className="p-8">
             <TableSkeleton rows={10} cols={7} />
           </div>
-        ) : filteredDefaulters.length === 0 ? (
+        ) : defaulters.length === 0 ? (
           <div className="p-20 text-center text-gray-400">
             <p className="text-4xl mb-4">✓</p>
             <p className="font-semibold text-green-600">No fee defaulters!</p>
@@ -320,7 +340,7 @@ export default function FeeDefaultersPage() {
               </tr>
             </thead>
             <tbody className="divide-y divide-gray-100">
-              {filteredDefaulters.map(defaulter => (
+              {defaulters.map(defaulter => (
                 <tr key={defaulter.studentId} className="hover:bg-gray-50 transition-colors">
                   <td className="p-4">
                     <div>
@@ -340,8 +360,8 @@ export default function FeeDefaultersPage() {
                   </td>
                   <td className="p-4 text-center">
                     <span className={`px-3 py-1 rounded-lg text-xs font-bold ${defaulter.daysOverdue > 60 ? 'bg-red-100 text-red-700' :
-                        defaulter.daysOverdue > 30 ? 'bg-orange-100 text-orange-700' :
-                          'bg-yellow-100 text-yellow-700'
+                      defaulter.daysOverdue > 30 ? 'bg-orange-100 text-orange-700' :
+                        'bg-yellow-100 text-yellow-700'
                       }`}>
                       {defaulter.daysOverdue} days
                     </span>
@@ -386,6 +406,52 @@ export default function FeeDefaultersPage() {
           </table>
         )}
       </div>
+
+      {/* Pagination Controls */}
+      {!loading && defaulters.length > 0 && (
+        <div className="flex items-center justify-between bg-white px-4 py-3 border rounded-2xl shadow-sm sm:px-6 mt-4">
+          <div className="hidden sm:flex sm:flex-1 sm:items-center sm:justify-between">
+            <div>
+              <p className="text-sm text-gray-700">
+                Showing <span className="font-medium">{page * size + 1}</span> to{" "}
+                <span className="font-medium">
+                  {Math.min((page + 1) * size, totalElements)}
+                </span>{" "}
+                of <span className="font-medium">{totalElements}</span> results
+              </p>
+            </div>
+            <div>
+              <nav className="isolate inline-flex -space-x-px rounded-md shadow-sm" aria-label="Pagination">
+                <button
+                  onClick={() => setPage(Math.max(0, page - 1))}
+                  disabled={page === 0}
+                  className="relative inline-flex items-center rounded-l-md px-2 py-2 text-gray-400 ring-1 ring-inset ring-gray-300 hover:bg-gray-50 focus:z-20 focus:outline-offset-0 disabled:opacity-50"
+                  aria-label="Previous page"
+                >
+                  <span className="sr-only">Previous</span>
+                  <svg className="h-5 w-5" viewBox="0 0 20 20" fill="currentColor" aria-hidden="true">
+                    <path fillRule="evenodd" d="M12.79 5.23a.75.75 0 01-.02 1.06L8.832 10l3.938 3.71a.75.75 0 11-1.04 1.08l-4.5-4.25a.75.75 0 010-1.08l4.5-4.25a.75.75 0 011.06.02z" clipRule="evenodd" />
+                  </svg>
+                </button>
+                <div className="relative inline-flex items-center px-4 py-2 text-sm font-semibold text-gray-900 ring-1 ring-inset ring-gray-300 focus:z-20 focus:outline-offset-0">
+                  Page {page + 1} of {totalPages}
+                </div>
+                <button
+                  onClick={() => setPage(Math.min(totalPages - 1, page + 1))}
+                  disabled={page >= totalPages - 1}
+                  className="relative inline-flex items-center rounded-r-md px-2 py-2 text-gray-400 ring-1 ring-inset ring-gray-300 hover:bg-gray-50 focus:z-20 focus:outline-offset-0 disabled:opacity-50"
+                  aria-label="Next page"
+                >
+                  <span className="sr-only">Next</span>
+                  <svg className="h-5 w-5" viewBox="0 0 20 20" fill="currentColor" aria-hidden="true">
+                    <path fillRule="evenodd" d="M7.21 14.77a.75.75 0 01.02-1.06L11.168 10 7.23 6.29a.75.75 0 111.04-1.08l4.5 4.25a.75.75 0 010 1.08l-4.5 4.25a.75.75 0 01-1.06-.02z" clipRule="evenodd" />
+                  </svg>
+                </button>
+              </nav>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 }
