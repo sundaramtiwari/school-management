@@ -23,8 +23,8 @@ public class TransportRouteController {
     }
 
     @GetMapping
-    public ResponseEntity<List<TransportRouteDto>> getAll() {
-        return ResponseEntity.ok(routeService.getAllRoutes());
+    public ResponseEntity<List<TransportRouteDto>> getAllActiveRoutes() {
+        return ResponseEntity.ok(routeService.getAllActiveRoutes());
     }
 
     // Add DELETE mapping for transport routes

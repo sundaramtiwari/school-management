@@ -18,7 +18,7 @@ public class TeacherService {
     private final TeacherRepository teacherRepository;
 
     @Transactional(readOnly = true)
-    public List<TeacherListItemDto> listTeachers() {
+    public List<TeacherListItemDto> listTeachersBySchoolId() {
         Long schoolId = SecurityUtil.schoolId();
         List<Teacher> teachers = teacherRepository.findBySchoolId(schoolId);
         return teachers.stream()

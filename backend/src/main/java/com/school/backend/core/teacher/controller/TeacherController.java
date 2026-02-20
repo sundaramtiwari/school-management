@@ -21,6 +21,6 @@ public class TeacherController {
     @GetMapping("/teachers")
     @PreAuthorize("hasAnyRole('SCHOOL_ADMIN', 'PLATFORM_ADMIN', 'SUPER_ADMIN')")
     public ResponseEntity<List<TeacherListItemDto>> listTeachers() {
-        return ResponseEntity.ok(teacherService.listTeachers());
+        return ResponseEntity.ok(teacherService.listTeachersBySchoolId());
     }
 }

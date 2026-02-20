@@ -6,6 +6,7 @@ import com.school.backend.core.student.dto.StudentCreateRequest;
 import com.school.backend.core.student.dto.StudentDto;
 import com.school.backend.core.student.dto.StudentUpdateRequest;
 import com.school.backend.core.student.service.StudentService;
+import com.school.backend.user.security.SecurityUtil;
 import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
 import org.springframework.data.domain.Page;
@@ -15,7 +16,6 @@ import org.springframework.data.domain.Sort;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.web.bind.annotation.*;
-import com.school.backend.user.security.SecurityUtil;
 
 @RestController
 @RequestMapping("/api/students")
@@ -45,17 +45,6 @@ public class StudentController {
 
         Pageable pageable = PageRequest.of(page, size);
         Page<StudentDto> p = service.listBySchool(SecurityUtil.schoolId(), pageable);
-        return ResponseEntity.ok(PageResponseMapper.fromPage(p));
-    }
-
-    @GetMapping
-    @PreAuthorize("hasAnyRole('SUPER_ADMIN', 'PLATFORM_ADMIN')")
-    public ResponseEntity<PageResponse<StudentDto>> list(
-            @RequestParam(defaultValue = "0") int page,
-            @RequestParam(defaultValue = "20") int size) {
-
-        Pageable pageable = PageRequest.of(page, size);
-        Page<StudentDto> p = service.listAll(pageable);
         return ResponseEntity.ok(PageResponseMapper.fromPage(p));
     }
 

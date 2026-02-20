@@ -1,7 +1,7 @@
 package com.school.backend.transport.service;
 
-import com.school.backend.common.tenant.TenantContext;
 import com.school.backend.common.exception.ResourceNotFoundException;
+import com.school.backend.common.tenant.TenantContext;
 import com.school.backend.transport.dto.TransportRouteDto;
 import com.school.backend.transport.entity.TransportRoute;
 import com.school.backend.transport.repository.TransportRouteRepository;
@@ -31,9 +31,8 @@ public class TransportRouteService {
     }
 
     @Transactional(readOnly = true)
-    public List<TransportRouteDto> getAllRoutes() {
-        return routeRepository.findAll().stream()
-                .filter(TransportRoute::isActive)
+    public List<TransportRouteDto> getAllActiveRoutes() {
+        return routeRepository.findByActiveTrue().stream()
                 .map(this::mapToDto)
                 .collect(Collectors.toList());
     }

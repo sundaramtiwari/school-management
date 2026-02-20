@@ -7,6 +7,9 @@ import org.springframework.http.ResponseEntity;
 import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.web.bind.annotation.*;
 
+import java.util.Collection;
+import java.util.List;
+
 @RestController
 @RequestMapping("/api/transport/enrollments")
 @RequiredArgsConstructor
@@ -32,8 +35,8 @@ public class TransportEnrollmentController {
 
     @GetMapping("/active-status")
     @PreAuthorize("hasAnyRole('SUPER_ADMIN', 'PLATFORM_ADMIN', 'SCHOOL_ADMIN', 'ACCOUNTANT', 'TEACHER')")
-    public ResponseEntity<java.util.List<TransportEnrollmentDto>> getBatchStatus(
-            @RequestParam java.util.Collection<Long> studentIds,
+    public ResponseEntity<List<TransportEnrollmentDto>> getBatchStatus(
+            @RequestParam Collection<Long> studentIds,
             @RequestParam Long sessionId) {
         return ResponseEntity.ok(enrollmentService.getActiveEnrollmentsForStudents(studentIds, sessionId));
     }
