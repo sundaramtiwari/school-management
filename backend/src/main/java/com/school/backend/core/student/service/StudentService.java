@@ -38,6 +38,36 @@ public class StudentService {
     private final GuardianService guardianService;
     private final StudentGuardianRepository studentGuardianRepository;
 
+    private void validateGuardians(List<com.school.backend.core.guardian.dto.GuardianCreateRequest> guardians) {
+        if (guardians == null || guardians.isEmpty()) {
+            throw new IllegalArgumentException("At least one guardian is required");
+        }
+
+        long primaryCount = guardians.stream().filter(g -> g.isPrimaryGuardian()).count();
+        if (primaryCount > 1) {
+            throw new IllegalArgumentException("Only one primary guardian is allowed");
+        }
+    }
+
+    private void linkGuardians(Long studentId, Long schoolId, List<com.school.backend.core.guardian.dto.GuardianCreateRequest> guardians) {
+        long primaryCount = guardians.stream().filter(g -> g.isPrimaryGuardian()).count();
+
+        for (int i = 0; i < guardians.size(); i++) {
+            var gReq = guardians.get(i);
+            Guardian g = guardianService.findOrCreateByContact(schoolId, gReq);
+
+            boolean isPrimary = (primaryCount == 0 && i == 0) || gReq.isPrimaryGuardian();
+
+            StudentGuardian sg = StudentGuardian.builder()
+                    .studentId(studentId)
+                    .guardianId(g.getId())
+                    .primaryGuardian(isPrimary)
+                    .build();
+            sg.setSchoolId(schoolId);
+            studentGuardianRepository.save(sg);
+        }
+    }
+
     private static void updateStudentDetails(StudentUpdateRequest req, Student existing) {
         if (req.getFirstName() != null)
             existing.setFirstName(req.getFirstName());
@@ -147,30 +177,8 @@ public class StudentService {
         Student ent = mapper.toEntity(req);
         Student saved = repository.save(ent);
 
-        // Link Guardians
-        if (req.getGuardians() == null || req.getGuardians().isEmpty()) {
-            throw new IllegalArgumentException("At least one guardian is required");
-        }
-
-        long primaryCount = req.getGuardians().stream().filter(g -> g.isPrimaryGuardian()).count();
-        if (primaryCount > 1) {
-            throw new IllegalArgumentException("Only one primary guardian is allowed");
-        }
-
-        for (int i = 0; i < req.getGuardians().size(); i++) {
-            var gReq = req.getGuardians().get(i);
-            Guardian g = guardianService.findOrCreateByContact(schoolId, gReq);
-
-            boolean isPrimary = (primaryCount == 0 && i == 0) || gReq.isPrimaryGuardian();
-
-            StudentGuardian sg = StudentGuardian.builder()
-                    .studentId(saved.getId())
-                    .guardianId(g.getId())
-                    .primaryGuardian(isPrimary)
-                    .build();
-            sg.setSchoolId(schoolId);
-            studentGuardianRepository.save(sg);
-        }
+        validateGuardians(req.getGuardians());
+        linkGuardians(saved.getId(), schoolId, req.getGuardians());
 
         return mapper.toDto(saved);
     }
@@ -197,10 +205,31 @@ public class StudentService {
                         dto.setName(g.getName());
                         dto.setRelation(g.getRelation());
                         dto.setContactNumber(g.getContactNumber());
+                        dto.setEmail(g.getEmail());
+                        dto.setAddress(g.getAddress());
+                        dto.setAadharNumber(g.getAadharNumber());
+                        dto.setOccupation(g.getOccupation());
+                        dto.setQualification(g.getQualification());
+                        dto.setWhatsappEnabled(g.isWhatsappEnabled());
                     });
                     return dto;
                 })
                 .collect(Collectors.toList());
+    }
+
+    @Transactional
+    public void replaceGuardians(Long studentId, List<com.school.backend.core.guardian.dto.GuardianCreateRequest> guardians) {
+        Student student = repository.findById(studentId)
+                .orElseThrow(() -> new ResourceNotFoundException("Student not found: " + studentId));
+
+        Long schoolId = TenantContext.getSchoolId();
+        if (!student.getSchoolId().equals(schoolId)) {
+            throw new SecurityException("Unauthorized access to student guardians");
+        }
+
+        validateGuardians(guardians);
+        studentGuardianRepository.deleteByStudentId(studentId);
+        linkGuardians(studentId, schoolId, guardians);
     }
 
     @Transactional(readOnly = true)

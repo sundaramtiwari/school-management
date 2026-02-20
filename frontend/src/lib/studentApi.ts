@@ -27,6 +27,9 @@ export const studentApi = {
         api.delete(`/api/students/${id}`),
 
     getGuardians: (id: number) =>
-        api.get(`/api/students/${id}/guardians`),
+        api.get(`/api/guardians/${id}/guardians`),
+
+    updateGuardians: (id: number, guardians: StudentPayload[]) =>
+        api.put(`/api/guardians/${id}/guardians`, guardians),
 
 };

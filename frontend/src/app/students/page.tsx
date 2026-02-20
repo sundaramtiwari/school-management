@@ -274,7 +274,18 @@ export default function StudentsPage() {
 
       setProfileStudent({
         ...res.data,
-        guardians: gRes.data
+        guardians: (gRes.data || []).map((g: Partial<GuardianFormValue>) => ({
+          name: g.name || "",
+          relation: g.relation || "FATHER",
+          contactNumber: g.contactNumber || "",
+          email: g.email || "",
+          address: g.address || "",
+          aadharNumber: g.aadharNumber || "",
+          occupation: g.occupation || "",
+          qualification: g.qualification || "",
+          primaryGuardian: !!g.primaryGuardian,
+          whatsappEnabled: g.whatsappEnabled ?? true,
+        }))
       });
     } catch {
       showToast("Failed to load student profile", "error");
@@ -318,12 +329,12 @@ export default function StudentsPage() {
       return;
     }
 
-    if (!isEditing && studentForm.guardians.length === 0) {
+    if (studentForm.guardians.length === 0) {
       showToast("At least one guardian is required", "warning");
       return;
     }
 
-    if (!isEditing && !studentForm.guardians.some(g => g.primaryGuardian)) {
+    if (!studentForm.guardians.some(g => g.primaryGuardian)) {
       showToast("Please designate a primary guardian", "warning");
       return;
     }
@@ -339,6 +350,7 @@ export default function StudentsPage() {
           ...studentUpdateData,
           previousYearOfPassing: studentUpdateData.previousYearOfPassing ? Number(studentUpdateData.previousYearOfPassing) : null,
         });
+        await studentApi.updateGuardians(profileStudent.id, studentForm.guardians);
         showToast("Student updated successfully!", "success");
       } else {
         const res = await studentApi.create({
@@ -1099,18 +1111,16 @@ export default function StudentsPage() {
           </section>
 
           {/* Section 8: Guardians */}
-          {!isEditing && (
-            <section className="space-y-4 mb-4">
-              <h3 className="text-lg font-semibold border-b border-gray-100 pb-2 flex items-center gap-2">
-                <span className="bg-blue-600 text-white w-5 h-5 rounded-full flex items-center justify-center text-[10px]">8</span>
-                Guardian Information
-              </h3>
-              <GuardianFormSection
-                guardians={studentForm.guardians}
-                onChange={(newGuardians) => setStudentForm({ ...studentForm, guardians: newGuardians })}
-              />
-            </section>
-          )}
+          <section className="space-y-4 mb-4">
+            <h3 className="text-lg font-semibold border-b border-gray-100 pb-2 flex items-center gap-2">
+              <span className="bg-blue-600 text-white w-5 h-5 rounded-full flex items-center justify-center text-[10px]">8</span>
+              Guardian Information
+            </h3>
+            <GuardianFormSection
+              guardians={studentForm.guardians}
+              onChange={(newGuardians) => setStudentForm({ ...studentForm, guardians: newGuardians })}
+            />
+          </section>
 
         </div>
       </Modal>

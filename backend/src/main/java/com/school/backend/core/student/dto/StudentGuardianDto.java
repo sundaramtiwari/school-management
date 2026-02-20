@@ -11,4 +11,10 @@ public class StudentGuardianDto {
     private String name;
     private String relation;
     private String contactNumber;
+    private String email;
+    private String address;
+    private String aadharNumber;
+    private String occupation;
+    private String qualification;
+    private boolean whatsappEnabled;
 }

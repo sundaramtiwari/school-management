@@ -25,22 +25,23 @@ public class GuardianService {
 
     private static @NonNull Guardian getGuardian(GuardianCreateRequest req, Optional<Guardian> existing) {
         Guardian g = existing.get();
-        // Update details only if they are null in DB and provided in request
-        if (g.getName() == null && req.getName() != null)
+        // Update details when request has non-blank values.
+        if (req.getName() != null && !req.getName().isBlank())
             g.setName(req.getName());
-        if (g.getEmail() == null && req.getEmail() != null)
+        if (req.getEmail() != null && !req.getEmail().isBlank())
             g.setEmail(req.getEmail());
-        if (g.getAddress() == null && req.getAddress() != null)
+        if (req.getAddress() != null && !req.getAddress().isBlank())
             g.setAddress(req.getAddress());
-        if (g.getOccupation() == null && req.getOccupation() != null)
+        if (req.getOccupation() != null && !req.getOccupation().isBlank())
             g.setOccupation(req.getOccupation());
-        if (g.getQualification() == null && req.getQualification() != null)
+        if (req.getQualification() != null && !req.getQualification().isBlank())
             g.setQualification(req.getQualification());
-        if (g.getAadharNumber() == null && req.getAadharNumber() != null)
+        if (req.getAadharNumber() != null && !req.getAadharNumber().isBlank())
             g.setAadharNumber(req.getAadharNumber());
+        if (req.getRelation() != null && !req.getRelation().isBlank())
+            g.setRelation(req.getRelation());
 
-        if (req.isWhatsappEnabled())
-            g.setWhatsappEnabled(true);
+        g.setWhatsappEnabled(req.isWhatsappEnabled());
         return g;
     }
 

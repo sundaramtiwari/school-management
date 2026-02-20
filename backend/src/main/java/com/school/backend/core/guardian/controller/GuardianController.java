@@ -5,6 +5,8 @@ import com.school.backend.common.dto.PageResponseMapper;
 import com.school.backend.core.guardian.dto.GuardianCreateRequest;
 import com.school.backend.core.guardian.dto.GuardianDto;
 import com.school.backend.core.guardian.service.GuardianService;
+import com.school.backend.core.student.dto.StudentGuardianDto;
+import com.school.backend.core.student.service.StudentService;
 import com.school.backend.user.security.SecurityUtil;
 import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
@@ -15,12 +17,15 @@ import org.springframework.http.ResponseEntity;
 import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.web.bind.annotation.*;
 
+import java.util.List;
+
 @RestController
 @RequestMapping("/api/guardians")
 @RequiredArgsConstructor
 public class GuardianController {
 
     private final GuardianService service;
+    private final StudentService studentService;
 
     @PostMapping
     @PreAuthorize("hasAnyRole('SCHOOL_ADMIN', 'TEACHER', 'SUPER_ADMIN')")
@@ -37,5 +42,20 @@ public class GuardianController {
         Pageable pageable = PageRequest.of(page, size);
         Page<GuardianDto> p = service.listBySchool(SecurityUtil.schoolId(), pageable);
         return ResponseEntity.ok(PageResponseMapper.fromPage(p));
+    }
+
+    @GetMapping("/{id}/guardians")
+    @PreAuthorize("hasAnyRole('SCHOOL_ADMIN', 'TEACHER', 'ACCOUNTANT', 'SUPER_ADMIN', 'PLATFORM_ADMIN')")
+    public ResponseEntity<List<StudentGuardianDto>> getGuardians(@PathVariable Long id) {
+        return ResponseEntity.ok(studentService.getGuardiansForStudent(id));
+    }
+
+    @PutMapping("/{id}/guardians")
+    @PreAuthorize("hasAnyRole('SCHOOL_ADMIN', 'TEACHER', 'SUPER_ADMIN', 'PLATFORM_ADMIN')")
+    public ResponseEntity<Void> replaceGuardians(
+            @PathVariable Long id,
+            @RequestBody List<GuardianCreateRequest> guardians) {
+        studentService.replaceGuardians(id, guardians);
+        return ResponseEntity.noContent().build();
     }
 }
