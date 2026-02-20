@@ -43,9 +43,7 @@ export default function ClassesPage() {
         if (!user) return;
         try {
             setLoading(true);
-            const currentRole = user?.role?.toUpperCase();
-            const isHighLevelAdmin = currentRole === "SUPER_ADMIN" || currentRole === "PLATFORM_ADMIN";
-            const endpoint = isHighLevelAdmin ? "/api/classes" : "/api/classes/mine";
+            const endpoint = "/api/classes/mine";
 
             const res = await api.get(`${endpoint}?size=100`);
             setClasses(res.data.content || []);

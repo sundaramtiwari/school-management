@@ -48,6 +48,7 @@ export default function MarksheetsPage() {
         saving: false,
         downloadingId: null as number | null
     });
+    const [hasSchoolContext, setHasSchoolContext] = useState(true);
 
     /* ---------------- Init ---------------- */
 
@@ -59,6 +60,7 @@ export default function MarksheetsPage() {
     };
 
     const isTeacher = user?.role === "TEACHER";
+    const isHighLevelAdmin = user?.role === "SUPER_ADMIN" || user?.role === "PLATFORM_ADMIN";
 
     const loadClasses = useCallback(async () => {
         if (!currentSession) return;
@@ -86,6 +88,28 @@ export default function MarksheetsPage() {
 
     const loadSchools = useCallback(async () => {
         try {
+            const selectedSchoolId = typeof window !== "undefined" ? localStorage.getItem("schoolId") : null;
+            if (!isHighLevelAdmin) {
+                const fallbackSchoolId = selectedSchoolId ? Number(selectedSchoolId) : null;
+                const resolvedSchoolId = user?.schoolId ?? (fallbackSchoolId && !Number.isNaN(fallbackSchoolId) ? fallbackSchoolId : null);
+                if (!resolvedSchoolId) {
+                    setHasSchoolContext(false);
+                    setLoading(prev => ({ ...prev, schools: false }));
+                    return;
+                }
+                setHasSchoolContext(true);
+                setSelectedSchool(resolvedSchoolId);
+                void loadClasses();
+                setLoading(prev => ({ ...prev, schools: false }));
+                return;
+            }
+
+            if (!user?.schoolId && !selectedSchoolId) {
+                setHasSchoolContext(false);
+                setLoading(prev => ({ ...prev, schools: false }));
+                return;
+            }
+            setHasSchoolContext(true);
             setLoading(prev => ({ ...prev, schools: true }));
             const res = await schoolApi.list(0, 100);
             const loadedSchools = res.data.content || [];
@@ -97,6 +121,12 @@ export default function MarksheetsPage() {
                     setSelectedSchool(userSchool.id);
                     void loadClasses();
                 }
+            } else if (selectedSchoolId) {
+                const selected = Number(selectedSchoolId);
+                if (!Number.isNaN(selected)) {
+                    setSelectedSchool(selected);
+                    void loadClasses();
+                }
             } else if (loadedSchools.length === 1) {
                 setSelectedSchool(loadedSchools[0].id);
                 void loadClasses();
@@ -106,7 +136,7 @@ export default function MarksheetsPage() {
         } finally {
             setLoading(prev => ({ ...prev, schools: false }));
         }
-    }, [showToast, user?.schoolId, loadClasses]);
+    }, [showToast, user?.schoolId, isHighLevelAdmin, loadClasses]);
 
     async function loadExams(classId: number) {
         if (!currentSession) return;
@@ -169,6 +199,10 @@ export default function MarksheetsPage() {
     useEffect(() => {
         void loadSchools();
     }, [loadSchools]);
+
+    if (!hasSchoolContext) {
+        return <div className="text-gray-500">Please select a school to continue.</div>;
+    }
 
     function onSchoolChange(e: ChangeEvent<HTMLSelectElement>) {
         const val = e.target.value ? Number(e.target.value) : "";

@@ -3,26 +3,29 @@ package com.school.backend.core.student.service;
 import com.school.backend.common.exception.ResourceNotFoundException;
 import com.school.backend.common.tenant.SessionResolver;
 import com.school.backend.common.tenant.TenantContext;
-import com.school.backend.core.classsubject.repository.SchoolClassRepository;
-import com.school.backend.core.student.dto.StudentCreateRequest;
-import com.school.backend.core.student.dto.StudentDto;
-import com.school.backend.core.student.dto.StudentUpdateRequest;
-import com.school.backend.core.student.entity.Student;
-import com.school.backend.core.student.mapper.StudentMapper;
-import com.school.backend.core.student.repository.StudentRepository;
+import com.school.backend.core.guardian.dto.GuardianCreateRequest;
 import com.school.backend.core.guardian.entity.Guardian;
 import com.school.backend.core.guardian.service.GuardianService;
+import com.school.backend.core.student.dto.StudentCreateRequest;
+import com.school.backend.core.student.dto.StudentDto;
 import com.school.backend.core.student.dto.StudentGuardianDto;
+import com.school.backend.core.student.dto.StudentUpdateRequest;
+import com.school.backend.core.student.entity.Student;
 import com.school.backend.core.student.entity.StudentGuardian;
+import com.school.backend.core.student.mapper.StudentMapper;
 import com.school.backend.core.student.repository.StudentGuardianRepository;
-import com.school.backend.school.repository.SchoolRepository;
+import com.school.backend.core.student.repository.StudentRepository;
+import com.school.backend.school.service.SetupValidationService;
 import lombok.RequiredArgsConstructor;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
+import java.util.HashSet;
 import java.util.List;
+import java.util.Map;
+import java.util.Set;
 import java.util.stream.Collectors;
 
 @Service
@@ -31,42 +34,10 @@ public class StudentService {
 
     private final StudentRepository repository;
     private final StudentMapper mapper;
-    private final SchoolRepository schoolRepository;
-    private final SchoolClassRepository classRepository;
     private final SessionResolver sessionResolver;
-    private final com.school.backend.school.service.SetupValidationService setupValidationService;
+    private final SetupValidationService setupValidationService;
     private final GuardianService guardianService;
     private final StudentGuardianRepository studentGuardianRepository;
-
-    private void validateGuardians(List<com.school.backend.core.guardian.dto.GuardianCreateRequest> guardians) {
-        if (guardians == null || guardians.isEmpty()) {
-            throw new IllegalArgumentException("At least one guardian is required");
-        }
-
-        long primaryCount = guardians.stream().filter(g -> g.isPrimaryGuardian()).count();
-        if (primaryCount > 1) {
-            throw new IllegalArgumentException("Only one primary guardian is allowed");
-        }
-    }
-
-    private void linkGuardians(Long studentId, Long schoolId, List<com.school.backend.core.guardian.dto.GuardianCreateRequest> guardians) {
-        long primaryCount = guardians.stream().filter(g -> g.isPrimaryGuardian()).count();
-
-        for (int i = 0; i < guardians.size(); i++) {
-            var gReq = guardians.get(i);
-            Guardian g = guardianService.findOrCreateByContact(schoolId, gReq);
-
-            boolean isPrimary = (primaryCount == 0 && i == 0) || gReq.isPrimaryGuardian();
-
-            StudentGuardian sg = StudentGuardian.builder()
-                    .studentId(studentId)
-                    .guardianId(g.getId())
-                    .primaryGuardian(isPrimary)
-                    .build();
-            sg.setSchoolId(schoolId);
-            studentGuardianRepository.save(sg);
-        }
-    }
 
     private static void updateStudentDetails(StudentUpdateRequest req, Student existing) {
         if (req.getFirstName() != null)
@@ -161,6 +132,36 @@ public class StudentService {
             existing.setCurrentStatus(req.getCurrentStatus());
     }
 
+    private void validateGuardians(List<com.school.backend.core.guardian.dto.GuardianCreateRequest> guardians) {
+        if (guardians == null || guardians.isEmpty()) {
+            throw new IllegalArgumentException("At least one guardian is required");
+        }
+
+        long primaryCount = guardians.stream().filter(GuardianCreateRequest::isPrimaryGuardian).count();
+        if (primaryCount > 1) {
+            throw new IllegalArgumentException("Only one primary guardian is allowed");
+        }
+    }
+
+    private void linkGuardians(Long studentId, Long schoolId, List<com.school.backend.core.guardian.dto.GuardianCreateRequest> guardians) {
+        long primaryCount = guardians.stream().filter(GuardianCreateRequest::isPrimaryGuardian).count();
+
+        for (int i = 0; i < guardians.size(); i++) {
+            var gReq = guardians.get(i);
+            Guardian g = guardianService.findOrCreateByContact(schoolId, gReq);
+
+            boolean isPrimary = (primaryCount == 0 && i == 0) || gReq.isPrimaryGuardian();
+
+            StudentGuardian sg = StudentGuardian.builder()
+                    .studentId(studentId)
+                    .guardianId(g.getId())
+                    .primaryGuardian(isPrimary)
+                    .build();
+            sg.setSchoolId(schoolId);
+            studentGuardianRepository.save(sg);
+        }
+    }
+
     @Transactional
     public StudentDto register(StudentCreateRequest req) {
         Long schoolId = TenantContext.getSchoolId();
@@ -174,10 +175,11 @@ public class StudentService {
             throw new IllegalArgumentException("Admission number already exists for this school");
         }
 
+        validateGuardians(req.getGuardians());
+
         Student ent = mapper.toEntity(req);
         Student saved = repository.save(ent);
 
-        validateGuardians(req.getGuardians());
         linkGuardians(saved.getId(), schoolId, req.getGuardians());
 
         return mapper.toDto(saved);
@@ -218,18 +220,89 @@ public class StudentService {
     }
 
     @Transactional
-    public void replaceGuardians(Long studentId, List<com.school.backend.core.guardian.dto.GuardianCreateRequest> guardians) {
+    public void replaceGuardians(Long studentId, List<GuardianCreateRequest> requests) {
+
+        // ── 1. Validate input ──────────────────────────────────────────────────
+        if (requests == null || requests.isEmpty()) {
+            throw new IllegalArgumentException("At least one guardian is required");
+        }
+
+        long primaryCount = requests.stream()
+                .filter(GuardianCreateRequest::isPrimaryGuardian)
+                .count();
+        if (primaryCount == 0) {
+            throw new IllegalArgumentException("Exactly one primary guardian is required");
+        }
+        if (primaryCount > 1) {
+            throw new IllegalArgumentException("Only one primary guardian is allowed");
+        }
+
+        // ── 2. Tenant + ownership check ────────────────────────────────────────
+        Long schoolId = TenantContext.getSchoolId();
+
         Student student = repository.findById(studentId)
                 .orElseThrow(() -> new ResourceNotFoundException("Student not found: " + studentId));
 
-        Long schoolId = TenantContext.getSchoolId();
         if (!student.getSchoolId().equals(schoolId)) {
             throw new SecurityException("Unauthorized access to student guardians");
         }
 
-        validateGuardians(guardians);
-        studentGuardianRepository.deleteByStudentId(studentId);
-        linkGuardians(studentId, schoolId, guardians);
+        // ── 3. Load existing mappings once ─────────────────────────────────────
+        List<StudentGuardian> existingMappings =
+                studentGuardianRepository.findByStudentId(studentId);
+
+        Map<Long, StudentGuardian> existingByGuardianId = existingMappings.stream()
+                .collect(Collectors.toMap(StudentGuardian::getGuardianId, sg -> sg));
+
+        // ── 4. Upsert incoming guardians ───────────────────────────────────────
+        Set<Long> incomingGuardianIds = new HashSet<>();
+
+        for (GuardianCreateRequest req : requests) {
+            Guardian guardian = guardianService.findOrCreateByContact(schoolId, req);
+            Long guardianId = guardian.getId();
+            incomingGuardianIds.add(guardianId);
+
+            if (existingByGuardianId.containsKey(guardianId)) {
+                // Update primary flag and save explicitly
+                StudentGuardian sg = existingByGuardianId.get(guardianId);
+                sg.setPrimaryGuardian(req.isPrimaryGuardian());
+                studentGuardianRepository.save(sg);        // ← was missing before
+            } else {
+                // New mapping
+                StudentGuardian sg = new StudentGuardian();
+                sg.setStudentId(studentId);
+                sg.setGuardianId(guardianId);
+                sg.setPrimaryGuardian(req.isPrimaryGuardian());
+                sg.setSchoolId(schoolId);
+                studentGuardianRepository.save(sg);
+            }
+        }
+
+        // ── 5. Batch delete removed guardians ─────────────────────────────────
+        List<StudentGuardian> toDelete = existingMappings.stream()
+                .filter(sg -> !incomingGuardianIds.contains(sg.getGuardianId()))
+                .collect(Collectors.toList());
+
+        if (!toDelete.isEmpty()) {
+            studentGuardianRepository.deleteAll(toDelete);  // single batch delete
+        }
+
+        // ── 6. Final integrity check ───────────────────────────────────────────
+        // Guard against edge case where findOrCreateByContact merged two
+        // incoming requests into the same guardian (same contact number,
+        // different relation), which could result in zero or two primaries.
+        List<StudentGuardian> finalMappings =
+                studentGuardianRepository.findByStudentId(studentId);
+
+        long finalPrimaryCount = finalMappings.stream()
+                .filter(StudentGuardian::isPrimaryGuardian)
+                .count();
+
+        if (finalPrimaryCount != 1) {
+            throw new IllegalStateException(
+                    "Guardian replacement resulted in " + finalPrimaryCount +
+                            " primary guardians. Expected exactly 1. Rolling back.");
+        }
     }
 
     @Transactional(readOnly = true)
@@ -254,11 +327,6 @@ public class StudentService {
         return repository.findBySchoolIdAndSessionId(schoolId, sessionId, pageable).map(mapper::toDto);
     }
 
-    @Transactional(readOnly = true)
-    public Page<StudentDto> listAll(Pageable pageable) {
-        return repository.findAll(pageable).map(mapper::toDto);
-    }
-
     @Transactional
     public StudentDto update(Long id, StudentUpdateRequest req) {
 
@@ -272,10 +340,10 @@ public class StudentService {
 
     @Transactional
     public void delete(Long id) {
-        if (!repository.existsById(id))
-            throw new ResourceNotFoundException("Student not found: " + id);
-        // soft delete: mark active=false
-        Student s = repository.findById(id).get();
+        Student s = repository.findById(id)
+                .orElseThrow(() -> new ResourceNotFoundException("Student not found: " + id));
+
+        // Soft delete by marking as inactive
         s.setActive(false);
         repository.save(s);
     }
