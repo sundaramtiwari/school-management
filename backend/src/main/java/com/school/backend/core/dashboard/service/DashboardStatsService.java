@@ -24,6 +24,7 @@ public class DashboardStatsService {
         private final TransportEnrollmentRepository transportRepository;
         private final ExamRepository examRepository;
         private final FeeSummaryService feeSummaryService;
+        private final com.school.backend.core.attendance.service.AttendanceService attendanceService;
         private final SessionResolver sessionResolver;
 
         public SchoolAdminStatsDto getSchoolAdminStats(Long sessionId) {
@@ -38,7 +39,10 @@ public class DashboardStatsService {
                 // 2. Fee Stats (Defaulters Count)
                 long feePendingCount = feeSummaryService.countDefaulters();
 
-                // 3. Upcoming Exams
+                // 3. Attendance Stats
+                double attendancePercentage = attendanceService.getTodayStats(schoolId, effectiveSessionId);
+
+                // 4. Upcoming Exams
                 LocalDate now = LocalDate.now();
                 var upcomingExams = examRepository
                                 .findBySchoolIdAndSessionIdAndStartDateAfter(schoolId, effectiveSessionId, now)
@@ -57,7 +61,7 @@ public class DashboardStatsService {
                                 .totalTeachers(totalTeachers)
                                 .feePendingCount(feePendingCount)
                                 .upcomingExams(upcomingExams)
-                                .attendancePercentage(85.0) // Mock for now until attendance service is checked
+                                .attendancePercentage(attendancePercentage)
                                 .build();
         }
 }

@@ -28,6 +28,8 @@ export default function ExamCreationModal({
     const [form, setForm] = useState({
         name: "",
         examType: "UT", // Default to Unit Test
+        startDate: "",
+        endDate: "",
     });
 
     async function handleSave() {
@@ -44,6 +46,8 @@ export default function ExamCreationModal({
                 sessionId,
                 name: form.name,
                 examType: form.examType,
+                startDate: form.startDate || undefined,
+                endDate: form.endDate || undefined,
             });
             showToast("Exam created successfully!", "success");
             onSuccess();
@@ -103,6 +107,27 @@ export default function ExamCreationModal({
                         <option value="FINAL">Final Exam (FINAL)</option>
                         <option value="PERIODIC">Periodic Test</option>
                     </select>
+                </div>
+
+                <div className="grid grid-cols-2 gap-4">
+                    <div className="space-y-1">
+                        <label className="text-xs font-bold text-gray-400 uppercase ml-1">Start Date</label>
+                        <input
+                            type="date"
+                            value={form.startDate}
+                            onChange={(e) => setForm({ ...form, startDate: e.target.value })}
+                            className="input-ref"
+                        />
+                    </div>
+                    <div className="space-y-1">
+                        <label className="text-xs font-bold text-gray-400 uppercase ml-1">End Date</label>
+                        <input
+                            type="date"
+                            value={form.endDate}
+                            onChange={(e) => setForm({ ...form, endDate: e.target.value })}
+                            className="input-ref"
+                        />
+                    </div>
                 </div>
 
                 <div className="p-4 bg-gray-50 rounded-xl border border-dashed text-xs text-gray-500">

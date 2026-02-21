@@ -17,4 +17,7 @@ public class ExamCreateRequest {
     private String name;
 
     private String examType;
+
+    private java.time.LocalDate startDate;
+    private java.time.LocalDate endDate;
 }

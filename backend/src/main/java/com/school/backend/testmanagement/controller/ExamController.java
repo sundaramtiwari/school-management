@@ -39,11 +39,10 @@ public class ExamController {
 
     @PostMapping("/{examId}/marks/bulk")
     @PreAuthorize("hasAnyRole('SUPER_ADMIN', 'PLATFORM_ADMIN', 'SCHOOL_ADMIN', 'TEACHER')")
-    public ResponseEntity<Void> saveMarksBulk(
+    public ResponseEntity<com.school.backend.testmanagement.dto.BulkMarkEntryResponse> saveMarksBulk(
             @PathVariable Long examId,
             @RequestBody BulkMarksDto dto) {
-        service.saveMarksBulk(examId, dto);
-        return ResponseEntity.ok().build();
+        return ResponseEntity.ok(service.saveMarksBulk(examId, dto));
     }
 
     @PutMapping("/{examId}/publish")

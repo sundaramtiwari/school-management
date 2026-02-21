@@ -5,6 +5,7 @@ import com.school.backend.common.exception.BusinessException;
 import com.school.backend.user.security.SecurityUtil;
 import com.school.backend.core.student.repository.StudentEnrollmentRepository;
 import com.school.backend.testmanagement.dto.BulkMarksDto;
+import com.school.backend.testmanagement.dto.BulkMarkEntryResponse;
 import com.school.backend.testmanagement.dto.ExamCreateRequest;
 import com.school.backend.testmanagement.dto.ExamDto;
 import com.school.backend.testmanagement.entity.Exam;
@@ -147,6 +148,8 @@ public class ExamService {
                 .sessionId(req.getSessionId())
                 .name(req.getName())
                 .examType(req.getExamType())
+                .startDate(req.getStartDate())
+                .endDate(req.getEndDate())
                 .active(true)
                 .build();
 
@@ -162,7 +165,7 @@ public class ExamService {
 
     // Bulk save marks
     @Transactional
-    public void saveMarksBulk(Long examId, BulkMarksDto dto) {
+    public BulkMarkEntryResponse saveMarksBulk(Long examId, BulkMarksDto dto) {
         Exam exam = repository.findById(examId)
                 .orElseThrow(() -> new IllegalArgumentException("Exam not found"));
         setupValidationService.ensureAtLeastOneClassExists(exam.getSchoolId(), exam.getSessionId());
@@ -176,32 +179,45 @@ public class ExamService {
         Map<Long, ExamSubject> subjectMap = subjects.stream()
                 .collect(Collectors.toMap(ExamSubject::getId, Function.identity()));
 
+        List<BulkMarkEntryResponse.SkippedSubject> skipped = new java.util.ArrayList<>();
+        java.util.Set<Long> assignedSubjectIds = new java.util.HashSet<>();
+
         if (SecurityUtil.hasRole("TEACHER")) {
             Long userId = SecurityUtil.current().getUserId();
             Teacher teacher = teacherRepository.findByUserId(userId)
                     .orElseThrow(() -> new BusinessException("Teacher record not found for user"));
 
-            for (ExamSubject examSubject : subjects) {
-                boolean assigned = teacherAssignmentRepository
-                        .existsByTeacherIdAndSessionIdAndSchoolClassIdAndSubjectIdAndActiveTrue(
-                                teacher.getId(), exam.getSessionId(), exam.getClassId(), examSubject.getSubjectId());
-                if (!assigned) {
-                    throw new BusinessException(
-                            "Access Denied: You are not assigned to one or more subjects in this exam.");
-                }
-            }
+            // Get all active assignments for this teacher in this class/session
+            List<com.school.backend.core.teacher.entity.TeacherAssignment> assignments = teacherAssignmentRepository
+                    .findByTeacherIdAndSessionIdAndActiveTrue(teacher.getId(), exam.getSessionId());
+
+            assignedSubjectIds = assignments.stream()
+                    .filter(ta -> ta.getSchoolClass().getId().equals(exam.getClassId()))
+                    .map(ta -> ta.getSubject().getId())
+                    .collect(Collectors.toSet());
         }
+
+        int savedCount = 0;
 
         // 2. Process and save marks
         for (BulkMarksDto.MarkItem item : dto.getMarks()) {
-            ExamSubject subject = subjectMap.get(item.getExamSubjectId());
-            if (subject == null) {
+            ExamSubject examSubject = subjectMap.get(item.getExamSubjectId());
+            if (examSubject == null) {
                 throw new IllegalArgumentException("Invalid ExamSubjectId for this exam: " + item.getExamSubjectId());
             }
 
-            if (item.getMarksObtained() > subject.getMaxMarks()) {
+            // Teacher check: Must be assigned to the subject
+            if (SecurityUtil.hasRole("TEACHER") && !assignedSubjectIds.contains(examSubject.getSubjectId())) {
+                skipped.add(new BulkMarkEntryResponse.SkippedSubject(
+                        examSubject.getSubjectId(),
+                        "Subject " + examSubject.getSubjectId(), // Should ideally have name but entity references ID
+                        "Not assigned to teacher"));
+                continue;
+            }
+
+            if (item.getMarksObtained() > examSubject.getMaxMarks()) {
                 throw new IllegalArgumentException("Marks exceed maximum marks (" +
-                        subject.getMaxMarks() + ") for subject: " + item.getExamSubjectId());
+                        examSubject.getMaxMarks() + ") for subject: " + item.getExamSubjectId());
             }
 
             // Upsert (Find existing or create new)
@@ -216,6 +232,13 @@ public class ExamService {
 
             mark.setMarksObtained(item.getMarksObtained());
             markRepository.save(mark);
+            savedCount++;
         }
+
+        return BulkMarkEntryResponse.builder()
+                .savedCount(savedCount)
+                .skippedCount(skipped.size())
+                .skippedSubjects(skipped)
+                .build();
     }
 }

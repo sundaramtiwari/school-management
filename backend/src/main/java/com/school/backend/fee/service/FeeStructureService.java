@@ -1,5 +1,6 @@
 package com.school.backend.fee.service;
 
+import com.school.backend.common.enums.FeeFrequency;
 import com.school.backend.common.enums.LateFeeCapType;
 import com.school.backend.common.enums.LateFeeType;
 import com.school.backend.common.exception.ResourceNotFoundException;
@@ -9,9 +10,8 @@ import com.school.backend.fee.dto.FeeStructureCreateRequest;
 import com.school.backend.fee.dto.FeeStructureDto;
 import com.school.backend.fee.entity.FeeStructure;
 import com.school.backend.fee.entity.FeeType;
-import com.school.backend.fee.entity.StudentFeeAssignment;
-import com.school.backend.common.enums.FeeFrequency;
 import com.school.backend.fee.entity.LateFeePolicy;
+import com.school.backend.fee.entity.StudentFeeAssignment;
 import com.school.backend.fee.repository.FeeStructureRepository;
 import com.school.backend.fee.repository.FeeTypeRepository;
 import com.school.backend.fee.repository.LateFeePolicyRepository;
@@ -25,6 +25,8 @@ import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
 import java.math.BigDecimal;
+import java.time.LocalDate;
+import java.time.temporal.ChronoUnit;
 import java.util.List;
 
 @Service
@@ -108,10 +110,7 @@ public class FeeStructureService {
             }
         }
 
-        BigDecimal finalAmount = fs.getAmount();
-        if (fs.getFrequency() != null && fs.getFrequency() != FeeFrequency.ONE_TIME) {
-            finalAmount = finalAmount.multiply(new BigDecimal(fs.getFrequency().getPeriodsPerYear()));
-        }
+        BigDecimal finalAmount = computeAmount(fs, studentId);
 
         // --- Snapshot Late Fee Policy ---
         LateFeePolicy policy = lateFeePolicyRepository.findByFeeStructureId(fs.getId()).orElse(null);
@@ -149,6 +148,42 @@ public class FeeStructureService {
                 .stream()
                 .map(this::toDto)
                 .toList();
+    }
+
+    private BigDecimal computeAmount(FeeStructure fs, Long studentId) {
+        if (fs.getFrequency() == null || fs.getFrequency() == FeeFrequency.ONE_TIME
+                || fs.getFrequency() == FeeFrequency.ANNUALLY) {
+            return fs.getAmount();
+        }
+
+        AcademicSession session = academicSessionRepository.findById(fs.getSessionId())
+                .filter(s -> fs.getSchoolId().equals(s.getSchoolId()))
+                .orElse(null);
+
+        if (session == null || session.getStartDate() == null || session.getEndDate() == null) {
+            return fs.getAmount().multiply(BigDecimal.valueOf(fs.getFrequency().getPeriodsPerYear()));
+        }
+
+        // Use enrollment date if student joined mid-session, otherwise session start
+        LocalDate effectiveStart = enrollmentRepository
+                .findFirstByStudentIdAndSessionIdAndActiveTrue(studentId, fs.getSessionId())
+                .map(StudentEnrollment::getEnrollmentDate)
+                .filter(d -> d.isAfter(session.getStartDate()))
+                .orElse(session.getStartDate());
+
+        long months = ChronoUnit.MONTHS.between(
+                effectiveStart.withDayOfMonth(1), // normalize to month start
+                session.getEndDate().plusDays(1));
+
+        if (months <= 0)
+            months = 1; // minimum 1 month
+
+        return switch (fs.getFrequency()) {
+            case MONTHLY -> fs.getAmount().multiply(BigDecimal.valueOf(months));
+            case QUARTERLY -> fs.getAmount().multiply(BigDecimal.valueOf(Math.ceil(months / 3.0)));
+            case HALF_YEARLY -> fs.getAmount().multiply(BigDecimal.valueOf(Math.ceil(months / 6.0)));
+            default -> fs.getAmount();
+        };
     }
 
     // ---------------- MAPPER ----------------

@@ -13,7 +13,7 @@ import java.time.LocalDate;
         uniqueConstraints = {
                 @UniqueConstraint(
                         name = "uk_student_session",
-                        columnNames = {"student_id", "session_id"}
+                        columnNames = {"student_id", "session_id", "active"}
                 )
         },
         indexes = {

@@ -10,33 +10,36 @@ import org.springframework.data.jpa.repository.Query;
 import org.springframework.data.repository.query.Param;
 
 import java.util.List;
+import java.util.Optional;
 
 public interface StudentEnrollmentRepository extends JpaRepository<StudentEnrollment, Long> {
 
-    Page<StudentEnrollment> findByClassId(Long classId, Pageable pageable);
+  Optional<StudentEnrollment> findFirstByStudentIdAndSessionIdAndActiveTrue(Long studentId, Long sessionId);
 
-    Page<StudentEnrollment> findByStudentId(Long studentId, Pageable pageable);
+  Page<StudentEnrollment> findByClassId(Long classId, Pageable pageable);
 
-    Page<StudentEnrollment> findBySessionId(Long sessionId, Pageable pageable);
+  Page<StudentEnrollment> findByStudentId(Long studentId, Pageable pageable);
 
-    List<StudentEnrollment> findByStudentIdOrderBySessionIdAsc(Long studentId);
+  Page<StudentEnrollment> findBySessionId(Long sessionId, Pageable pageable);
 
-    List<StudentEnrollment> findByStudentIdAndSessionId(Long studentId, Long sessionId);
+  List<StudentEnrollment> findByStudentIdOrderBySessionIdAsc(Long studentId);
 
-    List<StudentEnrollment> findByClassIdAndSessionId(Long classId, Long sessionId);
+  List<StudentEnrollment> findByStudentIdAndSessionId(Long studentId, Long sessionId);
 
-    long countBySchoolIdAndSessionIdAndActiveTrue(Long schoolId, Long sessionId);
+  List<StudentEnrollment> findByClassIdAndSessionId(Long classId, Long sessionId);
 
-    long countByClassIdAndSessionIdAndActiveTrue(Long classId, Long sessionId);
+  long countBySchoolIdAndSessionIdAndActiveTrue(Long schoolId, Long sessionId);
 
-    @Lock(LockModeType.PESSIMISTIC_WRITE)
-    @Query("""
-            select e from StudentEnrollment e
-            where e.studentId = :studentId
-              and e.active = true
-            """)
-    List<StudentEnrollment> findActiveByStudentIdForUpdate(@Param("studentId") Long studentId);
+  long countByClassIdAndSessionIdAndActiveTrue(Long classId, Long sessionId);
 
-    boolean existsByStudentIdAndSessionIdAndActiveTrue(Long studentId, Long sessionId);
+  @Lock(LockModeType.PESSIMISTIC_WRITE)
+  @Query("""
+      select e from StudentEnrollment e
+      where e.studentId = :studentId
+        and e.active = true
+      """)
+  List<StudentEnrollment> findActiveByStudentIdForUpdate(@Param("studentId") Long studentId);
+
+  boolean existsByStudentIdAndSessionIdAndActiveTrue(Long studentId, Long sessionId);
 
 }

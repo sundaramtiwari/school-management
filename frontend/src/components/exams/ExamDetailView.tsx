@@ -165,8 +165,17 @@ export default function ExamDetailView({ exam: initialExam, classId, onClose }: 
         }
         try {
             setIsSavingMarks(true);
-            await examApi.saveMarksBulk(exam.id, { marks: editedMarks });
-            showToast("Marks saved successfully", "success");
+            const res = await examApi.saveMarksBulk(exam.id, { marks: editedMarks });
+            const data = res.data;
+
+            if (data?.skippedCount > 0) {
+                const skippedText = data.skippedSubjects
+                    .map((s: any) => s.subjectName || `Subject #${s.subjectId}`)
+                    .join(", ");
+                showToast(`Saved ${data.savedCount} entries. Skipped: ${skippedText}`, "warning", 8000);
+            } else {
+                showToast(`Marks saved successfully (${data.savedCount} entries)`, "success");
+            }
             void loadExistingMarks();
         } catch {
             showToast("Failed to save marks", "error");
