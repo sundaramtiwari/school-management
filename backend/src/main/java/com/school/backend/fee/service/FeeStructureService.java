@@ -160,6 +160,7 @@ public class FeeStructureService {
                 .filter(s -> fs.getSchoolId().equals(s.getSchoolId()))
                 .orElse(null);
 
+        // Fallback: If session or dates are missing, charge the full year amount
         if (session == null || session.getStartDate() == null || session.getEndDate() == null) {
             return fs.getAmount().multiply(BigDecimal.valueOf(fs.getFrequency().getPeriodsPerYear()));
         }
@@ -171,17 +172,19 @@ public class FeeStructureService {
                 .filter(d -> d.isAfter(session.getStartDate()))
                 .orElse(session.getStartDate());
 
-        long months = ChronoUnit.MONTHS.between(
+        // Calculate total months remaining in session from effective start date
+        long monthsRemaining = ChronoUnit.MONTHS.between(
                 effectiveStart.withDayOfMonth(1), // normalize to month start
                 session.getEndDate().plusDays(1));
 
-        if (months <= 0)
-            months = 1; // minimum 1 month
+        if (monthsRemaining <= 0) {
+            monthsRemaining = 1; // minimum 1 month
+        }
 
         return switch (fs.getFrequency()) {
-            case MONTHLY -> fs.getAmount().multiply(BigDecimal.valueOf(months));
-            case QUARTERLY -> fs.getAmount().multiply(BigDecimal.valueOf(Math.ceil(months / 3.0)));
-            case HALF_YEARLY -> fs.getAmount().multiply(BigDecimal.valueOf(Math.ceil(months / 6.0)));
+            case MONTHLY -> fs.getAmount().multiply(BigDecimal.valueOf(monthsRemaining));
+            case QUARTERLY -> fs.getAmount().multiply(BigDecimal.valueOf(Math.ceil(monthsRemaining / 3.0)));
+            case HALF_YEARLY -> fs.getAmount().multiply(BigDecimal.valueOf(Math.ceil(monthsRemaining / 6.0)));
             default -> fs.getAmount();
         };
     }

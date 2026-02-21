@@ -12,4 +12,9 @@ public interface StudentFundingArrangementRepository extends JpaRepository<Stude
 
     @Query("SELECT sfa FROM StudentFundingArrangement sfa WHERE sfa.studentId = :studentId AND sfa.sessionId = :sessionId AND sfa.active = true")
     Optional<StudentFundingArrangement> findActiveByStudentAndSession(Long studentId, Long sessionId);
+
+    Optional<StudentFundingArrangement> findByStudentIdAndSessionIdAndSchoolIdAndActiveTrue(
+            Long studentId, Long sessionId, Long schoolId);
+
+    long countByStudentIdAndSessionIdAndSchoolIdAndActiveTrue(Long studentId, Long sessionId, Long schoolId);
 }

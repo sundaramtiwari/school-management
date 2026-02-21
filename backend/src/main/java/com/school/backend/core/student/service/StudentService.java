@@ -144,6 +144,18 @@ public class StudentService {
         }
     }
 
+    private void validateExactlyOnePrimaryGuardian(List<GuardianCreateRequest> guardians) {
+        long primaryCount = guardians.stream()
+                .filter(GuardianCreateRequest::isPrimaryGuardian)
+                .count();
+        if (primaryCount == 0) {
+            throw new IllegalArgumentException("Exactly one primary guardian is required");
+        }
+        if (primaryCount > 1) {
+            throw new IllegalArgumentException("Only one primary guardian is allowed");
+        }
+    }
+
     private void linkGuardians(Long studentId, Long schoolId,
             List<com.school.backend.core.guardian.dto.GuardianCreateRequest> guardians) {
         long primaryCount = guardians.stream().filter(GuardianCreateRequest::isPrimaryGuardian).count();
@@ -229,15 +241,7 @@ public class StudentService {
             throw new IllegalArgumentException("At least one guardian is required");
         }
 
-        long primaryCount = requests.stream()
-                .filter(GuardianCreateRequest::isPrimaryGuardian)
-                .count();
-        if (primaryCount == 0) {
-            throw new IllegalArgumentException("Exactly one primary guardian is required");
-        }
-        if (primaryCount > 1) {
-            throw new IllegalArgumentException("Only one primary guardian is allowed");
-        }
+        validateExactlyOnePrimaryGuardian(requests);
 
         // ── 2. Tenant + ownership check ────────────────────────────────────────
         Long schoolId = TenantContext.getSchoolId();
@@ -259,7 +263,7 @@ public class StudentService {
         Set<Long> incomingGuardianIds = new HashSet<>();
 
         for (GuardianCreateRequest req : requests) {
-            Guardian guardian = guardianService.findOrCreateByContact(schoolId, req);
+            Guardian guardian = guardianService.findOrCreateByContactWithoutMutatingExisting(schoolId, req);
             Long guardianId = guardian.getId();
             incomingGuardianIds.add(guardianId);
 

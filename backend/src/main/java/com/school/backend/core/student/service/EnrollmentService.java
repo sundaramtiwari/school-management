@@ -1,6 +1,7 @@
 package com.school.backend.core.student.service;
 
 import com.school.backend.common.exception.ResourceNotFoundException;
+import com.school.backend.common.exception.InvalidOperationException;
 import com.school.backend.core.classsubject.repository.SchoolClassRepository;
 import com.school.backend.core.student.dto.StudentEnrollmentDto;
 import com.school.backend.core.student.dto.StudentEnrollmentRequest;
@@ -36,11 +37,23 @@ public class EnrollmentService {
 
     @Transactional
     public StudentEnrollmentDto enroll(StudentEnrollmentRequest req) {
+        Long schoolId = TenantContext.getSchoolId();
+
         // verify student & class
         studentRepository.findById(req.getStudentId())
                 .orElseThrow(() -> new ResourceNotFoundException("Student not found"));
         classRepository.findById(req.getClassId())
                 .orElseThrow(() -> new ResourceNotFoundException("Class not found"));
+
+        long activeCount = enrollmentRepository.countByStudentIdAndSessionIdAndSchoolIdAndActiveTrue(
+                req.getStudentId(), req.getSessionId(), schoolId);
+        if (activeCount > 1) {
+            throw new InvalidOperationException(
+                    "Data integrity violation: multiple active enrollments found for student/session.");
+        }
+        if (activeCount == 1) {
+            throw new InvalidOperationException("Student already has an active enrollment for this session.");
+        }
 
         StudentEnrollment ent = enrollmentMapper.toEntity(req);
         ent.setEnrollmentDate(req.getEnrollmentDate() != null ? req.getEnrollmentDate() : LocalDate.now());
@@ -53,7 +66,6 @@ public class EnrollmentService {
         });
 
         // Trigger Auto-Assignment of Fees
-        Long schoolId = TenantContext.getSchoolId();
         List<FeeStructure> existingFees = feeStructureRepository.findByClassIdAndSessionIdAndSchoolId(
                 req.getClassId(), req.getSessionId(), schoolId);
 
