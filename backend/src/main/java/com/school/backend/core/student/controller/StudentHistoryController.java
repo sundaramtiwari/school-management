@@ -23,4 +23,11 @@ public class StudentHistoryController {
         return ResponseEntity.ok(service.getEnrollmentHistory(studentId));
     }
 
+    @GetMapping("/promotions")
+    public ResponseEntity<List<com.school.backend.core.student.dto.PromotionRecordDto>> getPromotions(
+            @PathVariable Long studentId) {
+
+        return ResponseEntity.ok(service.getPromotionHistory(studentId));
+    }
+
 }

@@ -23,4 +23,11 @@ public class TeacherController {
     public ResponseEntity<List<TeacherListItemDto>> listTeachers() {
         return ResponseEntity.ok(teacherService.listTeachersBySchoolId());
     }
+
+    @GetMapping("/teachers/by-user/{userId}")
+    @PreAuthorize("hasAnyRole('SCHOOL_ADMIN', 'PLATFORM_ADMIN', 'SUPER_ADMIN', 'TEACHER', 'ACCOUNTANT')")
+    public ResponseEntity<TeacherListItemDto> getTeacherByUserId(
+            @org.springframework.web.bind.annotation.PathVariable Long userId) {
+        return ResponseEntity.ok(teacherService.getByUserId(userId));
+    }
 }

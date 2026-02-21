@@ -147,7 +147,7 @@ export default function TransportPage() {
 
     return (
         <div className="mx-auto px-6 py-6 space-y-6">
-            <header className="flex justify-between items-center">
+            <header className="flex justify-between items-center mb-2">
                 <div>
                     <h1 className="text-lg font-semibold">Transport Management</h1>
                     <p className="text-gray-500 text-base mt-1">Define routes and associated pickup point fees.</p>
@@ -160,6 +160,14 @@ export default function TransportPage() {
                     <span>+</span> New Route
                 </button>
             </header>
+
+            <div className="bg-blue-50 text-blue-800 p-4 rounded-lg flex items-start gap-3 border border-blue-100 mb-6 font-medium text-sm">
+                <span className="text-blue-500">ℹ️</span>
+                <p>
+                    <strong className="font-bold">Note:</strong> Transport fee billing uses the core Fee Structure.
+                    The Pickup Point fees listed below are for informational/routing purposes and are not directly billed here.
+                </p>
+            </div>
 
             <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
                 {/* Routes List */}

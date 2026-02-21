@@ -79,6 +79,23 @@ type StudentEnrollmentDto = {
   remarks: string;
 };
 
+type PromotionRecordDto = {
+  id: number;
+  studentId: number;
+  sourceSessionId: number;
+  sourceSessionName: string;
+  targetSessionId: number;
+  targetSessionName: string;
+  sourceClassId: number;
+  sourceClassName: string;
+  targetClassId: number;
+  targetClassName: string;
+  promotionType: "PROMOTED" | "DEMOTED" | "GRADUATED";
+  remarks?: string;
+  promotedBy: string;
+  promotedAt: string;
+};
+
 type StudentFundingArrangement = {
   id: number;
   studentId: number;
@@ -129,12 +146,15 @@ export default function StudentsPage() {
   const [profileStudent, setProfileStudent] = useState<Student | null>(null);
   const [loadingProfile, setLoadingProfile] = useState(false);
   const [isEditing, setIsEditing] = useState(false);
-  const [profileTab, setProfileTab] = useState<"overview" | "ledger" | "enrollments" | "funding">("overview");
+  const [profileTab, setProfileTab] = useState<"overview" | "ledger" | "enrollments" | "promotions" | "funding">("overview");
   const [ledgerLoading, setLedgerLoading] = useState(false);
   const [ledgerData, setLedgerData] = useState<LedgerEntry[]>([]);
 
   const [enrollmentsLoading, setEnrollmentsLoading] = useState(false);
   const [enrollmentsData, setEnrollmentsData] = useState<StudentEnrollmentDto[]>([]);
+
+  const [promotionsLoading, setPromotionsLoading] = useState(false);
+  const [promotionsData, setPromotionsData] = useState<PromotionRecordDto[]>([]);
 
   const [fundingLoading, setFundingLoading] = useState(false);
   const [fundingData, setFundingData] = useState<StudentFundingArrangement | null>(null);
@@ -271,6 +291,19 @@ export default function StudentsPage() {
     }
   }, [showToast]);
 
+  const loadPromotions = useCallback(async (studentId: number) => {
+    try {
+      setPromotionsLoading(true);
+      const res = await studentApi.getPromotionHistory(studentId);
+      setPromotionsData(Array.isArray(res.data) ? res.data : []);
+    } catch {
+      showToast("Failed to load promotion history", "error");
+      setPromotionsData([]);
+    } finally {
+      setPromotionsLoading(false);
+    }
+  }, [showToast]);
+
   const loadFunding = useCallback(async (studentId: number, sessionId: number) => {
     try {
       setFundingLoading(true);
@@ -314,10 +347,12 @@ export default function StudentsPage() {
       void loadStudentLedger(profileStudent.id);
     } else if (profileTab === "enrollments") {
       void loadEnrollments(profileStudent.id);
+    } else if (profileTab === "promotions") {
+      void loadPromotions(profileStudent.id);
     } else if (profileTab === "funding" && currentSession) {
       void loadFunding(profileStudent.id, currentSession.id);
     }
-  }, [showProfileModal, profileTab, profileStudent?.id, currentSession?.id, loadStudentLedger, loadEnrollments, loadFunding]);
+  }, [showProfileModal, profileTab, profileStudent?.id, currentSession?.id, loadStudentLedger, loadEnrollments, loadPromotions, loadFunding]);
 
   /* ---------------- Handlers ---------------- */
 
@@ -362,6 +397,7 @@ export default function StudentsPage() {
       setProfileTab("overview");
       setLedgerData([]);
       setEnrollmentsData([]);
+      setPromotionsData([]);
       setFundingData(null);
       setShowProfileModal(true);
 
@@ -399,6 +435,7 @@ export default function StudentsPage() {
     setProfileStudent(null);
     setLedgerData([]);
     setEnrollmentsData([]);
+    setPromotionsData([]);
     setFundingData(null);
     setProfileTab("overview");
   }, []);
@@ -1553,6 +1590,65 @@ export default function StudentsPage() {
                             <span className={`px-2 py-0.5 rounded-full text-[10px] font-bold uppercase border ${e.active ? 'bg-green-50 text-green-700 border-green-200' : 'bg-gray-100 text-gray-600 border-gray-200'}`}>
                               {e.active ? "Active" : "Past"}
                             </span>
+                          </td>
+                        </tr>
+                      ))}
+                    </tbody>
+                  </table>
+                </div>
+              )}
+            </div>
+          )}
+
+          {profileTab === "promotions" && (
+            <div className="space-y-3">
+              {promotionsLoading ? (
+                <TableSkeleton rows={3} cols={6} />
+              ) : promotionsData.length === 0 ? (
+                <div className="text-sm text-gray-500">No promotion history found.</div>
+              ) : (
+                <div className="overflow-hidden border border-gray-200 rounded-lg">
+                  <table className="min-w-full divide-y divide-gray-200 text-sm">
+                    <thead className="bg-gray-50">
+                      <tr>
+                        <th className="px-4 py-3 text-left font-medium text-gray-500 uppercase tracking-wider text-[10px]">Type</th>
+                        <th className="px-4 py-3 text-left font-medium text-gray-500 uppercase tracking-wider text-[10px]">From Session</th>
+                        <th className="px-4 py-3 text-left font-medium text-gray-500 uppercase tracking-wider text-[10px]">To Session</th>
+                        <th className="px-4 py-3 text-left font-medium text-gray-500 uppercase tracking-wider text-[10px]">From Class</th>
+                        <th className="px-4 py-3 text-left font-medium text-gray-500 uppercase tracking-wider text-[10px]">To Class</th>
+                        <th className="px-4 py-3 text-center font-medium text-gray-500 uppercase tracking-wider text-[10px]">Date / By</th>
+                      </tr>
+                    </thead>
+                    <tbody className="bg-white divide-y divide-gray-200">
+                      {promotionsData.map((p) => (
+                        <tr key={p.id}>
+                          <td className="px-4 py-3 text-[11px] font-bold">
+                            <span className={`px-2 py-0.5 rounded-full uppercase tracking-wider ${p.promotionType === 'PROMOTED' || p.promotionType === 'GRADUATED'
+                                ? 'bg-green-100 text-green-700'
+                                : 'bg-red-100 text-red-700'
+                              }`}>
+                              {p.promotionType}
+                            </span>
+                          </td>
+                          <td className="px-4 py-3 text-gray-800 text-[11px]">
+                            {p.sourceSessionName || `Session ${p.sourceSessionId}`}
+                          </td>
+                          <td className="px-4 py-3 font-semibold text-blue-800 text-[11px]">
+                            {p.targetSessionName || `Session ${p.targetSessionId}`}
+                          </td>
+                          <td className="px-4 py-3 text-gray-800 text-[11px]">
+                            {p.sourceClassName || `Class ${p.sourceClassId}`}
+                          </td>
+                          <td className="px-4 py-3 font-semibold text-blue-800 text-[11px]">
+                            {p.targetClassName || `Class ${p.targetClassId}`}
+                          </td>
+                          <td className="px-4 py-3 text-center">
+                            <div className="text-[10px] text-gray-900 font-mono">
+                              {new Date(p.promotedAt).toLocaleDateString()}
+                            </div>
+                            <div className="text-[9px] text-gray-400 mt-1 uppercase">
+                              by {p.promotedBy}
+                            </div>
                           </td>
                         </tr>
                       ))}

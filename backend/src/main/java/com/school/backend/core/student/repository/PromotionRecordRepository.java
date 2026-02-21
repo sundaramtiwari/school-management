@@ -8,4 +8,6 @@ import java.util.List;
 public interface PromotionRecordRepository extends JpaRepository<PromotionRecord, Long> {
 
     List<PromotionRecord> findByStudentIdOrderByPromotedAtAsc(Long studentId);
+
+    List<PromotionRecord> findByStudentIdAndSchoolIdOrderByPromotedAtAsc(Long studentId, Long schoolId);
 }

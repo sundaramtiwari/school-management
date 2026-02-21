@@ -26,9 +26,25 @@ public class TeacherService {
                 .collect(Collectors.toList());
     }
 
+    @Transactional(readOnly = true)
+    public TeacherListItemDto getByUserId(Long userId) {
+        Long schoolId = SecurityUtil.schoolId();
+        Teacher teacher = teacherRepository.findByUserId(userId)
+                .orElseThrow(() -> new com.school.backend.common.exception.ResourceNotFoundException(
+                        "Teacher not found for user: " + userId));
+
+        if (!teacher.getSchoolId().equals(schoolId)) {
+            throw new org.springframework.security.access.AccessDeniedException(
+                    "Teacher does not belong to current school");
+        }
+
+        return toListItemDto(teacher);
+    }
+
     private TeacherListItemDto toListItemDto(Teacher t) {
         TeacherListItemDto dto = new TeacherListItemDto();
         dto.setId(t.getId());
+        dto.setUserId(t.getUser() != null ? t.getUser().getId() : null);
         dto.setFullName(t.getUser() != null && t.getUser().getFullName() != null ? t.getUser().getFullName() : "");
         return dto;
     }

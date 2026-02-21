@@ -6,6 +6,7 @@ import { canMutateFinance } from "@/lib/permissions";
 import { useToast } from "@/components/ui/Toast";
 import { Skeleton, TableSkeleton } from "@/components/ui/Skeleton";
 import { useAuth } from "@/context/AuthContext";
+import { useSession } from "@/context/SessionContext";
 
 type Defaulter = {
   studentId: number;
@@ -22,7 +23,16 @@ type Defaulter = {
 export default function FeeDefaultersPage() {
   const { user } = useAuth();
   const { showToast } = useToast();
+  const { sessions, currentSession } = useSession();
   const canManageFinance = canMutateFinance(user?.role);
+
+  const [selectedSessionId, setSelectedSessionId] = useState<string>("");
+
+  useEffect(() => {
+    if (currentSession?.id && !selectedSessionId) {
+      setSelectedSessionId(currentSession.id.toString());
+    }
+  }, [currentSession, selectedSessionId]);
 
   const [defaulters, setDefaulters] = useState<Defaulter[]>([]);
   const [loading, setLoading] = useState(true);
@@ -54,7 +64,7 @@ export default function FeeDefaultersPage() {
 
   useEffect(() => {
     setPage(0);
-  }, [selectedClass, minAmount, minDays]);
+  }, [selectedClass, minAmount, minDays, selectedSessionId]);
 
   const loadClasses = useCallback(async () => {
     try {
@@ -76,6 +86,7 @@ export default function FeeDefaultersPage() {
       if (selectedClass) params.append("classId", selectedClass);
       if (minAmount) params.append("minAmountDue", minAmount);
       if (minDays) params.append("minDaysOverdue", minDays);
+      if (selectedSessionId) params.append("sessionId", selectedSessionId);
 
       const res = await api.get(`/api/fees/defaulters?${params.toString()}`);
 
@@ -88,7 +99,7 @@ export default function FeeDefaultersPage() {
     } finally {
       setLoading(false);
     }
-  }, [page, size, debouncedSearch, selectedClass, minAmount, minDays, showToast]);
+  }, [page, size, debouncedSearch, selectedClass, minAmount, minDays, selectedSessionId, showToast]);
 
   useEffect(() => {
     loadClasses();
@@ -113,6 +124,7 @@ export default function FeeDefaultersPage() {
       if (selectedClass) params.append("classId", selectedClass);
       if (minAmount) params.append("minAmountDue", minAmount);
       if (minDays) params.append("minDaysOverdue", minDays);
+      if (selectedSessionId) params.append("sessionId", selectedSessionId);
 
       const res = await api.get(`/api/fees/defaulters/export?${params.toString()}`);
       const exportData: Defaulter[] = res.data || [];
@@ -262,7 +274,23 @@ export default function FeeDefaultersPage() {
           )}
         </div>
 
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
+        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-5 gap-4">
+          <div>
+            <label className="block text-xs font-bold uppercase text-gray-400 mb-2">Session</label>
+            <select
+              value={selectedSessionId}
+              onChange={e => setSelectedSessionId(e.target.value)}
+              className="input w-full font-bold"
+            >
+              <option value="">All Sessions</option>
+              {sessions.map(s => (
+                <option key={s.id} value={s.id}>
+                  {s.name} {s.isActive ? "(Active)" : ""}
+                </option>
+              ))}
+            </select>
+          </div>
+
           <div>
             <label className="block text-xs font-bold uppercase text-gray-400 mb-2">Search Student</label>
             <input
