@@ -24,29 +24,33 @@ public class SessionSeeder {
     @Transactional
     public Result seed(SchoolSeeder.Result schoolResult) {
         List<AcademicSession> sessionsToSave = new ArrayList<>();
+        LocalDate today = LocalDate.now();
+        int activeStartYear = today.getMonthValue() >= 4 ? today.getYear() : today.getYear() - 1;
+        int completedStartYear = activeStartYear - 1;
+        int plannedStartYear = activeStartYear + 1;
 
         for (School school : schoolResult.schools()) {
             AcademicSession completed = AcademicSession.builder()
                     .schoolId(school.getId())
-                    .name("2023-24 (COMPLETED)")
-                    .startDate(LocalDate.of(2024, 4, 1))
-                    .endDate(LocalDate.of(2025, 3, 31))
+                    .name(sessionName(completedStartYear))
+                    .startDate(sessionStart(completedStartYear))
+                    .endDate(sessionEnd(completedStartYear))
                     .active(false)
                     .build();
 
             AcademicSession active = AcademicSession.builder()
                     .schoolId(school.getId())
-                    .name("2024-25 (ACTIVE)")
-                    .startDate(LocalDate.of(2025, 4, 1))
-                    .endDate(LocalDate.of(2026, 3, 31))
+                    .name(sessionName(activeStartYear))
+                    .startDate(sessionStart(activeStartYear))
+                    .endDate(sessionEnd(activeStartYear))
                     .active(true)
                     .build();
 
             AcademicSession planned = AcademicSession.builder()
                     .schoolId(school.getId())
-                    .name("2025-26 (PLANNED)")
-                    .startDate(LocalDate.of(2026, 4, 1))
-                    .endDate(LocalDate.of(2027, 3, 31))
+                    .name(sessionName(plannedStartYear))
+                    .startDate(sessionStart(plannedStartYear))
+                    .endDate(sessionEnd(plannedStartYear))
                     .active(false)
                     .build();
 
@@ -75,6 +79,19 @@ public class SessionSeeder {
         schoolRepository.saveAll(schoolsToUpdate);
 
         return new Result(sessionsBySchool);
+    }
+
+    private String sessionName(int startYear) {
+        int endYearShort = (startYear + 1) % 100;
+        return startYear + "-" + String.format("%02d", endYearShort);
+    }
+
+    private LocalDate sessionStart(int startYear) {
+        return LocalDate.of(startYear, 4, 1);
+    }
+
+    private LocalDate sessionEnd(int startYear) {
+        return LocalDate.of(startYear + 1, 3, 31);
     }
 
     public record SessionTriplet(

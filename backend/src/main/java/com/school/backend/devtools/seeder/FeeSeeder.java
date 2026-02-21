@@ -83,7 +83,7 @@ public class FeeSeeder {
                         .sessionId(schoolClass.getSessionId())
                         .feeType(typeMap.get("Tuition"))
                         .amount(tuitionAmount(schoolClass.getName()))
-                        .frequency(FeeFrequency.ANNUALLY)
+                        .frequency(FeeFrequency.MONTHLY)
                         .dueDayOfMonth(10)
                         .active(true)
                         .build();
@@ -102,21 +102,6 @@ public class FeeSeeder {
                         .build();
                 feeStructuresToSave.add(exam);
                 structureByClassSessionType.put(key(schoolClass.getId(), schoolClass.getSessionId(), "Exam"), exam);
-
-                if (shouldIncludeTransport(schoolClass.getName())) {
-                    FeeStructure transport = FeeStructure.builder()
-                            .schoolId(schoolId)
-                            .classId(schoolClass.getId())
-                            .sessionId(schoolClass.getSessionId())
-                            .feeType(typeMap.get("Transport"))
-                            .amount(BigDecimal.valueOf(8_400).setScale(2, RoundingMode.HALF_UP))
-                            .frequency(FeeFrequency.ANNUALLY)
-                            .dueDayOfMonth(10)
-                            .active(true)
-                            .build();
-                    feeStructuresToSave.add(transport);
-                    structureByClassSessionType.put(key(schoolClass.getId(), schoolClass.getSessionId(), "Transport"), transport);
-                }
             }
         }
 
@@ -169,12 +154,6 @@ public class FeeSeeder {
                     maybeAddPayment(random, enrollment, assignmentsToSave.get(assignmentsToSave.size() - 1), paymentsToSave);
                 }
 
-                Long transportSession = transportResult.transportSessionByStudentId().get(enrollment.getStudentId());
-                FeeStructure transport = structureByClassSessionType.get(classSessionPrefix + "Transport");
-                if (transport != null && transportSession != null && transportSession.equals(enrollment.getSessionId())) {
-                    assignmentsToSave.add(buildAssignment(transport, enrollment, sessions, bucket, fundingArrangementByStudentSession, fundingArrangementsToSave));
-                    maybeAddPayment(random, enrollment, assignmentsToSave.get(assignmentsToSave.size() - 1), paymentsToSave);
-                }
             }
         }
 
@@ -211,13 +190,6 @@ public class FeeSeeder {
                 ? BigDecimal.valueOf(4_500)
                 : BigDecimal.valueOf(3_000);
         return amount.setScale(2, RoundingMode.HALF_UP);
-    }
-
-    private boolean shouldIncludeTransport(String className) {
-        return switch (className) {
-            case "Nursery", "LKG", "UKG", "1", "2", "3", "4", "5", "6", "7" -> true;
-            default -> false;
-        };
     }
 
     private Map<String, StudentBucket> buildBuckets(List<Student> students) {

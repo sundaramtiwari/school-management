@@ -25,6 +25,13 @@ import java.util.stream.Collectors;
 @Component
 @RequiredArgsConstructor
 public class ExamSeeder {
+    private static final String[] EXAM_TYPES = {
+            "UNIT_TEST_1",
+            "HALF_YEARLY",
+            "UNIT_TEST_2",
+            "UNIT_TEST_3",
+            "ANNUAL"
+    };
 
     private final ExamRepository examRepository;
     private final ExamSubjectRepository examSubjectRepository;
@@ -35,15 +42,16 @@ public class ExamSeeder {
         List<Exam> examsToSave = new ArrayList<>();
         for (List<SchoolClass> classes : classSubjectResult.classesBySchool().values()) {
             for (SchoolClass schoolClass : classes) {
-                for (int i = 1; i <= 5; i++) {
-                    LocalDate startDate = examDateByIndex(i, schoolClass.getSessionId());
+                for (int i = 0; i < EXAM_TYPES.length; i++) {
+                    String examType = EXAM_TYPES[i];
+                    LocalDate startDate = examDateByIndex(i + 1, schoolClass.getSessionId());
                     examsToSave.add(
                             Exam.builder()
                                     .schoolId(schoolClass.getSchoolId())
                                     .classId(schoolClass.getId())
                                     .sessionId(schoolClass.getSessionId())
-                                    .name("Exam " + i)
-                                    .examType("TERM_" + i)
+                                    .name(examType)
+                                    .examType(examType)
                                     .startDate(startDate)
                                     .endDate(startDate.plusDays(4))
                                     .status(ExamStatus.PUBLISHED)
