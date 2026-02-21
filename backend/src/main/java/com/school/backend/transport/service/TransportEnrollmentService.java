@@ -19,6 +19,7 @@ import com.school.backend.transport.repository.TransportEnrollmentRepository;
 import com.school.backend.transport.repository.TransportRouteRepository;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
+import org.springframework.dao.DataIntegrityViolationException;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -49,9 +50,6 @@ public class TransportEnrollmentService {
     private final FeeTypeRepository feeTypeRepository;
     private final FeeStructureRepository feeStructureRepository;
     private final StudentFeeAssignmentRepository assignmentRepository;
-
-    // Cache for transport fee type to avoid repeated DB queries
-    private FeeType transportFeeTypeCache;
 
     /**
      * Enrolls a student in transport for a session.
@@ -242,7 +240,7 @@ public class TransportEnrollmentService {
         }
 
         // 3. Deactivate transport fee assignment
-        deactivateTransportFeeAssignment(studentId, sessionId);
+        deactivateTransportFeeAssignment(studentId, sessionId, enrollment.getPickupPoint());
 
         log.info("Student {} successfully unenrolled from transport. Capacity restored for route {}",
                 studentId, routeId);
@@ -258,7 +256,7 @@ public class TransportEnrollmentService {
      */
     @Transactional(readOnly = true)
     public List<TransportEnrollmentDto> getActiveEnrollmentsForStudents(java.util.Collection<Long> studentIds,
-            Long sessionId) {
+                                                                        Long sessionId) {
         return enrollmentRepository.findByStudentIdInAndSessionIdAndActiveTrue(studentIds, sessionId)
                 .stream()
                 .map(this::mapToDto)
@@ -272,22 +270,18 @@ public class TransportEnrollmentService {
      * @param studentId Student ID
      * @param sessionId Session ID
      */
-    private void deactivateTransportFeeAssignment(Long studentId, Long sessionId) {
-        FeeType transportType = getOrCreateTransportFeeType();
+    private void deactivateTransportFeeAssignment(Long studentId, Long sessionId, PickupPoint pickupPoint) {
+        Long schoolId = TenantContext.getSchoolId();
+        FeeType transportType = getOrCreateTransportFeeType(schoolId);
 
-        // Find all transport fee structures for this session
-        feeStructureRepository
-                .findByFeeTypeIdAndSessionIdAndClassIdIsNull(transportType.getId(), sessionId)
-                .forEach(structure -> {
-                    // Find and deactivate student's assignment to this structure
-                    assignmentRepository
-                            .findByStudentIdAndFeeStructureIdAndSessionId(studentId, structure.getId(), sessionId)
-                            .ifPresent(assignment -> {
-                                assignment.setActive(false);
-                                assignmentRepository.save(assignment);
-                                log.debug("Deactivated transport fee assignment for student {}", studentId);
-                            });
-                });
+        feeStructureRepository.findByFeeTypeIdAndSessionIdAndClassIdIsNullAndSchoolIdAndAmountAndFrequency(
+                transportType.getId(), sessionId, schoolId, pickupPoint.getAmount(), pickupPoint.getFrequency()).flatMap(structure -> assignmentRepository
+                .findByStudentIdAndFeeStructureIdAndSessionIdAndSchoolId(
+                        studentId, structure.getId(), sessionId, schoolId)).ifPresent(assignment -> {
+            assignment.setActive(false);
+            assignmentRepository.save(assignment);
+            log.debug("Deactivated transport fee assignment for student {}", studentId);
+        });
     }
 
     /**
@@ -304,24 +298,12 @@ public class TransportEnrollmentService {
         Long schoolId = TenantContext.getSchoolId();
 
         // 1. Ensure TRANSPORT FeeType exists
-        FeeType transportFeeType = feeTypeRepository.findByNameAndSchoolId("TRANSPORT", schoolId)
-                .orElseGet(() -> {
-                    log.info("Creating TRANSPORT fee type for school {}", schoolId);
-                    return feeTypeRepository.saveAndFlush(FeeType.builder()
-                            .name("TRANSPORT")
-                            .description("Transport / Bus Fees")
-                            .active(true)
-                            .schoolId(schoolId)
-                            .build());
-                });
+        FeeType transportFeeType = getOrCreateTransportFeeType(schoolId);
 
         // 2. Find or create fee structure for this pickup point's amount and frequency
         FeeStructure structure = feeStructureRepository
-                .findByFeeTypeIdAndSessionIdAndClassIdIsNull(transportFeeType.getId(), sessionId)
-                .stream()
-                .filter(fs -> fs.getAmount().compareTo(pp.getAmount()) == 0
-                        && fs.getFrequency().equals(pp.getFrequency()))
-                .findFirst()
+                .findByFeeTypeIdAndSessionIdAndClassIdIsNullAndSchoolIdAndAmountAndFrequency(
+                        transportFeeType.getId(), sessionId, schoolId, pp.getAmount(), pp.getFrequency())
                 .orElseGet(() -> {
                     log.debug(
                             "Creating new transport fee structure for pickup point {} with amount {} and frequency {}",
@@ -340,7 +322,8 @@ public class TransportEnrollmentService {
 
         // Check if already assigned (and active)
         Optional<StudentFeeAssignment> existingAssignment = assignmentRepository
-                .findByStudentIdAndFeeStructureIdAndSessionId(student.getId(), structure.getId(), sessionId);
+                .findByStudentIdAndFeeStructureIdAndSessionIdAndSchoolId(
+                        student.getId(), structure.getId(), sessionId, schoolId);
 
         if (existingAssignment.isPresent()) {
             StudentFeeAssignment assignment = existingAssignment.get();
@@ -363,7 +346,7 @@ public class TransportEnrollmentService {
                     .sessionId(sessionId)
                     .amount(finalAmount)
                     .active(true)
-                    .schoolId(TenantContext.getSchoolId())
+                    .schoolId(schoolId)
                     .build();
             assignmentRepository.save(assignment);
 
@@ -372,30 +355,27 @@ public class TransportEnrollmentService {
     }
 
     /**
-     * Gets or creates the TRANSPORT fee type.
-     * Uses caching to avoid repeated database queries.
+     * Gets or creates the TRANSPORT fee type for a school.
      *
      * @return Transport FeeType entity
      */
-    private synchronized FeeType getOrCreateTransportFeeType() {
-        if (transportFeeTypeCache == null) {
-            log.debug("Loading TRANSPORT fee type");
-
-            transportFeeTypeCache = feeTypeRepository.findAll().stream()
-                    .filter(t -> t.getName().equalsIgnoreCase("TRANSPORT"))
-                    .findFirst()
-                    .orElseGet(() -> {
-                        log.info("Creating TRANSPORT fee type");
-                        FeeType t = FeeType.builder()
+    private FeeType getOrCreateTransportFeeType(Long schoolId) {
+        return feeTypeRepository.findByNameAndSchoolId("TRANSPORT", schoolId)
+                .orElseGet(() -> {
+                    log.info("Creating TRANSPORT fee type for school {}", schoolId);
+                    try {
+                        return feeTypeRepository.saveAndFlush(FeeType.builder()
                                 .name("TRANSPORT")
                                 .description("Transport / Bus Fees")
                                 .active(true)
-                                .schoolId(TenantContext.getSchoolId())
-                                .build();
-                        return feeTypeRepository.save(t);
-                    });
-        }
-        return transportFeeTypeCache;
+                                .schoolId(schoolId)
+                                .build());
+                    } catch (DataIntegrityViolationException ex) {
+                        // Unique constraint race: another transaction inserted same fee type.
+                        return feeTypeRepository.findByNameAndSchoolId("TRANSPORT", schoolId)
+                                .orElseThrow(() -> ex);
+                    }
+                });
     }
 
     /**

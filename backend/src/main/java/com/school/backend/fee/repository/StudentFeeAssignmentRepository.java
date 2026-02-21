@@ -27,6 +27,9 @@ public interface StudentFeeAssignmentRepository
     Optional<StudentFeeAssignment> findByStudentIdAndFeeStructureIdAndSessionId(
             Long studentId, Long feeStructureId, Long sessionId);
 
+    Optional<StudentFeeAssignment> findByStudentIdAndFeeStructureIdAndSessionIdAndSchoolId(
+            Long studentId, Long feeStructureId, Long sessionId, Long schoolId);
+
     boolean existsByStudentIdAndFeeStructureIdAndSessionId(
             Long studentId,
             Long feeStructureId,
