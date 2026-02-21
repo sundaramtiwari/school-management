@@ -16,8 +16,16 @@ type SchoolClass = {
     name: string;
     section: string;
     stream?: string;
+    capacity?: number | null;
+    classTeacherId?: number | null;
+    remarks?: string | null;
     sessionId: number;
     active: boolean;
+};
+
+type Teacher = {
+    id: number;
+    fullName: string;
 };
 
 export default function ClassesPage() {
@@ -33,11 +41,15 @@ export default function ClassesPage() {
     const [showForm, setShowForm] = useState(false);
     const [editId, setEditId] = useState<number | null>(null);
     const [postCreateClass, setPostCreateClass] = useState<{ id: number; name: string } | null>(null);
+    const [teachers, setTeachers] = useState<Teacher[]>([]);
 
     const [form, setForm] = useState({
         className: "",
         section: "A",
         stream: "",
+        classTeacherId: "",
+        capacity: "",
+        remarks: "",
         active: true,
     });
 
@@ -60,7 +72,20 @@ export default function ClassesPage() {
         void loadClasses();
     }, [currentSession, loadClasses]);
 
-    function updateField(e: ChangeEvent<HTMLInputElement>) {
+    useEffect(() => {
+        if (!canManageClasses) return;
+        const loadTeachers = async () => {
+            try {
+                const res = await api.get<Teacher[]>("/api/teachers");
+                setTeachers(res.data || []);
+            } catch {
+                setTeachers([]);
+            }
+        };
+        void loadTeachers();
+    }, [canManageClasses]);
+
+    function updateField(e: ChangeEvent<HTMLInputElement | HTMLSelectElement | HTMLTextAreaElement>) {
         const value = e.target.type === "checkbox" ? e.target.checked : e.target.value;
         setForm({ ...form, [e.target.name]: value });
     }
@@ -70,6 +95,9 @@ export default function ClassesPage() {
             className: "",
             section: "A",
             stream: "",
+            classTeacherId: "",
+            capacity: "",
+            remarks: "",
             active: true,
         });
     }
@@ -79,6 +107,9 @@ export default function ClassesPage() {
             className: c.name,
             section: c.section,
             stream: c.stream || "",
+            classTeacherId: c.classTeacherId ? String(c.classTeacherId) : "",
+            capacity: c.capacity != null ? String(c.capacity) : "",
+            remarks: c.remarks || "",
             active: c.active,
         });
         setEditId(c.id);
@@ -98,6 +129,9 @@ export default function ClassesPage() {
                 section: form.section,
                 stream: form.stream || null,
                 sessionId: currentSession.id,
+                classTeacherId: form.classTeacherId ? Number(form.classTeacherId) : null,
+                capacity: form.capacity === "" ? null : Number(form.capacity),
+                remarks: form.remarks?.trim() ? form.remarks.trim() : null,
                 active: form.active,
             };
 
@@ -306,6 +340,49 @@ export default function ClassesPage() {
                                     className="input-ref"
                                 />
                             </div>
+                        </div>
+
+                        <div className="grid grid-cols-2 gap-4">
+                            <div>
+                                <label className="block text-xs font-bold text-gray-400 uppercase mb-2 ml-1">Class Teacher</label>
+                                <select
+                                    name="classTeacherId"
+                                    value={form.classTeacherId}
+                                    onChange={updateField}
+                                    className="input-ref"
+                                >
+                                    <option value="">Select teacher</option>
+                                    {teachers.map((teacher) => (
+                                        <option key={teacher.id} value={teacher.id}>
+                                            {teacher.fullName}
+                                        </option>
+                                    ))}
+                                </select>
+                            </div>
+                            <div>
+                                <label className="block text-xs font-bold text-gray-400 uppercase mb-2 ml-1">Capacity</label>
+                                <input
+                                    type="number"
+                                    min={0}
+                                    name="capacity"
+                                    placeholder="e.g. 40"
+                                    value={form.capacity}
+                                    onChange={updateField}
+                                    className="input-ref"
+                                />
+                            </div>
+                        </div>
+
+                        <div>
+                            <label className="block text-xs font-bold text-gray-400 uppercase mb-2 ml-1">Remarks</label>
+                            <textarea
+                                name="remarks"
+                                placeholder="Optional notes for this class"
+                                value={form.remarks}
+                                onChange={updateField}
+                                rows={3}
+                                className="input-ref"
+                            />
                         </div>
 
                         <div className="p-4 rounded-lg border border-gray-100 bg-gray-50 text-gray-500 text-base italic">

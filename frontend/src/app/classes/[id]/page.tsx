@@ -11,14 +11,24 @@ type SchoolClass = {
     name: string;
     section: string;
     stream?: string;
+    capacity?: number | null;
+    classTeacherId?: number | null;
+    classTeacherName?: string | null;
+    remarks?: string | null;
     sessionId: number;
     active: boolean;
+};
+
+type Teacher = {
+    id: number;
+    fullName: string;
 };
 
 export default function ClassDetailsPage() {
     const params = useParams();
     const router = useRouter();
     const [schoolClass, setSchoolClass] = useState<SchoolClass | null>(null);
+    const [teachers, setTeachers] = useState<Teacher[]>([]);
     const [loading, setLoading] = useState(true);
     const [activeTab, setActiveTab] = useState<"overview" | "subjects">("overview");
 
@@ -41,6 +51,23 @@ export default function ClassDetailsPage() {
             void loadClass();
         }
     }, [classId, loadClass]);
+
+    useEffect(() => {
+        const loadTeachers = async () => {
+            try {
+                const res = await api.get<Teacher[]>("/api/teachers");
+                setTeachers(res.data || []);
+            } catch {
+                setTeachers([]);
+            }
+        };
+        void loadTeachers();
+    }, []);
+
+    const classTeacherName =
+        schoolClass?.classTeacherName ||
+        teachers.find((teacher) => teacher.id === schoolClass?.classTeacherId)?.fullName ||
+        (schoolClass?.classTeacherId ? `Teacher #${schoolClass.classTeacherId}` : "N/A");
 
     if (loading) {
         return <div className="p-8"><TableSkeleton rows={3} cols={2} /></div>;
@@ -130,6 +157,18 @@ export default function ClassDetailsPage() {
                                             {schoolClass?.active ? "Active" : "Inactive"}
                                         </span>
                                     </dd>
+                                </div>
+                                <div className="bg-gray-50 px-4 py-5 sm:grid sm:grid-cols-3 sm:gap-4 sm:px-6">
+                                    <dt className="text-sm font-medium text-gray-500">Class Teacher</dt>
+                                    <dd className="mt-1 text-sm text-gray-900 sm:mt-0 sm:col-span-2">{classTeacherName}</dd>
+                                </div>
+                                <div className="bg-white px-4 py-5 sm:grid sm:grid-cols-3 sm:gap-4 sm:px-6">
+                                    <dt className="text-sm font-medium text-gray-500">Capacity</dt>
+                                    <dd className="mt-1 text-sm text-gray-900 sm:mt-0 sm:col-span-2">{schoolClass?.capacity ?? "N/A"}</dd>
+                                </div>
+                                <div className="bg-gray-50 px-4 py-5 sm:grid sm:grid-cols-3 sm:gap-4 sm:px-6">
+                                    <dt className="text-sm font-medium text-gray-500">Remarks</dt>
+                                    <dd className="mt-1 text-sm text-gray-900 sm:mt-0 sm:col-span-2">{schoolClass?.remarks || "N/A"}</dd>
                                 </div>
                             </dl>
                         </div>

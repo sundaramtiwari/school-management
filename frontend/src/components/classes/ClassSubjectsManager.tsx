@@ -3,6 +3,7 @@
 import { useCallback, useEffect, useState } from "react";
 import { classSubjectApi, ClassSubjectData } from "@/lib/classSubjectApi";
 import { subjectApi, SubjectData } from "@/lib/subjectApi";
+import { api } from "@/lib/api";
 import Modal from "@/components/ui/Modal";
 import { useToast } from "@/components/ui/Toast";
 
@@ -10,12 +11,19 @@ interface ClassSubjectsManagerProps {
     classId: number;
 }
 
+type Teacher = {
+    id: number;
+    fullName: string;
+};
+
 export default function ClassSubjectsManager({ classId }: ClassSubjectsManagerProps) {
     const [assigned, setAssigned] = useState<ClassSubjectData[]>([]);
     const [loading, setLoading] = useState(true);
     const [isAssignModalOpen, setIsAssignModalOpen] = useState(false);
     const [availableSubjects, setAvailableSubjects] = useState<SubjectData[]>([]);
+    const [teachers, setTeachers] = useState<Teacher[]>([]);
     const [selectedSubjectId, setSelectedSubjectId] = useState<string>("");
+    const [selectedTeacherId, setSelectedTeacherId] = useState<string>("");
     const [assigning, setAssigning] = useState(false);
     const { showToast } = useToast();
 
@@ -49,24 +57,31 @@ export default function ClassSubjectsManager({ classId }: ClassSubjectsManagerPr
 
     const openAssignModal = async () => {
         setIsAssignModalOpen(true);
-        // Fetch active subjects for dropdown
+        setSelectedSubjectId("");
+        setSelectedTeacherId("");
         try {
-            const data = await subjectApi.getAll(0, 100, true); // Active only
+            const [subjectsRes, teachersRes] = await Promise.all([
+                subjectApi.getAll(0, 100, true),
+                api.get<Teacher[]>("/api/teachers"),
+            ]);
+            const data = subjectsRes;
             setAvailableSubjects(data.content);
+            setTeachers(teachersRes.data || []);
         } catch (error) {
-            console.error("Failed to fetch subjects", error);
-            showToast("Failed to fetch active subjects", "error");
+            console.error("Failed to fetch assign modal data", error);
+            showToast("Failed to fetch subjects or teachers", "error");
         }
     };
 
     const handleAssign = async () => {
-        if (!selectedSubjectId) return;
+        if (!selectedSubjectId || !selectedTeacherId) return;
         setAssigning(true);
         try {
-            await classSubjectApi.assign(classId, parseInt(selectedSubjectId));
+            await classSubjectApi.assign(classId, parseInt(selectedSubjectId), parseInt(selectedTeacherId));
             showToast("Subject assigned successfully", "success");
             setIsAssignModalOpen(false);
             setSelectedSubjectId("");
+            setSelectedTeacherId("");
             fetchAssigned();
         } catch (error: unknown) {
             console.error("Failed to assign subject", error);
@@ -97,7 +112,7 @@ export default function ClassSubjectsManager({ classId }: ClassSubjectsManagerPr
             </button>
             <button
                 onClick={handleAssign}
-                disabled={assigning || !selectedSubjectId}
+                disabled={assigning || !selectedSubjectId || !selectedTeacherId}
                 className="px-4 py-2 bg-blue-600 text-white rounded-md hover:bg-blue-700 disabled:opacity-50"
             >
                 {assigning ? "Assigning..." : "Assign"}
@@ -123,23 +138,27 @@ export default function ClassSubjectsManager({ classId }: ClassSubjectsManagerPr
                         <tr>
                             <th className="px-6 py-3">Subject Name</th>
                             <th className="px-6 py-3">Code</th>
+                            <th className="px-6 py-3">Teacher</th>
                             <th className="px-6 py-3">Actions</th>
                         </tr>
                     </thead>
                     <tbody>
                         {loading ? (
                             <tr>
-                                <td colSpan={3} className="px-6 py-4 text-center">Loading...</td>
+                                <td colSpan={4} className="px-6 py-4 text-center">Loading...</td>
                             </tr>
                         ) : assigned.length === 0 ? (
                             <tr>
-                                <td colSpan={3} className="px-6 py-4 text-center">No subjects assigned.</td>
+                                <td colSpan={4} className="px-6 py-4 text-center">No subjects assigned.</td>
                             </tr>
                         ) : (
                             assigned.map((item) => (
                                 <tr key={item.id} className="border-b hover:bg-gray-50">
                                     <td className="px-6 py-4 font-medium">{item.subjectName}</td>
                                     <td className="px-6 py-4">{item.subjectCode || "-"}</td>
+                                    <td className="px-6 py-4">
+                                        {item.teacherName || teachers.find((teacher) => teacher.id === item.teacherId)?.fullName || "-"}
+                                    </td>
                                     <td className="px-6 py-4">
                                         <button
                                             onClick={() => handleRemove(item.id)}
@@ -176,6 +195,25 @@ export default function ClassSubjectsManager({ classId }: ClassSubjectsManagerPr
                                 {availableSubjects.map((s) => (
                                     <option key={s.id} value={s.id}>
                                         {s.name} ({s.code})
+                                    </option>
+                                ))}
+                            </select>
+                        </div>
+                    </div>
+                    <div className="grid grid-cols-4 items-center gap-4">
+                        <label htmlFor="teacher" className="text-right text-sm font-medium">
+                            Teacher
+                        </label>
+                        <div className="col-span-3">
+                            <select
+                                className="flex h-10 w-full rounded-md border border-gray-300 bg-transparent px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
+                                value={selectedTeacherId}
+                                onChange={(e) => setSelectedTeacherId(e.target.value)}
+                            >
+                                <option value="">Select Teacher</option>
+                                {teachers.map((teacher) => (
+                                    <option key={teacher.id} value={teacher.id}>
+                                        {teacher.fullName}
                                     </option>
                                 ))}
                             </select>
