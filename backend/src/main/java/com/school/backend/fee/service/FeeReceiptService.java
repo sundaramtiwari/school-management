@@ -51,6 +51,10 @@ public class FeeReceiptService {
         Student student = studentRepository.findById(payment.getStudentId())
                 .orElseThrow(() -> new ResourceNotFoundException("Student not found"));
 
+        return generateReceiptPdf(school, student, payment);
+    }
+
+    private byte[] generateReceiptPdf(School school, Student student, FeePayment payment) {
         try (ByteArrayOutputStream out = new ByteArrayOutputStream()) {
             Document document = new Document(PageSize.A4);
             PdfWriter.getInstance(document, out);
@@ -61,7 +65,7 @@ public class FeeReceiptService {
             addSchoolHeader(document, school);
 
             // 2. Receipt Title
-            addReceiptTitle(document, paymentId);
+            addReceiptTitle(document, payment.getId());
 
             // 3. Student & Payment Details
             addDetailsTable(document, student, payment);
@@ -76,7 +80,7 @@ public class FeeReceiptService {
             return out.toByteArray();
 
         } catch (Exception e) {
-            throw new RuntimeException("Error generating receipt", e);
+            throw new RuntimeException("Error generating receipt PDF", e);
         }
     }
 

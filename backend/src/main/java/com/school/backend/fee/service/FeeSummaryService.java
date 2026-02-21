@@ -1,5 +1,7 @@
 package com.school.backend.fee.service;
 
+import com.school.backend.common.tenant.SessionContext;
+import com.school.backend.common.tenant.TenantContext;
 import com.school.backend.common.exception.ResourceNotFoundException;
 import com.school.backend.core.student.entity.Student;
 import com.school.backend.core.student.repository.StudentEnrollmentRepository;
@@ -54,12 +56,8 @@ public class FeeSummaryService {
         // ---------------------------------------------------
         @Transactional(readOnly = true)
         public FeeStatsDto getDashboardStats(Long sessionId) {
-
+                Long effectiveSessionId = validateAndGetSessionId(sessionId);
                 Long schoolId = SecurityUtil.schoolId();
-
-                if (!sessionRepository.existsByIdAndSchoolId(sessionId, schoolId)) {
-                        throw new ResourceNotFoundException("Session not found: " + sessionId);
-                }
 
                 // 1. Today's Collection
                 BigDecimal todayPaid = paymentRepository
@@ -69,14 +67,14 @@ public class FeeSummaryService {
 
                 // 2. Total Students (SESSION AWARE)
                 long totalStudents = enrollmentRepository
-                                .countBySchoolIdAndSessionIdAndActiveTrue(schoolId, sessionId);
+                                .countBySchoolIdAndSessionIdAndActiveTrue(schoolId, effectiveSessionId);
 
                 // 3. Optimized Pending Calculation (NO N+1)
                 BigDecimal totalAssigned = assignmentRepository
-                                .sumTotalAssignedBySchoolAndSession(schoolId, sessionId);
+                                .sumTotalAssignedBySchoolAndSession(schoolId, effectiveSessionId);
 
                 BigDecimal totalPaid = paymentRepository
-                                .sumTotalPaidBySchoolAndSession(schoolId, sessionId);
+                                .sumTotalPaidBySchoolAndSession(schoolId, effectiveSessionId);
 
                 BigDecimal totalPending = (totalAssigned != null ? totalAssigned : ZERO)
                                 .subtract(totalPaid != null ? totalPaid : ZERO);
@@ -104,11 +102,14 @@ public class FeeSummaryService {
                                 .findByIdAndSchoolId(studentId, schoolId)
                                 .orElseThrow(() -> new ResourceNotFoundException("Student not found: " + studentId));
 
-                AcademicSession session = sessionRepository.findById(sessionId)
-                                .orElseThrow(() -> new ResourceNotFoundException("Session not found: " + sessionId));
+                Long effectiveSessionId = validateAndGetSessionId(sessionId);
+
+                AcademicSession session = sessionRepository.findById(effectiveSessionId)
+                                .orElseThrow(() -> new ResourceNotFoundException(
+                                                "Session not found: " + effectiveSessionId));
 
                 List<StudentFeeAssignment> assignments = assignmentRepository.findByStudentIdAndSessionId(studentId,
-                                sessionId);
+                                effectiveSessionId);
 
                 BigDecimal totalFeeAccrued = assignments.stream()
                                 .map(a -> nz(a.getAmount()))
@@ -263,16 +264,12 @@ public class FeeSummaryService {
         // ---------------------------------------------------
         @Transactional(readOnly = true)
         public List<FeeSummaryDto> getTopDefaulters(Long sessionId, int limit) {
-
+                Long effectiveSessionId = validateAndGetSessionId(sessionId);
                 Long schoolId = SecurityUtil.schoolId();
-
-                if (!sessionRepository.existsByIdAndSchoolId(sessionId, schoolId)) {
-                        throw new ResourceNotFoundException("Session not found: " + sessionId);
-                }
 
                 // 1. Load students (session aware)
                 List<Student> students = studentRepository
-                                .findBySchoolIdAndSessionId(schoolId, sessionId, Pageable.unpaged())
+                                .findBySchoolIdAndSessionId(schoolId, effectiveSessionId, Pageable.unpaged())
                                 .getContent();
 
                 if (students.isEmpty())
@@ -280,7 +277,7 @@ public class FeeSummaryService {
 
                 // 2. Aggregated Assigned
                 var assignedRaw = assignmentRepository
-                                .sumAssignedGroupedByStudent(schoolId, sessionId);
+                                .sumAssignedGroupedByStudent(schoolId, effectiveSessionId);
 
                 var assignedMap = assignedRaw.stream()
                                 .collect(Collectors.toMap(
@@ -289,16 +286,17 @@ public class FeeSummaryService {
 
                 // 3. Aggregated Paid
                 var paidRaw = paymentRepository
-                                .sumPaidGroupedByStudent(schoolId, sessionId);
+                                .sumPaidGroupedByStudent(schoolId, effectiveSessionId);
 
                 var paidMap = paidRaw.stream()
                                 .collect(Collectors.toMap(
                                                 r -> (Long) r[INT_ZERO],
                                                 r -> (java.math.BigDecimal) r[1]));
 
-                String sessionName = sessionRepository.findById(sessionId)
+                String sessionName = sessionRepository.findById(effectiveSessionId)
                                 .map(AcademicSession::getName)
-                                .orElseThrow(() -> new ResourceNotFoundException("Session not found: " + sessionId));
+                                .orElseThrow(() -> new ResourceNotFoundException(
+                                                "Session not found: " + effectiveSessionId));
 
                 List<FeeSummaryDto> results = new ArrayList<>();
 
@@ -601,6 +599,20 @@ public class FeeSummaryService {
                 defaulters.sort((a, b) -> b.getAmountDue().compareTo(a.getAmountDue()));
 
                 return defaulters;
+        }
+
+        private Long validateAndGetSessionId(Long sessionId) {
+                Long effectiveId = (sessionId != null) ? sessionId : SessionContext.getSessionId();
+
+                if (effectiveId == null) {
+                        throw new com.school.backend.common.exception.BusinessException("No active session selected");
+                }
+
+                if (!sessionRepository.existsByIdAndSchoolId(effectiveId, TenantContext.getSchoolId())) {
+                        throw new ResourceNotFoundException("Session not found or access denied: " + effectiveId);
+                }
+
+                return effectiveId;
         }
 
 }
