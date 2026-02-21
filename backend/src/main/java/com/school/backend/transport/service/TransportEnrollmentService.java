@@ -23,6 +23,7 @@ import org.springframework.dao.DataIntegrityViolationException;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
+import java.math.BigDecimal;
 import java.util.List;
 import java.util.Optional;
 
@@ -337,7 +338,7 @@ public class TransportEnrollmentService {
             }
         } else {
             // Create new assignment
-            java.math.BigDecimal finalAmount = structure.getAmount()
+            BigDecimal finalAmount = structure.getAmount()
                     .multiply(java.math.BigDecimal.valueOf(structure.getFrequency().getPeriodsPerYear()));
 
             StudentFeeAssignment assignment = StudentFeeAssignment.builder()

@@ -199,7 +199,7 @@ public class TransportIntegrationTest extends BaseAuthenticatedIntegrationTest {
         ResponseEntity<String> enrollResp = restTemplate.postForEntity(
                 "/api/transport/enrollments", new HttpEntity<>(enrollReq, headers), String.class);
 
-        assertEquals(HttpStatus.INTERNAL_SERVER_ERROR, enrollResp.getStatusCode());
+        assertEquals(HttpStatus.BAD_REQUEST, enrollResp.getStatusCode());
         assertNotNull(enrollResp.getBody());
         assertTrue(enrollResp.getBody().contains("Student must be assigned to a class"));
     }
@@ -232,29 +232,13 @@ public class TransportIntegrationTest extends BaseAuthenticatedIntegrationTest {
         ResponseEntity<String> resp2 = restTemplate.exchange(
                 "/api/transport/enrollments/student/" + testStudent.getId() + "?sessionId=" + sessionId,
                 HttpMethod.DELETE, new HttpEntity<>(headers), String.class);
-        assertEquals(HttpStatus.INTERNAL_SERVER_ERROR, resp2.getStatusCode());
+        assertEquals(HttpStatus.BAD_REQUEST, resp2.getStatusCode());
         assertNotNull(resp2.getBody());
         assertTrue(resp2.getBody().contains("already unenrolled"));
     }
 
     private void cleanup() {
-        // Delete in order to respect foreign key constraints
-        paymentRepository.deleteAllInBatch();
-        enrollmentRepository.deleteAllInBatch();
-        assignmentRepository.deleteAllInBatch();
-        pickupPointRepository.deleteAllInBatch();
-        routeRepository.deleteAllInBatch();
-        // Delete attendance before students using direct SQL
-        try {
-            jdbcTemplate.execute("DELETE FROM student_attendance");
-        } catch (Exception e) {
-            // Ignore if table doesn't exist
-        }
-        studentRepository.deleteAllInBatch();
-        classRepository.deleteAllInBatch();
-        feeStructureRepository.deleteAllInBatch();
-        feeTypeRepository.deleteAllInBatch();
-        sessionRepository.deleteAllInBatch();
+        fullCleanup();
     }
 
     @org.junit.jupiter.api.AfterEach

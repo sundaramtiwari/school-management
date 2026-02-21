@@ -18,6 +18,9 @@ import com.school.backend.school.entity.AcademicSession;
 import com.school.backend.school.entity.School;
 import com.school.backend.school.repository.AcademicSessionRepository;
 import com.school.backend.school.repository.SchoolRepository;
+import com.school.backend.transport.repository.PickupPointRepository;
+import com.school.backend.transport.repository.TransportEnrollmentRepository;
+import com.school.backend.transport.repository.TransportRouteRepository;
 import com.school.backend.user.repository.UserRepository;
 import org.junit.jupiter.api.BeforeEach;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -71,6 +74,12 @@ public abstract class BaseAuthenticatedIntegrationTest {
     protected StudentFeeAssignmentRepository assignmentRepository;
     @Autowired
     protected FeePaymentRepository feePaymentRepository;
+    @Autowired
+    protected TransportEnrollmentRepository transportEnrollmentRepository;
+    @Autowired
+    protected PickupPointRepository pickupPointRepository;
+    @Autowired
+    protected TransportRouteRepository transportRouteRepository;
 
     protected String token;
     protected HttpHeaders headers;
@@ -113,6 +122,9 @@ public abstract class BaseAuthenticatedIntegrationTest {
     }
 
     protected void fullCleanup() {
+        transportEnrollmentRepository.deleteAll();
+        pickupPointRepository.deleteAll();
+        transportRouteRepository.deleteAll();
         attendanceRepository.deleteAll();
         promotionRecordRepository.deleteAll();
         studentEnrollmentRepository.deleteAll();

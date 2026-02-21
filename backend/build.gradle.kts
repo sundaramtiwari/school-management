@@ -64,6 +64,26 @@ dependencies {
     testAnnotationProcessor("org.projectlombok:lombok")
 }
 
-tasks.withType<Test> {
+tasks.test {
     useJUnitPlatform()
+    description = "Runs fast, non-integration tests in parallel."
+    exclude("**/*IntegrationTest.class")
+    exclude("**/BackendApplicationTests.class")
+    maxParallelForks = (Runtime.getRuntime().availableProcessors() / 2).coerceAtLeast(1)
+}
+
+val integrationTest by tasks.registering(Test::class) {
+    useJUnitPlatform()
+    description = "Runs Spring Boot/integration tests sequentially."
+    group = LifecycleBasePlugin.VERIFICATION_GROUP
+    testClassesDirs = sourceSets.test.get().output.classesDirs
+    classpath = sourceSets.test.get().runtimeClasspath
+    include("**/*IntegrationTest.class")
+    include("**/BackendApplicationTests.class")
+    maxParallelForks = 1
+    shouldRunAfter(tasks.test)
+}
+
+tasks.check {
+    dependsOn(integrationTest)
 }

@@ -79,33 +79,27 @@ public class FeePaymentConcurrencyIntegrationTest extends BaseAuthenticatedInteg
         }
 
         int successCount = 0;
-        int failureCount = 0;
+        BigDecimal successfulPaidTotal = BigDecimal.ZERO;
 
-        if (resA != null && resA.getStatusCode() == HttpStatus.OK)
+        if (resA != null && resA.getStatusCode() == HttpStatus.OK) {
             successCount++;
-        else
-            failureCount++;
+            successfulPaidTotal = successfulPaidTotal.add(BigDecimal.valueOf(5000));
+        }
 
-        if (resB != null && resB.getStatusCode() == HttpStatus.OK)
+        if (resB != null && resB.getStatusCode() == HttpStatus.OK) {
             successCount++;
-        else
-            failureCount++;
+            successfulPaidTotal = successfulPaidTotal.add(BigDecimal.valueOf(3000));
+        }
 
-        // One must succeed, one must fail due to @Version on StudentFeeAssignment
-        Assertions.assertThat(successCount).isEqualTo(1);
-        Assertions.assertThat(failureCount).isEqualTo(1);
+        // With pessimistic locking, concurrent requests may serialize and both succeed.
+        Assertions.assertThat(successCount).isBetween(1, 2);
 
-        // Check DB for lost updates
+        // Check DB for lost updates / consistency
         BigDecimal totalPaidInDb = feePaymentRepository.findByStudentId(studentId).stream()
                 .map(p -> p.getAmountPaid())
                 .reduce(BigDecimal.ZERO, BigDecimal::add);
 
-        // Should be either 5000 or 3000, not 8000
-        BigDecimal expectedAmount = (resA != null && resA.getStatusCode() == HttpStatus.OK)
-                ? BigDecimal.valueOf(5000)
-                : BigDecimal.valueOf(3000);
-
-        Assertions.assertThat(totalPaidInDb).isEqualByComparingTo(expectedAmount);
+        Assertions.assertThat(totalPaidInDb).isEqualByComparingTo(successfulPaidTotal);
 
         BigDecimal principalPaidOnAssignment = assignmentRepository.findByStudentIdAndSessionId(studentId, sessionId)
                 .stream()
@@ -113,6 +107,7 @@ public class FeePaymentConcurrencyIntegrationTest extends BaseAuthenticatedInteg
                 .reduce(BigDecimal.ZERO, BigDecimal::add);
 
         Assertions.assertThat(principalPaidOnAssignment).isEqualByComparingTo(totalPaidInDb);
+        Assertions.assertThat(totalPaidInDb).isLessThanOrEqualTo(BigDecimal.valueOf(10000));
 
         executor.shutdown();
     }
