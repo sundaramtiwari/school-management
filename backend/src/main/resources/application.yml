@@ -33,8 +33,9 @@ springdoc:
     enabled: true
 
 jwt:
-  secret: ${JWT_SECRET:default-dev-secret}
-  expiration-ms: 3600000  # 1 hour
+  secret: ${JWT_SECRET:default-dev-secret-key-at-least-32-bytes}
+  expiry:
+    ms: 3600000  # 1 hour
 
 server:
   port: 8080

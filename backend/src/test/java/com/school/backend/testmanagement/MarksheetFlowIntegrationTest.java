@@ -174,8 +174,6 @@ public class MarksheetFlowIntegrationTest extends BaseAuthenticatedIntegrationTe
         /* ---------- Exam ---------- */
 
         ExamCreateRequest examReq = new ExamCreateRequest();
-
-        examReq.setSchoolId(schoolId);
         examReq.setClassId(classId);
         examReq.setSessionId(sessionId);
         examReq.setName("Final Exam");

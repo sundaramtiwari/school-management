@@ -8,7 +8,6 @@ import org.hibernate.Session;
 import org.springframework.core.Ordered;
 import org.springframework.core.annotation.Order;
 import org.springframework.stereotype.Component;
-import org.springframework.transaction.support.TransactionSynchronizationManager;
 
 @Aspect
 @Component
@@ -21,10 +20,6 @@ public class TenantFilterAspect {
     @Before("execution(* com.school.backend..service..*(..))" +
             " || @annotation(org.springframework.transaction.annotation.Transactional)")
     public void enableFilter() {
-        if (!TransactionSynchronizationManager.isActualTransactionActive()) {
-            return;
-        }
-
         Long schoolId = TenantContext.getSchoolId();
 
         if (schoolId != null) {

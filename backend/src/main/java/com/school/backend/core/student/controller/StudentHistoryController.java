@@ -4,6 +4,7 @@ import com.school.backend.core.student.dto.StudentEnrollmentDto;
 import com.school.backend.core.student.service.StudentHistoryService;
 import lombok.RequiredArgsConstructor;
 import org.springframework.http.ResponseEntity;
+import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.web.bind.annotation.*;
 
 import java.util.List;
@@ -17,6 +18,7 @@ public class StudentHistoryController {
 
     // ----------------- Enrollment Timeline -----------------
     @GetMapping("/enrollments")
+    @PreAuthorize("hasAnyRole('SUPER_ADMIN', 'SCHOOL_ADMIN', 'ACCOUNTANT')")
     public ResponseEntity<List<StudentEnrollmentDto>> getEnrollments(
             @PathVariable Long studentId) {
 
@@ -24,6 +26,7 @@ public class StudentHistoryController {
     }
 
     @GetMapping("/promotions")
+    @PreAuthorize("hasAnyRole('SUPER_ADMIN', 'SCHOOL_ADMIN', 'ACCOUNTANT')")
     public ResponseEntity<List<com.school.backend.core.student.dto.PromotionRecordDto>> getPromotions(
             @PathVariable Long studentId) {
 

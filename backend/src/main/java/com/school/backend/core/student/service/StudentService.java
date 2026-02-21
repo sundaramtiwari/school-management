@@ -19,6 +19,7 @@ import com.school.backend.school.service.SetupValidationService;
 import lombok.RequiredArgsConstructor;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
+import org.springframework.security.access.AccessDeniedException;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -193,7 +194,7 @@ public class StudentService {
 
         // Tenant Security Check
         if (!student.getSchoolId().equals(TenantContext.getSchoolId())) {
-            throw new SecurityException("Unauthorized access to student guardians");
+            throw new AccessDeniedException("Unauthorized access to student guardians");
         }
 
         return studentGuardianRepository.findByStudentId(studentId).stream()
@@ -245,7 +246,7 @@ public class StudentService {
                 .orElseThrow(() -> new ResourceNotFoundException("Student not found: " + studentId));
 
         if (!student.getSchoolId().equals(schoolId)) {
-            throw new SecurityException("Unauthorized access to student guardians");
+            throw new AccessDeniedException("Unauthorized access to student guardians");
         }
 
         // ── 3. Load existing mappings once ─────────────────────────────────────
@@ -319,7 +320,7 @@ public class StudentService {
                 .orElseThrow(() -> new ResourceNotFoundException("Student not found: " + id));
 
         if (!s.getSchoolId().equals(TenantContext.getSchoolId())) {
-            throw new SecurityException("Unauthorized access to student");
+            throw new AccessDeniedException("Unauthorized access to student");
         }
         return mapper.toDto(s);
     }
@@ -337,7 +338,7 @@ public class StudentService {
                 .orElseThrow(() -> new ResourceNotFoundException("Student not found: " + id));
 
         if (!existing.getSchoolId().equals(TenantContext.getSchoolId())) {
-            throw new SecurityException("Unauthorized access to student");
+            throw new AccessDeniedException("Unauthorized access to student");
         }
 
         updateStudentDetails(req, existing);
@@ -351,7 +352,7 @@ public class StudentService {
                 .orElseThrow(() -> new ResourceNotFoundException("Student not found: " + id));
 
         if (!s.getSchoolId().equals(TenantContext.getSchoolId())) {
-            throw new SecurityException("Unauthorized access to student");
+            throw new AccessDeniedException("Unauthorized access to student");
         }
 
         // Soft delete by marking as inactive

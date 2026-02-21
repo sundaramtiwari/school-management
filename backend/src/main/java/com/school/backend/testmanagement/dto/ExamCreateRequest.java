@@ -8,9 +8,6 @@ import lombok.Data;
 public class ExamCreateRequest {
 
     @NotNull
-    private Long schoolId;
-
-    @NotNull
     private Long classId;
 
     @NotNull

@@ -1,5 +1,8 @@
 package com.school.backend.common.exception;
 
+import jakarta.servlet.http.HttpServletRequest;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.access.AccessDeniedException;
@@ -8,9 +11,11 @@ import org.springframework.web.bind.annotation.RestControllerAdvice;
 
 import java.time.LocalDateTime;
 import java.util.Map;
+import java.util.UUID;
 
 @RestControllerAdvice
 public class GlobalExceptionHandler {
+        private static final Logger log = LoggerFactory.getLogger(GlobalExceptionHandler.class);
 
         @ExceptionHandler(ResourceNotFoundException.class)
         public ResponseEntity<Map<String, Object>> handleResourceNotFound(ResourceNotFoundException ex) {
@@ -64,12 +69,19 @@ public class GlobalExceptionHandler {
         }
 
         @ExceptionHandler(Exception.class)
-        public ResponseEntity<Map<String, Object>> handleGenericException(Exception ex) {
+        public ResponseEntity<Map<String, Object>> handleGenericException(Exception ex, HttpServletRequest request) {
+                String correlationId = request.getHeader("X-Correlation-Id");
+                if (correlationId == null || correlationId.isBlank()) {
+                        Object requestCorrelationId = request.getAttribute("correlationId");
+                        correlationId = requestCorrelationId != null ? requestCorrelationId.toString() : UUID.randomUUID().toString();
+                }
+
+                log.error("Unhandled exception. correlationId={}", correlationId, ex);
                 return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR)
                                 .body(Map.of(
                                                 "timestamp", LocalDateTime.now(),
                                                 "status", HttpStatus.INTERNAL_SERVER_ERROR.value(),
                                                 "error", "Internal Server Error",
-                                                "message", ex.getMessage()));
+                                                "message", "An unexpected error occurred. Please contact support with correlationId: " + correlationId));
         }
 }

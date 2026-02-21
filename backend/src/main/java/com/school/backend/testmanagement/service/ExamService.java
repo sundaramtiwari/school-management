@@ -18,6 +18,7 @@ import com.school.backend.core.teacher.entity.Teacher;
 import com.school.backend.core.teacher.repository.TeacherRepository;
 import com.school.backend.core.teacher.repository.TeacherAssignmentRepository;
 import lombok.RequiredArgsConstructor;
+import org.springframework.security.access.AccessDeniedException;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -118,7 +119,11 @@ public class ExamService {
 
     @Transactional
     public Exam create(ExamCreateRequest req) {
-        setupValidationService.ensureAtLeastOneClassExists(req.getSchoolId(), req.getSessionId());
+        Long schoolId = SecurityUtil.schoolId();
+        if (schoolId == null) {
+            throw new AccessDeniedException("School context is required");
+        }
+        setupValidationService.ensureAtLeastOneClassExists(schoolId, req.getSessionId());
 
         // Authority Check
         if (SecurityUtil.hasRole("TEACHER")) {
@@ -137,7 +142,7 @@ public class ExamService {
         }
 
         Exam exam = Exam.builder()
-                .schoolId(req.getSchoolId())
+                .schoolId(schoolId)
                 .classId(req.getClassId())
                 .sessionId(req.getSessionId())
                 .name(req.getName())

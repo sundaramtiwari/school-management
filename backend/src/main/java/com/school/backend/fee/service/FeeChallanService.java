@@ -19,6 +19,7 @@ import com.school.backend.school.entity.School;
 import com.school.backend.school.repository.AcademicSessionRepository;
 import com.school.backend.school.repository.SchoolRepository;
 import lombok.RequiredArgsConstructor;
+import org.springframework.security.access.AccessDeniedException;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -48,7 +49,7 @@ public class FeeChallanService {
                 .orElseThrow(() -> new ResourceNotFoundException("Student not found: " + studentId));
 
         if (!student.getSchoolId().equals(schoolId)) {
-            throw new SecurityException("Access denied: Student does not belong to your school");
+            throw new AccessDeniedException("Access denied: Student does not belong to your school");
         }
 
         School school = schoolRepository.findById(schoolId)

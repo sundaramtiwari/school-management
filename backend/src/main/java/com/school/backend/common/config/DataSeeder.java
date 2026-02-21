@@ -545,7 +545,6 @@ public class DataSeeder implements CommandLineRunner {
         }
 
         ExamCreateRequest req = new ExamCreateRequest();
-        req.setSchoolId(schoolId);
         req.setClassId(classId);
         req.setSessionId(sessionId);
         req.setName(name);
