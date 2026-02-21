@@ -29,24 +29,24 @@ public class SessionSeeder {
             AcademicSession completed = AcademicSession.builder()
                     .schoolId(school.getId())
                     .name("2023-24 (COMPLETED)")
-                    .startDate(LocalDate.of(2023, 4, 1))
-                    .endDate(LocalDate.of(2024, 3, 31))
+                    .startDate(LocalDate.of(2024, 4, 1))
+                    .endDate(LocalDate.of(2025, 3, 31))
                     .active(false)
                     .build();
 
             AcademicSession active = AcademicSession.builder()
                     .schoolId(school.getId())
                     .name("2024-25 (ACTIVE)")
-                    .startDate(LocalDate.of(2024, 4, 1))
-                    .endDate(LocalDate.of(2025, 3, 31))
+                    .startDate(LocalDate.of(2025, 4, 1))
+                    .endDate(LocalDate.of(2026, 3, 31))
                     .active(true)
                     .build();
 
             AcademicSession planned = AcademicSession.builder()
                     .schoolId(school.getId())
                     .name("2025-26 (PLANNED)")
-                    .startDate(LocalDate.of(2025, 4, 1))
-                    .endDate(LocalDate.of(2026, 3, 31))
+                    .startDate(LocalDate.of(2026, 4, 1))
+                    .endDate(LocalDate.of(2027, 3, 31))
                     .active(false)
                     .build();
 

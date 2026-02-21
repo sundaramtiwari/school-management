@@ -12,11 +12,7 @@ import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Component;
 import org.springframework.transaction.annotation.Transactional;
 
-import java.util.ArrayList;
-import java.util.LinkedHashMap;
-import java.util.List;
-import java.util.Map;
-import java.util.Random;
+import java.util.*;
 
 @Component
 @RequiredArgsConstructor
@@ -57,24 +53,13 @@ public class SchoolSeeder {
         List<School> schools = schoolRepository.saveAll(schoolsToSave);
 
         List<User> usersToSave = new ArrayList<>(2 + schools.size() * 56);
-        for (int i = 1; i <= 2; i++) {
-            usersToSave.add(
-                    User.builder()
-                            .email("superadmin" + i + "@school.local")
-                            .fullName("Super Admin " + i)
-                            .passwordHash(passwordEncoder.encode("admin123"))
-                            .role(UserRole.SUPER_ADMIN)
-                            .active(true)
-                            .build()
-            );
-        }
 
         for (School school : schools) {
             usersToSave.add(
                     User.builder()
                             .email("schooladmin@" + school.getSchoolCode().toLowerCase() + ".local")
                             .fullName(school.getName() + " Admin")
-                            .passwordHash(passwordEncoder.encode("admin123"))
+                            .passwordHash(passwordEncoder.encode("admin"))
                             .role(UserRole.SCHOOL_ADMIN)
                             .school(school)
                             .active(true)
@@ -86,7 +71,7 @@ public class SchoolSeeder {
                         User.builder()
                                 .email("accountant" + i + "@" + school.getSchoolCode().toLowerCase() + ".local")
                                 .fullName("Accountant " + i + " " + school.getName())
-                                .passwordHash(passwordEncoder.encode("admin123"))
+                                .passwordHash(passwordEncoder.encode("admin"))
                                 .role(UserRole.ACCOUNTANT)
                                 .school(school)
                                 .active(true)
@@ -99,7 +84,7 @@ public class SchoolSeeder {
                         User.builder()
                                 .email("teacher" + i + "@" + school.getSchoolCode().toLowerCase() + ".local")
                                 .fullName("Teacher " + i + " " + school.getName())
-                                .passwordHash(passwordEncoder.encode("admin123"))
+                                .passwordHash(passwordEncoder.encode("admin"))
                                 .role(UserRole.TEACHER)
                                 .school(school)
                                 .active(true)
