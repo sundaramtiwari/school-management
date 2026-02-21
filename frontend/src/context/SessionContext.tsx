@@ -97,6 +97,12 @@ export function SessionProvider({ children }: { children: React.ReactNode }) {
 
   // Axios interceptor to inject X-Session-Id header
   useEffect(() => {
+    if (currentSession) {
+      localStorage.setItem("sessionId", currentSession.id.toString());
+    } else {
+      localStorage.removeItem("sessionId");
+    }
+
     const interceptor = api.interceptors.request.use((config) => {
       if (currentSession) {
         config.headers["X-Session-Id"] = currentSession.id.toString();

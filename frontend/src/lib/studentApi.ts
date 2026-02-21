@@ -32,6 +32,9 @@ export const studentApi = {
     getPromotionHistory: (studentId: number) =>
         api.get(`/api/students/${studentId}/history/promotions`),
 
+    getEnrollmentHistory: (studentId: number) =>
+        api.get(`/api/students/${studentId}/history/enrollments`),
+
     updateGuardians: (id: number, guardians: StudentPayload[]) =>
         api.put(`/api/guardians/${id}/guardians`, guardians),
 

@@ -113,7 +113,7 @@ type StudentFundingArrangement = {
 export default function StudentsPage() {
   const { user } = useAuth();
   const { showToast } = useToast();
-  const { currentSession } = useSession();
+  const { currentSession, sessions } = useSession();
 
   const canUserAddStudent = canAddStudent(user?.role);
   const canUserPromoteStudents = canPromoteStudents(user?.role);
@@ -122,7 +122,6 @@ export default function StudentsPage() {
   /* ---------- Filters ---------- */
 
   const [classes, setClasses] = useState<SchoolClass[]>([]);
-  const [sessions, setSessions] = useState<{ id: number; name: string }[]>([]);
   const [selectedClass, setSelectedClass] = useState<number | "">("");
 
   /* ---------- Students ---------- */
@@ -238,12 +237,8 @@ export default function StudentsPage() {
   const loadClasses = useCallback(async () => {
     try {
       setLoadingClasses(true);
-      const [resClasses, resSessions] = await Promise.all([
-        api.get("/api/classes/mine"),
-        api.get("/api/sessions")
-      ]);
-      setClasses(resClasses.data.content || []);
-      setSessions(resSessions.data || []);
+      const res = await api.get("/api/classes/mine");
+      setClasses(res.data.content || []);
     } catch {
       showToast("Error loading classes", "error");
     } finally {
@@ -1575,7 +1570,7 @@ export default function StudentsPage() {
                       {enrollmentsData.map((e) => (
                         <tr key={e.id} className={e.active ? "bg-green-50/20" : ""}>
                           <td className="px-4 py-3 font-medium text-gray-900">
-                            {sessions.find(s => s.id === e.sessionId)?.name || `Session ${e.sessionId}`}
+                            {sessions.find((s: any) => s.id === e.sessionId)?.name || `Session ${e.sessionId}`}
                           </td>
                           <td className="px-4 py-3 text-gray-700">
                             {classes.find(c => c.id === e.classId)?.name || `Class ${e.classId}`} {e.section ? `- ${e.section}` : ''}
@@ -1624,8 +1619,8 @@ export default function StudentsPage() {
                         <tr key={p.id}>
                           <td className="px-4 py-3 text-[11px] font-bold">
                             <span className={`px-2 py-0.5 rounded-full uppercase tracking-wider ${p.promotionType === 'PROMOTED' || p.promotionType === 'GRADUATED'
-                                ? 'bg-green-100 text-green-700'
-                                : 'bg-red-100 text-red-700'
+                              ? 'bg-green-100 text-green-700'
+                              : 'bg-red-100 text-red-700'
                               }`}>
                               {p.promotionType}
                             </span>
