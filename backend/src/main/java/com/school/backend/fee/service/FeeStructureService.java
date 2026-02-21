@@ -109,8 +109,8 @@ public class FeeStructureService {
         }
 
         BigDecimal finalAmount = fs.getAmount();
-        if (fs.getFrequency() == FeeFrequency.MONTHLY) {
-            finalAmount = finalAmount.multiply(new BigDecimal(12));
+        if (fs.getFrequency() != null && fs.getFrequency() != FeeFrequency.ONE_TIME) {
+            finalAmount = finalAmount.multiply(new BigDecimal(fs.getFrequency().getPeriodsPerYear()));
         }
 
         // --- Snapshot Late Fee Policy ---

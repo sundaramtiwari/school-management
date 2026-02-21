@@ -26,5 +26,7 @@ public class FeePaymentRequest {
     // CASH / UPI / BANK / CHEQUE
     private String mode;
 
+    private String transactionReference;
+
     private String remarks;
 }

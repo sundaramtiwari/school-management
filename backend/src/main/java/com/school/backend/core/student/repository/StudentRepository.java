@@ -49,6 +49,32 @@ public interface StudentRepository extends JpaRepository<Student, Long> {
   boolean existsByAdmissionNumberAndSchoolId(String admissionNumber, Long schoolId);
 
   @Query("""
+      SELECT COUNT(DISTINCT s.id)
+      FROM Student s
+      JOIN StudentEnrollment e ON s.id = e.studentId
+      WHERE s.schoolId = :schoolId
+        AND e.sessionId = :sessionId
+        AND (:classId IS NULL OR e.classId = :classId)
+        AND (:search IS NULL OR LOWER(s.firstName) LIKE LOWER(CONCAT('%', :search, '%'))
+             OR LOWER(s.lastName) LIKE LOWER(CONCAT('%', :search, '%'))
+             OR LOWER(s.admissionNumber) LIKE LOWER(CONCAT('%', :search, '%')))
+        AND (
+             (SELECT COALESCE(SUM(a.amount), 0) FROM StudentFeeAssignment a WHERE a.studentId = s.id AND a.sessionId = :sessionId AND a.active = true)
+             + (SELECT COALESCE(SUM(a.lateFeeAccrued), 0) FROM StudentFeeAssignment a WHERE a.studentId = s.id AND a.sessionId = :sessionId AND a.active = true)
+             - (SELECT COALESCE(SUM(p.principalPaid + p.lateFeePaid), 0) FROM FeePayment p WHERE p.studentId = s.id AND p.sessionId = :sessionId)
+            ) >= :minAmountDue
+        AND (:maxPaymentDate IS NULL OR COALESCE((SELECT MAX(p.paymentDate) FROM FeePayment p WHERE p.studentId = s.id AND p.sessionId = :sessionId), :sessionStart) <= :maxPaymentDate)
+      """)
+  long countDefaulters(
+      @Param("schoolId") Long schoolId,
+      @Param("sessionId") Long sessionId,
+      @Param("classId") Long classId,
+      @Param("search") String search,
+      @Param("minAmountDue") BigDecimal minAmountDue,
+      @Param("maxPaymentDate") LocalDate maxPaymentDate,
+      @Param("sessionStart") LocalDate sessionStart);
+
+  @Query("""
       SELECT s.id, s.firstName, s.lastName, s.admissionNumber, s.contactNumber, c.name, c.section,
              (SELECT COALESCE(SUM(a.amount), 0) FROM StudentFeeAssignment a WHERE a.studentId = s.id AND a.sessionId = :sessionId AND a.active = true),
              (SELECT COALESCE(SUM(a.lateFeeAccrued), 0) FROM StudentFeeAssignment a WHERE a.studentId = s.id AND a.sessionId = :sessionId AND a.active = true),

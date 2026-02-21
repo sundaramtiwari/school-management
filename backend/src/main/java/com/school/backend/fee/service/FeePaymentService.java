@@ -58,9 +58,9 @@ public class FeePaymentService {
             throw new BusinessException("Session is required for fee payment.");
         }
 
-        // Fetch active assignments for this student and session
+        // Fetch active assignments for this student and session with PESSIMISTIC lock
         List<StudentFeeAssignment> assignments = assignmentRepository
-                .findByStudentIdAndSessionId(req.getStudentId(), sessionId);
+                .findByStudentIdAndSessionIdWithLock(req.getStudentId(), sessionId);
         if (assignments.isEmpty()) {
             throw new BusinessException("No fee assignments found for this student in current session.");
         }
@@ -152,6 +152,7 @@ public class FeePaymentService {
                 .lateFeePaid(lateFeeToPay)
                 .paymentDate(effectivePaymentDate)
                 .mode(req.getMode())
+                .transactionReference(req.getTransactionReference())
                 .remarks(req.getRemarks())
                 .schoolId(TenantContext.getSchoolId())
                 .build();
@@ -195,6 +196,7 @@ public class FeePaymentService {
         dto.setAmountPaid(p.getPrincipalPaid().add(p.getLateFeePaid()));
         dto.setPaymentDate(p.getPaymentDate());
         dto.setMode(p.getMode());
+        dto.setTransactionReference(p.getTransactionReference());
         dto.setRemarks(p.getRemarks());
 
         return dto;

@@ -19,44 +19,45 @@ import java.util.stream.Collectors;
 @RequiredArgsConstructor
 public class DashboardStatsService {
 
-    private final StudentRepository studentRepository;
-    private final UserRepository userRepository;
-    private final TransportEnrollmentRepository transportRepository;
-    private final ExamRepository examRepository;
-    private final FeeSummaryService feeSummaryService;
-    private final SessionResolver sessionResolver;
+        private final StudentRepository studentRepository;
+        private final UserRepository userRepository;
+        private final TransportEnrollmentRepository transportRepository;
+        private final ExamRepository examRepository;
+        private final FeeSummaryService feeSummaryService;
+        private final SessionResolver sessionResolver;
 
-    public SchoolAdminStatsDto getSchoolAdminStats(Long sessionId) {
-        Long schoolId = TenantContext.getSchoolId();
-        Long effectiveSessionId = sessionId != null ? sessionId : sessionResolver.resolveForCurrentSchool();
+        public SchoolAdminStatsDto getSchoolAdminStats(Long sessionId) {
+                Long schoolId = TenantContext.getSchoolId();
+                Long effectiveSessionId = sessionId != null ? sessionId : sessionResolver.resolveForCurrentSchool();
 
-        // 1. Basic Counts
-        long totalStudents = studentRepository.countBySchoolIdAndSessionId(schoolId, effectiveSessionId);
-        long transportCount = transportRepository.countBySchoolIdAndSessionId(schoolId, effectiveSessionId);
-        long totalTeachers = userRepository.countBySchoolIdAndRole(schoolId, UserRole.TEACHER);
+                // 1. Basic Counts
+                long totalStudents = studentRepository.countBySchoolIdAndSessionId(schoolId, effectiveSessionId);
+                long transportCount = transportRepository.countBySchoolIdAndSessionId(schoolId, effectiveSessionId);
+                long totalTeachers = userRepository.countBySchoolIdAndRole(schoolId, UserRole.TEACHER);
 
-        // 2. Fee Stats (Defaulters Count)
-        long feePendingCount = feeSummaryService.getAllDefaulters().size();
+                // 2. Fee Stats (Defaulters Count)
+                long feePendingCount = feeSummaryService.countDefaulters();
 
-        // 3. Upcoming Exams
-        LocalDate now = LocalDate.now();
-        var upcomingExams = examRepository.findBySchoolIdAndSessionIdAndStartDateAfter(schoolId, effectiveSessionId, now)
-                .stream()
-                .limit(5)
-                .map(e -> SchoolAdminStatsDto.UpcomingExamDto.builder()
-                        .name(e.getName())
-                        .date(e.getStartDate() != null ? e.getStartDate().toString() : "TBD")
-                        .className("Class " + e.getClassId()) // Need class name here ideally
-                        .build())
-                .collect(Collectors.toList());
+                // 3. Upcoming Exams
+                LocalDate now = LocalDate.now();
+                var upcomingExams = examRepository
+                                .findBySchoolIdAndSessionIdAndStartDateAfter(schoolId, effectiveSessionId, now)
+                                .stream()
+                                .limit(5)
+                                .map(e -> SchoolAdminStatsDto.UpcomingExamDto.builder()
+                                                .name(e.getName())
+                                                .date(e.getStartDate() != null ? e.getStartDate().toString() : "TBD")
+                                                .className("Class " + e.getClassId()) // Need class name here ideally
+                                                .build())
+                                .collect(Collectors.toList());
 
-        return SchoolAdminStatsDto.builder()
-                .totalStudents(totalStudents)
-                .transportCount(transportCount)
-                .totalTeachers(totalTeachers)
-                .feePendingCount(feePendingCount)
-                .upcomingExams(upcomingExams)
-                .attendancePercentage(85.0) // Mock for now until attendance service is checked
-                .build();
-    }
+                return SchoolAdminStatsDto.builder()
+                                .totalStudents(totalStudents)
+                                .transportCount(transportCount)
+                                .totalTeachers(totalTeachers)
+                                .feePendingCount(feePendingCount)
+                                .upcomingExams(upcomingExams)
+                                .attendancePercentage(85.0) // Mock for now until attendance service is checked
+                                .build();
+        }
 }

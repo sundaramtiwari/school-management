@@ -298,7 +298,7 @@ public class FeeSummaryService {
 
                 String sessionName = sessionRepository.findById(sessionId)
                                 .map(AcademicSession::getName)
-                                .orElse("");
+                                .orElseThrow(() -> new ResourceNotFoundException("Session not found: " + sessionId));
 
                 List<FeeSummaryDto> results = new ArrayList<>();
 
@@ -347,6 +347,39 @@ public class FeeSummaryService {
         }
 
         @Transactional(readOnly = true)
+        public long countDefaulters() {
+                Long schoolId = SecurityUtil.schoolId();
+                School school = schoolRepository.findById(schoolId)
+                                .orElseThrow(() -> new ResourceNotFoundException("School not found"));
+
+                Long sessionId = school.getCurrentSessionId();
+                if (sessionId == null)
+                        return 0;
+
+                AcademicSession session = sessionRepository.findById(sessionId)
+                                .orElseThrow(() -> new ResourceNotFoundException("Session not found"));
+
+                LocalDate sessionStart;
+                try {
+                        int startYear = Integer.parseInt(session.getName().split("-")[INT_ZERO]);
+                        sessionStart = LocalDate.of(startYear, Month.APRIL, 1);
+                } catch (Exception e) {
+                        sessionStart = LocalDate.now().minusMonths(6);
+                }
+
+                BigDecimal effectiveMinAmountDue = new BigDecimal("0.01");
+
+                return studentRepository.countDefaulters(
+                                schoolId,
+                                sessionId,
+                                null,
+                                null,
+                                effectiveMinAmountDue,
+                                null,
+                                sessionStart);
+        }
+
+        @Transactional(readOnly = true)
         public List<DefaulterDto> exportDefaulters(String search, Long classId, BigDecimal minAmountDue,
                         Integer minDaysOverdue) {
                 Page<DefaulterDto> page = getDefaultersPage(search, classId, minAmountDue, minDaysOverdue,
@@ -371,6 +404,7 @@ public class FeeSummaryService {
                 }
 
                 Long sessionId = school.getCurrentSessionId();
+
                 AcademicSession session = sessionRepository.findById(sessionId)
                                 .orElseThrow(() -> new ResourceNotFoundException("Session not found"));
 

@@ -7,6 +7,13 @@ import com.lowagie.text.Rectangle;
 import com.lowagie.text.pdf.PdfPCell;
 import com.lowagie.text.pdf.PdfPTable;
 import com.lowagie.text.pdf.PdfWriter;
+import com.lowagie.text.Document;
+import com.lowagie.text.Paragraph;
+import com.lowagie.text.Phrase;
+import com.lowagie.text.Element;
+import com.lowagie.text.PageSize;
+import com.lowagie.text.Chunk;
+import com.lowagie.text.DocumentException;
 import com.school.backend.common.exception.ResourceNotFoundException;
 import com.school.backend.core.student.entity.Student;
 import com.school.backend.core.student.repository.StudentRepository;
@@ -23,7 +30,7 @@ import org.springframework.security.access.AccessDeniedException;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
-import java.awt.*;
+import java.awt.Color;
 import java.io.ByteArrayOutputStream;
 import java.text.NumberFormat;
 import java.time.LocalDate;
@@ -184,14 +191,14 @@ public class FeeChallanService {
     }
 
     private java.math.BigDecimal addFeeBreakdown(Document document, List<StudentFeeAssignment> assignments,
-                                                 int monthsToPay)
+            int monthsToPay)
             throws DocumentException {
         Font headerFont = FontFactory.getFont(FontFactory.HELVETICA, 11, Font.BOLD, Color.WHITE);
         Font contentFont = FontFactory.getFont(FontFactory.HELVETICA, 10);
 
         PdfPTable table = new PdfPTable(4);
         table.setWidthPercentage(100);
-        table.setWidths(new float[]{3f, 1.2f, 0.8f, 1.5f});
+        table.setWidths(new float[] { 3f, 1.2f, 0.8f, 1.5f });
 
         // Header Row
         PdfPCell headerCell1 = new PdfPCell(new Phrase("Fee Type", headerFont));
