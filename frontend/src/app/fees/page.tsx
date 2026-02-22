@@ -66,7 +66,7 @@ export default function FeesDashboard() {
                             </button>
                             <button onClick={() => router.push('/fees/discounts')} className="px-5 py-2.5 bg-blue-600 text-white rounded-md font-medium hover:bg-blue-700 text-base">
                                 Manage Discounts
-                            /button>
+                            </button>
                             <button onClick={() => router.push('/fees/collect')} className="px-5 py-2.5 bg-blue-600 text-white rounded-md font-medium hover:bg-blue-700 text-base">
                                 Collect Fees
                             </button>
@@ -135,10 +135,10 @@ export default function FeesDashboard() {
         </div>
     );
 }
-    type RecentPayment = {
-        id: number;
-        studentId: number;
-        mode: string;
-        paymentDate: string;
-        amountPaid: number;
-    };
+type RecentPayment = {
+    id: number;
+    studentId: number;
+    mode: string;
+    paymentDate: string;
+    amountPaid: number;
+};
