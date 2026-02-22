@@ -78,18 +78,11 @@ public class StudentFeeAssignmentService {
         // --- Snapshot Late Fee Policy ---
         LateFeePolicy policy = lateFeePolicyRepository.findByFeeStructureId(fs.getId()).orElse(null);
 
-        // --- Snapshot Funding ---
-        BigDecimal fundingSnapshot = fundingRepository
-                .findActiveByStudentAndSession(req.getStudentId(), req.getSessionId())
-                .map(f -> feeCalculationService.calculateFundingSnapshot(finalAmount, BigDecimal.ZERO, f))
-                .orElse(BigDecimal.ZERO);
-
         StudentFeeAssignment assignment = StudentFeeAssignment.builder()
                 .studentId(req.getStudentId())
                 .feeStructureId(fs.getId())
                 .sessionId(req.getSessionId())
                 .amount(finalAmount)
-                .sponsorCoveredAmount(fundingSnapshot)
                 .dueDate(dueDate)
                 .lateFeeType(policy != null ? policy.getType() : null)
                 .lateFeeValue(policy != null ? policy.getAmountValue() : BigDecimal.ZERO)
@@ -99,6 +92,14 @@ public class StudentFeeAssignmentService {
                 .schoolId(TenantContext.getSchoolId())
                 .active(true)
                 .build();
+
+        // --- Snapshot Funding ---
+        BigDecimal discountSnapshot = nz(assignment.getTotalDiscountAmount());
+        BigDecimal fundingSnapshot = fundingRepository
+                .findActiveByStudentAndSession(req.getStudentId(), req.getSessionId())
+                .map(f -> feeCalculationService.calculateFundingSnapshot(finalAmount, discountSnapshot, f))
+                .orElse(BigDecimal.ZERO);
+        assignment.setSponsorCoveredAmount(fundingSnapshot);
 
         return toDto(assignmentRepository.save(assignment));
     }
