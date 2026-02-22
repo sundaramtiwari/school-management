@@ -127,7 +127,8 @@ export default function AccountantDashboard() {
       icon: "📊",
       color: "purple",
       href: "#",
-      description: "Coming soon"
+      description: "Coming soon",
+      disabled: true
     },
   ];
 
@@ -391,10 +392,12 @@ export default function AccountantDashboard() {
               {quickActions.map((action, i) => (
                 <button
                   key={i}
-                  onClick={() => router.push(action.href)}
+                  onClick={() => !action.disabled && router.push(action.href)}
+                  disabled={action.disabled}
+                  title={action.disabled ? "Coming soon" : ""}
                   className={`
                     p-4 rounded-xl border-2 border-gray-100
-                    hover:border-${action.color}-400 hover:bg-${action.color}-50
+                    ${action.disabled ? "opacity-50 cursor-not-allowed" : `hover:border-${action.color}-400 hover:bg-${action.color}-50`}
                     transition-all text-left group bg-gray-50
                   `}
                 >

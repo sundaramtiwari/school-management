@@ -88,8 +88,8 @@ export default function Sidebar() {
           const isSchoolScoped = ["SCHOOL_ADMIN", "TEACHER", "ACCOUNTANT"].includes(userRole as string);
           const isPlatformRole = ["SUPER_ADMIN", "PLATFORM_ADMIN"].includes(userRole as string);
 
-          const requiresSession = ["Classes", "Students", "Fees", "Marksheets", "Attendance"].includes(item.name);
-          const requiresClasses = ["Students", "Fees", "Marksheets", "Attendance"].includes(item.name);
+          const requiresSession = ["Classes", "Students", "Fees", "Marksheets", "Attendance", "Exams"].includes(item.name);
+          const requiresClasses = ["Students", "Fees", "Marksheets", "Attendance", "Exams"].includes(item.name);
 
           let isRestricted = false;
           let restrictionMessage = "";

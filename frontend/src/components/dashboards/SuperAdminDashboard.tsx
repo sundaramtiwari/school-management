@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect, useState } from "react";
+import { useRouter } from "next/navigation";
 import { api } from "@/lib/api";
 import { schoolApi } from "@/lib/schoolApi";
 import { useAuth } from "@/context/AuthContext";
@@ -22,6 +23,7 @@ type PlatformDashboardStats = {
 
 export default function SuperAdminDashboard() {
   const { user } = useAuth();
+  const router = useRouter();
   const [stats, setStats] = useState({
     totalSchools: 0,
     activeSchools: 0,
@@ -93,7 +95,8 @@ export default function SuperAdminDashboard() {
       icon: "⚙️",
       color: "gray",
       href: "#",
-      description: "Coming soon"
+      description: "Coming soon",
+      disabled: true
     },
   ];
 
@@ -227,7 +230,7 @@ export default function SuperAdminDashboard() {
                 <p className="text-4xl mb-3">🏫</p>
                 <p className="text-sm">No schools registered yet</p>
                 <button
-                  onClick={() => window.location.href = '/schools'}
+                  onClick={() => router.push('/schools')}
                   className="mt-4 bg-blue-600 text-white px-6 py-2 rounded-lg hover:bg-blue-700 transition font-semibold text-sm"
                 >
                   Add First School
@@ -246,7 +249,7 @@ export default function SuperAdminDashboard() {
                     </p>
                   </div>
                   <button
-                    onClick={() => window.location.href = `/schools`}
+                    onClick={() => router.push(`/schools`)}
                     className="text-blue-600 hover:text-blue-800 text-sm font-semibold"
                   >
                     View →
@@ -257,7 +260,7 @@ export default function SuperAdminDashboard() {
           </div>
           {recentSchools.length > 0 && (
             <button
-              onClick={() => window.location.href = '/schools'}
+              onClick={() => router.push('/schools')}
               className="w-full mt-4 py-2 text-center text-blue-600 hover:text-blue-800 font-semibold text-sm"
             >
               View All Schools ({stats.totalSchools}) →
@@ -274,10 +277,12 @@ export default function SuperAdminDashboard() {
               {quickActions.map((action, i) => (
                 <button
                   key={i}
-                  onClick={() => window.location.href = action.href}
+                  onClick={() => !action.disabled && router.push(action.href)}
+                  disabled={action.disabled}
+                  title={action.disabled ? "Feature coming soon" : ""}
                   className={`
                     p-4 rounded-xl border-2 border-gray-100
-                    hover:border-${action.color}-400 hover:bg-${action.color}-50
+                    ${action.disabled ? "opacity-50 cursor-not-allowed" : `hover:border-${action.color}-400 hover:bg-${action.color}-50`}
                     transition-all text-left group bg-gray-50
                   `}
                 >

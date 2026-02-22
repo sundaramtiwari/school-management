@@ -1,6 +1,7 @@
 "use client";
 
 import { useCallback, useEffect, useState } from "react";
+import { useRouter } from "next/navigation";
 import { api } from "@/lib/api";
 import { Skeleton } from "@/components/ui/Skeleton";
 import { useSession } from "@/context/SessionContext";
@@ -31,6 +32,7 @@ export default function TeacherDashboard() {
   };
 
   const { currentSession } = useSession();
+  const router = useRouter();
 
   const [classes, setClasses] = useState<ClassInfo[]>([]);
   const [pendingTasks, setPendingTasks] = useState<PendingTask[]>([]);
@@ -149,28 +151,32 @@ export default function TeacherDashboard() {
       icon: "✓",
       color: "green",
       href: "/attendance",
-      description: "Record today's presence"
+      description: "Record today's presence",
+      disabled: false
     },
     {
       title: "Enter Marks",
       icon: "📝",
       color: "blue",
       href: "/marksheets",
-      description: "Update exam scores"
+      description: "Update exam scores",
+      disabled: false
     },
     {
       title: "View Students",
       icon: "👨‍🎓",
       color: "purple",
       href: "/students",
-      description: "Student directory"
+      description: "Student directory",
+      disabled: false
     },
     {
       title: "View Exams",
       icon: "📋",
       color: "indigo",
       href: "/exams",
-      description: "Manage assessments"
+      description: "Manage assessments",
+      disabled: false
     },
   ];
 
@@ -313,7 +319,7 @@ export default function TeacherDashboard() {
                       </span>
                     )}
                     <button
-                      onClick={() => window.location.href = `/attendance?class=${cls.id}`}
+                      onClick={() => router.push(`/attendance?class=${cls.id}`)}
                       className="text-blue-600 hover:text-blue-800 text-sm font-semibold"
                     >
                       Mark →
@@ -360,7 +366,7 @@ export default function TeacherDashboard() {
                     <button
                       onClick={() => {
                         if (task.type === "attendance") {
-                          window.location.href = `/attendance?class=${task.classId}`;
+                          router.push(`/attendance?class=${task.classId}`);
                         }
                       }}
                       className="text-blue-600 hover:text-blue-800 text-sm font-bold"
@@ -380,10 +386,12 @@ export default function TeacherDashboard() {
               {quickActions.map((action, i) => (
                 <button
                   key={i}
-                  onClick={() => window.location.href = action.href}
+                  onClick={() => !action.disabled && router.push(action.href)}
+                  disabled={action.disabled}
+                  title={action.disabled ? "Feature coming soon" : ""}
                   className={`
                     p-4 rounded-xl border-2 border-gray-100
-                    hover:border-${action.color}-400 hover:bg-${action.color}-50
+                    ${action.disabled ? "opacity-50 cursor-not-allowed" : `hover:border-${action.color}-400 hover:bg-${action.color}-50`}
                     transition-all text-left group bg-gray-50
                   `}
                 >

@@ -7,6 +7,7 @@ import { useToast } from "@/components/ui/Toast";
 import { Skeleton, TableSkeleton } from "@/components/ui/Skeleton";
 import { useAuth } from "@/context/AuthContext";
 import { useSession } from "@/context/SessionContext";
+import { useRouter } from "next/navigation";
 
 type Defaulter = {
   studentId: number;
@@ -21,6 +22,7 @@ type Defaulter = {
 };
 
 export default function FeeDefaultersPage() {
+  const router = useRouter();
   const { user } = useAuth();
   const { showToast } = useToast();
   const { sessions, currentSession } = useSession();
@@ -169,7 +171,7 @@ export default function FeeDefaultersPage() {
   }
 
   function goToCollectFee(studentId: number) {
-    window.location.href = `/fees/collect?student=${studentId}`;
+    router.push(`/fees/collect?student=${studentId}`);
   }
 
   function sendReminder(defaulter: Defaulter) {
