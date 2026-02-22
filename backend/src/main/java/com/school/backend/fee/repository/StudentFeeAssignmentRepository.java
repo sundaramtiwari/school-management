@@ -53,13 +53,19 @@ public interface StudentFeeAssignmentRepository
     List<StudentFeeAssignment> findByStudentId(Long studentId);
 
     @Query("""
-                SELECT COALESCE(SUM(a.amount), 0)
+                SELECT COALESCE(SUM(a.amount), 0),
+                       COALESCE(SUM(a.lateFeeAccrued), 0),
+                       COALESCE(SUM(a.totalDiscountAmount), 0),
+                       COALESCE(SUM(a.sponsorCoveredAmount), 0),
+                       COALESCE(SUM(a.lateFeeWaived), 0),
+                       COALESCE(SUM(a.principalPaid), 0),
+                       COALESCE(SUM(a.lateFeePaid), 0)
                 FROM StudentFeeAssignment a
                 WHERE a.schoolId = :schoolId
                   AND a.sessionId = :sessionId
                   AND a.active = true
             """)
-    BigDecimal sumTotalAssignedBySchoolAndSession(
+    Object[] sumFinancialTotalsBySchoolAndSession(
             @Param("schoolId") Long schoolId,
             @Param("sessionId") Long sessionId);
 
@@ -67,7 +73,11 @@ public interface StudentFeeAssignmentRepository
                 SELECT a.studentId,
                        COALESCE(SUM(a.amount), 0),
                        COALESCE(SUM(a.lateFeeAccrued), 0),
-                       COALESCE(SUM(a.lateFeeWaived), 0)
+                       COALESCE(SUM(a.lateFeeWaived), 0),
+                       COALESCE(SUM(a.totalDiscountAmount), 0),
+                       COALESCE(SUM(a.sponsorCoveredAmount), 0),
+                       COALESCE(SUM(a.principalPaid), 0),
+                       COALESCE(SUM(a.lateFeePaid), 0)
                 FROM StudentFeeAssignment a
                 WHERE a.schoolId = :schoolId
                   AND a.sessionId = :sessionId

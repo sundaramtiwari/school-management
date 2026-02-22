@@ -70,14 +70,23 @@ public class FeeSummaryService {
                                 .countBySchoolIdAndSessionIdAndActiveTrue(schoolId, effectiveSessionId);
 
                 // 3. Optimized Pending Calculation (NO N+1)
-                BigDecimal totalAssigned = assignmentRepository
-                                .sumTotalAssignedBySchoolAndSession(schoolId, effectiveSessionId);
+                Object[] pendingComponents = assignmentRepository
+                                .sumFinancialTotalsBySchoolAndSession(schoolId, effectiveSessionId);
+                BigDecimal totalAssigned = toBigDecimal(pendingComponents[0]);
+                BigDecimal totalLateFeeAccrued = toBigDecimal(pendingComponents[1]);
+                BigDecimal totalDiscountAmount = toBigDecimal(pendingComponents[2]);
+                BigDecimal totalSponsorCoveredAmount = toBigDecimal(pendingComponents[3]);
+                BigDecimal totalLateFeeWaived = toBigDecimal(pendingComponents[4]);
+                BigDecimal totalPrincipalPaid = toBigDecimal(pendingComponents[5]);
+                BigDecimal totalLateFeePaid = toBigDecimal(pendingComponents[6]);
 
-                BigDecimal totalPaid = paymentRepository
-                                .sumTotalPaidBySchoolAndSession(schoolId, effectiveSessionId);
-
-                BigDecimal totalPending = (totalAssigned != null ? totalAssigned : ZERO)
-                                .subtract(totalPaid != null ? totalPaid : ZERO);
+                BigDecimal totalPending = totalAssigned
+                                .add(totalLateFeeAccrued)
+                                .subtract(totalDiscountAmount)
+                                .subtract(totalSponsorCoveredAmount)
+                                .subtract(totalLateFeeWaived)
+                                .subtract(totalPrincipalPaid)
+                                .subtract(totalLateFeePaid);
 
                 if (totalPending.compareTo(ZERO) < INT_ZERO) {
                         totalPending = ZERO;
@@ -304,15 +313,22 @@ public class FeeSummaryService {
                                 .collect(Collectors.toMap(
                                                 r -> (Long) r[INT_ZERO],
                                                 r -> (java.math.BigDecimal) r[3]));
-
-                // 3. Aggregated Paid
-                var paidRaw = paymentRepository
-                                .sumPaidGroupedByStudent(schoolId, effectiveSessionId);
-
-                var paidMap = paidRaw.stream()
+                var totalDiscountMap = assignedRaw.stream()
                                 .collect(Collectors.toMap(
                                                 r -> (Long) r[INT_ZERO],
-                                                r -> (java.math.BigDecimal) r[1]));
+                                                r -> (java.math.BigDecimal) r[4]));
+                var totalSponsorMap = assignedRaw.stream()
+                                .collect(Collectors.toMap(
+                                                r -> (Long) r[INT_ZERO],
+                                                r -> (java.math.BigDecimal) r[5]));
+                var principalPaidMap = assignedRaw.stream()
+                                .collect(Collectors.toMap(
+                                                r -> (Long) r[INT_ZERO],
+                                                r -> (java.math.BigDecimal) r[6]));
+                var lateFeePaidMap = assignedRaw.stream()
+                                .collect(Collectors.toMap(
+                                                r -> (Long) r[INT_ZERO],
+                                                r -> (java.math.BigDecimal) r[7]));
 
                 String sessionName = sessionRepository.findById(effectiveSessionId)
                                 .map(AcademicSession::getName)
@@ -329,12 +345,18 @@ public class FeeSummaryService {
                                         ZERO);
                         BigDecimal totalLateFeeAccrued = lateFeeAccruedMap.getOrDefault(studentId, ZERO);
                         BigDecimal totalLateFeeWaived = lateFeeWaivedMap.getOrDefault(studentId, ZERO);
-                        BigDecimal totalPaid = paidMap.getOrDefault(studentId, ZERO);
+                        BigDecimal totalDiscountAmount = totalDiscountMap.getOrDefault(studentId, ZERO);
+                        BigDecimal totalSponsorCoveredAmount = totalSponsorMap.getOrDefault(studentId, ZERO);
+                        BigDecimal totalPrincipalPaid = principalPaidMap.getOrDefault(studentId, ZERO);
+                        BigDecimal totalLateFeePaid = lateFeePaidMap.getOrDefault(studentId, ZERO);
 
                         BigDecimal pending = totalAssigned
                                         .add(totalLateFeeAccrued)
+                                        .subtract(totalDiscountAmount)
+                                        .subtract(totalSponsorCoveredAmount)
                                         .subtract(totalLateFeeWaived)
-                                        .subtract(totalPaid);
+                                        .subtract(totalPrincipalPaid)
+                                        .subtract(totalLateFeePaid);
                         if (pending.compareTo(ZERO) < INT_ZERO) {
                                 pending = ZERO;
                         }
@@ -348,7 +370,7 @@ public class FeeSummaryService {
                                         (student.getLastName() != null ? student.getLastName() : ""));
                         dto.setSession(sessionName);
                         dto.setTotalFee(totalAssigned);
-                        dto.setTotalPaid(totalPaid);
+                        dto.setTotalPaid(totalPrincipalPaid.add(totalLateFeePaid));
                         dto.setPendingFee(pending);
                         dto.setFeePending(true);
 
@@ -558,15 +580,22 @@ public class FeeSummaryService {
                                 .collect(Collectors.toMap(
                                                 r -> (Long) r[INT_ZERO],
                                                 r -> (java.math.BigDecimal) r[3]));
-
-                // 3. Aggregated Paid Amounts
-                var paidRaw = paymentRepository
-                                .sumPaidGroupedByStudent(schoolId, sessionId);
-
-                var paidMap = paidRaw.stream()
+                var totalDiscountMap = assignedRaw.stream()
                                 .collect(Collectors.toMap(
                                                 r -> (Long) r[INT_ZERO],
-                                                r -> (java.math.BigDecimal) r[1]));
+                                                r -> (java.math.BigDecimal) r[4]));
+                var totalSponsorMap = assignedRaw.stream()
+                                .collect(Collectors.toMap(
+                                                r -> (Long) r[INT_ZERO],
+                                                r -> (java.math.BigDecimal) r[5]));
+                var principalPaidMap = assignedRaw.stream()
+                                .collect(Collectors.toMap(
+                                                r -> (Long) r[INT_ZERO],
+                                                r -> (java.math.BigDecimal) r[6]));
+                var lateFeePaidMap = assignedRaw.stream()
+                                .collect(Collectors.toMap(
+                                                r -> (Long) r[INT_ZERO],
+                                                r -> (java.math.BigDecimal) r[7]));
 
                 // 4. Last Payment Dates
                 var lastPaymentRaw = paymentRepository
@@ -589,11 +618,17 @@ public class FeeSummaryService {
                                         ZERO);
                         BigDecimal totalLateFeeWaived = lateFeeWaivedMap.getOrDefault(studentId,
                                         ZERO);
-                        BigDecimal totalPaid = paidMap.getOrDefault(studentId, ZERO);
+                        BigDecimal totalDiscountAmount = totalDiscountMap.getOrDefault(studentId, ZERO);
+                        BigDecimal totalSponsorCoveredAmount = totalSponsorMap.getOrDefault(studentId, ZERO);
+                        BigDecimal totalPrincipalPaid = principalPaidMap.getOrDefault(studentId, ZERO);
+                        BigDecimal totalLateFeePaid = lateFeePaidMap.getOrDefault(studentId, ZERO);
 
                         BigDecimal pending = totalAssigned.add(totalLateFeeAccrued)
+                                        .subtract(totalDiscountAmount)
+                                        .subtract(totalSponsorCoveredAmount)
                                         .subtract(totalLateFeeWaived)
-                                        .subtract(totalPaid);
+                                        .subtract(totalPrincipalPaid)
+                                        .subtract(totalLateFeePaid);
                         if (pending.compareTo(ZERO) < INT_ZERO) {
                                 pending = ZERO;
                         }
