@@ -93,11 +93,27 @@ export default function TeacherDashboard() {
       const totalStudents = enrichedClasses.reduce((sum, cls) => sum + cls.studentCount, 0);
       const attendanceMarked = enrichedClasses.filter(cls => cls.attendanceMarked).length;
 
+      let publishedExamsCount = 0;
+      await Promise.all(
+        classData.map(async (cls: ClassApiItem) => {
+          try {
+            const examRes = await api.get(`/api/exams/by-class/${cls.id}`);
+            const exams = examRes.data || [];
+            const publishedExams = Array.isArray(exams)
+              ? exams.filter((ex: { status: string }) => ex.status === "PUBLISHED")
+              : (exams.content || []).filter((ex: { status: string }) => ex.status === "PUBLISHED");
+            publishedExamsCount += publishedExams.length;
+          } catch {
+            // ignore
+          }
+        })
+      );
+
       setStats({
         totalClasses: enrichedClasses.length,
         totalStudents,
         attendanceMarkedToday: attendanceMarked,
-        pendingMarkEntry: 0, // TODO: Get from exams endpoint
+        pendingMarkEntry: publishedExamsCount,
       });
 
       // Build pending tasks
@@ -150,11 +166,11 @@ export default function TeacherDashboard() {
       description: "Student directory"
     },
     {
-      title: "Generate Marksheet",
-      icon: "📄",
+      title: "View Exams",
+      icon: "📋",
       color: "indigo",
-      href: "/marksheets",
-      description: "Download reports"
+      href: "/exams",
+      description: "Manage assessments"
     },
   ];
 

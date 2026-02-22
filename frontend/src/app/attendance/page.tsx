@@ -220,7 +220,7 @@ export default function AttendancePage() {
         <div className="mx-auto px-6 py-6 space-y-6">
             <div className="flex justify-between items-center text-wrap">
                 <div>
-                    <h1 className="text-lg font-semibold">Student Attendance</h1>
+                    <h1 className="text-lg font-semibold">Attendance for {selectedDate}</h1>
                     <p className="text-gray-500 text-base mt-1">Track and record daily student presence for <span className="text-blue-600 font-bold">{currentSession?.name || "current session"}</span>.</p>
                 </div>
 

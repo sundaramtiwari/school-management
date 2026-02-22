@@ -57,16 +57,25 @@ export default function ClassesPage() {
         if (!user) return;
         try {
             setLoading(true);
-            const endpoint = "/api/classes/mine";
 
-            const res = await api.get(`${endpoint}?size=100`);
-            setClasses(res.data.content || []);
+            if (user.role === "TEACHER") {
+                if (!currentSession) {
+                    setClasses([]);
+                    return;
+                }
+                const res = await api.get(`/api/class-subjects/my-classes?sessionId=${currentSession.id}`);
+                setClasses(res.data || []);
+            } else {
+                const endpoint = "/api/classes/mine";
+                const res = await api.get(`${endpoint}?size=100`);
+                setClasses(res.data.content || []);
+            }
         } catch {
             showToast("Failed to load classes", "error");
         } finally {
             setLoading(false);
         }
-    }, [showToast, user]);
+    }, [showToast, user, currentSession]);
 
     useEffect(() => {
         void loadClasses();
@@ -149,7 +158,7 @@ export default function ClassesPage() {
                 setEditId(null);
                 resetForm();
                 void loadClasses();
-                
+
                 setTimeout(() => {
                     setPostCreateClass({ id: res.data.id, name: res.data.name });
                 }, 150);
