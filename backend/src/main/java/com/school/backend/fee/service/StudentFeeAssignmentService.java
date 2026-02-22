@@ -151,13 +151,7 @@ public class StudentFeeAssignmentService {
         dto.setSponsorCoveredAmount(sfa.getSponsorCoveredAmount());
         dto.setPrincipalPaid(sfa.getPrincipalPaid());
 
-        BigDecimal pending = nz(sfa.getAmount())
-                .add(nz(sfa.getLateFeeAccrued()))
-                .subtract(nz(sfa.getTotalDiscountAmount()))
-                .subtract(nz(sfa.getSponsorCoveredAmount()))
-                .subtract(nz(sfa.getPrincipalPaid()))
-                .subtract(nz(sfa.getLateFeePaid()))
-                .subtract(nz(sfa.getLateFeeWaived()));
+        BigDecimal pending = calculatePendingFromPersistedValues(sfa);
 
         dto.setStatus(pending.compareTo(BigDecimal.ZERO) <= 0 ? "PAID" : "PENDING");
         BigDecimal remainingPrincipal = nz(sfa.getAmount())
@@ -176,6 +170,16 @@ public class StudentFeeAssignmentService {
 
     private BigDecimal nz(BigDecimal value) {
         return value != null ? value : ZERO;
+    }
+
+    private BigDecimal calculatePendingFromPersistedValues(StudentFeeAssignment sfa) {
+        return nz(sfa.getAmount())
+                .add(nz(sfa.getLateFeeAccrued()))
+                .subtract(nz(sfa.getTotalDiscountAmount()))
+                .subtract(nz(sfa.getSponsorCoveredAmount()))
+                .subtract(nz(sfa.getPrincipalPaid()))
+                .subtract(nz(sfa.getLateFeePaid()))
+                .subtract(nz(sfa.getLateFeeWaived()));
     }
 
     private LocalDate resolveDerivedDueDate(Long sessionId, Long schoolId, Integer dueDayOfMonth) {

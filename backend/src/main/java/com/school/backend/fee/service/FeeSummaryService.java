@@ -50,7 +50,6 @@ public class FeeSummaryService {
         private final FeePaymentRepository paymentRepository;
         private final AcademicSessionRepository sessionRepository;
         private final SchoolRepository schoolRepository;
-        private final LateFeeCalculator lateFeeCalculator;
 
         // ---------------------------------------------------
         // DASHBOARD STATS
@@ -129,15 +128,7 @@ public class FeeSummaryService {
                                 .reduce(ZERO, BigDecimal::add);
 
                 BigDecimal totalLateFeeAccrued = assignments.stream()
-                                .map(sfa -> {
-                                        BigDecimal unpaid = nz(sfa.getAmount())
-                                                        .subtract(nz(sfa.getPrincipalPaid()))
-                                                        .subtract(nz(sfa.getTotalDiscountAmount()))
-                                                        .subtract(nz(sfa.getSponsorCoveredAmount()));
-                                        BigDecimal incremental = lateFeeCalculator.calculateLateFee(sfa,
-                                                        unpaid, LocalDate.now());
-                                        return nz(sfa.getLateFeeAccrued()).add(incremental);
-                                })
+                                .map(sfa -> nz(sfa.getLateFeeAccrued()))
                                 .reduce(ZERO, BigDecimal::add);
 
                 BigDecimal totalLateFeePaid = assignments.stream()
