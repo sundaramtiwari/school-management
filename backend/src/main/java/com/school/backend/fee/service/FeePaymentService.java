@@ -165,14 +165,25 @@ public class FeePaymentService {
     // ---------------- HISTORY ----------------
     @Transactional(readOnly = true)
     public List<FeePaymentDto> getHistory(Long studentId) {
+        return getStudentPayments(studentId, null);
+    }
 
-        Optional<Student> student = studentRepository.findById(studentId);
+    @Transactional(readOnly = true)
+    public List<FeePaymentDto> getStudentPayments(Long studentId, Long sessionId) {
+        Long schoolId = TenantContext.getSchoolId();
+
+        Optional<Student> student = studentRepository.findByIdAndSchoolId(studentId, schoolId);
         if (student.isEmpty()) {
             throw new ResourceNotFoundException("Student not found: " + studentId);
         }
         String studentName = buildStudentName(student.get().getFirstName(), student.get().getLastName());
 
-        return paymentRepository.findByStudentId(studentId)
+        List<FeePayment> payments = sessionId != null
+                ? paymentRepository.findByStudentIdAndSessionIdAndSchoolIdOrderByPaymentDateDescIdDesc(
+                        studentId, sessionId, schoolId)
+                : paymentRepository.findByStudentIdAndSchoolIdOrderByPaymentDateDescIdDesc(studentId, schoolId);
+
+        return payments
                 .stream()
                 .map(payment -> toDto(payment, studentName))
                 .toList();
