@@ -157,6 +157,7 @@ export default function StudentsPage() {
 
   const [fundingLoading, setFundingLoading] = useState(false);
   const [fundingData, setFundingData] = useState<StudentFundingArrangement | null>(null);
+  const [fundingHistory, setFundingHistory] = useState<StudentFundingArrangement[]>([]);
   const [editingFunding, setEditingFunding] = useState(false);
   const [fundingForm, setFundingForm] = useState({
     coverageType: "NONE" as "NONE" | "FULL" | "PARTIAL",
@@ -303,18 +304,18 @@ export default function StudentsPage() {
     try {
       setFundingLoading(true);
       setEditingFunding(false);
-      const res = await api.get(`/api/fees/funding/student/${studentId}/session/${sessionId}`);
-      const data = res.data;
-      setFundingData(data);
-      setFundingForm({
-        coverageType: data.coverageType || "NONE",
-        coverageMode: data.coverageMode || "FIXED_AMOUNT",
-        coverageValue: data.coverageValue ? data.coverageValue.toString() : "0",
-        validFrom: data.validFrom || "",
-        validTo: data.validTo || "",
-      });
-    } catch (err: unknown) {
-      if (axios.isAxiosError(err) && err.response?.status === 404) {
+      try {
+        const res = await api.get(`/api/fees/funding/student/${studentId}/session/${sessionId}`);
+        const data = res.data;
+        setFundingData(data);
+        setFundingForm({
+          coverageType: data.coverageType,
+          coverageMode: data.coverageMode,
+          coverageValue: data.coverageValue ? data.coverageValue.toString() : "0",
+          validFrom: data.validFrom || "",
+          validTo: data.validTo || "",
+        });
+      } catch {
         setFundingData(null);
         setFundingForm({
           coverageType: "NONE",
@@ -323,9 +324,16 @@ export default function StudentsPage() {
           validFrom: "",
           validTo: "",
         });
-      } else {
-        showToast("Failed to load funding arrangement", "error");
       }
+
+      try {
+        const histRes = await api.get(`/api/fees/funding/student/${studentId}`);
+        setFundingHistory(Array.isArray(histRes.data) ? histRes.data : []);
+      } catch {
+        setFundingHistory([]);
+      }
+    } catch {
+      showToast("Failed to load funding arrangement", "error");
     } finally {
       setFundingLoading(false);
     }
@@ -432,6 +440,7 @@ export default function StudentsPage() {
     setEnrollmentsData([]);
     setPromotionsData([]);
     setFundingData(null);
+    setFundingHistory([]);
     setProfileTab("overview");
   }, []);
 
@@ -1815,9 +1824,28 @@ export default function StudentsPage() {
                       onClick={() => setEditingFunding(true)}
                       className="mt-2 text-blue-600 bg-blue-50 hover:bg-blue-100 px-4 py-2 rounded-md font-medium text-sm transition-colors border border-blue-200"
                     >
-                      + Add Sponsorship
+                      {fundingHistory.length > 0 ? "+ Re-add Funding" : "+ Add Sponsorship"}
                     </button>
                   )}
+                </div>
+              )}
+
+              {fundingHistory.length > 0 && (
+                <div className="mt-6 border-t pt-4">
+                  <h4 className="text-sm font-semibold mb-3">Funding History</h4>
+                  <div className="space-y-2">
+                    {fundingHistory.map((hist) => (
+                      <div key={hist.id} className="flex justify-between items-center p-3 bg-white border border-gray-100 rounded-lg text-sm">
+                        <div>
+                          <span className="font-semibold text-gray-700">{hist.coverageType === "FULL" ? "Full Scholarship" : "Partial Sponsorship"}</span>
+                          <span className="text-xs text-gray-500 ml-2">({hist.coverageMode === "PERCENTAGE" ? hist.coverageValue + "%" : "₹" + hist.coverageValue})</span>
+                        </div>
+                        <span className={`px-2 py-0.5 rounded-full text-[10px] uppercase font-bold ${hist.active ? "bg-green-100 text-green-700" : "bg-gray-100 text-gray-500"}`}>
+                          {hist.active ? "Active" : "Inactive"}
+                        </span>
+                      </div>
+                    ))}
+                  </div>
                 </div>
               )}
             </div>

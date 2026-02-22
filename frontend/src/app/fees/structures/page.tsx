@@ -28,7 +28,7 @@ type SchoolClass = {
 };
 type FeeType = { id: number; name: string };
 
-const FREQUENCIES = ["ONE_TIME", "MONTHLY", "ANNUALLY"];
+const FREQUENCIES = ["ONE_TIME", "MONTHLY", "QUARTERLY", "HALF_YEARLY", "ANNUALLY"];
 
 export default function FeeStructuresPage() {
     const { user } = useAuth();
