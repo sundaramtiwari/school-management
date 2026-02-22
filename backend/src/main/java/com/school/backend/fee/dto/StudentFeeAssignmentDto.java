@@ -35,6 +35,7 @@ public class StudentFeeAssignmentDto {
     private BigDecimal totalDiscountAmount;
     private BigDecimal sponsorCoveredAmount;
     private BigDecimal principalPaid;
+    private BigDecimal remainingPrincipal;
     private String status;
 
     private boolean active;

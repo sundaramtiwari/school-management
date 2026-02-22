@@ -1,8 +1,11 @@
 package com.school.backend.fee.controller;
 
+import com.school.backend.fee.dto.FeeDiscountApplyRequest;
 import com.school.backend.fee.dto.StudentFeeAssignRequest;
 import com.school.backend.fee.dto.StudentFeeAssignmentDto;
+import com.school.backend.fee.service.FeeDiscountService;
 import com.school.backend.fee.service.StudentFeeAssignmentService;
+import com.school.backend.user.security.SecurityUtil;
 import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
 import org.springframework.security.access.prepost.PreAuthorize;
@@ -15,7 +18,8 @@ import java.util.List;
 @RequiredArgsConstructor
 public class StudentFeeAssignmentController {
 
-    private final StudentFeeAssignmentService service;
+    private final StudentFeeAssignmentService assignmentService;
+    private final FeeDiscountService feeDiscountService;
 
     // Assign fee to student
     @PostMapping
@@ -23,7 +27,7 @@ public class StudentFeeAssignmentController {
     public StudentFeeAssignmentDto assign(
             @Valid @RequestBody StudentFeeAssignRequest req) {
 
-        return service.assign(req);
+        return assignmentService.assign(req);
     }
 
     // List student's assigned fees
@@ -33,6 +37,20 @@ public class StudentFeeAssignmentController {
             @PathVariable Long studentId,
             @RequestParam Long sessionId) {
 
-        return service.listByStudent(studentId, sessionId);
+        return assignmentService.listByStudent(studentId, sessionId);
+    }
+
+    @PostMapping("/{assignmentId}/discount")
+    @PreAuthorize("hasAnyRole('SCHOOL_ADMIN','ACCOUNTANT','SUPER_ADMIN','PLATFORM_ADMIN')")
+    public StudentFeeAssignmentDto applyDiscount(
+            @PathVariable Long assignmentId,
+            @Valid @RequestBody FeeDiscountApplyRequest req) {
+
+        return assignmentService.toDto(feeDiscountService.applyDiscount(
+                assignmentId,
+                req.getDiscountDefinitionId(),
+                SecurityUtil.schoolId(),
+                req.getRemarks(),
+                SecurityUtil.userId()));
     }
 }

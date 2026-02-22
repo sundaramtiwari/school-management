@@ -22,12 +22,15 @@ import com.school.backend.fee.entity.LateFeePolicy;
 import com.school.backend.fee.repository.LateFeePolicyRepository;
 
 import java.math.BigDecimal;
+import java.math.RoundingMode;
 import java.time.LocalDate;
 import java.util.List;
 
 @Service
 @RequiredArgsConstructor
 public class StudentFeeAssignmentService {
+    private static final BigDecimal ZERO = BigDecimal.ZERO;
+
 
     private final StudentFeeAssignmentRepository assignmentRepository;
     private final FeeStructureRepository feeStructureRepository;
@@ -116,7 +119,7 @@ public class StudentFeeAssignmentService {
     }
 
     // ---------------- MAPPER ----------------
-    private StudentFeeAssignmentDto toDto(StudentFeeAssignment sfa) {
+    public StudentFeeAssignmentDto toDto(StudentFeeAssignment sfa) {
 
         StudentFeeAssignmentDto dto = new StudentFeeAssignmentDto();
 
@@ -148,19 +151,31 @@ public class StudentFeeAssignmentService {
         dto.setSponsorCoveredAmount(sfa.getSponsorCoveredAmount());
         dto.setPrincipalPaid(sfa.getPrincipalPaid());
 
-        BigDecimal pending = sfa.getAmount()
-                .add(sfa.getLateFeeAccrued())
-                .subtract(sfa.getTotalDiscountAmount())
-                .subtract(sfa.getSponsorCoveredAmount())
-                .subtract(sfa.getPrincipalPaid())
-                .subtract(sfa.getLateFeePaid())
-                .subtract(sfa.getLateFeeWaived());
+        BigDecimal pending = nz(sfa.getAmount())
+                .add(nz(sfa.getLateFeeAccrued()))
+                .subtract(nz(sfa.getTotalDiscountAmount()))
+                .subtract(nz(sfa.getSponsorCoveredAmount()))
+                .subtract(nz(sfa.getPrincipalPaid()))
+                .subtract(nz(sfa.getLateFeePaid()))
+                .subtract(nz(sfa.getLateFeeWaived()));
 
         dto.setStatus(pending.compareTo(BigDecimal.ZERO) <= 0 ? "PAID" : "PENDING");
+        BigDecimal remainingPrincipal = nz(sfa.getAmount())
+                .subtract(nz(sfa.getPrincipalPaid()))
+                .subtract(nz(sfa.getTotalDiscountAmount()))
+                .subtract(nz(sfa.getSponsorCoveredAmount()));
+        if (remainingPrincipal.compareTo(ZERO) < 0) {
+            remainingPrincipal = ZERO;
+        }
+        dto.setRemainingPrincipal(remainingPrincipal.setScale(2, RoundingMode.HALF_UP));
 
         dto.setActive(sfa.isActive());
 
         return dto;
+    }
+
+    private BigDecimal nz(BigDecimal value) {
+        return value != null ? value : ZERO;
     }
 
     private LocalDate resolveDerivedDueDate(Long sessionId, Long schoolId, Integer dueDayOfMonth) {

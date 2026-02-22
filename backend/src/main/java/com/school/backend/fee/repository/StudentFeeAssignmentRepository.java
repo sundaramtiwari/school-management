@@ -30,6 +30,11 @@ public interface StudentFeeAssignmentRepository
     Optional<StudentFeeAssignment> findByStudentIdAndFeeStructureIdAndSessionIdAndSchoolId(
             Long studentId, Long feeStructureId, Long sessionId, Long schoolId);
 
+    Optional<StudentFeeAssignment> findByIdAndSchoolId(Long id, Long schoolId);
+
+    @Query(value = "SELECT COUNT(1) > 0 FROM student_fee_assignments WHERE id = :id", nativeQuery = true)
+    boolean existsAnyById(@Param("id") Long id);
+
     boolean existsByStudentIdAndFeeStructureIdAndSessionId(
             Long studentId,
             Long feeStructureId,
