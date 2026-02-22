@@ -45,7 +45,7 @@ export default function SchoolAdminDashboard() {
       // Load stats via new dedicated endpoint
       const [results, classCountRes] = await Promise.all([
         api.get(`/api/dashboard/school-admin/stats?sessionId=${currentSession.id}`),
-        api.get('/api/classes/mine?size=1'), // Classes still separate as they are global-ish
+        api.get('/api/classes/count'), // Classes still separate as they are global-ish
       ]);
 
       const data = results.data;
@@ -53,7 +53,7 @@ export default function SchoolAdminDashboard() {
 
       setStats({
         students: data.totalStudents || 0,
-        classes: classData?.totalElements || 0,
+        classes: classData?.count || 0,
         teachers: data.totalTeachers || 0,
         attendance: data.attendancePercentage || 0,
         feesPending: data.totalFeesPending || 0, // Should be amount or adapted

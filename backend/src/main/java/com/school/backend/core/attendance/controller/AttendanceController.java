@@ -1,7 +1,6 @@
 package com.school.backend.core.attendance.controller;
 
 import com.school.backend.common.tenant.SessionContext;
-import com.school.backend.common.tenant.SessionContext;
 import com.school.backend.core.attendance.dto.AttendanceResponse;
 import com.school.backend.core.attendance.entity.StudentAttendance;
 import com.school.backend.core.attendance.enums.AttendanceStatus;

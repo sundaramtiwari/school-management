@@ -1,6 +1,7 @@
 "use client";
 
-import { useCallback, useEffect, useState, type ChangeEvent } from "react";
+import { useCallback, useEffect, useState, type ChangeEvent, Suspense } from "react";
+import { useSearchParams } from "next/navigation";
 import { api } from "@/lib/api";
 import { canCollectFees } from "@/lib/permissions";
 import { useToast } from "@/components/ui/Toast";
@@ -21,10 +22,20 @@ type FeeSummary = {
 };
 type Payment = { id: number; amountPaid: number; paymentDate: string; mode: string; remarks: string };
 
+
 export default function FeeCollectPage() {
+    return (
+        <Suspense fallback={<div className="p-12 text-center text-gray-400">Loading Billing...</div>}>
+            <FeeCollectContent />
+        </Suspense>
+    );
+}
+
+function FeeCollectContent() {
     const { user } = useAuth();
     const { showToast } = useToast();
     const { currentSession } = useSession();
+    const searchParams = useSearchParams();
 
     const canUserCollectFees = canCollectFees(user?.role);
 
@@ -61,6 +72,37 @@ export default function FeeCollectPage() {
     useEffect(() => {
         void loadClasses();
     }, [currentSession, loadClasses]);
+
+    // Handle deep-linking from query params
+    useEffect(() => {
+        const studentId = searchParams.get("student");
+        if (studentId && currentSession) {
+            void (async () => {
+                try {
+                    // 1. Fetch Student Details to get their class
+                    const stdRes = await api.get(`/api/students/${studentId}`);
+                    const student = stdRes.data;
+
+                    if (student.currentClassId) {
+                        setSelectedClass(student.currentClassId);
+
+                        // 2. Load all students for that class to populate dropdown
+                        setLoadingStudents(true);
+                        const studentsRes = await api.get(`/api/students/by-class/${student.currentClassId}?size=100`);
+                        setStudents(studentsRes.data.content || []);
+                        setLoadingStudents(false);
+
+                        // 3. Set selected student and load their ledger
+                        setSelectedStudent(Number(studentId));
+                        void loadStudentData(Number(studentId));
+                    }
+                } catch (err) {
+                    console.error("Deep-linking failed", err);
+                    showToast("Failed to auto-load student from link", "error");
+                }
+            })();
+        }
+    }, [searchParams, currentSession, showToast]);
 
     /* -------- Handlers -------- */
     async function onClassChange(e: ChangeEvent<HTMLSelectElement>) {
@@ -257,7 +299,7 @@ export default function FeeCollectPage() {
                                         onChange={e => setMonths(Number(e.target.value))}
                                     >
                                         {[1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12].map(m => (
-                                                    <option key={m} value={m} className="bg-gray-900 text-white">{m} Month{m > 1 ? "s" : ""}</option>
+                                            <option key={m} value={m} className="bg-gray-900 text-white">{m} Month{m > 1 ? "s" : ""}</option>
                                         ))}
                                     </select>
                                 </div>
