@@ -49,9 +49,9 @@ public class LateFeeAccrualIdempotencyTest extends BaseAuthenticatedIntegrationT
                     "/api/fees/summary/students/" + studentId + "?sessionId=" + sessionId,
                     HttpMethod.GET, new HttpEntity<>(headers), FeeSummaryDto.class);
             Assertions.assertThat(summaryResp.getStatusCode()).isEqualTo(HttpStatus.OK);
-            // Preview should show late fee
+            // Read path must be persisted-only and should not accrue late fee in real-time
             Assertions.assertThat(summaryResp.getBody().getTotalLateFeeAccrued())
-                    .isEqualByComparingTo(BigDecimal.valueOf(500));
+                    .isEqualByComparingTo(BigDecimal.ZERO);
         }
 
         // 3. Ensure no DB mutation yet

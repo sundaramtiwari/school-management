@@ -20,6 +20,8 @@ public interface FeePaymentRepository extends JpaRepository<FeePayment, Long> {
                 String getLastName();
         }
 
+        List<FeePayment> findByStudentId(Long studentId);
+
         List<FeePayment> findByStudentIdAndSchoolIdOrderByPaymentDateDescIdDesc(Long studentId, Long schoolId);
 
         List<FeePayment> findByStudentIdAndSessionIdAndSchoolIdOrderByPaymentDateDescIdDesc(

@@ -26,6 +26,7 @@ public class FeeDiscountService {
     private final StudentFeeAssignmentRepository assignmentRepository;
     private final DiscountDefinitionRepository discountDefinitionRepository;
     private final FeeAdjustmentRepository feeAdjustmentRepository;
+    private final FundingSnapshotService fundingSnapshotService;
 
     @Transactional
     public StudentFeeAssignment applyDiscount(
@@ -51,19 +52,26 @@ public class FeeDiscountService {
             throw new BusinessException("Discount cannot be applied because no principal is due.");
         }
 
-        BigDecimal calculatedDiscount = calculateDiscountAmount(discountDefinition, assignment.getAmount(), principalDue);
+        BigDecimal calculatedDiscount = calculateDiscountAmount(discountDefinition, assignment.getAmount());
+        if (discountDefinition.getType() == DiscountType.PERCENTAGE) {
+            calculatedDiscount = calculatedDiscount.min(principalDue);
+        }
         if (calculatedDiscount.compareTo(ZERO) <= 0) {
             throw new BusinessException("Calculated discount must be greater than zero.");
         }
-        if (calculatedDiscount.compareTo(principalDue) > 0) {
-            throw new BusinessException("Calculated discount exceeds remaining principal due.");
+        if (discountDefinition.getType() == DiscountType.FLAT && calculatedDiscount.compareTo(principalDue) > 0) {
+            throw new BusinessException("Calculated flat discount exceeds remaining principal due.");
         }
 
         BigDecimal updatedTotalDiscount = nz(assignment.getTotalDiscountAmount()).add(calculatedDiscount);
+        assignment.setTotalDiscountAmount(updatedTotalDiscount);
+        fundingSnapshotService.recalculateAndUpdateFundingSnapshot(assignment);
+        BigDecimal updatedSponsorCoveredAmount = nz(assignment.getSponsorCoveredAmount());
+
         BigDecimal principalAfterDiscount = nz(assignment.getAmount())
                 .subtract(nz(assignment.getPrincipalPaid()))
                 .subtract(updatedTotalDiscount)
-                .subtract(nz(assignment.getSponsorCoveredAmount()));
+                .subtract(updatedSponsorCoveredAmount);
         if (principalAfterDiscount.compareTo(ZERO) < 0) {
             throw new BusinessException("Discount cannot reduce principal below zero.");
         }
@@ -81,7 +89,7 @@ public class FeeDiscountService {
                 .schoolId(schoolId)
                 .build());
 
-        assignment.setTotalDiscountAmount(updatedTotalDiscount);
+        assignment.setSponsorCoveredAmount(updatedSponsorCoveredAmount);
         return assignmentRepository.save(assignment);
     }
 
@@ -106,8 +114,7 @@ public class FeeDiscountService {
                 .subtract(nz(assignment.getSponsorCoveredAmount()));
     }
 
-    private BigDecimal calculateDiscountAmount(DiscountDefinition definition, BigDecimal assignmentAmount,
-            BigDecimal principalDue) {
+    private BigDecimal calculateDiscountAmount(DiscountDefinition definition, BigDecimal assignmentAmount) {
         BigDecimal raw;
         if (definition.getType() == DiscountType.PERCENTAGE) {
             raw = nz(assignmentAmount).multiply(nz(definition.getAmountValue())).divide(HUNDRED, 6, RoundingMode.HALF_UP);
