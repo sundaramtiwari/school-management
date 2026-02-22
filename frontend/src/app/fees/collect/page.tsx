@@ -21,6 +21,18 @@ type FeeSummary = {
     status: string
 };
 type Payment = { id: number; amountPaid: number; paymentDate: string; mode: string; remarks: string };
+type FeeAssignment = {
+    id: number;
+    feeTypeName: string;
+    amount: number;
+    totalDiscountAmount: number;
+    sponsorCoveredAmount: number;
+    principalPaid: number;
+    lateFeeAccrued: number;
+    lateFeePaid: number;
+    lateFeeWaived: number;
+    status: string;
+};
 
 
 export default function FeeCollectPage() {
@@ -48,6 +60,8 @@ function FeeCollectContent() {
 
     const [summary, setSummary] = useState<FeeSummary | null>(null);
     const [history, setHistory] = useState<Payment[]>([]);
+    const [breakdown, setBreakdown] = useState<FeeAssignment[]>([]);
+    const [isBreakdownOpen, setIsBreakdownOpen] = useState(false);
 
     const [loading, setLoading] = useState(false);
     const [loadingStudents, setLoadingStudents] = useState(false);
@@ -138,13 +152,15 @@ function FeeCollectContent() {
         if (!currentSession) return;
         try {
             setLoading(true);
-            const [sumRes, histRes] = await Promise.all([
+            const [sumRes, histRes, breakRes] = await Promise.all([
                 api.get(`/api/fees/summary/students/${stdId}?sessionId=${currentSession.id}`),
-                api.get(`/api/fees/payments/students/${stdId}`)
+                api.get(`/api/fees/payments/students/${stdId}`),
+                api.get(`/api/fees/assignments/students/${stdId}?sessionId=${currentSession.id}`)
             ]);
 
             setSummary(sumRes.data);
             setHistory(histRes.data || []);
+            setBreakdown(breakRes.data || []);
         } catch {
             showToast("Billing synchronization failed", "error");
         } finally {
@@ -311,6 +327,64 @@ function FeeCollectContent() {
                                     {isDownloading ? "⏳ Generating..." : "📄 Generate Academic Challan"}
                                 </button>
                             </div>
+                        </div>
+
+                        {/* Fee Breakdown (Collapsible) */}
+                        <div className="bg-white border rounded-2xl overflow-hidden shadow-sm">
+                            <button
+                                onClick={() => setIsBreakdownOpen(!isBreakdownOpen)}
+                                className="w-full p-6 flex items-center justify-between hover:bg-gray-50 transition-colors"
+                            >
+                                <h3 className="text-xs font-black uppercase tracking-widest text-gray-500">Fee Breakdown</h3>
+                                <span className={`transform transition-transform duration-200 ${isBreakdownOpen ? "rotate-180" : ""}`}>
+                                    <svg className="w-5 h-5 text-gray-400" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 9l-7 7-7-7" />
+                                    </svg>
+                                </span>
+                            </button>
+
+                            {isBreakdownOpen && (
+                                <div className="px-6 pb-6 space-y-4">
+                                    <div className="overflow-x-auto">
+                                        <table className="w-full text-left text-[11px]">
+                                            <thead className="text-gray-400 font-bold uppercase border-b">
+                                                <tr>
+                                                    <th className="pb-2">Type</th>
+                                                    <th className="pb-2 text-right">Principal</th>
+                                                    <th className="pb-2 text-right">Discount</th>
+                                                    <th className="pb-2 text-right">Funding</th>
+                                                    <th className="pb-2 text-right">Pending</th>
+                                                    <th className="pb-2 text-center">Status</th>
+                                                </tr>
+                                            </thead>
+                                            <tbody className="divide-y divide-gray-100">
+                                                {breakdown.map((item) => {
+                                                    const pendingAmount = (item.amount + item.lateFeeAccrued) - item.totalDiscountAmount - item.sponsorCoveredAmount - (item.principalPaid + item.lateFeePaid);
+                                                    return (
+                                                        <tr key={item.id}>
+                                                            <td className="py-2.5 font-bold text-gray-700">{item.feeTypeName || "Miscellaneous"}</td>
+                                                            <td className="py-2.5 text-right">₹ {item.amount.toLocaleString()}</td>
+                                                            <td className="py-2.5 text-right text-blue-600">₹ {item.totalDiscountAmount.toLocaleString()}</td>
+                                                            <td className="py-2.5 text-right text-indigo-600">₹ {item.sponsorCoveredAmount.toLocaleString()}</td>
+                                                            <td className="py-2.5 text-right font-black">₹ {Math.max(0, pendingAmount).toLocaleString()}</td>
+                                                            <td className="py-2.5 text-center">
+                                                                <span className={`px-2 py-0.5 rounded-full text-[9px] font-black uppercase ${item.status === 'PAID' ? 'bg-green-100 text-green-600' : 'bg-red-100 text-red-600'}`}>
+                                                                    {item.status}
+                                                                </span>
+                                                            </td>
+                                                        </tr>
+                                                    );
+                                                })}
+                                                {breakdown.length === 0 && (
+                                                    <tr>
+                                                        <td colSpan={6} className="py-8 text-center text-gray-400 italic">No detailed assignments found</td>
+                                                    </tr>
+                                                )}
+                                            </tbody>
+                                        </table>
+                                    </div>
+                                </div>
+                            )}
                         </div>
 
                         {/* Payment Entry */}

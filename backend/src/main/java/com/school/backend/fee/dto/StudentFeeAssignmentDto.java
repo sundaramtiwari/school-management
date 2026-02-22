@@ -17,6 +17,7 @@ public class StudentFeeAssignmentDto {
     private Long sessionId;
 
     private BigDecimal amount;
+    private String feeTypeName;
 
     // Snapshot
     private LocalDate dueDate;
@@ -32,6 +33,9 @@ public class StudentFeeAssignmentDto {
     private BigDecimal lateFeePaid;
     private BigDecimal lateFeeWaived;
     private BigDecimal totalDiscountAmount;
+    private BigDecimal sponsorCoveredAmount;
+    private BigDecimal principalPaid;
+    private String status;
 
     private boolean active;
 }

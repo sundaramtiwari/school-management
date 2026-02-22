@@ -4,6 +4,8 @@ import { useCallback, useEffect, useState } from "react";
 import { useSession } from "@/context/SessionContext";
 import { api } from "@/lib/api";
 import { Skeleton } from "@/components/ui/Skeleton";
+import { useRouter } from "next/navigation";
+import { useToast } from "@/components/ui/Toast";
 
 type RecentPayment = {
   id: number;
@@ -23,6 +25,8 @@ type Defaulter = {
 
 export default function AccountantDashboard() {
   const { currentSession, isSessionLoading: sessionLoading } = useSession();
+  const router = useRouter();
+  const { showToast } = useToast();
   const [stats, setStats] = useState({
     collectedToday: 0,
     transactionsToday: 0,
@@ -33,6 +37,7 @@ export default function AccountantDashboard() {
   const [recentPayments, setRecentPayments] = useState<RecentPayment[]>([]);
   const [topDefaulters, setTopDefaulters] = useState<Defaulter[]>([]);
   const [loading, setLoading] = useState(true);
+  const [isDownloading, setIsDownloading] = useState(false);
 
   const loadAccountantDashboard = useCallback(async () => {
     if (!currentSession?.id) return;
@@ -71,6 +76,26 @@ export default function AccountantDashboard() {
     }
   }, [currentSession?.id]);
 
+  const downloadReceipt = async (pid: number) => {
+    try {
+      setIsDownloading(true);
+      showToast("Generating receipt...", "info");
+      const res = await api.get(`/api/fees/payments/${pid}/receipt`, { responseType: 'blob' });
+      const url = window.URL.createObjectURL(new Blob([res.data]));
+      const link = document.createElement('a');
+      link.href = url;
+      link.setAttribute('download', `receipt_transaction_${pid}.pdf`);
+      document.body.appendChild(link);
+      link.click();
+      document.body.removeChild(link);
+      showToast("Download complete", "success");
+    } catch {
+      showToast("Receipt generation failed", "error");
+    } finally {
+      setIsDownloading(false);
+    }
+  };
+
   useEffect(() => {
     if (!sessionLoading && currentSession) loadAccountantDashboard();
   }, [sessionLoading, currentSession, loadAccountantDashboard]);
@@ -83,13 +108,13 @@ export default function AccountantDashboard() {
       href: "/fees/collect",
       description: "Record payment"
     },
-    {
-      title: "Generate Challan",
-      icon: "📄",
-      color: "blue",
-      href: "/fees/structures",
-      description: "Create fee slip"
-    },
+    //     {
+    //       title: "Generate Challan",
+    //       icon: "📄",
+    //       color: "blue",
+    //       href: "/fees/structures",
+    //       description: "Create fee slip"
+    //     },
     {
       title: "View Defaulters",
       icon: "⚠️",
@@ -282,10 +307,11 @@ export default function AccountantDashboard() {
                   <div className="text-right">
                     <p className="font-bold text-green-600">{formatCurrency(payment.amountPaid)}</p>
                     <button
-                      onClick={() => window.location.href = `/fees/payments/${payment.id}/receipt`}
-                      className="text-xs text-blue-600 hover:text-blue-800 mt-1"
+                      onClick={() => downloadReceipt(payment.id)}
+                      disabled={isDownloading}
+                      className="text-xs text-blue-600 hover:text-blue-800 mt-1 disabled:opacity-50"
                     >
-                      Download Receipt
+                      {isDownloading ? "Downloading..." : "Download Receipt"}
                     </button>
                   </div>
                 </div>
@@ -294,7 +320,7 @@ export default function AccountantDashboard() {
           </div>
           {recentPayments.length > 0 && (
             <button
-              onClick={() => window.location.href = '/fees/collect'}
+              onClick={() => router.push('/fees/collect')}
               className="w-full mt-4 py-2 text-center text-blue-600 hover:text-blue-800 font-semibold text-sm"
             >
               View All Payments →
@@ -338,7 +364,7 @@ export default function AccountantDashboard() {
                     <div className="text-right">
                       <p className="font-bold text-red-600">{formatCurrency(defaulter.amountDue)}</p>
                       <button
-                        onClick={() => window.location.href = `/fees/collect?student=${defaulter.studentId}`}
+                        onClick={() => router.push(`/fees/collect?student=${defaulter.studentId}`)}
                         className="text-xs text-blue-600 hover:text-blue-800 mt-1"
                       >
                         Collect →
@@ -350,7 +376,7 @@ export default function AccountantDashboard() {
             </div>
             {topDefaulters.length > 0 && (
               <button
-                onClick={() => window.location.href = '/fees/defaulters'}
+                onClick={() => router.push('/fees/defaulters')}
                 className="w-full mt-4 py-2 text-center text-red-600 hover:text-red-800 font-semibold text-sm"
               >
                 View All Defaulters ({stats.defaulterCount}) →
@@ -365,7 +391,7 @@ export default function AccountantDashboard() {
               {quickActions.map((action, i) => (
                 <button
                   key={i}
-                  onClick={() => window.location.href = action.href}
+                  onClick={() => router.push(action.href)}
                   className={`
                     p-4 rounded-xl border-2 border-gray-100
                     hover:border-${action.color}-400 hover:bg-${action.color}-50
@@ -397,7 +423,7 @@ export default function AccountantDashboard() {
               Consider sending fee reminders or scheduling collection drives.
             </p>
             <button
-              onClick={() => window.location.href = '/fees/defaulters'}
+              onClick={() => router.push('/fees/defaulters')}
               className="mt-3 bg-red-600 text-white px-4 py-2 rounded-lg hover:bg-red-700 transition font-semibold text-sm"
             >
               View Defaulter List

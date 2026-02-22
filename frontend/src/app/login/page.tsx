@@ -1,15 +1,27 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useEffect, Suspense } from "react";
 import { useAuth } from "@/context/AuthContext";
 import { api } from "@/lib/api";
+import { useSearchParams } from "next/navigation";
+import { useToast } from "@/components/ui/Toast";
 
-export default function LoginPage() {
+function LoginContent() {
     const { login } = useAuth();
+    const searchParams = useSearchParams();
+    const { showToast } = useToast();
     const [email, setEmail] = useState("");
     const [password, setPassword] = useState("");
     const [error, setError] = useState("");
     const [loading, setLoading] = useState(false);
+
+    useEffect(() => {
+        if (searchParams.get("expired")) {
+            showToast("Session expired. Please log in again.", "error");
+            // Clear the param from URL to avoid repeated toasts on refresh
+            window.history.replaceState({}, "", "/login");
+        }
+    }, [searchParams, showToast]);
 
     async function handleSubmit(e: React.FormEvent) {
         e.preventDefault();
@@ -72,5 +84,13 @@ export default function LoginPage() {
                 </form>
             </div>
         </div>
+    );
+}
+
+export default function LoginPage() {
+    return (
+        <Suspense fallback={<div className="flex min-h-screen items-center justify-center bg-gray-100">Loading...</div>}>
+            <LoginContent />
+        </Suspense>
     );
 }

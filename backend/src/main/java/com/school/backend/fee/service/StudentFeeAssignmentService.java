@@ -126,6 +126,13 @@ public class StudentFeeAssignmentService {
         dto.setSessionId(sfa.getSessionId());
         dto.setAmount(sfa.getAmount());
 
+        // Populate Fee Type Name
+        feeStructureRepository.findById(sfa.getFeeStructureId()).ifPresent(fs -> {
+            if (fs.getFeeType() != null) {
+                dto.setFeeTypeName(fs.getFeeType().getName());
+            }
+        });
+
         dto.setDueDate(sfa.getDueDate());
         dto.setLateFeeType(sfa.getLateFeeType());
         dto.setLateFeeValue(sfa.getLateFeeValue());
@@ -138,6 +145,18 @@ public class StudentFeeAssignmentService {
         dto.setLateFeePaid(sfa.getLateFeePaid());
         dto.setLateFeeWaived(sfa.getLateFeeWaived());
         dto.setTotalDiscountAmount(sfa.getTotalDiscountAmount());
+        dto.setSponsorCoveredAmount(sfa.getSponsorCoveredAmount());
+        dto.setPrincipalPaid(sfa.getPrincipalPaid());
+
+        BigDecimal pending = sfa.getAmount()
+                .add(sfa.getLateFeeAccrued())
+                .subtract(sfa.getTotalDiscountAmount())
+                .subtract(sfa.getSponsorCoveredAmount())
+                .subtract(sfa.getPrincipalPaid())
+                .subtract(sfa.getLateFeePaid())
+                .subtract(sfa.getLateFeeWaived());
+
+        dto.setStatus(pending.compareTo(BigDecimal.ZERO) <= 0 ? "PAID" : "PENDING");
 
         dto.setActive(sfa.isActive());
 

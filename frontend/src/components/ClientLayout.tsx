@@ -7,6 +7,7 @@ import Breadcrumbs from "@/components/Breadcrumbs";
 import { useRouter, usePathname } from "next/navigation";
 import { useSession } from "@/context/SessionContext";
 import { useEffect } from "react";
+import ErrorBoundary from "@/components/ErrorBoundary";
 
 function LayoutContent({ children }: { children: React.ReactNode }) {
     const { user, isLoading: authLoading } = useAuth();
@@ -56,12 +57,16 @@ function LayoutContent({ children }: { children: React.ReactNode }) {
     );
 }
 
+
 export default function ClientLayout({ children }: { children: React.ReactNode }) {
     return (
-        <AuthProvider>
-            <SessionProvider>
-                <LayoutContent>{children}</LayoutContent>
-            </SessionProvider>
-        </AuthProvider>
+        <ErrorBoundary>
+            <AuthProvider>
+                <SessionProvider>
+                    <LayoutContent>{children}</LayoutContent>
+                </SessionProvider>
+            </AuthProvider>
+        </ErrorBoundary>
     );
 }
+
