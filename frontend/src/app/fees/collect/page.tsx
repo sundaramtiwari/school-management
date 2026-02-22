@@ -1,6 +1,6 @@
 "use client";
 
-import { useCallback, useEffect, useState, type ChangeEvent, Suspense } from "react";
+import React, { useCallback, useEffect, useState, type ChangeEvent, Suspense } from "react";
 import { useSearchParams } from "next/navigation";
 import { api } from "@/lib/api";
 import { canCollectFees } from "@/lib/permissions";
@@ -34,7 +34,16 @@ type FeeAssignment = {
     status: string;
 };
 
-
+type FeeAdjustment = {
+    id: number;
+    type: string;
+    discountType?: string;
+    discountName?: string;
+    amount: number;
+    remarks?: string;
+    createdByName?: string;
+    createdAt: string;
+};
 export default function FeeCollectPage() {
     return (
         <Suspense fallback={<div className="p-12 text-center text-gray-400">Loading Billing...</div>}>
@@ -62,6 +71,10 @@ function FeeCollectContent() {
     const [history, setHistory] = useState<Payment[]>([]);
     const [breakdown, setBreakdown] = useState<FeeAssignment[]>([]);
     const [isBreakdownOpen, setIsBreakdownOpen] = useState(false);
+
+    const [expandedAssignmentId, setExpandedAssignmentId] = useState<number | null>(null);
+    const [adjustmentHistory, setAdjustmentHistory] = useState<Record<number, FeeAdjustment[]>>({});
+    const [loadingAdjustments, setLoadingAdjustments] = useState(false);
 
     const [loading, setLoading] = useState(false);
     const [loadingStudents, setLoadingStudents] = useState(false);
@@ -241,6 +254,30 @@ function FeeCollectContent() {
         }
     }
 
+    async function toggleExpand(id: number) {
+        if (expandedAssignmentId === id) {
+            setExpandedAssignmentId(null);
+            return;
+        }
+
+        setExpandedAssignmentId(id);
+
+        if (!adjustmentHistory[id]) {
+            try {
+                setLoadingAdjustments(true);
+                const res = await api.get(`/api/fees/assignments/${id}/adjustments`);
+                setAdjustmentHistory(prev => ({
+                    ...prev,
+                    [id]: res.data || []
+                }));
+            } catch {
+                showToast("Failed to load adjustment history", "error");
+            } finally {
+                setLoadingAdjustments(false);
+            }
+        }
+    }
+
     return (
         <div className="space-y-6">
             <header>
@@ -349,6 +386,7 @@ function FeeCollectContent() {
                                         <table className="w-full text-left text-[11px]">
                                             <thead className="text-gray-400 font-bold uppercase border-b">
                                                 <tr>
+                                                    <th className="pb-2 w-8"></th>
                                                     <th className="pb-2">Type</th>
                                                     <th className="pb-2 text-right">Principal</th>
                                                     <th className="pb-2 text-right">Discount</th>
@@ -361,23 +399,85 @@ function FeeCollectContent() {
                                                 {breakdown.map((item) => {
                                                     const pendingAmount = (item.amount + item.lateFeeAccrued) - item.totalDiscountAmount - item.sponsorCoveredAmount - (item.principalPaid + item.lateFeePaid);
                                                     return (
-                                                        <tr key={item.id}>
-                                                            <td className="py-2.5 font-bold text-gray-700">{item.feeTypeName || "Miscellaneous"}</td>
-                                                            <td className="py-2.5 text-right">₹ {item.amount.toLocaleString()}</td>
-                                                            <td className="py-2.5 text-right text-blue-600">₹ {item.totalDiscountAmount.toLocaleString()}</td>
-                                                            <td className="py-2.5 text-right text-indigo-600">₹ {item.sponsorCoveredAmount.toLocaleString()}</td>
-                                                            <td className="py-2.5 text-right font-black">₹ {Math.max(0, pendingAmount).toLocaleString()}</td>
-                                                            <td className="py-2.5 text-center">
-                                                                <span className={`px-2 py-0.5 rounded-full text-[9px] font-black uppercase ${item.status === 'PAID' ? 'bg-green-100 text-green-600' : 'bg-red-100 text-red-600'}`}>
-                                                                    {item.status}
-                                                                </span>
-                                                            </td>
-                                                        </tr>
+                                                        <React.Fragment key={item.id}>
+                                                            <tr className="hover:bg-gray-50 transition-colors">
+                                                                <td className="py-2.5 text-center">
+                                                                    <button
+                                                                        onClick={() => toggleExpand(item.id)}
+                                                                        className="text-gray-400 hover:text-gray-700"
+                                                                    >
+                                                                        {expandedAssignmentId === item.id ? "▼" : "▶"}
+                                                                    </button>
+                                                                </td>
+                                                                <td className="py-2.5 font-bold text-gray-700">{item.feeTypeName || "Miscellaneous"}</td>
+                                                                <td className="py-2.5 text-right">₹ {item.amount.toLocaleString()}</td>
+                                                                <td className="py-2.5 text-right text-blue-600">₹ {item.totalDiscountAmount.toLocaleString()}</td>
+                                                                <td className="py-2.5 text-right text-indigo-600">₹ {item.sponsorCoveredAmount.toLocaleString()}</td>
+                                                                <td className="py-2.5 text-right font-black">₹ {Math.max(0, pendingAmount).toLocaleString()}</td>
+                                                                <td className="py-2.5 text-center">
+                                                                    <span className={`px-2 py-0.5 rounded-full text-[9px] font-black uppercase ${item.status === 'PAID' ? 'bg-green-100 text-green-600' : 'bg-red-100 text-red-600'}`}>
+                                                                        {item.status}
+                                                                    </span>
+                                                                </td>
+                                                            </tr>
+                                                            {expandedAssignmentId === item.id && (
+                                                                <tr>
+                                                                    <td colSpan={7} className="bg-gray-50 px-6 py-4 border-b border-gray-100">
+                                                                        {loadingAdjustments ? (
+                                                                            <div className="text-sm text-gray-400 italic">
+                                                                                Loading adjustments...
+                                                                            </div>
+                                                                        ) : adjustmentHistory[item.id]?.length ? (
+                                                                            <div className="space-y-3 text-sm">
+                                                                                {adjustmentHistory[item.id].map(adj => (
+                                                                                    <div key={adj.id} className="border-l-4 border-blue-200 pl-4 bg-white p-3 rounded shadow-sm">
+                                                                                        <div className="flex justify-between items-center mb-1">
+                                                                                            <span className="font-bold text-gray-700">
+                                                                                                {adj.discountName || adj.type.replace('_', ' ')}
+                                                                                            </span>
+                                                                                            <span className="font-bold text-blue-600">
+                                                                                                ₹ {adj.amount.toLocaleString()}
+                                                                                            </span>
+                                                                                        </div>
+                                                                                        <div className="text-[10px] uppercase font-bold text-gray-400 flex flex-wrap gap-4 mt-2">
+                                                                                            {adj.discountType && (
+                                                                                                <span>Type: {adj.discountType}</span>
+                                                                                            )}
+                                                                                            {adj.createdByName && (
+                                                                                                <span>By: {adj.createdByName}</span>
+                                                                                            )}
+                                                                                            <span>
+                                                                                                {new Date(adj.createdAt).toLocaleString(undefined, {
+                                                                                                    year: 'numeric',
+                                                                                                    month: 'short',
+                                                                                                    day: 'numeric',
+                                                                                                    hour: '2-digit',
+                                                                                                    minute: '2-digit'
+                                                                                                })}
+                                                                                            </span>
+                                                                                        </div>
+                                                                                        {adj.remarks && (
+                                                                                            <div className="text-xs text-gray-500 italic mt-2 border-t pt-2">
+                                                                                                "{adj.remarks}"
+                                                                                            </div>
+                                                                                        )}
+                                                                                    </div>
+                                                                                ))}
+                                                                            </div>
+                                                                        ) : (
+                                                                            <div className="text-sm text-gray-400 italic text-center py-2">
+                                                                                No adjustments recorded for this assignment.
+                                                                            </div>
+                                                                        )}
+                                                                    </td>
+                                                                </tr>
+                                                            )}
+                                                        </React.Fragment>
                                                     );
                                                 })}
                                                 {breakdown.length === 0 && (
                                                     <tr>
-                                                        <td colSpan={6} className="py-8 text-center text-gray-400 italic">No detailed assignments found</td>
+                                                        <td colSpan={7} className="py-8 text-center text-gray-400 italic">No detailed assignments found</td>
                                                     </tr>
                                                 )}
                                             </tbody>

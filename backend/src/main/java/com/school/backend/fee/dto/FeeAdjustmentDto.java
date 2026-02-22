@@ -1,5 +1,6 @@
 package com.school.backend.fee.dto;
 
+import com.school.backend.common.enums.DiscountType;
 import com.school.backend.fee.entity.FeeAdjustment;
 import lombok.Data;
 
@@ -13,6 +14,7 @@ public class FeeAdjustmentDto {
     private Long assignmentId;
     private String discountName;
     private FeeAdjustment.AdjustmentType type;
+    private DiscountType discountType;
     private BigDecimal amount;
     private String remarks;
     private String createdByName;

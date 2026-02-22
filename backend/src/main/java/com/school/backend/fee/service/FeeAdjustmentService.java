@@ -65,6 +65,7 @@ public class FeeAdjustmentService {
         dto.setId(adjustment.getId());
         dto.setAssignmentId(adjustment.getAssignmentId());
         dto.setType(adjustment.getType());
+        dto.setDiscountType(adjustment.getDiscountTypeSnapshot());
         dto.setAmount(adjustment.getAmount());
         dto.setRemarks(adjustment.getReason());
         dto.setCreatedAt(adjustment.getCreatedAt());
