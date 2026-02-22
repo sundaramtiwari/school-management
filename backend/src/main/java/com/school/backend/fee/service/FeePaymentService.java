@@ -180,7 +180,8 @@ public class FeePaymentService {
 
     @Transactional(readOnly = true)
     public List<FeePaymentDto> getRecentPayments(int limit) {
-        Pageable pageable = PageRequest.of(0, limit);
+        int safeLimit = Math.min(Math.max(limit, 1), 50);
+        Pageable pageable = PageRequest.of(0, safeLimit);
         return paymentRepository.findRecentPayments(TenantContext.getSchoolId(), pageable)
                 .stream()
                 .map(p -> toDto(p.getPayment(), buildStudentName(p.getFirstName(), p.getLastName())))

@@ -34,7 +34,7 @@ public interface FeePaymentRepository extends JpaRepository<FeePayment, Long> {
         @Query("""
                         SELECT f as payment, s.firstName as firstName, s.lastName as lastName
                         FROM FeePayment f
-                        JOIN Student s ON s.id = f.studentId AND s.schoolId = f.schoolId
+                        LEFT JOIN Student s ON s.id = f.studentId AND s.schoolId = f.schoolId
                         WHERE f.schoolId = :schoolId
                         ORDER BY f.paymentDate DESC
                         """)
