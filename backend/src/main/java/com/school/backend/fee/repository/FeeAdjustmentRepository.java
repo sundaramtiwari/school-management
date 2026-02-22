@@ -7,4 +7,6 @@ import java.util.List;
 
 public interface FeeAdjustmentRepository extends JpaRepository<FeeAdjustment, Long> {
     List<FeeAdjustment> findByAssignmentId(Long assignmentId);
+
+    List<FeeAdjustment> findByAssignmentIdOrderByCreatedAtAsc(Long assignmentId);
 }

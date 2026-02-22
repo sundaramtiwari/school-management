@@ -8,6 +8,7 @@ import com.school.backend.core.guardian.dto.GuardianCreateRequest;
 import com.school.backend.core.student.dto.StudentCreateRequest;
 import com.school.backend.core.student.dto.StudentDto;
 import com.school.backend.fee.dto.FeeDiscountApplyRequest;
+import com.school.backend.fee.dto.FeeAdjustmentDto;
 import com.school.backend.fee.dto.FeeStructureCreateRequest;
 import com.school.backend.fee.dto.FeeStructureDto;
 import com.school.backend.fee.dto.StudentFeeAssignRequest;
@@ -85,6 +86,10 @@ public class FeeDiscountIntegrationTest extends BaseAuthenticatedIntegrationTest
         Assertions.assertThat(adjustment.getAmount()).isEqualByComparingTo(new BigDecimal("100.00"));
         Assertions.assertThat(adjustment.getReason()).isEqualTo("Scholarship");
         Assertions.assertThat(adjustment.getCreatedByStaff()).isNotBlank();
+        Assertions.assertThat(adjustment.getDiscountDefinitionId()).isEqualTo(definition.getId());
+        Assertions.assertThat(adjustment.getDiscountNameSnapshot()).isEqualTo("Merit 10");
+        Assertions.assertThat(adjustment.getDiscountTypeSnapshot()).isEqualTo(DiscountType.PERCENTAGE);
+        Assertions.assertThat(adjustment.getDiscountValueSnapshot()).isEqualByComparingTo(new BigDecimal("10.00"));
     }
 
     @Test
@@ -131,6 +136,52 @@ public class FeeDiscountIntegrationTest extends BaseAuthenticatedIntegrationTest
                 .getTotalDiscountAmount();
         Assertions.assertThat(currentDiscount).isEqualByComparingTo(new BigDecimal("800.00"));
         Assertions.assertThat(feeAdjustmentRepository.findByAssignmentId(assignmentId)).hasSize(1);
+    }
+
+    @Test
+    void adjustmentHistory_should_use_snapshot_and_fallback_legacy_discount() {
+        setupBaseData();
+
+        feeAdjustmentRepository.save(FeeAdjustment.builder()
+                .assignmentId(assignmentId)
+                .type(FeeAdjustment.AdjustmentType.DISCOUNT)
+                .amount(new BigDecimal("5.00"))
+                .reason("Old legacy row")
+                .createdByStaff(null)
+                .schoolId(schoolId)
+                .build());
+
+        DiscountDefinition definition = discountDefinitionRepository.save(DiscountDefinition.builder()
+                .name("Merit 25")
+                .type(DiscountType.PERCENTAGE)
+                .amountValue(new BigDecimal("25.00"))
+                .active(true)
+                .schoolId(schoolId)
+                .build());
+
+        FeeDiscountApplyRequest req = new FeeDiscountApplyRequest();
+        req.setDiscountDefinitionId(definition.getId());
+        req.setRemarks("Manual approval");
+        ResponseEntity<StudentFeeAssignmentDto> applyResp = restTemplate.exchange(
+                "/api/fees/assignments/" + assignmentId + "/discount",
+                HttpMethod.POST,
+                new HttpEntity<>(req, headers),
+                StudentFeeAssignmentDto.class);
+        Assertions.assertThat(applyResp.getStatusCode()).isEqualTo(HttpStatus.OK);
+
+        ResponseEntity<FeeAdjustmentDto[]> historyResp = restTemplate.exchange(
+                "/api/fees/assignments/" + assignmentId + "/adjustments",
+                HttpMethod.GET,
+                new HttpEntity<>(headers),
+                FeeAdjustmentDto[].class);
+        Assertions.assertThat(historyResp.getStatusCode()).isEqualTo(HttpStatus.OK);
+
+        FeeAdjustmentDto[] rows = Objects.requireNonNull(historyResp.getBody());
+        Assertions.assertThat(rows).hasSize(2);
+        Assertions.assertThat(rows[0].getDiscountName()).isEqualTo("Legacy Discount");
+        Assertions.assertThat(rows[0].getType()).isEqualTo(FeeAdjustment.AdjustmentType.DISCOUNT);
+        Assertions.assertThat(rows[1].getDiscountName()).isEqualTo("Merit 25");
+        Assertions.assertThat(rows[1].getType()).isEqualTo(FeeAdjustment.AdjustmentType.DISCOUNT);
     }
 
     private void setupBaseData() {
