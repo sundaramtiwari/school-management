@@ -51,7 +51,7 @@ public class FeeDiscountService {
             throw new BusinessException("Discount cannot be applied because no principal is due.");
         }
 
-        BigDecimal calculatedDiscount = calculateDiscountAmount(discountDefinition, principalDue);
+        BigDecimal calculatedDiscount = calculateDiscountAmount(discountDefinition, assignment.getAmount(), principalDue);
         if (calculatedDiscount.compareTo(ZERO) <= 0) {
             throw new BusinessException("Calculated discount must be greater than zero.");
         }
@@ -106,10 +106,11 @@ public class FeeDiscountService {
                 .subtract(nz(assignment.getSponsorCoveredAmount()));
     }
 
-    private BigDecimal calculateDiscountAmount(DiscountDefinition definition, BigDecimal principalDue) {
+    private BigDecimal calculateDiscountAmount(DiscountDefinition definition, BigDecimal assignmentAmount,
+            BigDecimal principalDue) {
         BigDecimal raw;
         if (definition.getType() == DiscountType.PERCENTAGE) {
-            raw = principalDue.multiply(nz(definition.getAmountValue())).divide(HUNDRED, 6, RoundingMode.HALF_UP);
+            raw = nz(assignmentAmount).multiply(nz(definition.getAmountValue())).divide(HUNDRED, 6, RoundingMode.HALF_UP);
         } else if (definition.getType() == DiscountType.FLAT) {
             raw = nz(definition.getAmountValue());
         } else {
