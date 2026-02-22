@@ -3,10 +3,10 @@ package com.school.backend.user.service;
 import com.school.backend.common.enums.UserRole;
 import com.school.backend.common.exception.ResourceNotFoundException;
 import com.school.backend.common.tenant.TenantContext;
+import com.school.backend.core.classsubject.service.ClassSubjectService;
 import com.school.backend.core.teacher.repository.TeacherRepository;
 import com.school.backend.school.entity.School;
 import com.school.backend.school.repository.SchoolRepository;
-import com.school.backend.core.classsubject.service.ClassSubjectService;
 import com.school.backend.user.dto.UserDto;
 import com.school.backend.user.entity.User;
 import com.school.backend.user.repository.UserRepository;
@@ -79,6 +79,7 @@ public class UserService {
         // Wait, repository.findById respects filters? YES, Hibernate filters apply to
         // finds too if enabled.
 
+        user.setFullName(dto.getFullName());
         user.setEmail(dto.getEmail());
         if (dto.getPassword() != null && !dto.getPassword().isEmpty()) {
             user.setPasswordHash(passwordEncoder.encode(dto.getPassword()));

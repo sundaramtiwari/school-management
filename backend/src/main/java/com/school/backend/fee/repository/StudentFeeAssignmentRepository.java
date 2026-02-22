@@ -64,7 +64,10 @@ public interface StudentFeeAssignmentRepository
             @Param("sessionId") Long sessionId);
 
     @Query("""
-                SELECT a.studentId, SUM(a.amount), SUM(a.lateFeeAccrued)
+                SELECT a.studentId,
+                       COALESCE(SUM(a.amount), 0),
+                       COALESCE(SUM(a.lateFeeAccrued), 0),
+                       COALESCE(SUM(a.lateFeeWaived), 0)
                 FROM StudentFeeAssignment a
                 WHERE a.schoolId = :schoolId
                   AND a.sessionId = :sessionId

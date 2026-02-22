@@ -2,10 +2,12 @@ package com.school.backend.fee.controller;
 
 import com.school.backend.fee.dto.FeeDiscountApplyRequest;
 import com.school.backend.fee.dto.FeeAdjustmentDto;
+import com.school.backend.fee.dto.LateFeeWaiverRequest;
 import com.school.backend.fee.dto.StudentFeeAssignRequest;
 import com.school.backend.fee.dto.StudentFeeAssignmentDto;
 import com.school.backend.fee.service.FeeAdjustmentService;
 import com.school.backend.fee.service.FeeDiscountService;
+import com.school.backend.fee.service.LateFeeWaiverService;
 import com.school.backend.fee.service.StudentFeeAssignmentService;
 import com.school.backend.user.security.SecurityUtil;
 import jakarta.validation.Valid;
@@ -23,6 +25,7 @@ public class StudentFeeAssignmentController {
     private final StudentFeeAssignmentService assignmentService;
     private final FeeDiscountService feeDiscountService;
     private final FeeAdjustmentService feeAdjustmentService;
+    private final LateFeeWaiverService lateFeeWaiverService;
 
     // Assign fee to student
     @PostMapping
@@ -61,5 +64,19 @@ public class StudentFeeAssignmentController {
     @PreAuthorize("hasAnyRole('SCHOOL_ADMIN','ACCOUNTANT','SUPER_ADMIN','PLATFORM_ADMIN')")
     public List<FeeAdjustmentDto> getAdjustments(@PathVariable Long assignmentId) {
         return feeAdjustmentService.getAdjustmentsForAssignment(assignmentId, SecurityUtil.schoolId());
+    }
+
+    @PostMapping("/{assignmentId}/waive-late-fee")
+    @PreAuthorize("hasAnyRole('SCHOOL_ADMIN','ACCOUNTANT','SUPER_ADMIN','PLATFORM_ADMIN')")
+    public StudentFeeAssignmentDto waiveLateFee(
+            @PathVariable Long assignmentId,
+            @Valid @RequestBody LateFeeWaiverRequest req) {
+
+        return assignmentService.toDto(lateFeeWaiverService.waiveLateFee(
+                assignmentId,
+                req.getWaiverAmount(),
+                req.getRemarks(),
+                SecurityUtil.schoolId(),
+                SecurityUtil.userId()));
     }
 }

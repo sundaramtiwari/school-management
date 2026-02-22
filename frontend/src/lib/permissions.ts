@@ -23,7 +23,10 @@ export function canEditStudent(role?: string | null): boolean {
 
 export function canCollectFees(role?: string | null): boolean {
   const normalizedRole = normalizeRole(role);
-  return normalizedRole === "ACCOUNTANT" || normalizedRole === "SCHOOL_ADMIN" || normalizedRole === "SUPER_ADMIN";
+  return normalizedRole === "ACCOUNTANT"
+    || normalizedRole === "SCHOOL_ADMIN"
+    || normalizedRole === "SUPER_ADMIN"
+    || normalizedRole === "PLATFORM_ADMIN";
 }
 
 export function canManageFees(role?: string | null): boolean {

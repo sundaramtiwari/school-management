@@ -1,8 +1,11 @@
 package com.school.backend.devtools.seeder;
 
+import com.school.backend.common.enums.DiscountType;
 import com.school.backend.core.classsubject.entity.SchoolClass;
 import com.school.backend.core.student.entity.Student;
 import com.school.backend.core.student.entity.StudentEnrollment;
+import com.school.backend.fee.entity.DiscountDefinition;
+import com.school.backend.fee.entity.FeeAdjustment;
 import com.school.backend.fee.entity.FeePayment;
 import com.school.backend.fee.entity.FeeStructure;
 import com.school.backend.fee.entity.FeeType;
@@ -18,6 +21,8 @@ import com.school.backend.common.enums.LateFeeType;
 import com.school.backend.fee.repository.FeePaymentRepository;
 import com.school.backend.fee.repository.FeeStructureRepository;
 import com.school.backend.fee.repository.FeeTypeRepository;
+import com.school.backend.fee.repository.DiscountDefinitionRepository;
+import com.school.backend.fee.repository.FeeAdjustmentRepository;
 import com.school.backend.fee.repository.LateFeeLogRepository;
 import com.school.backend.fee.repository.LateFeePolicyRepository;
 import com.school.backend.fee.repository.StudentFeeAssignmentRepository;
@@ -44,6 +49,8 @@ public class FeeSeeder {
     private final LateFeePolicyRepository lateFeePolicyRepository;
     private final StudentFeeAssignmentRepository studentFeeAssignmentRepository;
     private final StudentFundingArrangementRepository studentFundingArrangementRepository;
+    private final DiscountDefinitionRepository discountDefinitionRepository;
+    private final FeeAdjustmentRepository feeAdjustmentRepository;
     private final FeePaymentRepository feePaymentRepository;
     private final LateFeeLogRepository lateFeeLogRepository;
 
@@ -159,9 +166,98 @@ public class FeeSeeder {
 
         BatchSaveUtil.saveInBatches(fundingArrangementsToSave, 1_000, studentFundingArrangementRepository::saveAll);
         BatchSaveUtil.saveInBatches(assignmentsToSave, 1_000, studentFeeAssignmentRepository::saveAll);
+        seedDiscountExamples(assignmentsToSave, classSubjectResult.classesBySchool().keySet());
         List<LateFeeLog> lateFeeLogsToSave = buildLateFeeLogs(assignmentsToSave);
         BatchSaveUtil.saveInBatches(paymentsToSave, 1_000, feePaymentRepository::saveAll);
         BatchSaveUtil.saveInBatches(lateFeeLogsToSave, 1_000, lateFeeLogRepository::saveAll);
+    }
+
+    private void seedDiscountExamples(List<StudentFeeAssignment> assignmentsToSave, java.util.Set<Long> schoolIds) {
+        List<DiscountDefinition> definitionsToSave = new ArrayList<>();
+        Map<Long, DiscountDefinition> percentageBySchool = new LinkedHashMap<>();
+        Map<Long, DiscountDefinition> flatBySchool = new LinkedHashMap<>();
+
+        for (Long schoolId : schoolIds) {
+            DiscountDefinition percentage = DiscountDefinition.builder()
+                    .schoolId(schoolId)
+                    .name("Merit Scholarship 10%")
+                    .type(DiscountType.PERCENTAGE)
+                    .amountValue(new BigDecimal("10.00"))
+                    .active(true)
+                    .build();
+            DiscountDefinition flat = DiscountDefinition.builder()
+                    .schoolId(schoolId)
+                    .name("Need Support 1500")
+                    .type(DiscountType.FLAT)
+                    .amountValue(new BigDecimal("1500.00"))
+                    .active(true)
+                    .build();
+            definitionsToSave.add(percentage);
+            definitionsToSave.add(flat);
+            percentageBySchool.put(schoolId, percentage);
+            flatBySchool.put(schoolId, flat);
+        }
+        BatchSaveUtil.saveInBatches(definitionsToSave, 1_000, discountDefinitionRepository::saveAll);
+
+        Map<Long, Integer> discountedCountBySchool = new LinkedHashMap<>();
+        List<StudentFeeAssignment> assignmentsToUpdate = new ArrayList<>();
+        List<FeeAdjustment> adjustmentsToSave = new ArrayList<>();
+
+        for (StudentFeeAssignment assignment : assignmentsToSave) {
+            Long schoolId = assignment.getSchoolId();
+            int schoolCount = discountedCountBySchool.getOrDefault(schoolId, 0);
+            if (schoolCount >= 40) {
+                continue;
+            }
+
+            BigDecimal principalDue = assignment.getAmount()
+                    .subtract(assignment.getPrincipalPaid())
+                    .subtract(assignment.getSponsorCoveredAmount())
+                    .subtract(assignment.getTotalDiscountAmount());
+            if (principalDue.compareTo(BigDecimal.valueOf(100)) <= 0) {
+                continue;
+            }
+
+            DiscountDefinition definition;
+            BigDecimal discountAmount;
+            if (schoolCount % 2 == 0) {
+                definition = percentageBySchool.get(schoolId);
+                discountAmount = principalDue.multiply(new BigDecimal("10"))
+                        .divide(new BigDecimal("100"), 2, RoundingMode.HALF_UP);
+            } else {
+                definition = flatBySchool.get(schoolId);
+                discountAmount = principalDue.min(new BigDecimal("1500.00")).setScale(2, RoundingMode.HALF_UP);
+            }
+
+            if (definition == null || discountAmount.compareTo(BigDecimal.ZERO) <= 0) {
+                continue;
+            }
+
+            assignment.setTotalDiscountAmount(assignment.getTotalDiscountAmount().add(discountAmount));
+            assignmentsToUpdate.add(assignment);
+
+            adjustmentsToSave.add(FeeAdjustment.builder()
+                    .schoolId(schoolId)
+                    .assignmentId(assignment.getId())
+                    .type(FeeAdjustment.AdjustmentType.DISCOUNT)
+                    .amount(discountAmount)
+                    .discountDefinitionId(definition.getId())
+                    .discountNameSnapshot(definition.getName())
+                    .discountTypeSnapshot(definition.getType())
+                    .discountValueSnapshot(definition.getAmountValue())
+                    .reason("Seeded discount for UI validation")
+                    .createdByStaff(null)
+                    .build());
+
+            discountedCountBySchool.put(schoolId, schoolCount + 1);
+        }
+
+        if (!assignmentsToUpdate.isEmpty()) {
+            BatchSaveUtil.saveInBatches(assignmentsToUpdate, 1_000, studentFeeAssignmentRepository::saveAll);
+        }
+        if (!adjustmentsToSave.isEmpty()) {
+            BatchSaveUtil.saveInBatches(adjustmentsToSave, 1_000, feeAdjustmentRepository::saveAll);
+        }
     }
 
     private FeeType feeType(Long schoolId, String name) {

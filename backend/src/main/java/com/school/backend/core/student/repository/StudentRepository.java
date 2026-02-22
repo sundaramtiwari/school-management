@@ -61,6 +61,7 @@ public interface StudentRepository extends JpaRepository<Student, Long> {
         AND (
              (SELECT COALESCE(SUM(a.amount), 0) FROM StudentFeeAssignment a WHERE a.studentId = s.id AND a.sessionId = :sessionId AND a.active = true)
              + (SELECT COALESCE(SUM(a.lateFeeAccrued), 0) FROM StudentFeeAssignment a WHERE a.studentId = s.id AND a.sessionId = :sessionId AND a.active = true)
+             - (SELECT COALESCE(SUM(a.lateFeeWaived), 0) FROM StudentFeeAssignment a WHERE a.studentId = s.id AND a.sessionId = :sessionId AND a.active = true)
              - (SELECT COALESCE(SUM(p.principalPaid + p.lateFeePaid), 0) FROM FeePayment p WHERE p.studentId = s.id AND p.sessionId = :sessionId)
             ) >= :minAmountDue
         AND (:maxPaymentDate IS NULL OR COALESCE((SELECT MAX(p.paymentDate) FROM FeePayment p WHERE p.studentId = s.id AND p.sessionId = :sessionId), :sessionStart) <= :maxPaymentDate)
@@ -78,6 +79,7 @@ public interface StudentRepository extends JpaRepository<Student, Long> {
       SELECT s.id, s.firstName, s.lastName, s.admissionNumber, s.contactNumber, c.name, c.section,
              (SELECT COALESCE(SUM(a.amount), 0) FROM StudentFeeAssignment a WHERE a.studentId = s.id AND a.sessionId = :sessionId AND a.active = true),
              (SELECT COALESCE(SUM(a.lateFeeAccrued), 0) FROM StudentFeeAssignment a WHERE a.studentId = s.id AND a.sessionId = :sessionId AND a.active = true),
+             (SELECT COALESCE(SUM(a.lateFeeWaived), 0) FROM StudentFeeAssignment a WHERE a.studentId = s.id AND a.sessionId = :sessionId AND a.active = true),
              (SELECT COALESCE(SUM(p.principalPaid + p.lateFeePaid), 0) FROM FeePayment p WHERE p.studentId = s.id AND p.sessionId = :sessionId),
              (SELECT MAX(p.paymentDate) FROM FeePayment p WHERE p.studentId = s.id AND p.sessionId = :sessionId)
       FROM Student s
@@ -92,6 +94,7 @@ public interface StudentRepository extends JpaRepository<Student, Long> {
         AND (
              (SELECT COALESCE(SUM(a.amount), 0) FROM StudentFeeAssignment a WHERE a.studentId = s.id AND a.sessionId = :sessionId AND a.active = true)
              + (SELECT COALESCE(SUM(a.lateFeeAccrued), 0) FROM StudentFeeAssignment a WHERE a.studentId = s.id AND a.sessionId = :sessionId AND a.active = true)
+             - (SELECT COALESCE(SUM(a.lateFeeWaived), 0) FROM StudentFeeAssignment a WHERE a.studentId = s.id AND a.sessionId = :sessionId AND a.active = true)
              - (SELECT COALESCE(SUM(p.principalPaid + p.lateFeePaid), 0) FROM FeePayment p WHERE p.studentId = s.id AND p.sessionId = :sessionId)
             ) >= :minAmountDue
         AND (:maxPaymentDate IS NULL OR COALESCE((SELECT MAX(p.paymentDate) FROM FeePayment p WHERE p.studentId = s.id AND p.sessionId = :sessionId), :sessionStart) <= :maxPaymentDate)
