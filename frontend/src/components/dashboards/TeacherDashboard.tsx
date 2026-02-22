@@ -49,7 +49,7 @@ export default function TeacherDashboard() {
       setLoading(true);
 
       // Load teacher's assigned classes using explicit sessionId
-      const classesRes = await api.get<ClassApiItem[]>(`/api/teacher-assignments/my-classes?sessionId=${currentSession.id}`);
+      const classesRes = await api.get<ClassApiItem[]>(`/api/class-subjects/my-classes?sessionId=${currentSession.id}`);
       const classData: ClassApiItem[] = classesRes.data || [];
 
       // Enrich each class with attendance status

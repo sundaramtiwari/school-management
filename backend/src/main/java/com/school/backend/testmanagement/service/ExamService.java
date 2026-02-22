@@ -17,7 +17,8 @@ import com.school.backend.testmanagement.repository.ExamSubjectRepository;
 import com.school.backend.testmanagement.repository.StudentMarkRepository;
 import com.school.backend.core.teacher.entity.Teacher;
 import com.school.backend.core.teacher.repository.TeacherRepository;
-import com.school.backend.core.teacher.repository.TeacherAssignmentRepository;
+import com.school.backend.core.classsubject.repository.ClassSubjectRepository;
+import com.school.backend.school.entity.School;
 import lombok.RequiredArgsConstructor;
 import org.springframework.security.access.AccessDeniedException;
 import org.springframework.stereotype.Service;
@@ -37,7 +38,7 @@ public class ExamService {
     private final StudentMarkRepository markRepository;
     private final StudentEnrollmentRepository studentEnrollmentRepository;
     private final TeacherRepository teacherRepository;
-    private final TeacherAssignmentRepository teacherAssignmentRepository;
+    private final ClassSubjectRepository classSubjectRepository;
     private final ExamMapper examMapper;
     private final com.school.backend.school.service.SetupValidationService setupValidationService;
 
@@ -134,8 +135,11 @@ public class ExamService {
 
             // Check if teacher is assigned to this class in this session for AT LEAST ONE
             // subject
-            boolean assigned = teacherAssignmentRepository.existsByTeacherIdAndSessionIdAndSchoolClassIdAndActiveTrue(
-                    teacher.getId(), req.getSessionId(), req.getClassId());
+            List<com.school.backend.core.classsubject.entity.ClassSubject> assignments = classSubjectRepository
+                    .findByTeacherIdAndSessionId(teacher.getId(), req.getSessionId(), schoolId);
+
+            boolean assigned = assignments.stream()
+                    .anyMatch(a -> a.getSchoolClass().getId().equals(req.getClassId()));
 
             if (!assigned) {
                 throw new BusinessException("Access Denied: You are not assigned to this class.");
@@ -188,8 +192,8 @@ public class ExamService {
                     .orElseThrow(() -> new BusinessException("Teacher record not found for user"));
 
             // Get all active assignments for this teacher in this class/session
-            List<com.school.backend.core.teacher.entity.TeacherAssignment> assignments = teacherAssignmentRepository
-                    .findByTeacherIdAndSessionIdAndActiveTrue(teacher.getId(), exam.getSessionId());
+            List<com.school.backend.core.classsubject.entity.ClassSubject> assignments = classSubjectRepository
+                    .findByTeacherIdAndSessionId(teacher.getId(), exam.getSessionId(), exam.getSchoolId());
 
             assignedSubjectIds = assignments.stream()
                     .filter(ta -> ta.getSchoolClass().getId().equals(exam.getClassId()))

@@ -6,7 +6,7 @@ import com.school.backend.common.tenant.TenantContext;
 import com.school.backend.core.teacher.repository.TeacherRepository;
 import com.school.backend.school.entity.School;
 import com.school.backend.school.repository.SchoolRepository;
-import com.school.backend.core.teacher.service.TeacherAssignmentService;
+import com.school.backend.core.classsubject.service.ClassSubjectService;
 import com.school.backend.user.dto.UserDto;
 import com.school.backend.user.entity.User;
 import com.school.backend.user.repository.UserRepository;
@@ -25,7 +25,7 @@ public class UserService {
     private final SchoolRepository schoolRepository;
     private final PasswordEncoder passwordEncoder;
     private final TeacherRepository teacherRepository;
-    private final TeacherAssignmentService teacherAssignmentService;
+    private final ClassSubjectService classSubjectService;
 
     @Transactional(readOnly = true)
     public Page<UserDto> listUsers(String role, Pageable pageable) {
@@ -86,11 +86,22 @@ public class UserService {
         user.setRole(dto.getRole());
 
         // If a TEACHER user is being deactivated, soft-deactivate all their assignments
+        // in CURRENT session
         boolean wasActive = user.isActive();
         user.setActive(dto.isActive());
         if (wasActive && !dto.isActive() && user.getRole() == UserRole.TEACHER) {
             teacherRepository.findByUserId(user.getId())
-                    .ifPresent(teacher -> teacherAssignmentService.deactivateAllForTeacher(teacher.getId()));
+                    .ifPresent(teacher -> {
+                        if (user.getSchool() != null) {
+                            schoolRepository.findById(user.getSchool().getId()).ifPresent(s -> {
+                                Long currentSessionId = s.getCurrentSessionId();
+                                if (currentSessionId != null) {
+                                    classSubjectService.deactivateAllForTeacherInSession(teacher.getId(),
+                                            currentSessionId);
+                                }
+                            });
+                        }
+                    });
         }
 
         return toDto(userRepository.save(user));

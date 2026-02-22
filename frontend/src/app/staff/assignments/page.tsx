@@ -15,7 +15,7 @@ type Assignment = {
   className: string;
   subjectName: string;
   sessionName: string;
-  status: string;
+  status?: string;
 };
 
 const ALLOWED_ROLES = ["SCHOOL_ADMIN", "SUPER_ADMIN", "PLATFORM_ADMIN"];
@@ -60,10 +60,10 @@ export default function TeacherAssignmentsPage() {
       setLoadingAssignments(true);
       const [classesRes, assignmentsRes] = await Promise.all([
         api.get<{ content: SchoolClass[] }>(`/api/classes/mine/session/${currentSession.id}?size=100`),
-        api.get<Assignment[]>(`/api/teacher-assignments?sessionId=${currentSession.id}`),
+        api.get<Assignment[]>(`/api/class-subjects/assignments?sessionId=${currentSession.id}`),
       ]);
       setClasses(classesRes.data?.content || []);
-      setAssignments(assignmentsRes.data || []);
+      setAssignments((assignmentsRes.data || []).map(a => ({ ...a, status: "ACTIVE" })));
     } catch {
       showToast("Failed to load session data", "error");
       setClasses([]);
@@ -131,7 +131,7 @@ export default function TeacherAssignmentsPage() {
     }
     try {
       setIsSubmitting(true);
-      await api.post("/api/teacher-assignments", {
+      await api.post("/api/class-subjects/assignments", {
         teacherId: form.teacherId,
         sessionId: currentSession.id,
         classId: form.classId,
@@ -152,7 +152,7 @@ export default function TeacherAssignmentsPage() {
 
   async function handleDeactivate(id: number) {
     try {
-      await api.delete(`/api/teacher-assignments/${id}`);
+      await api.delete(`/api/class-subjects/assignments/${id}`);
       showToast("Assignment deactivated", "success");
       loadSessionData();
     } catch {

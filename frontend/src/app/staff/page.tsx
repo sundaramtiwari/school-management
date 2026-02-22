@@ -129,7 +129,7 @@ export default function StaffPage() {
             // 2. Fetch Assignments and Class maps concurrently
             const currentSessionId = localStorage.getItem("currentSessionId") || "";
             const [assignmentsRes, classesRes] = await Promise.all([
-                api.get(`/api/teachers/${teacher.id}/assignments${currentSessionId ? `?sessionId=${currentSessionId}` : ''}`),
+                api.get(`/api/class-subjects/assignments?teacherId=${teacher.id}${currentSessionId ? `&sessionId=${currentSessionId}` : ''}`),
                 api.get("/api/classes")
             ]);
 

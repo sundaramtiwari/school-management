@@ -69,7 +69,7 @@ export default function ExamsPage() {
         try {
             setLoadingClasses(true);
             if (isTeacher) {
-                const res = await api.get<SchoolClass[]>(`/api/teacher-assignments/my-classes?sessionId=${currentSession.id}`);
+                const res = await api.get<SchoolClass[]>(`/api/class-subjects/my-classes?sessionId=${currentSession.id}`);
                 setClasses(res.data || []);
             } else {
                 const res = await api.get("/api/classes/mine");

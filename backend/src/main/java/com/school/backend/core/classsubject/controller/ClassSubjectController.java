@@ -1,6 +1,9 @@
 package com.school.backend.core.classsubject.controller;
 
+import com.school.backend.core.classsubject.dto.ClassSubjectAssignmentDto;
 import com.school.backend.core.classsubject.dto.ClassSubjectDto;
+import com.school.backend.core.classsubject.entity.SchoolClass;
+import com.school.backend.core.classsubject.entity.Subject;
 import com.school.backend.core.classsubject.service.ClassSubjectService;
 import com.school.backend.user.security.SecurityUtil;
 import lombok.RequiredArgsConstructor;
@@ -10,6 +13,8 @@ import org.springframework.data.domain.Pageable;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.web.bind.annotation.*;
+
+import java.util.List;
 
 @RestController
 @RequestMapping("/api/class-subjects")
@@ -54,5 +59,38 @@ public class ClassSubjectController {
     public ResponseEntity<Void> delete(@PathVariable Long id) {
         service.delete(id);
         return ResponseEntity.noContent().build();
+    }
+
+    @PostMapping("/assignments")
+    @PreAuthorize("hasAnyRole('SCHOOL_ADMIN', 'PLATFORM_ADMIN', 'SUPER_ADMIN')")
+    public ClassSubjectAssignmentDto assignTeacher(@RequestBody ClassSubjectAssignmentDto req) {
+        return service.assignTeacher(req.getTeacherId(), req.getSessionId(), req.getClassId(), req.getSubjectId());
+    }
+
+    @GetMapping("/assignments")
+    @PreAuthorize("hasAnyRole('SCHOOL_ADMIN', 'PLATFORM_ADMIN', 'SUPER_ADMIN')")
+    public List<ClassSubjectAssignmentDto> listAssignments(
+            @RequestParam(required = false) Long sessionId,
+            @RequestParam(required = false) Long teacherId) {
+        return service.listAssignments(sessionId, teacherId);
+    }
+
+    @DeleteMapping("/assignments/{id}")
+    @PreAuthorize("hasAnyRole('SCHOOL_ADMIN', 'PLATFORM_ADMIN', 'SUPER_ADMIN')")
+    public ResponseEntity<Void> deactivateAssignment(@PathVariable Long id) {
+        service.deactivateAssignment(id);
+        return ResponseEntity.noContent().build();
+    }
+
+    @GetMapping("/my-classes")
+    @PreAuthorize("hasAnyRole('TEACHER', 'SCHOOL_ADMIN', 'PLATFORM_ADMIN', 'SUPER_ADMIN')")
+    public List<SchoolClass> getMyAssignedClasses(@RequestParam Long sessionId) {
+        return service.getMyAssignedClasses(sessionId);
+    }
+
+    @GetMapping("/my-subjects")
+    @PreAuthorize("hasAnyRole('TEACHER', 'SCHOOL_ADMIN', 'PLATFORM_ADMIN', 'SUPER_ADMIN')")
+    public List<Subject> getMyAssignedSubjects(@RequestParam Long sessionId, @RequestParam Long classId) {
+        return service.getMyAssignedSubjects(sessionId, classId);
     }
 }

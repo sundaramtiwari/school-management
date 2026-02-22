@@ -1,6 +1,7 @@
 package com.school.backend.core.attendance.controller;
 
-import com.school.backend.common.tenant.SessionResolver;
+import com.school.backend.common.tenant.SessionContext;
+import com.school.backend.common.tenant.SessionContext;
 import com.school.backend.core.attendance.dto.AttendanceResponse;
 import com.school.backend.core.attendance.entity.StudentAttendance;
 import com.school.backend.core.attendance.enums.AttendanceStatus;
@@ -21,7 +22,6 @@ import java.util.Map;
 public class AttendanceController {
 
     private final AttendanceService attendanceService;
-    private final SessionResolver sessionResolver;
 
     @PostMapping("/bulk")
     @PreAuthorize("hasAnyRole('SCHOOL_ADMIN', 'TEACHER', 'SUPER_ADMIN', 'PLATFORM_ADMIN')")
@@ -31,7 +31,7 @@ public class AttendanceController {
             @RequestParam(required = false) Long sessionId,
             @RequestBody Map<Long, AttendanceStatus> attendanceMap) {
 
-        Long effectiveSessionId = sessionId != null ? sessionId : sessionResolver.resolveForCurrentSchool();
+        Long effectiveSessionId = sessionId != null ? sessionId : SessionContext.getSessionId();
         attendanceService.markAttendanceBulk(date, classId, effectiveSessionId, attendanceMap, SecurityUtil.schoolId());
     }
 
@@ -42,7 +42,7 @@ public class AttendanceController {
             @RequestParam(required = false) Long sessionId,
             @RequestParam @DateTimeFormat(iso = DateTimeFormat.ISO.DATE) LocalDate date) {
 
-        Long effectiveSessionId = sessionId != null ? sessionId : sessionResolver.resolveForCurrentSchool();
+        Long effectiveSessionId = sessionId != null ? sessionId : SessionContext.getSessionId();
         List<StudentAttendance> attendance = attendanceService.getAttendanceByClassAndDate(classId, effectiveSessionId,
                 date);
         boolean editable = attendanceService.isEditable(date);
@@ -54,7 +54,7 @@ public class AttendanceController {
     @GetMapping("/stats/today")
     @PreAuthorize("hasAnyRole('SCHOOL_ADMIN', 'SUPER_ADMIN', 'PLATFORM_ADMIN')")
     public Map<String, Double> getTodayStats(@RequestParam(required = false) Long sessionId) {
-        Long effectiveSessionId = sessionId != null ? sessionId : sessionResolver.resolveForCurrentSchool();
+        Long effectiveSessionId = sessionId != null ? sessionId : SessionContext.getSessionId();
         double stats = attendanceService.getTodayStats(SecurityUtil.schoolId(), effectiveSessionId);
         return Map.of("percentage", stats);
     }

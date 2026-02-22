@@ -11,7 +11,7 @@ import com.school.backend.testmanagement.repository.ExamSubjectRepository;
 import com.school.backend.testmanagement.repository.StudentMarkRepository;
 import com.school.backend.core.teacher.entity.Teacher;
 import com.school.backend.core.teacher.repository.TeacherRepository;
-import com.school.backend.core.teacher.repository.TeacherAssignmentRepository;
+import com.school.backend.core.classsubject.repository.ClassSubjectRepository;
 import com.school.backend.user.security.SecurityUtil;
 import com.school.backend.common.exception.BusinessException;
 import lombok.RequiredArgsConstructor;
@@ -24,64 +24,66 @@ import java.util.List;
 @RequiredArgsConstructor
 public class MarkEntryService {
 
-    private final StudentMarkRepository markRepository;
-    private final ExamSubjectRepository subjectRepository;
-    private final ExamRepository examRepository;
-    private final TeacherRepository teacherRepository;
-    private final TeacherAssignmentRepository teacherAssignmentRepository;
-    private final com.school.backend.school.service.SetupValidationService setupValidationService;
+        private final StudentMarkRepository markRepository;
+        private final ExamSubjectRepository subjectRepository;
+        private final ExamRepository examRepository;
+        private final TeacherRepository teacherRepository;
+        private final ClassSubjectRepository classSubjectRepository;
+        private final com.school.backend.school.service.SetupValidationService setupValidationService;
 
-    @Transactional
-    public StudentMark enterMarks(MarkEntryRequest req) {
-        Long schoolId = TenantContext.getSchoolId();
+        @Transactional
+        public StudentMark enterMarks(MarkEntryRequest req) {
+                Long schoolId = TenantContext.getSchoolId();
 
-        ExamSubject subject = subjectRepository.findById(req.getExamSubjectId())
-                .orElseThrow(() -> new ResourceNotFoundException("ExamSubject not found"));
-        Exam exam = examRepository.findById(subject.getExamId())
-                .orElseThrow(() -> new BusinessException("Exam not found"));
-        setupValidationService.ensureAtLeastOneClassExists(schoolId, exam.getSessionId());
+                ExamSubject subject = subjectRepository.findById(req.getExamSubjectId())
+                                .orElseThrow(() -> new ResourceNotFoundException("ExamSubject not found"));
+                Exam exam = examRepository.findById(subject.getExamId())
+                                .orElseThrow(() -> new BusinessException("Exam not found"));
+                setupValidationService.ensureAtLeastOneClassExists(schoolId, exam.getSessionId());
 
-        if (SecurityUtil.hasRole("TEACHER")) {
-            Long userId = SecurityUtil.current().getUserId();
-            Teacher teacher = teacherRepository.findByUserId(userId)
-                    .orElseThrow(() -> new BusinessException("Teacher record not found for user"));
+                if (SecurityUtil.hasRole("TEACHER")) {
+                        Long userId = SecurityUtil.current().getUserId();
+                        Teacher teacher = teacherRepository.findByUserId(userId)
+                                        .orElseThrow(() -> new BusinessException("Teacher record not found for user"));
 
-            boolean assigned = teacherAssignmentRepository
-                    .existsByTeacherIdAndSessionIdAndSchoolClassIdAndSubjectIdAndActiveTrue(
-                            teacher.getId(), exam.getSessionId(), exam.getClassId(), subject.getSubjectId());
+                        boolean assigned = classSubjectRepository
+                                        .existsBySchoolClassSessionIdAndTeacherIdAndSchoolClassIdAndSubjectIdAndSchoolIdAndActiveTrue(
+                                                        exam.getSessionId(), teacher.getId(), exam.getClassId(),
+                                                        subject.getSubjectId(), schoolId);
 
-            if (!assigned) {
-                throw new BusinessException(
-                        "Access Denied: You are not assigned to this class and subject in the current session.");
-            }
+                        if (!assigned) {
+                                throw new BusinessException(
+                                                "Access Denied: You are not assigned to this class and subject in the current session.");
+                        }
+                }
+
+                if (req.getMarksObtained() > subject.getMaxMarks()) {
+                        throw new IllegalArgumentException("Marks exceed max marks");
+                }
+
+                StudentMark mark = markRepository.findByExamSubjectIdAndStudentId(
+                                req.getExamSubjectId(), req.getStudentId())
+                                .orElseGet(() -> StudentMark.builder()
+                                                .examId(subject.getExamId()) // Set examId from ExamSubject
+                                                .examSubjectId(req.getExamSubjectId())
+                                                .studentId(req.getStudentId())
+                                                .schoolId(TenantContext.getSchoolId()) // Ensure schoolId is set for new
+                                                                                       // entries
+                                                .build());
+
+                mark.setMarksObtained(req.getMarksObtained());
+                mark.setRemarks(req.getRemarks());
+
+                return markRepository.save(mark);
         }
 
-        if (req.getMarksObtained() > subject.getMaxMarks()) {
-            throw new IllegalArgumentException("Marks exceed max marks");
+        @Transactional(readOnly = true)
+        public List<StudentMark> getMarksByExam(Long examId) {
+                List<Long> subjectIds = subjectRepository.findByExamId(examId)
+                                .stream()
+                                .map(ExamSubject::getId)
+                                .toList();
+
+                return markRepository.findByExamSubjectIdIn(subjectIds);
         }
-
-        StudentMark mark = markRepository.findByExamSubjectIdAndStudentId(
-                req.getExamSubjectId(), req.getStudentId())
-                .orElseGet(() -> StudentMark.builder()
-                        .examId(subject.getExamId()) // Set examId from ExamSubject
-                        .examSubjectId(req.getExamSubjectId())
-                        .studentId(req.getStudentId())
-                        .schoolId(TenantContext.getSchoolId()) // Ensure schoolId is set for new entries
-                        .build());
-
-        mark.setMarksObtained(req.getMarksObtained());
-        mark.setRemarks(req.getRemarks());
-
-        return markRepository.save(mark);
-    }
-
-    @Transactional(readOnly = true)
-    public List<StudentMark> getMarksByExam(Long examId) {
-        List<Long> subjectIds = subjectRepository.findByExamId(examId)
-                .stream()
-                .map(ExamSubject::getId)
-                .toList();
-
-        return markRepository.findByExamSubjectIdIn(subjectIds);
-    }
 }
