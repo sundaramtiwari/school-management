@@ -6,6 +6,7 @@ import com.school.backend.fee.entity.FeeAdjustment;
 import com.school.backend.fee.entity.StudentFeeAssignment;
 import com.school.backend.fee.repository.FeeAdjustmentRepository;
 import com.school.backend.fee.repository.StudentFeeAssignmentRepository;
+import com.school.backend.user.entity.User;
 import com.school.backend.user.repository.UserRepository;
 import lombok.RequiredArgsConstructor;
 import org.springframework.security.access.AccessDeniedException;
@@ -40,15 +41,15 @@ public class FeeAdjustmentService {
         List<FeeAdjustment> adjustments = adjustmentRepository.findByAssignmentIdOrderByCreatedAtAsc(assignmentId);
 
         Map<Long, String> usersById = userRepository.findAllById(adjustments.stream()
-                .map(FeeAdjustment::getCreatedByStaff)
-                .filter(Objects::nonNull)
-                .map(String::trim)
-                .filter(s -> !s.isEmpty())
-                .filter(s -> s.chars().allMatch(Character::isDigit))
-                .map(Long::valueOf)
-                .toList()).stream()
+                        .map(FeeAdjustment::getCreatedByStaff)
+                        .filter(Objects::nonNull)
+                        .map(String::trim)
+                        .filter(s -> !s.isEmpty())
+                        .filter(s -> s.chars().allMatch(Character::isDigit))
+                        .map(Long::valueOf)
+                        .toList()).stream()
                 .collect(Collectors.toMap(
-                        user -> user.getId(),
+                        User::getId,
                         user -> (user.getFullName() == null || user.getFullName().isBlank()) ? SYSTEM
                                 : user.getFullName().trim()));
 

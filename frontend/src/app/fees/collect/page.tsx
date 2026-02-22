@@ -433,7 +433,7 @@ function FeeCollectContent() {
                                                                                     <div key={adj.id} className="border-l-4 border-blue-200 pl-4 bg-white p-3 rounded shadow-sm">
                                                                                         <div className="flex justify-between items-center mb-1">
                                                                                             <span className="font-bold text-gray-700">
-                                                                                                {adj.discountName || adj.type.replace('_', ' ')}
+                                                                                                {adj.discountName || adj.type.replaceAll('_', ' ')}
                                                                                             </span>
                                                                                             <span className="font-bold text-blue-600">
                                                                                                 ₹ {adj.amount.toLocaleString()}
