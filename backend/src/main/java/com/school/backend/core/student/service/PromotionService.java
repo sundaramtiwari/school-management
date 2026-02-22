@@ -21,6 +21,7 @@ import org.springframework.transaction.annotation.Transactional;
 
 import java.time.LocalDate;
 import java.time.LocalDateTime;
+import java.util.ArrayList;
 import java.util.LinkedHashSet;
 import java.util.List;
 import java.util.Set;
@@ -37,7 +38,7 @@ public class PromotionService {
     private final ExamRepository examRepository;
 
     @Transactional
-    public void promoteStudents(PromotionRequest request) {
+    public List<PromotionRecord> promoteStudents(PromotionRequest request) {
         if (request.getStudentIds() == null || request.getStudentIds().isEmpty()) {
             throw new IllegalArgumentException("studentIds must not be empty");
         }
@@ -59,18 +60,24 @@ public class PromotionService {
         AdmissionType admissionType = mapAdmissionType(request.getPromotionType());
 
         Set<Long> uniqueStudentIds = new LinkedHashSet<>(request.getStudentIds());
+        List<PromotionRecord> promotionRecords = new ArrayList<>();
         for (Long studentId : uniqueStudentIds) {
-            processSingleStudent(studentId, request, targetClass, today, now, promotedBy, admissionType);
+            PromotionRecord record = processSingleStudent(studentId, request, targetClass, today, now, promotedBy,
+                    admissionType);
+            if (record != null) {
+                promotionRecords.add(record);
+            }
         }
+        return promotionRecords;
     }
 
-    private void processSingleStudent(Long studentId,
-                                      PromotionRequest request,
-                                      SchoolClass targetClass,
-                                      LocalDate today,
-                                      LocalDateTime now,
-                                      String promotedBy,
-                                      AdmissionType admissionType) {
+    private PromotionRecord processSingleStudent(Long studentId,
+                                                 PromotionRequest request,
+                                                 SchoolClass targetClass,
+                                                 LocalDate today,
+                                                 LocalDateTime now,
+                                                 String promotedBy,
+                                                 AdmissionType admissionType) {
         if (!studentRepository.existsById(studentId)) {
             throw new ResourceNotFoundException("Student not found: " + studentId);
         }
@@ -85,7 +92,7 @@ public class PromotionService {
         boolean alreadyAtTarget = request.getTargetSessionId().equals(currentEnrollment.getSessionId())
                 && request.getTargetClassId().equals(currentEnrollment.getClassId());
         if (alreadyAtTarget) {
-            return;
+            return null;
         }
 
         long nonLockedExamCount = examRepository.countNonLockedBySessionIdAndClassId(
@@ -126,7 +133,7 @@ public class PromotionService {
                 .promotedAt(now)
                 .schoolId(currentEnrollment.getSchoolId())
                 .build();
-        promotionRecordRepository.save(promotionRecord);
+        return promotionRecordRepository.save(promotionRecord);
     }
 
     private AdmissionType mapAdmissionType(PromotionType promotionType) {

@@ -12,6 +12,14 @@ import java.util.List;
 import java.util.Optional;
 
 public interface FeePaymentRepository extends JpaRepository<FeePayment, Long> {
+        interface RecentPaymentView {
+                FeePayment getPayment();
+
+                String getFirstName();
+
+                String getLastName();
+        }
+
         List<FeePayment> findByStudentId(Long studentId);
 
         Optional<FeePayment> findTopByStudentIdOrderByPaymentDateDesc(Long studentId);
@@ -23,8 +31,14 @@ public interface FeePaymentRepository extends JpaRepository<FeePayment, Long> {
         @Query("SELECT SUM(f.principalPaid + f.lateFeePaid) FROM FeePayment f WHERE f.schoolId = :schoolId")
         BigDecimal sumTotalPaidBySchoolId(@Param("schoolId") Long schoolId);
 
-        @Query("SELECT f FROM FeePayment f WHERE f.schoolId = :schoolId ORDER BY f.paymentDate DESC")
-        List<FeePayment> findRecentPayments(@Param("schoolId") Long schoolId, Pageable pageable);
+        @Query("""
+                        SELECT f as payment, s.firstName as firstName, s.lastName as lastName
+                        FROM FeePayment f
+                        JOIN Student s ON s.id = f.studentId AND s.schoolId = f.schoolId
+                        WHERE f.schoolId = :schoolId
+                        ORDER BY f.paymentDate DESC
+                        """)
+        List<RecentPaymentView> findRecentPayments(@Param("schoolId") Long schoolId, Pageable pageable);
 
         @Query("""
                             SELECT COALESCE(SUM(p.principalPaid + p.lateFeePaid), 0)

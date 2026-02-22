@@ -9,6 +9,8 @@ import org.springframework.http.ResponseEntity;
 import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.web.bind.annotation.*;
 
+import java.util.List;
+
 @RestController
 @RequestMapping("/api/fees/funding")
 @RequiredArgsConstructor
@@ -39,6 +41,13 @@ public class StudentFundingArrangementController {
         return fundingService.getActive(studentId, sessionId)
                 .map(ResponseEntity::ok)
                 .orElse(ResponseEntity.notFound().build());
+    }
+
+    @GetMapping("/student/{studentId}")
+    @PreAuthorize("hasAnyRole('SCHOOL_ADMIN', 'ACCOUNTANT', 'SUPER_ADMIN')")
+    public ResponseEntity<List<StudentFundingArrangement>> getAllForStudent(@PathVariable Long studentId) {
+        log.debug("Fetching all funding arrangements for studentId={}", studentId);
+        return ResponseEntity.ok(fundingService.getAllForStudent(studentId));
     }
 
     @DeleteMapping("/{id}")

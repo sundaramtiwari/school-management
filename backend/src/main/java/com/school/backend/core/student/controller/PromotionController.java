@@ -1,6 +1,7 @@
 package com.school.backend.core.student.controller;
 
 import com.school.backend.core.student.dto.PromotionRequest;
+import com.school.backend.core.student.entity.PromotionRecord;
 import com.school.backend.core.student.service.PromotionService;
 import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
@@ -11,6 +12,8 @@ import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RestController;
 
+import java.util.List;
+
 @RestController
 @RequestMapping("/api/promotions")
 @RequiredArgsConstructor
@@ -20,8 +23,7 @@ public class PromotionController {
 
     @PostMapping
     @PreAuthorize("hasAnyRole('SCHOOL_ADMIN', 'SUPER_ADMIN', 'PLATFORM_ADMIN')")
-    public ResponseEntity<Void> promoteStudents(@Valid @RequestBody PromotionRequest request) {
-        promotionService.promoteStudents(request);
-        return ResponseEntity.ok().build();
+    public ResponseEntity<List<PromotionRecord>> promoteStudents(@Valid @RequestBody PromotionRequest request) {
+        return ResponseEntity.ok(promotionService.promoteStudents(request));
     }
 }

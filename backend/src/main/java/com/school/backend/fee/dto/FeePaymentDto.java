@@ -10,6 +10,7 @@ public class FeePaymentDto {
     private Long id;
 
     private Long studentId;
+    private String studentName;
     private Long sessionId;
 
     private java.math.BigDecimal amountPaid; // Total

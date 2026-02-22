@@ -4,6 +4,7 @@ import com.school.backend.common.enums.LateFeeType;
 import com.school.backend.common.exception.BusinessException;
 import com.school.backend.common.exception.ResourceNotFoundException;
 import com.school.backend.common.tenant.TenantContext;
+import com.school.backend.core.student.entity.Student;
 import com.school.backend.core.student.repository.StudentRepository;
 import com.school.backend.fee.dto.FeePaymentDto;
 import com.school.backend.fee.dto.FeePaymentRequest;
@@ -22,8 +23,9 @@ import org.springframework.transaction.annotation.Transactional;
 
 import java.math.BigDecimal;
 import java.time.LocalDate;
-import java.util.List;
 import java.util.Comparator;
+import java.util.List;
+import java.util.Optional;
 
 @Service
 @RequiredArgsConstructor
@@ -164,13 +166,15 @@ public class FeePaymentService {
     @Transactional(readOnly = true)
     public List<FeePaymentDto> getHistory(Long studentId) {
 
-        if (!studentRepository.existsById(studentId)) {
+        Optional<Student> student = studentRepository.findById(studentId);
+        if (student.isEmpty()) {
             throw new ResourceNotFoundException("Student not found: " + studentId);
         }
+        String studentName = buildStudentName(student.get().getFirstName(), student.get().getLastName());
 
         return paymentRepository.findByStudentId(studentId)
                 .stream()
-                .map(this::toDto)
+                .map(payment -> toDto(payment, studentName))
                 .toList();
     }
 
@@ -179,17 +183,22 @@ public class FeePaymentService {
         Pageable pageable = PageRequest.of(0, limit);
         return paymentRepository.findRecentPayments(TenantContext.getSchoolId(), pageable)
                 .stream()
-                .map(this::toDto)
+                .map(p -> toDto(p.getPayment(), buildStudentName(p.getFirstName(), p.getLastName())))
                 .toList();
     }
 
     // ---------------- MAPPER ----------------
     private FeePaymentDto toDto(FeePayment p) {
+        return toDto(p, null);
+    }
+
+    private FeePaymentDto toDto(FeePayment p, String studentName) {
 
         FeePaymentDto dto = new FeePaymentDto();
 
         dto.setId(p.getId());
         dto.setStudentId(p.getStudentId());
+        dto.setStudentName(studentName);
         dto.setSessionId(p.getSessionId());
         dto.setPrincipalPaid(p.getPrincipalPaid());
         dto.setLateFeePaid(p.getLateFeePaid());
@@ -200,6 +209,13 @@ public class FeePaymentService {
         dto.setRemarks(p.getRemarks());
 
         return dto;
+    }
+
+    private String buildStudentName(String firstName, String lastName) {
+        String first = firstName == null ? "" : firstName.trim();
+        String last = lastName == null ? "" : lastName.trim();
+        String fullName = (first + " " + last).trim();
+        return fullName.isEmpty() ? null : fullName;
     }
 
     private void hydrateDefaults(StudentFeeAssignment assignment) {
