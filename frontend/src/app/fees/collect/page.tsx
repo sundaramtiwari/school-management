@@ -74,7 +74,7 @@ function FeeCollectContent() {
 
     const [expandedAssignmentId, setExpandedAssignmentId] = useState<number | null>(null);
     const [adjustmentHistory, setAdjustmentHistory] = useState<Record<number, FeeAdjustment[]>>({});
-    const [loadingAdjustments, setLoadingAdjustments] = useState(false);
+    const [loadingAdjustments, setLoadingAdjustments] = useState<Record<number, boolean>>({});
 
     const [loading, setLoading] = useState(false);
     const [loadingStudents, setLoadingStudents] = useState(false);
@@ -264,7 +264,7 @@ function FeeCollectContent() {
 
         if (!adjustmentHistory[id]) {
             try {
-                setLoadingAdjustments(true);
+                setLoadingAdjustments(prev => ({ ...prev, [id]: true }));
                 const res = await api.get(`/api/fees/assignments/${id}/adjustments`);
                 setAdjustmentHistory(prev => ({
                     ...prev,
@@ -273,7 +273,7 @@ function FeeCollectContent() {
             } catch {
                 showToast("Failed to load adjustment history", "error");
             } finally {
-                setLoadingAdjustments(false);
+                setLoadingAdjustments(prev => ({ ...prev, [id]: false }));
             }
         }
     }
@@ -423,7 +423,7 @@ function FeeCollectContent() {
                                                             {expandedAssignmentId === item.id && (
                                                                 <tr>
                                                                     <td colSpan={7} className="bg-gray-50 px-6 py-4 border-b border-gray-100">
-                                                                        {loadingAdjustments ? (
+                                                                        {loadingAdjustments[item.id] ? (
                                                                             <div className="text-sm text-gray-400 italic">
                                                                                 Loading adjustments...
                                                                             </div>
