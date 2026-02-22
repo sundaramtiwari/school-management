@@ -171,6 +171,7 @@ public class FeeSummaryService {
                 dto.setTotalPaid(totalPaid.setScale(SCALE_2, ROUNDING_MODE_HALF_UP));
                 dto.setTotalLateFeeAccrued(totalLateFeeAccrued.setScale(SCALE_2, ROUNDING_MODE_HALF_UP));
                 dto.setTotalLateFeePaid(totalLateFeePaid.setScale(SCALE_2, ROUNDING_MODE_HALF_UP));
+                dto.setTotalLateFeeWaived(totalLateFeeWaived.setScale(SCALE_2, ROUNDING_MODE_HALF_UP));
                 dto.setPendingFee(pending.setScale(SCALE_2, ROUNDING_MODE_HALF_UP));
                 dto.setFeePending(pending.compareTo(ZERO) > INT_ZERO);
 

@@ -16,6 +16,7 @@ public class FeeSummaryDto {
     private java.math.BigDecimal pendingFee; // total (Principal + Accrued Late Fee) - Total Paid
     private java.math.BigDecimal totalLateFeeAccrued;
     private java.math.BigDecimal totalLateFeePaid;
+    private java.math.BigDecimal totalLateFeeWaived;
 
     private boolean feePending;
 }
