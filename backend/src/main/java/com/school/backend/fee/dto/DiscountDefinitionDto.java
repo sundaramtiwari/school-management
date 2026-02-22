@@ -12,4 +12,5 @@ public class DiscountDefinitionDto {
     private String name;
     private DiscountType type;
     private BigDecimal amountValue;
+    private boolean active;
 }

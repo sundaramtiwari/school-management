@@ -64,6 +64,9 @@ export default function FeesDashboard() {
                             <button onClick={() => router.push('/fees/structures')} className="px-5 py-2.5 bg-white border border-gray-300 rounded-md font-medium hover:bg-gray-50 text-base">
                                 Edit Structures
                             </button>
+                            <button onClick={() => router.push('/fees/discounts')} className="px-5 py-2.5 bg-blue-600 text-white rounded-md font-medium hover:bg-blue-700 text-base">
+                                Manage Discounts
+                            /button>
                             <button onClick={() => router.push('/fees/collect')} className="px-5 py-2.5 bg-blue-600 text-white rounded-md font-medium hover:bg-blue-700 text-base">
                                 Collect Fees
                             </button>
