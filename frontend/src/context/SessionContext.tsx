@@ -45,27 +45,15 @@ export function SessionProvider({ children }: { children: React.ReactNode }) {
 
     try {
       setIsSessionLoading(true);
-      const [sessionsRes, activeRes] = await Promise.all([
-        api.get<AcademicSession[]>("/api/academic-sessions"),
-        api.get<{ exists: boolean; sessionId: number; name: string }>("/api/academic-sessions/active")
-      ]);
+      const sessionsRes = await api.get<AcademicSession[]>("/api/academic-sessions");
 
       const fetchedSessions = sessionsRes.data;
-      const activeInfo = activeRes.data;
       setSessions(fetchedSessions);
 
-      // STRICT: Determine currentSession using activeInfo
-      if (activeInfo.exists && activeInfo.sessionId) {
-        const activeSession = fetchedSessions.find(s => s.id === activeInfo.sessionId);
-        // Fallback to minimal object if not found in list (though it should be)
-        setCurrentSessionState(activeSession || {
-          id: activeInfo.sessionId,
-          name: activeInfo.name,
-          schoolId: (user.schoolId ?? Number(selectedSchoolId)) as number,
-          startDate: "",
-          endDate: "",
-          active: true
-        });
+      // STRICT: Determine active session from list (isActive flag)
+      const activeSession = fetchedSessions.find(s => s.active);
+      if (activeSession) {
+        setCurrentSessionState(activeSession);
       } else {
         setCurrentSessionState(null);
       }
@@ -90,6 +78,38 @@ export function SessionProvider({ children }: { children: React.ReactNode }) {
       setIsSessionLoading(false);
     }
   }, [refreshSessions, user?.role, user?.schoolId, user?.userId]);
+
+  // Listen for schoolId changes in localStorage (handles stale session)
+  useEffect(() => {
+    const handleStorageChange = (e: StorageEvent) => {
+      if (e.key === "schoolId") {
+        refreshSessions();
+      }
+    };
+
+    window.addEventListener("storage", handleStorageChange);
+
+    // Support same-tab updates (e.g. from School Selector)
+    const handleLocalSchoolIdChange = () => {
+      refreshSessions();
+    };
+    window.addEventListener("local-storage-schoolId", handleLocalSchoolIdChange);
+
+    // Monkey-patch setItem to fire same-tab event for schoolId
+    const originalSetItem = window.localStorage.setItem;
+    window.localStorage.setItem = function (key, value) {
+      originalSetItem.call(this, key, value);
+      if (key === "schoolId") {
+        window.dispatchEvent(new Event("local-storage-schoolId"));
+      }
+    };
+
+    return () => {
+      window.removeEventListener("storage", handleStorageChange);
+      window.removeEventListener("local-storage-schoolId", handleLocalSchoolIdChange);
+      window.localStorage.setItem = originalSetItem;
+    };
+  }, [refreshSessions]);
 
   function isPlatformRole(role?: string) {
     return ["SUPER_ADMIN", "PLATFORM_ADMIN"].includes(role?.toUpperCase() || "");
