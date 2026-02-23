@@ -11,6 +11,8 @@ import org.springframework.http.ResponseEntity;
 import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.web.bind.annotation.*;
 
+import java.util.Map;
+
 @RestController
 @RequestMapping("/api/classes")
 @RequiredArgsConstructor
@@ -78,7 +80,7 @@ public class SchoolClassController {
 
     @GetMapping("/count")
     @PreAuthorize("hasAnyRole('SCHOOL_ADMIN', 'TEACHER', 'ACCOUNTANT', 'SUPER_ADMIN', 'PLATFORM_ADMIN')")
-    public ResponseEntity<java.util.Map<String, Long>> getClassCount() {
+    public ResponseEntity<Map<String, Long>> getClassCount() {
         return ResponseEntity.ok(java.util.Collections.singletonMap("count", service.getClassCount()));
     }
 }

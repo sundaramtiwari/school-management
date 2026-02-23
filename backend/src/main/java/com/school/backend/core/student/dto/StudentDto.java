@@ -42,4 +42,5 @@ public class StudentDto {
     private String previousSchoolAddress;
     private String previousSchoolContact;
     private String reasonForLeavingPreviousSchool;
+    private boolean enrollmentActive;
 }

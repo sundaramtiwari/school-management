@@ -13,6 +13,7 @@ import com.school.backend.core.student.dto.StudentUpdateRequest;
 import com.school.backend.core.student.entity.Student;
 import com.school.backend.core.student.entity.StudentGuardian;
 import com.school.backend.core.student.mapper.StudentMapper;
+import com.school.backend.core.student.repository.StudentEnrollmentRepository;
 import com.school.backend.core.student.repository.StudentGuardianRepository;
 import com.school.backend.core.student.repository.StudentRepository;
 import com.school.backend.school.service.SetupValidationService;
@@ -39,6 +40,7 @@ public class StudentService {
     private final SetupValidationService setupValidationService;
     private final GuardianService guardianService;
     private final StudentGuardianRepository studentGuardianRepository;
+    private final StudentEnrollmentRepository enrollmentRepository;
 
     private static void updateStudentDetails(StudentUpdateRequest req, Student existing) {
         if (req.getFirstName() != null)
@@ -315,7 +317,8 @@ public class StudentService {
 
         return repository
                 .findByClassIdAndSessionId(classId, sessionId, pageable)
-                .map(mapper::toDto);
+                .map(s -> mapper.toDto(s,
+                        enrollmentRepository.existsByStudentIdAndSessionIdAndActiveTrue(s.getId(), sessionId)));
     }
 
     @Transactional(readOnly = true)
@@ -326,13 +329,16 @@ public class StudentService {
         if (!s.getSchoolId().equals(TenantContext.getSchoolId())) {
             throw new AccessDeniedException("Unauthorized access to student");
         }
-        return mapper.toDto(s);
+        Long sessionId = sessionResolver.resolveForCurrentSchool();
+        return mapper.toDto(s, enrollmentRepository.existsByStudentIdAndSessionIdAndActiveTrue(id, sessionId));
     }
 
     @Transactional(readOnly = true)
     public Page<StudentDto> listBySchool(Long schoolId, Pageable pageable) {
         Long sessionId = sessionResolver.resolveForCurrentSchool();
-        return repository.findBySchoolIdAndSessionId(schoolId, sessionId, pageable).map(mapper::toDto);
+        return repository.findBySchoolIdAndSessionId(schoolId, sessionId, pageable)
+                .map(s -> mapper.toDto(s,
+                        enrollmentRepository.existsByStudentIdAndSessionIdAndActiveTrue(s.getId(), sessionId)));
     }
 
     @Transactional

@@ -41,6 +41,7 @@ public class FeeSummaryService {
 
         private static final int INT_ZERO = 0;
         private static final int SCALE_2 = 2;
+        private static final int DASHBOARD_COMPONENT_COUNT = 7;
         private static final BigDecimal ZERO = BigDecimal.ZERO;
         private static final RoundingMode ROUNDING_MODE_HALF_UP = RoundingMode.HALF_UP;
 
@@ -70,8 +71,9 @@ public class FeeSummaryService {
                                 .countBySchoolIdAndSessionIdAndActiveTrue(schoolId, effectiveSessionId);
 
                 // 3. Optimized Pending Calculation (NO N+1)
-                Object[] pendingComponents = assignmentRepository
+                Object[] pendingComponentsRaw = assignmentRepository
                                 .sumFinancialTotalsBySchoolAndSession(schoolId, effectiveSessionId);
+                Object[] pendingComponents = normalizeAggregationRow(pendingComponentsRaw, DASHBOARD_COMPONENT_COUNT);
                 BigDecimal totalAssigned = toBigDecimal(pendingComponents[0]);
                 BigDecimal totalLateFeeAccrued = toBigDecimal(pendingComponents[1]);
                 BigDecimal totalDiscountAmount = toBigDecimal(pendingComponents[2]);
@@ -271,9 +273,22 @@ public class FeeSummaryService {
         private BigDecimal toBigDecimal(Object val) {
                 if (val == null)
                         return ZERO;
+                if (val instanceof Object[] nested && nested.length > 0) {
+                        return toBigDecimal(nested[0]);
+                }
                 if (val instanceof BigDecimal)
                         return (BigDecimal) val;
                 return new BigDecimal(val.toString());
+        }
+
+        private Object[] normalizeAggregationRow(Object[] raw, int expectedColumns) {
+                if (raw == null) {
+                        return new Object[expectedColumns];
+                }
+                if (raw.length == 1 && raw[0] instanceof Object[] nested) {
+                        return nested;
+                }
+                return raw;
         }
 
         private BigDecimal nz(BigDecimal value) {

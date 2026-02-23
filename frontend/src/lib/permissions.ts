@@ -46,3 +46,8 @@ export function canModifyAttendance(role?: string | null): boolean {
   const normalizedRole = normalizeRole(role);
   return normalizedRole === "SCHOOL_ADMIN" || isPlatformAdminRole(normalizedRole);
 }
+
+export function canWithdrawStudent(role?: string | null): boolean {
+  const r = normalizeRole(role);
+  return r === "SCHOOL_ADMIN" || r === "SUPER_ADMIN";
+}

@@ -5,7 +5,7 @@ import axios from "axios";
 import { studentApi } from "@/lib/studentApi";
 import { api } from "@/lib/api";
 import { getErrorMessage } from "@/lib/error";
-import { canAddStudent, canEditStudent, canPromoteStudents } from "@/lib/permissions";
+import { canAddStudent, canEditStudent, canPromoteStudents, canWithdrawStudent } from "@/lib/permissions";
 import { useToast } from "@/components/ui/Toast";
 import { useSession } from "@/context/SessionContext";
 import Modal from "@/components/ui/Modal";
@@ -13,6 +13,7 @@ import { TableSkeleton } from "@/components/ui/Skeleton";
 import { useAuth } from "@/context/AuthContext";
 import GuardianFormSection, { GuardianFormValue } from "@/components/students/GuardianFormSection";
 import PromotionModal from "@/components/promotion/PromotionModal";
+import WithdrawStudentModal from "@/components/students/WithdrawStudentModal";
 
 /* ---------------- Types ---------------- */
 
@@ -52,7 +53,8 @@ type Student = {
   previousSchoolContact?: string;
   reasonForLeavingPreviousSchool?: string;
   guardians?: GuardianFormValue[];
-  currentStatus?: "ENROLLED" | "FAILED" | "LEFT";
+  currentStatus?: "ENROLLED" | "FAILED" | "LEFT" | "WITHDRAWN";
+  enrollmentActive?: boolean;
 };
 
 type LedgerEntry = {
@@ -118,6 +120,7 @@ export default function StudentsPage() {
   const canUserAddStudent = canAddStudent(user?.role);
   const canUserPromoteStudents = canPromoteStudents(user?.role);
   const canUserEditStudent = canEditStudent(user?.role);
+  const canUserWithdrawStudent = canWithdrawStudent(user?.role);
 
   /* ---------- Filters ---------- */
 
@@ -144,6 +147,7 @@ export default function StudentsPage() {
   const [showProfileModal, setShowProfileModal] = useState(false);
   const [profileStudent, setProfileStudent] = useState<Student | null>(null);
   const [loadingProfile, setLoadingProfile] = useState(false);
+  const [withdrawStudent, setWithdrawStudent] = useState<Student | null>(null);
   const [isEditing, setIsEditing] = useState(false);
   const [profileTab, setProfileTab] = useState<"overview" | "ledger" | "enrollments" | "promotions" | "funding">("overview");
   const [ledgerLoading, setLedgerLoading] = useState(false);
@@ -451,6 +455,26 @@ export default function StudentsPage() {
       void loadStudents(Number(selectedClass), currentPage);
     }
   }, [selectedClass, currentPage, loadStudents]);
+
+  const onWithdrawalSuccess = useCallback((response: any) => {
+    if (response.enrollmentClosed) {
+      showToast("Student withdrawn successfully.", "success");
+    } else {
+      showToast("Student is already withdrawn.", "info");
+    }
+
+    if (response.futureAssignmentsSkippedDueToPayment > 0) {
+      showToast(
+        `Some future assignments were not deactivated due to existing payments. Please review in Finance module.`,
+        "warning"
+      );
+    }
+
+    setWithdrawStudent(null);
+    if (selectedClass) {
+      void loadStudents(Number(selectedClass), currentPage);
+    }
+  }, [selectedClass, currentPage, loadStudents, showToast]);
 
   function goToPage(nextPage: number) {
     if (!selectedClass || nextPage < 0 || nextPage >= totalPages || nextPage === currentPage) return;
@@ -795,7 +819,7 @@ export default function StudentsPage() {
                   <td className="p-4 text-center">
                     <span className={`px-2 py-0.5 rounded-full text-[10px] font-bold uppercase border ${s.currentStatus === "ENROLLED" ? "bg-green-50 text-green-600 border-green-100" :
                       s.currentStatus === "FAILED" ? "bg-orange-50 text-orange-600 border-orange-100" :
-                        s.currentStatus === "LEFT" ? "bg-red-50 text-red-600 border-red-100" :
+                        s.currentStatus === "LEFT" || s.currentStatus === "WITHDRAWN" ? "bg-red-50 text-red-600 border-red-100" :
                           "bg-gray-50 text-gray-600 border-gray-100"
                       }`}>
                       {s.currentStatus || "UNKNOWN"}
@@ -806,12 +830,24 @@ export default function StudentsPage() {
                     <button
                       onClick={() => openProfile(s)}
                       className="text-gray-400 hover:text-blue-600 p-1"
+                      title="View Profile"
                     >
                       <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                         <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 12a3 3 0 11-6 0 3 3 0 016 0z" />
                         <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M2.458 12C3.732 7.943 7.523 5 12 5c4.478 0 8.268 2.943 9.542 7-1.274 4.057-5.064 7-9.542 7-4.477 0-8.268-2.943-9.542-7z" />
                       </svg>
                     </button>
+                    {canUserWithdrawStudent && s.enrollmentActive && (
+                      <button
+                        onClick={() => setWithdrawStudent(s)}
+                        className="text-gray-400 hover:text-red-600 p-1"
+                        title="Withdraw Student"
+                      >
+                        <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13 7a4 4 0 11-8 0 4 4 0 018 0zM9 14a6 6 0 00-6 6v1h12v-1a6 6 0 00-6-6zM21 12h-6" />
+                        </svg>
+                      </button>
+                    )}
                   </td>
                 </tr>
               ))}
@@ -1344,6 +1380,17 @@ export default function StudentsPage() {
         onClose={() => setShowPromotionModal(false)}
         onSuccess={onPromotionSuccess}
       />
+
+      {withdrawStudent && currentSession && (
+        <WithdrawStudentModal
+          studentId={withdrawStudent.id}
+          studentName={`${withdrawStudent.firstName} ${withdrawStudent.lastName}`}
+          sessionId={currentSession.id}
+          isOpen={!!withdrawStudent}
+          onClose={() => setWithdrawStudent(null)}
+          onSuccess={onWithdrawalSuccess}
+        />
+      )}
 
       <Modal
         isOpen={showProfileModal}

@@ -11,7 +11,13 @@ public class StudentMapperImpl implements StudentMapper {
 
     @Override
     public StudentDto toDto(Student entity) {
-        if (entity == null) return null;
+        return toDto(entity, false);
+    }
+
+    @Override
+    public StudentDto toDto(Student entity, boolean enrollmentActive) {
+        if (entity == null)
+            return null;
         StudentDto dto = new StudentDto();
         dto.setId(entity.getId());
         dto.setAdmissionNumber(entity.getAdmissionNumber());
@@ -37,8 +43,10 @@ public class StudentMapperImpl implements StudentMapper {
         dto.setReasonForLeaving(entity.getReasonForLeaving());
         dto.setActive(entity.isActive());
         dto.setCurrentStatus(entity.getCurrentStatus());
-        if (entity.getCurrentClass() != null) dto.setCurrentClassId(entity.getCurrentClass().getId());
-        if (entity.getSchool() != null) dto.setSchoolId(entity.getSchool().getId());
+        if (entity.getCurrentClass() != null)
+            dto.setCurrentClassId(entity.getCurrentClass().getId());
+        if (entity.getSchool() != null)
+            dto.setSchoolId(entity.getSchool().getId());
         dto.setRemarks(entity.getRemarks());
         dto.setPreviousSchoolName(entity.getPreviousSchoolName());
         dto.setPreviousSchoolBoard(entity.getPreviousSchoolBoard());
@@ -48,13 +56,15 @@ public class StudentMapperImpl implements StudentMapper {
         dto.setPreviousSchoolAddress(entity.getPreviousSchoolAddress());
         dto.setPreviousSchoolContact(entity.getPreviousSchoolContact());
         dto.setReasonForLeavingPreviousSchool(entity.getReasonForLeavingPreviousSchool());
+        dto.setEnrollmentActive(enrollmentActive);
 
         return dto;
     }
 
     @Override
     public Student toEntity(StudentCreateRequest dto) {
-        if (dto == null) return null;
+        if (dto == null)
+            return null;
         Student entity = new Student();
         entity.setAdmissionNumber(dto.getAdmissionNumber());
         entity.setFirstName(dto.getFirstName());
