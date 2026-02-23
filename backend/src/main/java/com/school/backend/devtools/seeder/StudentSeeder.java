@@ -2,6 +2,7 @@ package com.school.backend.devtools.seeder;
 
 import com.school.backend.common.enums.AdmissionType;
 import com.school.backend.common.enums.Gender;
+import com.school.backend.common.enums.StudentStatus;
 import com.school.backend.common.enums.PromotionType;
 import com.school.backend.core.classsubject.entity.SchoolClass;
 import com.school.backend.core.student.entity.PromotionRecord;
@@ -88,9 +89,9 @@ public class StudentSeeder {
                             : nextClass);
                 };
 
-                String status = switch (type) {
-                    case PAST_ONLY -> (index < CURRENT_ONLY_COUNT + FAIL_COUNT ? "FAILED" : "LEFT");
-                    case CURRENT_ONLY, PROMOTED -> "ENROLLED";
+                StudentStatus status = switch (type) {
+                    case PAST_ONLY -> (index < CURRENT_ONLY_COUNT + FAIL_COUNT ? StudentStatus.SUSPENDED : StudentStatus.LEFT);
+                    case CURRENT_ONLY, PROMOTED -> StudentStatus.ENROLLED;
                 };
 
                 Student student = Student.builder()

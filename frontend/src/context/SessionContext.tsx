@@ -30,6 +30,7 @@ export function SessionProvider({ children }: { children: React.ReactNode }) {
   const [sessions, setSessions] = useState<AcademicSession[]>([]);
   const [isSessionLoading, setIsSessionLoading] = useState(true);
   const [hasClasses, setHasClasses] = useState(false);
+  const currentSessionId = currentSession?.id ?? null;
 
   // Fetch sessions from API
   const refreshSessions = useCallback(async () => {
@@ -117,15 +118,15 @@ export function SessionProvider({ children }: { children: React.ReactNode }) {
 
   // Axios interceptor to inject X-Session-Id header
   useEffect(() => {
-    if (currentSession) {
-      localStorage.setItem("sessionId", currentSession.id.toString());
+    if (currentSessionId) {
+      localStorage.setItem("sessionId", currentSessionId.toString());
     } else {
       localStorage.removeItem("sessionId");
     }
 
     const interceptor = api.interceptors.request.use((config) => {
-      if (currentSession) {
-        config.headers["X-Session-Id"] = currentSession.id.toString();
+      if (currentSessionId) {
+        config.headers["X-Session-Id"] = currentSessionId.toString();
       }
       return config;
     });
@@ -133,13 +134,13 @@ export function SessionProvider({ children }: { children: React.ReactNode }) {
     return () => {
       api.interceptors.request.eject(interceptor);
     };
-  }, [currentSession?.id]);
+  }, [currentSessionId]);
 
   // Fetch class count when session changes
   useEffect(() => {
     // Ensure classes count respects selected school context
     const selectedSchoolId = localStorage.getItem("schoolId");
-    if (currentSession && (user?.schoolId || selectedSchoolId)) {
+    if (currentSessionId && (user?.schoolId || selectedSchoolId)) {
       api.get<{ count: number }>("/api/classes/count")
         .then(res => {
           setHasClasses(res.data.count > 0);
@@ -151,7 +152,7 @@ export function SessionProvider({ children }: { children: React.ReactNode }) {
     } else {
       setHasClasses(false);
     }
-  }, [currentSession, user?.schoolId]);
+  }, [currentSessionId, user?.schoolId]);
 
   return (
     <SessionContext.Provider

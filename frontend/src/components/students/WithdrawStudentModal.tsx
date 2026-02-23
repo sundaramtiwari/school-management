@@ -26,6 +26,8 @@ interface Props {
     onSuccess: (response: WithdrawalResponse) => void;
 }
 
+const WITHDRAWAL_STATUSES = ["PASSED_OUT", "LEFT", "SUSPENDED", "WITHDRAWN"] as const;
+
 /* ---- Helpers ---- */
 
 function todayISO(): string {
@@ -45,12 +47,14 @@ export default function WithdrawStudentModal({
     const { showToast } = useToast();
 
     const [withdrawalDate, setWithdrawalDate] = useState<string>(todayISO());
+    const [status, setStatus] = useState<(typeof WITHDRAWAL_STATUSES)[number]>("LEFT");
     const [reason, setReason] = useState<string>("");
     const [confirmed, setConfirmed] = useState<boolean>(false);
     const [isSubmitting, setIsSubmitting] = useState<boolean>(false);
 
     function reset() {
         setWithdrawalDate(todayISO());
+        setStatus("LEFT");
         setReason("");
         setConfirmed(false);
         setIsSubmitting(false);
@@ -71,6 +75,7 @@ export default function WithdrawStudentModal({
             const res = await studentApi.withdraw(studentId, {
                 sessionId,
                 withdrawalDate,
+                status,
                 reason: reason.trim() || undefined,
             });
 
@@ -163,7 +168,24 @@ export default function WithdrawStudentModal({
                 </div>
 
                 {/* Withdrawal Date */}
-                <div className="space-y-1">
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                    <div className="space-y-1">
+                        <label className="block text-xs font-bold text-gray-500 uppercase tracking-wide">
+                            Status After Withdrawal <span className="text-red-500">*</span>
+                        </label>
+                        <select
+                            value={status}
+                            onChange={(e) => setStatus(e.target.value as (typeof WITHDRAWAL_STATUSES)[number])}
+                            disabled={isSubmitting}
+                            className="w-full rounded-md border border-gray-300 px-3 py-2 text-sm focus:ring-2 focus:ring-red-400 focus:border-red-400 disabled:bg-gray-50"
+                        >
+                            {WITHDRAWAL_STATUSES.map(s => (
+                                <option key={s} value={s}>{s.replace("_", " ")}</option>
+                            ))}
+                        </select>
+                    </div>
+
+                    <div className="space-y-1">
                     <label className="block text-xs font-bold text-gray-500 uppercase tracking-wide">
                         Withdrawal Date <span className="text-red-500">*</span>
                     </label>
@@ -174,6 +196,7 @@ export default function WithdrawStudentModal({
                         disabled={isSubmitting}
                         className="w-full rounded-md border border-gray-300 px-3 py-2 text-sm focus:ring-2 focus:ring-red-400 focus:border-red-400 disabled:bg-gray-50"
                     />
+                    </div>
                 </div>
 
                 {/* Reason */}

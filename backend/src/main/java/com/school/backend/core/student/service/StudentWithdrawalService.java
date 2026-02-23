@@ -43,7 +43,7 @@ public class StudentWithdrawalService {
     public StudentWithdrawalResponse withdrawStudent(Long studentId, StudentWithdrawalRequest request) {
         Long schoolId = TenantContext.getSchoolId();
 
-        studentRepository.findByIdAndSchoolId(studentId, schoolId)
+        var student = studentRepository.findByIdAndSchoolId(studentId, schoolId)
                 .orElseThrow(() -> new InvalidOperationException("Student does not belong to this school."));
 
         List<StudentEnrollment> lockedEnrollments = enrollmentRepository.findByStudentIdAndSessionIdAndSchoolIdForUpdate(
@@ -68,6 +68,11 @@ public class StudentWithdrawalService {
         enrollment.setActive(false);
         enrollment.setEndDate(request.getWithdrawalDate());
         enrollmentRepository.save(enrollment);
+
+        student.setReasonForLeaving(request.getReason());
+        student.setDateOfLeaving(request.getWithdrawalDate());
+        student.setCurrentStatus(request.getStatus());
+        studentRepository.save(student);
 
         List<StudentFeeAssignment> futureAssignments = assignmentRepository
                 .findByStudentIdAndSessionIdAndSchoolIdAndActiveTrueAndDueDateIsNotNullAndDueDateAfter(

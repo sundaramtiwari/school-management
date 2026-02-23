@@ -42,7 +42,10 @@ type Student = {
   contactNumber: string;
   email?: string;
   bloodGroup?: string;
+  photoUrl?: string;
   dateOfAdmission?: string;
+  dateOfLeaving?: string;
+  reasonForLeaving?: string;
   remarks?: string;
   previousSchoolName?: string;
   previousSchoolBoard?: string;
@@ -53,7 +56,7 @@ type Student = {
   previousSchoolContact?: string;
   reasonForLeavingPreviousSchool?: string;
   guardians?: GuardianFormValue[];
-  currentStatus?: "ENROLLED" | "FAILED" | "LEFT" | "WITHDRAWN";
+  currentStatus?: "ENROLLED" | "LEFT" | "PASSED_OUT" | "SUSPENDED" | "FAILED" | "WITHDRAWN";
   enrollmentActive?: boolean;
 };
 
@@ -819,7 +822,8 @@ export default function StudentsPage() {
                   <td className="p-4 text-center">
                     <span className={`px-2 py-0.5 rounded-full text-[10px] font-bold uppercase border ${s.currentStatus === "ENROLLED" ? "bg-green-50 text-green-600 border-green-100" :
                       s.currentStatus === "FAILED" ? "bg-orange-50 text-orange-600 border-orange-100" :
-                        s.currentStatus === "LEFT" || s.currentStatus === "WITHDRAWN" ? "bg-red-50 text-red-600 border-red-100" :
+                        s.currentStatus === "LEFT" || s.currentStatus === "WITHDRAWN" || s.currentStatus === "SUSPENDED" ? "bg-red-50 text-red-600 border-red-100" :
+                          s.currentStatus === "PASSED_OUT" ? "bg-indigo-50 text-indigo-600 border-indigo-100" :
                           "bg-gray-50 text-gray-600 border-gray-100"
                       }`}>
                       {s.currentStatus || "UNKNOWN"}
@@ -1431,6 +1435,33 @@ export default function StudentsPage() {
               <div className="py-10 text-center text-gray-400 italic">Loading details...</div>
             ) : profileStudent ? (
               <div className="space-y-6">
+                <div className="flex items-start gap-4 p-4 rounded-2xl border bg-gray-50/40">
+                  <div className="w-16 h-16 rounded-xl overflow-hidden border bg-white flex items-center justify-center">
+                    {profileStudent.photoUrl ? (
+                      // eslint-disable-next-line @next/next/no-img-element
+                      <img src={profileStudent.photoUrl} alt="Student photo" className="w-full h-full object-cover" />
+                    ) : (
+                      <span className="text-[10px] font-bold text-gray-400 uppercase">No Photo</span>
+                    )}
+                  </div>
+                  <div className="flex-1 grid grid-cols-1 md:grid-cols-2 gap-3 text-xs">
+                    <div className="space-y-1">
+                      <span className="text-[10px] font-bold text-gray-400 uppercase block tracking-wider">Student Status</span>
+                      <span className={`inline-flex px-2 py-0.5 rounded-full text-[10px] font-bold uppercase border ${profileStudent.currentStatus === "ENROLLED" ? "bg-green-50 text-green-600 border-green-100" :
+                        profileStudent.currentStatus === "PASSED_OUT" ? "bg-indigo-50 text-indigo-700 border-indigo-100" :
+                          profileStudent.currentStatus === "LEFT" || profileStudent.currentStatus === "SUSPENDED" || profileStudent.currentStatus === "WITHDRAWN" ? "bg-red-50 text-red-600 border-red-100" :
+                            "bg-gray-50 text-gray-600 border-gray-100"
+                        }`}>
+                        {profileStudent.currentStatus || "UNKNOWN"}
+                      </span>
+                    </div>
+                    <div className="space-y-1">
+                      <span className="text-[10px] font-bold text-gray-400 uppercase block tracking-wider">Photo URL</span>
+                      <span className="text-gray-700 break-all">{profileStudent.photoUrl || "-"}</span>
+                    </div>
+                  </div>
+                </div>
+
                 <div className="grid grid-cols-2 lg:grid-cols-3 gap-6 text-sm">
                   <div className="space-y-1">
                     <span className="text-[10px] font-bold text-gray-400 uppercase block tracking-wider">Admission No</span>
@@ -1477,6 +1508,48 @@ export default function StudentsPage() {
                     {!profileStudent.address && "-"}
                   </p>
                 </div>
+
+                <div className="bg-gray-50/50 p-4 rounded-2xl border space-y-4">
+                  <h4 className="text-[10px] font-bold text-blue-600 uppercase tracking-widest border-b pb-2">Previous School Details</h4>
+                  <div className="grid grid-cols-2 lg:grid-cols-3 gap-4 text-xs">
+                    <div><span className="text-gray-400 block mb-0.5">School Name:</span> {profileStudent.previousSchoolName || "-"}</div>
+                    <div><span className="text-gray-400 block mb-0.5">Board:</span> {profileStudent.previousSchoolBoard || "-"}</div>
+                    <div><span className="text-gray-400 block mb-0.5">Class:</span> {profileStudent.previousClass || "-"}</div>
+                    <div><span className="text-gray-400 block mb-0.5">Year of Passing:</span> {profileStudent.previousYearOfPassing ?? "-"}</div>
+                    <div><span className="text-gray-400 block mb-0.5">TC Number:</span> {profileStudent.transferCertificateNumber || "-"}</div>
+                    <div><span className="text-gray-400 block mb-0.5">Contact:</span> {profileStudent.previousSchoolContact || "-"}</div>
+                    <div className="col-span-2 lg:col-span-3">
+                      <span className="text-gray-400 block mb-0.5">Address:</span>
+                      <span>{profileStudent.previousSchoolAddress || "-"}</span>
+                    </div>
+                    <div className="col-span-2 lg:col-span-3">
+                      <span className="text-gray-400 block mb-0.5">Reason for Leaving:</span>
+                      <span>{profileStudent.reasonForLeavingPreviousSchool || "-"}</span>
+                    </div>
+                  </div>
+                </div>
+
+                {profileStudent.currentStatus && profileStudent.currentStatus !== "ENROLLED" && (
+                  <div className="bg-red-50/40 p-4 rounded-2xl border border-red-100 space-y-3">
+                    <h4 className="text-[10px] font-bold text-red-600 uppercase tracking-widest border-b border-red-100 pb-2">
+                      Exit Details
+                    </h4>
+                    <div className="grid grid-cols-1 md:grid-cols-3 gap-4 text-xs">
+                      <div>
+                        <span className="text-gray-400 block mb-0.5">Date of Leaving:</span>
+                        <span>{profileStudent.dateOfLeaving || "-"}</span>
+                      </div>
+                      <div className="md:col-span-2">
+                        <span className="text-gray-400 block mb-0.5">Reason for Leaving:</span>
+                        <span>{profileStudent.reasonForLeaving || "-"}</span>
+                      </div>
+                      <div className="md:col-span-3">
+                        <span className="text-gray-400 block mb-0.5">Remarks:</span>
+                        <span>{profileStudent.remarks || "-"}</span>
+                      </div>
+                    </div>
+                  </div>
+                )}
 
                 {profileStudent.guardians && profileStudent.guardians.length > 0 && (
                   <div className="space-y-3">

@@ -1,6 +1,7 @@
 package com.school.backend.core.student.dto;
 
 import com.school.backend.common.enums.Gender;
+import com.school.backend.common.enums.StudentStatus;
 import lombok.Data;
 
 import java.time.LocalDate;
@@ -44,7 +45,7 @@ public class StudentUpdateRequest {
     private String reasonForLeavingPreviousSchool;
 
     private Boolean active;
-    private String currentStatus;
+    private StudentStatus currentStatus;
 
     private String remarks;
 }

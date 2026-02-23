@@ -40,7 +40,7 @@ public class StudentFundingArrangementController {
         log.debug("Fetching active funding arrangement: studentId={}, sessionId={}", studentId, sessionId);
         return fundingService.getActive(studentId, sessionId)
                 .map(ResponseEntity::ok)
-                .orElse(ResponseEntity.notFound().build());
+                .orElse(ResponseEntity.ok().build());
     }
 
     @GetMapping("/student/{studentId}")

@@ -2,6 +2,7 @@ package com.school.backend.core.student.entity;
 
 import com.school.backend.common.entity.TenantEntity;
 import com.school.backend.common.enums.Gender;
+import com.school.backend.common.enums.StudentStatus;
 import com.school.backend.core.classsubject.entity.SchoolClass;
 import com.school.backend.school.entity.School;
 import jakarta.persistence.*;
@@ -78,8 +79,9 @@ public class Student extends TenantEntity {
     @Builder.Default
     private boolean active = true;
 
-    @Column(name = "current_status")
-    private String currentStatus; // ENROLLED, PASSED_OUT, LEFT, SUSPENDED
+    @Enumerated(EnumType.STRING)
+    @Column(name = "current_status", length = 20)
+    private StudentStatus currentStatus; // ENROLLED, PASSED_OUT, LEFT, SUSPENDED
 
     // currentClass references class id for quick lookup; keep as relation
     @ManyToOne(fetch = FetchType.LAZY)

@@ -1,6 +1,7 @@
 package com.school.backend.core.student.dto;
 
 import com.school.backend.common.enums.Gender;
+import com.school.backend.common.enums.StudentStatus;
 import lombok.Data;
 
 import java.time.LocalDate;
@@ -30,7 +31,7 @@ public class StudentDto {
     private LocalDate dateOfLeaving;
     private String reasonForLeaving;
     private boolean active;
-    private String currentStatus;
+    private StudentStatus currentStatus;
     private Long currentClassId;
     private Long schoolId;
     private String remarks;

@@ -30,7 +30,7 @@ export default function SessionsPage() {
         name: "",
         startDate: "",
         endDate: "",
-        active: true,
+        active: false,
     });
 
     const [form, setForm] = useState({
@@ -79,7 +79,7 @@ export default function SessionsPage() {
             await sessionApi.create(createForm);
             showToast("Academic session created!", "success");
             setShowInlineCreate(false);
-            setCreateForm({ name: "", startDate: "", endDate: "", active: true });
+            setCreateForm({ name: "", startDate: "", endDate: "", active: false });
             await refreshSessions();
         } catch (e: unknown) {
             const msg = (e as { response?: { data?: { message?: string } }; message?: string })?.response?.data?.message
@@ -91,21 +91,8 @@ export default function SessionsPage() {
         }
     }
 
-    async function handleSetCurrent(sessionId: number) {
-        try {
-            await sessionApi.setCurrent(sessionId);
-            showToast("Current session updated!", "success");
-            await refreshSessions();
-        } catch (e: unknown) {
-            const msg = (e as { response?: { data?: { message?: string } }; message?: string })?.response?.data?.message
-                || (e as { message?: string })?.message
-                || "Unknown error";
-            showToast("Failed to set current session: " + msg, "error");
-        }
-    }
-
     function openCreate() {
-        setCreateForm({ name: "", startDate: "", endDate: "", active: true });
+        setCreateForm({ name: "", startDate: "", endDate: "", active: false });
         setShowInlineCreate(true);
     }
 
@@ -176,7 +163,7 @@ export default function SessionsPage() {
                                 className="w-full rounded-md border border-gray-300 px-3 py-2 text-base focus:ring-2 focus:ring-blue-500"
                             />
                         </div>
-                        <div>
+                        <div className="space-y-3">
                             <button
                                 onClick={saveNewSessionInline}
                                 disabled={isSaving}
@@ -184,6 +171,15 @@ export default function SessionsPage() {
                             >
                                 {isSaving ? "Creating..." : "Create Session"}
                             </button>
+                            <label className="flex items-center gap-2 text-sm font-semibold text-gray-700 cursor-pointer">
+                                <input
+                                    type="checkbox"
+                                    checked={createForm.active}
+                                    onChange={(e) => setCreateForm({ ...createForm, active: e.target.checked })}
+                                    className="w-4 h-4 text-blue-600 rounded border-gray-300 focus:ring-blue-500"
+                                />
+                                Make current session
+                            </label>
                         </div>
                     </div>
                 </div>
@@ -223,19 +219,11 @@ export default function SessionsPage() {
                                     <td className="p-4 text-center">
                                         <span className={`px-3 py-1 rounded-full text-[10px] font-bold uppercase border ${s.active ? "bg-blue-50 text-blue-600 border-blue-100" : "bg-gray-50 text-gray-400 border-gray-200"
                                             }`}>
-                                            {s.active ? "Active" : "Archived"}
+                                            {s.active ? "Active" : "Inactive"}
                                         </span>
                                     </td>
                                     <td className="p-4 text-center">
                                         <div className="flex items-center justify-center gap-3">
-                                            {currentSession?.id !== s.id && (
-                                                <button
-                                                    onClick={() => handleSetCurrent(s.id)}
-                                                    className="text-green-600 hover:text-green-700 font-bold text-xs uppercase tracking-tighter"
-                                                >
-                                                    Set Current
-                                                </button>
-                                            )}
                                             {canManage && (
                                                 <button
                                                     onClick={() => openEdit(s)}
@@ -325,8 +313,8 @@ export default function SessionsPage() {
                             className="w-5 h-5 text-blue-600 rounded border-gray-300 focus:ring-blue-500"
                         />
                         <div>
-                            <span className="block text-sm font-bold text-blue-900 leading-none">Session Status</span>
-                            <span className="text-[10px] text-blue-600 font-medium">Available for data entry & selection</span>
+                            <span className="block text-sm font-bold text-blue-900 leading-none">Make current session</span>
+                            <span className="text-[10px] text-blue-600 font-medium">Only one session can be current at a time.</span>
                         </div>
                     </label>
                 </div>

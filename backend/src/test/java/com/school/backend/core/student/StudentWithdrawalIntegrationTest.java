@@ -3,6 +3,7 @@ package com.school.backend.core.student;
 import com.school.backend.common.BaseAuthenticatedIntegrationTest;
 import com.school.backend.common.enums.FeeFrequency;
 import com.school.backend.common.enums.Gender;
+import com.school.backend.common.enums.StudentStatus;
 import com.school.backend.core.classsubject.entity.SchoolClass;
 import com.school.backend.core.student.dto.StudentWithdrawalRequest;
 import com.school.backend.core.student.dto.StudentWithdrawalResponse;
@@ -65,6 +66,8 @@ public class StudentWithdrawalIntegrationTest extends BaseAuthenticatedIntegrati
         StudentEnrollment after = studentEnrollmentRepository.findById(enrollment.getId()).orElseThrow();
         Assertions.assertThat(after.isActive()).isFalse();
         Assertions.assertThat(after.getEndDate()).isEqualTo(withdrawalDate);
+        Student studentAfter = studentRepository.findById(student.getId()).orElseThrow();
+        Assertions.assertThat(studentAfter.getCurrentStatus()).isEqualTo(StudentStatus.LEFT);
 
         Assertions.assertThat(assignmentRepository.findById(future.getId()).orElseThrow().isActive()).isFalse();
         Assertions.assertThat(assignmentRepository.findById(past.getId()).orElseThrow().isActive()).isTrue();
@@ -257,7 +260,7 @@ public class StudentWithdrawalIntegrationTest extends BaseAuthenticatedIntegrati
                 .firstName("Stu")
                 .gender(Gender.MALE)
                 .active(true)
-                .currentStatus("ENROLLED")
+                .currentStatus(StudentStatus.ENROLLED)
                 .build());
     }
 
@@ -329,6 +332,7 @@ public class StudentWithdrawalIntegrationTest extends BaseAuthenticatedIntegrati
         StudentWithdrawalRequest request = new StudentWithdrawalRequest();
         request.setSessionId(sessionId);
         request.setWithdrawalDate(withdrawalDate);
+        request.setStatus(StudentStatus.LEFT);
         request.setReason(reason);
         return request;
     }

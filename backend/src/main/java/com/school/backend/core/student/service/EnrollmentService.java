@@ -1,7 +1,9 @@
 package com.school.backend.core.student.service;
 
-import com.school.backend.common.exception.ResourceNotFoundException;
+import com.school.backend.common.enums.StudentStatus;
 import com.school.backend.common.exception.InvalidOperationException;
+import com.school.backend.common.exception.ResourceNotFoundException;
+import com.school.backend.common.tenant.TenantContext;
 import com.school.backend.core.classsubject.repository.SchoolClassRepository;
 import com.school.backend.core.student.dto.StudentEnrollmentDto;
 import com.school.backend.core.student.dto.StudentEnrollmentRequest;
@@ -13,7 +15,6 @@ import com.school.backend.core.student.repository.StudentRepository;
 import com.school.backend.fee.entity.FeeStructure;
 import com.school.backend.fee.repository.FeeStructureRepository;
 import com.school.backend.fee.service.FeeStructureService;
-import com.school.backend.common.tenant.TenantContext;
 import lombok.RequiredArgsConstructor;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
@@ -62,6 +63,7 @@ public class EnrollmentService {
         // update student's currentClass reference
         studentRepository.findById(req.getStudentId()).ifPresent(s -> {
             s.setCurrentClass(classRepository.findById(req.getClassId()).orElse(null));
+            s.setCurrentStatus(StudentStatus.ENROLLED);
             studentRepository.save(s);
         });
 

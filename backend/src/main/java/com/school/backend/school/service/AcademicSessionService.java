@@ -22,8 +22,8 @@ public class AcademicSessionService {
     private final com.school.backend.school.repository.SchoolRepository schoolRepository;
 
     public List<AcademicSession> getSessions(Long schoolId) {
-        log.debug("Fetching active sessions for schoolId={}", schoolId);
-        return repository.findBySchoolIdAndActiveTrue(schoolId);
+        log.debug("Fetching all sessions for schoolId={}", schoolId);
+        return repository.findBySchoolId(schoolId);
     }
 
     @Transactional
@@ -40,7 +40,11 @@ public class AcademicSessionService {
         School school = schoolRepository.findById(session.getSchoolId())
                 .orElseThrow(() -> new ResourceNotFoundException("School not found"));
 
-        if (school.getCurrentSessionId() == null) {
+        if (saved.isActive()) {
+            enforceSingleActiveSession(saved.getSchoolId(), saved.getId());
+            school.setCurrentSessionId(saved.getId());
+            schoolRepository.save(school);
+        } else if (school.getCurrentSessionId() == null) {
             school.setCurrentSessionId(saved.getId());
             schoolRepository.save(school);
             log.info("Initialized currentSessionId={} for schoolId={}", saved.getId(), school.getId());
@@ -67,8 +71,23 @@ public class AcademicSessionService {
         session.setName(updatedSession.getName());
         session.setActive(updatedSession.isActive());
         // startDate/endDate are immutable after creation.
+        AcademicSession saved = repository.save(session);
+        School school = schoolRepository.findById(saved.getSchoolId())
+                .orElseThrow(() -> new ResourceNotFoundException("School not found"));
 
-        return repository.save(session);
+        if (saved.isActive()) {
+            enforceSingleActiveSession(saved.getSchoolId(), saved.getId());
+            school.setCurrentSessionId(saved.getId());
+            schoolRepository.save(school);
+        } else if (school.getCurrentSessionId() != null && school.getCurrentSessionId().equals(saved.getId())) {
+            repository.findFirstBySchoolIdAndActiveTrueOrderByStartDateDesc(saved.getSchoolId())
+                    .ifPresentOrElse(
+                            active -> school.setCurrentSessionId(active.getId()),
+                            () -> school.setCurrentSessionId(null));
+            schoolRepository.save(school);
+        }
+
+        return saved;
     }
 
     @Transactional
@@ -87,6 +106,11 @@ public class AcademicSessionService {
             throw new InvalidOperationException("Session does not belong to this school");
         }
 
+        if (!session.isActive()) {
+            session.setActive(true);
+            repository.save(session);
+        }
+        enforceSingleActiveSession(schoolId, sessionId);
         school.setCurrentSessionId(sessionId);
         schoolRepository.save(school);
     }
@@ -110,5 +134,9 @@ public class AcademicSessionService {
         if (endDate.isBefore(startDate)) {
             throw new InvalidOperationException("Session endDate must be on or after startDate");
         }
+    }
+
+    private void enforceSingleActiveSession(Long schoolId, Long activeSessionId) {
+        repository.deactivateOtherActiveSessions(schoolId, activeSessionId);
     }
 }
