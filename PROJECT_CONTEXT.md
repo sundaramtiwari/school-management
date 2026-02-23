@@ -91,6 +91,9 @@ All counts and academic queries must use StudentEnrollment.
 ### Features:
 
 - FeeStructure is class + session scoped.
+- FeeStructure = Template (editable)
+  - StudentFeeAssignment = Financial Record (immutable)
+  - FeeStructure updates must NEVER modify existing StudentFeeAssignment rows.
 - Automatic assignment:
   - On fee creation → assigned to enrolled students.
   - On student enrollment → existing fees assigned.
