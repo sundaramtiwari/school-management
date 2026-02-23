@@ -7,6 +7,7 @@ import com.school.backend.common.exception.ResourceNotFoundException;
 import com.school.backend.core.student.entity.StudentEnrollment;
 import com.school.backend.core.student.repository.StudentEnrollmentRepository;
 import com.school.backend.fee.dto.FeeStructureCreateRequest;
+import com.school.backend.fee.dto.FeeStructurePatchRequest;
 import com.school.backend.fee.dto.FeeStructureDto;
 import com.school.backend.fee.entity.FeeStructure;
 import com.school.backend.fee.entity.FeeType;
@@ -21,17 +22,24 @@ import com.school.backend.school.repository.AcademicSessionRepository;
 import com.school.backend.school.service.SetupValidationService;
 import com.school.backend.user.security.SecurityUtil;
 import lombok.RequiredArgsConstructor;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
+import org.springframework.security.access.AccessDeniedException;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
 import java.math.BigDecimal;
 import java.time.LocalDate;
 import java.time.temporal.ChronoUnit;
+import java.time.Instant;
+import java.util.LinkedHashMap;
 import java.util.List;
+import java.util.Map;
 
 @Service
 @RequiredArgsConstructor
 public class FeeStructureService {
+    private static final Logger log = LoggerFactory.getLogger(FeeStructureService.class);
 
     private final FeeStructureRepository feeStructureRepository;
     private final FeeTypeRepository feeTypeRepository;
@@ -46,8 +54,11 @@ public class FeeStructureService {
     public FeeStructureDto create(FeeStructureCreateRequest req) {
         setupValidationService.ensureAtLeastOneClassExists(SecurityUtil.schoolId(), req.getSessionId());
 
-        FeeType feeType = feeTypeRepository.findById(req.getFeeTypeId())
+        FeeType feeType = feeTypeRepository.findByIdAndSchoolId(req.getFeeTypeId(), SecurityUtil.schoolId())
                 .orElseThrow(() -> new ResourceNotFoundException("FeeType not found: " + req.getFeeTypeId()));
+        if (!feeType.isActive()) {
+            throw new IllegalStateException("Cannot create fee structure with inactive fee type: " + feeType.getId());
+        }
 
         FeeStructure fs = FeeStructure.builder()
                 .schoolId(SecurityUtil.schoolId())
@@ -81,6 +92,71 @@ public class FeeStructureService {
         if (saved.getClassId() != null) {
             assignFeeToStudents(saved);
         }
+
+        return toDto(saved);
+    }
+
+    @Transactional
+    public FeeStructureDto update(Long id, Long schoolId, FeeStructurePatchRequest req) {
+        FeeStructure fs = feeStructureRepository.findByIdAndSchoolId(id, schoolId)
+                .orElseThrow(() -> {
+                    if (feeStructureRepository.existsAnyById(id)) {
+                        throw new AccessDeniedException("Access denied for fee structure: " + id);
+                    }
+                    return new ResourceNotFoundException("FeeStructure not found: " + id);
+                });
+
+        validateImmutableFields(fs, req);
+
+        Map<String, Object> oldValues = captureStructureState(fs);
+
+        if (req.getAmount() != null) {
+            fs.setAmount(req.getAmount());
+        }
+        if (req.getFrequency() != null) {
+            fs.setFrequency(req.getFrequency());
+        }
+        if (req.getDueDayOfMonth() != null) {
+            fs.setDueDayOfMonth(req.getDueDayOfMonth());
+        }
+
+        syncLateFeePolicy(fs, req);
+
+        FeeStructure saved = feeStructureRepository.save(fs);
+        Map<String, Object> newValues = captureStructureState(saved);
+        log.info(
+                "event=fee_structure_updated schoolId={} structureId={} actorId={} oldValues={} newValues={} timestamp={}",
+                schoolId,
+                saved.getId(),
+                SecurityUtil.userId(),
+                oldValues,
+                newValues,
+                Instant.now());
+
+        return toDto(saved);
+    }
+
+    @Transactional
+    public FeeStructureDto toggleActive(Long id, Long schoolId) {
+        FeeStructure fs = feeStructureRepository.findByIdAndSchoolId(id, schoolId)
+                .orElseThrow(() -> {
+                    if (feeStructureRepository.existsAnyById(id)) {
+                        throw new AccessDeniedException("Access denied for fee structure: " + id);
+                    }
+                    return new ResourceNotFoundException("FeeStructure not found: " + id);
+                });
+
+        boolean oldActive = fs.isActive();
+        fs.setActive(!oldActive);
+        FeeStructure saved = feeStructureRepository.save(fs);
+
+        log.info("event=fee_structure_toggled schoolId={} structureId={} actorId={} oldActive={} newActive={} timestamp={}",
+                schoolId,
+                saved.getId(),
+                SecurityUtil.userId(),
+                oldActive,
+                saved.isActive(),
+                Instant.now());
 
         return toDto(saved);
     }
@@ -245,5 +321,88 @@ public class FeeStructureService {
     private java.time.LocalDate clampDay(java.time.LocalDate baseMonth, int day) {
         int lastDay = baseMonth.lengthOfMonth();
         return baseMonth.withDayOfMonth(Math.min(day, lastDay));
+    }
+
+    private void validateImmutableFields(FeeStructure fs, FeeStructurePatchRequest req) {
+        if (req.getSchoolId() != null && !req.getSchoolId().equals(fs.getSchoolId())) {
+            throw new IllegalArgumentException("schoolId is immutable");
+        }
+        if (req.getSessionId() != null && !req.getSessionId().equals(fs.getSessionId())) {
+            throw new IllegalArgumentException("sessionId is immutable");
+        }
+        if (req.getClassId() != null && !req.getClassId().equals(fs.getClassId())) {
+            throw new IllegalArgumentException("classId is immutable");
+        }
+        if (req.getFeeTypeId() != null && !req.getFeeTypeId().equals(fs.getFeeType().getId())) {
+            throw new IllegalArgumentException("feeTypeId is immutable");
+        }
+    }
+
+    private void syncLateFeePolicy(FeeStructure fs, FeeStructurePatchRequest req) {
+        LateFeePolicy existingPolicy = lateFeePolicyRepository.findByFeeStructureId(fs.getId()).orElse(null);
+        if (req.getLateFeePolicyId() != null) {
+            if (existingPolicy == null || !req.getLateFeePolicyId().equals(existingPolicy.getId())) {
+                throw new IllegalArgumentException("lateFeePolicyId does not belong to this fee structure");
+            }
+        }
+
+        if (req.getLateFeeType() == null &&
+                req.getLateFeeAmountValue() == null &&
+                req.getLateFeeGraceDays() == null &&
+                req.getLateFeeCapType() == null &&
+                req.getLateFeeCapValue() == null) {
+            return;
+        }
+
+        LateFeeType nextType = req.getLateFeeType() != null
+                ? req.getLateFeeType()
+                : (existingPolicy != null ? existingPolicy.getType() : LateFeeType.NONE);
+
+        if (nextType == LateFeeType.NONE) {
+            if (existingPolicy != null) {
+                existingPolicy.setType(LateFeeType.NONE);
+                existingPolicy.setAmountValue(BigDecimal.ZERO);
+                existingPolicy.setGraceDays(0);
+                existingPolicy.setCapType(LateFeeCapType.NONE);
+                existingPolicy.setCapValue(BigDecimal.ZERO);
+                existingPolicy.setActive(false);
+                lateFeePolicyRepository.save(existingPolicy);
+            }
+            return;
+        }
+
+        LateFeePolicy target = existingPolicy != null ? existingPolicy : LateFeePolicy.builder()
+                .schoolId(fs.getSchoolId())
+                .feeStructure(fs)
+                .build();
+
+        target.setType(nextType);
+        target.setAmountValue(req.getLateFeeAmountValue() != null ? req.getLateFeeAmountValue()
+                : (target.getAmountValue() != null ? target.getAmountValue() : BigDecimal.ZERO));
+        target.setGraceDays(req.getLateFeeGraceDays() != null ? req.getLateFeeGraceDays()
+                : (target.getGraceDays() != null ? target.getGraceDays() : 0));
+        target.setCapType(req.getLateFeeCapType() != null ? req.getLateFeeCapType()
+                : (target.getCapType() != null ? target.getCapType() : LateFeeCapType.NONE));
+        target.setCapValue(req.getLateFeeCapValue() != null ? req.getLateFeeCapValue()
+                : (target.getCapValue() != null ? target.getCapValue() : BigDecimal.ZERO));
+        target.setActive(true);
+        lateFeePolicyRepository.save(target);
+    }
+
+    private Map<String, Object> captureStructureState(FeeStructure fs) {
+        Map<String, Object> values = new LinkedHashMap<>();
+        values.put("amount", fs.getAmount());
+        values.put("frequency", fs.getFrequency());
+        values.put("dueDayOfMonth", fs.getDueDayOfMonth());
+        values.put("active", fs.isActive());
+
+        LateFeePolicy policy = lateFeePolicyRepository.findByFeeStructureId(fs.getId()).orElse(null);
+        values.put("lateFeePolicyId", policy != null ? policy.getId() : null);
+        values.put("lateFeeType", policy != null ? policy.getType() : null);
+        values.put("lateFeeAmountValue", policy != null ? policy.getAmountValue() : null);
+        values.put("lateFeeGraceDays", policy != null ? policy.getGraceDays() : null);
+        values.put("lateFeeCapType", policy != null ? policy.getCapType() : null);
+        values.put("lateFeeCapValue", policy != null ? policy.getCapValue() : null);
+        return values;
     }
 }

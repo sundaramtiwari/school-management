@@ -2,6 +2,7 @@ package com.school.backend.fee.controller;
 
 import com.school.backend.fee.dto.FeeStructureCreateRequest;
 import com.school.backend.fee.dto.FeeStructureDto;
+import com.school.backend.fee.dto.FeeStructurePatchRequest;
 import com.school.backend.fee.service.FeeStructureService;
 import com.school.backend.common.tenant.SessionResolver;
 import jakarta.validation.Valid;
@@ -25,6 +26,18 @@ public class FeeStructureController {
     @PreAuthorize("hasAnyRole('SCHOOL_ADMIN', 'SUPER_ADMIN')")
     public FeeStructureDto create(@Valid @RequestBody FeeStructureCreateRequest req) {
         return service.create(req);
+    }
+
+    @PatchMapping("/{id}")
+    @PreAuthorize("hasAnyRole('SCHOOL_ADMIN', 'SUPER_ADMIN')")
+    public FeeStructureDto update(@PathVariable Long id, @RequestBody FeeStructurePatchRequest req) {
+        return service.update(id, SecurityUtil.schoolId(), req);
+    }
+
+    @PatchMapping("/{id}/toggle")
+    @PreAuthorize("hasAnyRole('SCHOOL_ADMIN', 'SUPER_ADMIN')")
+    public FeeStructureDto toggle(@PathVariable Long id) {
+        return service.toggleActive(id, SecurityUtil.schoolId());
     }
 
     // List by class+session

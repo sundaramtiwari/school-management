@@ -66,7 +66,7 @@ public class EnrollmentService {
         });
 
         // Trigger Auto-Assignment of Fees
-        List<FeeStructure> existingFees = feeStructureRepository.findByClassIdAndSessionIdAndSchoolId(
+        List<FeeStructure> existingFees = feeStructureRepository.findByClassIdAndSessionIdAndSchoolIdAndActiveTrue(
                 req.getClassId(), req.getSessionId(), schoolId);
 
         for (FeeStructure fs : existingFees) {

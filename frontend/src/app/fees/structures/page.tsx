@@ -10,9 +10,11 @@ import { useSession } from "@/context/SessionContext";
 
 type FeeStructure = {
     id: number;
+    feeTypeId: number;
     feeTypeName: string;
     amount: number;
     frequency: string;
+    dueDayOfMonth?: number;
     active: boolean;
     lateFeeType?: string;
     lateFeeAmountValue?: number;
@@ -26,7 +28,7 @@ type SchoolClass = {
     name: string;
     section: string;
 };
-type FeeType = { id: number; name: string };
+type FeeType = { id: number; name: string; active: boolean };
 
 const FREQUENCIES = ["ONE_TIME", "MONTHLY", "QUARTERLY", "HALF_YEARLY", "ANNUALLY"];
 
@@ -44,6 +46,8 @@ export default function FeeStructuresPage() {
     const [showModal, setShowModal] = useState(false);
     const [showHeadModal, setShowHeadModal] = useState(false);
     const [feeTypes, setFeeTypes] = useState<FeeType[]>([]);
+    const [editingStructure, setEditingStructure] = useState<FeeStructure | null>(null);
+    const [editingFeeType, setEditingFeeType] = useState<FeeType | null>(null);
     const [newHeadName, setNewHeadName] = useState("");
     const [isSavingHead, setIsSavingHead] = useState(false);
 
@@ -149,15 +153,23 @@ export default function FeeStructuresPage() {
 
         try {
             setIsSavingHead(true);
-            await api.post("/api/fees/types", {
-                name: newHeadName.trim(),
-                description: newHeadName.trim()
-            });
-            showToast("Fee head added!", "success");
+            if (editingFeeType) {
+                await api.patch(`/api/fees/types/${editingFeeType.id}`, {
+                    name: newHeadName.trim(),
+                });
+                showToast("Fee head updated!", "success");
+            } else {
+                await api.post("/api/fees/types", {
+                    name: newHeadName.trim(),
+                    description: newHeadName.trim()
+                });
+                showToast("Fee head added!", "success");
+            }
+            setEditingFeeType(null);
             setNewHeadName("");
             void loadFeeTypes();
         } catch (e: unknown) {
-            showToast("Failed to add head: " + getErrorMessage(e), "error");
+            showToast("Failed to save head: " + getErrorMessage(e), "error");
         } finally {
             setIsSavingHead(false);
         }
@@ -199,26 +211,112 @@ export default function FeeStructuresPage() {
 
         try {
             setIsSaving(true);
-            await api.post("/api/fees/structures", {
-                classId: selectedClass,
-                sessionId: currentSession.id,
-                feeTypeId: form.feeTypeId,
-                amount: Number(form.amount),
-                frequency: form.frequency,
-                dueDayOfMonth: Number(form.dueDayOfMonth),
-                lateFeeType: form.lateFeeType,
-                lateFeeAmountValue: hasLateFee ? Number(form.lateFeeAmountValue || 0) : 0,
-                lateFeeGraceDays: hasLateFee ? Number(form.lateFeeGraceDays || 0) : 0,
-                lateFeeCapType: hasLateFee ? form.lateFeeCapType : "NONE",
-                lateFeeCapValue: hasLateFee && lateFeeCapType !== "NONE" ? Number(form.lateFeeCapValue || 0) : 0
-            });
-            showToast("Fee configuration saved!", "success");
+            if (editingStructure) {
+                await api.patch(`/api/fees/structures/${editingStructure.id}`, {
+                    amount: Number(form.amount),
+                    frequency: form.frequency,
+                    dueDayOfMonth: Number(form.dueDayOfMonth),
+                    lateFeeType: form.lateFeeType,
+                    lateFeeAmountValue: hasLateFee ? Number(form.lateFeeAmountValue || 0) : 0,
+                    lateFeeGraceDays: hasLateFee ? Number(form.lateFeeGraceDays || 0) : 0,
+                    lateFeeCapType: hasLateFee ? form.lateFeeCapType : "NONE",
+                    lateFeeCapValue: hasLateFee && lateFeeCapType !== "NONE" ? Number(form.lateFeeCapValue || 0) : 0
+                });
+                showToast("Fee configuration updated!", "success");
+            } else {
+                await api.post("/api/fees/structures", {
+                    classId: selectedClass,
+                    sessionId: currentSession.id,
+                    feeTypeId: form.feeTypeId,
+                    amount: Number(form.amount),
+                    frequency: form.frequency,
+                    dueDayOfMonth: Number(form.dueDayOfMonth),
+                    lateFeeType: form.lateFeeType,
+                    lateFeeAmountValue: hasLateFee ? Number(form.lateFeeAmountValue || 0) : 0,
+                    lateFeeGraceDays: hasLateFee ? Number(form.lateFeeGraceDays || 0) : 0,
+                    lateFeeCapType: hasLateFee ? form.lateFeeCapType : "NONE",
+                    lateFeeCapValue: hasLateFee && lateFeeCapType !== "NONE" ? Number(form.lateFeeCapValue || 0) : 0
+                });
+                showToast("Fee configuration saved!", "success");
+            }
             setShowModal(false);
+            setEditingStructure(null);
             void loadStructures(Number(selectedClass));
         } catch (e: unknown) {
             showToast("Save failed: " + getErrorMessage(e), "error");
         } finally {
             setIsSaving(false);
+        }
+    }
+
+    function openCreateStructureModal() {
+        setEditingStructure(null);
+        setForm({
+            feeTypeId: "",
+            amount: "",
+            frequency: "ONE_TIME",
+            dueDayOfMonth: "10",
+            lateFeeType: "NONE",
+            lateFeeAmountValue: "",
+            lateFeeGraceDays: "0",
+            lateFeeCapType: "NONE",
+            lateFeeCapValue: "",
+        });
+        setShowModal(true);
+    }
+
+    function openEditStructureModal(fs: FeeStructure) {
+        setEditingStructure(fs);
+        setForm({
+            feeTypeId: String(fs.feeTypeId),
+            amount: String(fs.amount),
+            frequency: fs.frequency,
+            dueDayOfMonth: String(fs.dueDayOfMonth ?? 10),
+            lateFeeType: fs.lateFeeType ?? "NONE",
+            lateFeeAmountValue: String(fs.lateFeeAmountValue ?? ""),
+            lateFeeGraceDays: String(fs.lateFeeGraceDays ?? 0),
+            lateFeeCapType: fs.lateFeeCapType ?? "NONE",
+            lateFeeCapValue: String(fs.lateFeeCapValue ?? ""),
+        });
+        setShowModal(true);
+    }
+
+    async function toggleStructure(fs: FeeStructure) {
+        if (!fs.active && !confirm("Activate this fee structure?")) {
+            return;
+        }
+        if (fs.active && !confirm("Deactivate this fee structure? Existing dues will remain unchanged.")) {
+            return;
+        }
+        try {
+            await api.patch(`/api/fees/structures/${fs.id}/toggle`);
+            showToast(`Fee configuration ${fs.active ? "deactivated" : "activated"}!`, "success");
+            if (selectedClass) {
+                void loadStructures(Number(selectedClass));
+            }
+        } catch (e: unknown) {
+            showToast("Toggle failed: " + getErrorMessage(e), "error");
+        }
+    }
+
+    function startEditFeeType(ft: FeeType) {
+        setEditingFeeType(ft);
+        setNewHeadName(ft.name);
+    }
+
+    async function toggleFeeType(ft: FeeType) {
+        if (ft.active && !confirm("Deactivate this fee head? New structures cannot use it.")) {
+            return;
+        }
+        if (!ft.active && !confirm("Activate this fee head?")) {
+            return;
+        }
+        try {
+            await api.patch(`/api/fees/types/${ft.id}/toggle`);
+            showToast(`Fee head ${ft.active ? "deactivated" : "activated"}!`, "success");
+            void loadFeeTypes();
+        } catch (e: unknown) {
+            showToast("Failed to toggle head: " + getErrorMessage(e), "error");
         }
     }
 
@@ -230,17 +328,19 @@ export default function FeeStructuresPage() {
                     <p className="text-gray-500">Configure fee heads for <span className="text-blue-600 font-bold">{currentSession?.name || "current session"}</span>.</p>
                 </div>
                 <div className="flex gap-3">
-                    <button
-                        onClick={() => setShowHeadModal(true)}
-                        className="bg-white text-gray-700 px-6 py-2.5 rounded-xl font-bold border border-gray-200 shadow-sm hover:bg-gray-50 transition-all flex items-center gap-2"
-                    >
-                        <span className="text-xl">⚙️</span> Manage Heads
-                    </button>
+                    {["SCHOOL_ADMIN", "SUPER_ADMIN"].includes(user?.role?.toUpperCase() ?? "") && (
+                        <button
+                            onClick={() => setShowHeadModal(true)}
+                            className="bg-white text-gray-700 px-6 py-2.5 rounded-xl font-bold border border-gray-200 shadow-sm hover:bg-gray-50 transition-all flex items-center gap-2"
+                        >
+                            <span className="text-xl">⚙️</span> Manage Heads
+                        </button>
+                    )}
                     {/* Expand FE gating to match backend permissions */}
                     {["SCHOOL_ADMIN", "SUPER_ADMIN"].includes(user?.role?.toUpperCase() ?? "") && (
                         <button
                             disabled={!selectedClass}
-                            onClick={() => setShowModal(true)}
+                            onClick={openCreateStructureModal}
                             className="bg-blue-600 text-white px-6 py-2.5 rounded-xl font-bold shadow-lg hover:bg-blue-700 transition-all flex items-center gap-2 disabled:bg-gray-400"
                         >
                             <span className="text-xl">+</span> Add Fee Configuration
@@ -280,6 +380,9 @@ export default function FeeStructuresPage() {
                                 <th className="p-4 text-right">Amount Value</th>
                                 <th className="p-4 text-center">Late Fee Policy</th>
                                 <th className="p-4 text-center w-32">Status Flag</th>
+                                {["SCHOOL_ADMIN", "SUPER_ADMIN"].includes(user?.role?.toUpperCase() ?? "") && (
+                                    <th className="p-4 text-center w-44">Actions</th>
+                                )}
                             </tr>
                         </thead>
                         <tbody className="divide-y divide-gray-100">
@@ -319,11 +422,32 @@ export default function FeeStructuresPage() {
                                             {fs.active ? "Active" : "Disabled"}
                                         </span>
                                     </td>
+                                    {["SCHOOL_ADMIN", "SUPER_ADMIN"].includes(user?.role?.toUpperCase() ?? "") && (
+                                        <td className="p-4">
+                                            <div className="flex items-center justify-center gap-2">
+                                                <button
+                                                    onClick={() => openEditStructureModal(fs)}
+                                                    className="px-3 py-1 rounded-lg border text-xs font-bold text-blue-700 border-blue-200 hover:bg-blue-50"
+                                                >
+                                                    Edit
+                                                </button>
+                                                <button
+                                                    onClick={() => toggleStructure(fs)}
+                                                    className={`px-3 py-1 rounded-lg text-xs font-bold border ${fs.active
+                                                            ? "text-orange-700 border-orange-200 hover:bg-orange-50"
+                                                            : "text-green-700 border-green-200 hover:bg-green-50"
+                                                        }`}
+                                                >
+                                                    {fs.active ? "Deactivate" : "Activate"}
+                                                </button>
+                                            </div>
+                                        </td>
+                                    )}
                                 </tr>
                             ))}
                             {structures.length === 0 && (
                                 <tr>
-                                    <td colSpan={5} className="p-20 text-center text-gray-400 italic bg-gray-50/30">
+                                    <td colSpan={["SCHOOL_ADMIN", "SUPER_ADMIN"].includes(user?.role?.toUpperCase() ?? "") ? 6 : 5} className="p-20 text-center text-gray-400 italic bg-gray-50/30">
                                         No fee heads configured for this class year.
                                     </td>
                                 </tr>
@@ -339,8 +463,11 @@ export default function FeeStructuresPage() {
 
             <Modal
                 isOpen={showModal}
-                onClose={() => setShowModal(false)}
-                title="Append Fee Configuration"
+                onClose={() => {
+                    setEditingStructure(null);
+                    setShowModal(false);
+                }}
+                title={editingStructure ? "Edit Fee Configuration" : "Append Fee Configuration"}
                 maxWidth="max-w-md"
                 footer={
                     <div className="flex gap-2">
@@ -361,12 +488,18 @@ export default function FeeStructuresPage() {
                 }
             >
                 <div className="space-y-5">
+                    {!!editingStructure && (
+                        <p className="text-[11px] text-amber-700 bg-amber-50 border border-amber-100 rounded-lg px-3 py-2">
+                            Changes affect future enrollments only. Existing dues remain unchanged.
+                        </p>
+                    )}
                     <div>
                         <label className="block text-xs font-bold text-gray-400 uppercase mb-2 ml-1">Fee Type Category *</label>
                         <select
                             className="input-ref font-bold"
                             value={form.feeTypeId}
                             onChange={(e) => setForm({ ...form, feeTypeId: e.target.value })}
+                            disabled={!!editingStructure}
                         >
                             <option value="">Select Ledger Head</option>
                             {feeTypes.map(t => (
@@ -509,7 +642,11 @@ export default function FeeStructuresPage() {
             {/* Manage Fee Heads Modal */}
             <Modal
                 isOpen={showHeadModal}
-                onClose={() => setShowHeadModal(false)}
+                onClose={() => {
+                    setShowHeadModal(false);
+                    setEditingFeeType(null);
+                    setNewHeadName("");
+                }}
                 title="Manage Institutional Fee Heads"
                 maxWidth="max-w-md"
                 footer={
@@ -523,7 +660,9 @@ export default function FeeStructuresPage() {
             >
                 <div className="space-y-6">
                     <div>
-                        <label className="block text-xs font-bold text-gray-400 uppercase mb-2 ml-1">Add New Ledger Head</label>
+                        <label className="block text-xs font-bold text-gray-400 uppercase mb-2 ml-1">
+                            {editingFeeType ? "Edit Ledger Head" : "Add New Ledger Head"}
+                        </label>
                         <div className="flex gap-2">
                             <input
                                 className="input-ref flex-1 font-bold"
@@ -536,7 +675,7 @@ export default function FeeStructuresPage() {
                                 disabled={isSavingHead}
                                 className="bg-blue-600 text-white px-4 rounded-xl font-bold hover:bg-blue-700 disabled:bg-gray-400"
                             >
-                                {isSavingHead ? "..." : "Add"}
+                                {isSavingHead ? "..." : editingFeeType ? "Save" : "Add"}
                             </button>
                         </div>
                     </div>
@@ -546,8 +685,31 @@ export default function FeeStructuresPage() {
                         <div className="space-y-2 max-h-[200px] overflow-y-auto pr-2">
                             {feeTypes.map(t => (
                                 <div key={t.id} className="flex justify-between items-center p-3 bg-gray-50 rounded-xl border border-gray-100">
-                                    <span className="font-bold text-gray-700">{t.name}</span>
-                                    <span className="text-[10px] bg-gray-200 text-gray-500 px-2 py-0.5 rounded font-black uppercase">Active</span>
+                                    <div className="flex flex-col">
+                                        <span className="font-bold text-gray-700">{t.name}</span>
+                                        <span className={`text-[10px] w-fit px-2 py-0.5 rounded font-black uppercase ${t.active ? "bg-green-100 text-green-700" : "bg-gray-200 text-gray-500"}`}>
+                                            {t.active ? "Active" : "Inactive"}
+                                        </span>
+                                    </div>
+                                    {["SCHOOL_ADMIN", "SUPER_ADMIN"].includes(user?.role?.toUpperCase() ?? "") && (
+                                        <div className="flex gap-2">
+                                            <button
+                                                onClick={() => startEditFeeType(t)}
+                                                className="text-[10px] px-2 py-1 rounded-md border border-blue-200 text-blue-700 font-bold hover:bg-blue-50"
+                                            >
+                                                Edit
+                                            </button>
+                                            <button
+                                                onClick={() => toggleFeeType(t)}
+                                                className={`text-[10px] px-2 py-1 rounded-md border font-bold ${t.active
+                                                        ? "border-orange-200 text-orange-700 hover:bg-orange-50"
+                                                        : "border-green-200 text-green-700 hover:bg-green-50"
+                                                    }`}
+                                            >
+                                                {t.active ? "Deactivate" : "Activate"}
+                                            </button>
+                                        </div>
+                                    )}
                                 </div>
                             ))}
                             {feeTypes.length === 0 && (
