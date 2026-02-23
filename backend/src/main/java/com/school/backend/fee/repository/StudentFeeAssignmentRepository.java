@@ -9,6 +9,7 @@ import org.springframework.data.repository.query.Param;
 import jakarta.persistence.LockModeType;
 
 import java.math.BigDecimal;
+import java.time.LocalDate;
 import java.util.List;
 import java.util.Optional;
 
@@ -49,6 +50,12 @@ public interface StudentFeeAssignmentRepository
             @Param("sessionId") Long sessionId);
 
     List<StudentFeeAssignment> findByStudentIdAndSessionId(Long studentId, Long sessionId);
+
+    List<StudentFeeAssignment> findByStudentIdAndSessionIdAndSchoolIdAndActiveTrueAndDueDateIsNotNullAndDueDateAfter(
+            Long studentId,
+            Long sessionId,
+            Long schoolId,
+            LocalDate withdrawalDate);
 
     List<StudentFeeAssignment> findByStudentId(Long studentId);
 

@@ -40,6 +40,19 @@ public interface StudentEnrollmentRepository extends JpaRepository<StudentEnroll
       """)
   List<StudentEnrollment> findActiveByStudentIdForUpdate(@Param("studentId") Long studentId);
 
+  @Lock(LockModeType.PESSIMISTIC_WRITE)
+  @Query("""
+      select e from StudentEnrollment e
+      where e.studentId = :studentId
+        and e.sessionId = :sessionId
+        and e.schoolId = :schoolId
+      order by e.id desc
+      """)
+  List<StudentEnrollment> findByStudentIdAndSessionIdAndSchoolIdForUpdate(
+      @Param("studentId") Long studentId,
+      @Param("sessionId") Long sessionId,
+      @Param("schoolId") Long schoolId);
+
   boolean existsByStudentIdAndSessionIdAndActiveTrue(Long studentId, Long sessionId);
 
   long countByStudentIdAndSessionIdAndSchoolIdAndActiveTrue(Long studentId, Long sessionId, Long schoolId);

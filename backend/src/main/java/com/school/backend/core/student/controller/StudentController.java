@@ -5,7 +5,10 @@ import com.school.backend.common.dto.PageResponseMapper;
 import com.school.backend.core.student.dto.StudentCreateRequest;
 import com.school.backend.core.student.dto.StudentDto;
 import com.school.backend.core.student.dto.StudentUpdateRequest;
+import com.school.backend.core.student.dto.StudentWithdrawalRequest;
+import com.school.backend.core.student.dto.StudentWithdrawalResponse;
 import com.school.backend.core.student.service.StudentService;
+import com.school.backend.core.student.service.StudentWithdrawalService;
 import com.school.backend.user.security.SecurityUtil;
 import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
@@ -23,6 +26,7 @@ import org.springframework.web.bind.annotation.*;
 public class StudentController {
 
     private final StudentService service;
+    private final StudentWithdrawalService withdrawalService;
 
     @PostMapping
     @PreAuthorize("hasAnyRole('SCHOOL_ADMIN', 'TEACHER', 'SUPER_ADMIN', 'PLATFORM_ADMIN')")
@@ -61,6 +65,14 @@ public class StudentController {
     public ResponseEntity<Void> delete(@PathVariable Long id) {
         service.delete(id);
         return ResponseEntity.noContent().build();
+    }
+
+    @PostMapping("/{id}/withdraw")
+    @PreAuthorize("hasAnyRole('SCHOOL_ADMIN', 'SUPER_ADMIN', 'PLATFORM_ADMIN')")
+    public ResponseEntity<StudentWithdrawalResponse> withdraw(
+            @PathVariable Long id,
+            @Valid @RequestBody StudentWithdrawalRequest request) {
+        return ResponseEntity.ok(withdrawalService.withdrawStudent(id, request));
     }
 
     @GetMapping("/by-class/{classId}")

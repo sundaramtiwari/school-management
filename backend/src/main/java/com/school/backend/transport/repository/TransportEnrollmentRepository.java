@@ -15,6 +15,8 @@ import java.util.Optional;
 public interface TransportEnrollmentRepository extends JpaRepository<TransportEnrollment, Long> {
     Optional<TransportEnrollment> findByStudentIdAndSessionIdAndSchoolId(Long studentId, Long sessionId, Long schoolId);
 
+    boolean existsByStudentIdAndSessionIdAndSchoolIdAndActiveTrue(Long studentId, Long sessionId, Long schoolId);
+
     List<TransportEnrollment> findByStudentIdInAndSessionIdAndActiveTrue(Collection<Long> studentIds, Long sessionId);
 
     List<TransportEnrollment> findByPickupPointRouteId(Long routeId);
