@@ -53,6 +53,23 @@ Session isolation:
 - Academic data filtered by sessionId
 - StudentEnrollment is source of academic truth
 
+### Simple model diagram (text)
+School (currentSessionId)
+  ├─ AcademicSession (active)
+  ├─ User (role, active)
+  ├─ Student
+  │   ├─ StudentEnrollment (session scoped, active)
+  │   ├─ PromotionRecord (source/target session,class)
+  │   └─ StudentAttendance (session/date scoped)
+  └─ Fee domain
+      ├─ FeeType ──< FeeStructure ──1:1── LateFeePolicy
+      ├─ StudentFeeAssignment (snapshot of structure + late fee policy + funding/discount effects)
+      │    ├─ FeeAdjustment (discount/waiver snapshots)
+      │    └─ LateFeeLog
+      ├─ FeePayment (principal + late fee paid)
+      └─ StudentFundingArrangement (session scoped, active)
+
+
 ---
 
 ## ✅ Implemented Modules
