@@ -53,9 +53,7 @@ Session isolation:
 - Academic data filtered by sessionId
 - StudentEnrollment is source of academic truth
 
-### Simple model diagram (text)
-
-## Diagram (Text)
+### Simple model diagram
 
 ```text
 School
