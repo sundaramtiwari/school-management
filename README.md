@@ -54,6 +54,10 @@ Session isolation:
 - StudentEnrollment is source of academic truth
 
 ### Simple model diagram (text)
+
+## Diagram (Text)
+
+```text
 School
   ├── AcademicSession (active, currentSessionId pointer on School)
   ├── User (role-based access)
@@ -76,7 +80,7 @@ School
   │     └── PickupPoint
   │           └── TransportEnrollment (session scoped, active lifecycle)
   └── Exam / ExamSubject / StudentMark / GradePolicy
-
+```
 
 ---
 
