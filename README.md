@@ -54,20 +54,28 @@ Session isolation:
 - StudentEnrollment is source of academic truth
 
 ### Simple model diagram (text)
-School (currentSessionId)
-  ├─ AcademicSession (active)
-  ├─ User (role, active)
-  ├─ Student
-  │   ├─ StudentEnrollment (session scoped, active)
-  │   ├─ PromotionRecord (source/target session,class)
-  │   └─ StudentAttendance (session/date scoped)
-  └─ Fee domain
-      ├─ FeeType ──< FeeStructure ──1:1── LateFeePolicy
-      ├─ StudentFeeAssignment (snapshot of structure + late fee policy + funding/discount effects)
-      │    ├─ FeeAdjustment (discount/waiver snapshots)
-      │    └─ LateFeeLog
-      ├─ FeePayment (principal + late fee paid)
-      └─ StudentFundingArrangement (session scoped, active)
+School
+  ├── AcademicSession (active, currentSessionId pointer on School)
+  ├── User (role-based access)
+  ├── SchoolClass (session scoped)
+  │     └── ClassSubject (Subject + optional Teacher assignment)
+  ├── Student
+  │     ├── StudentEnrollment (session scoped, active lifecycle)
+  │     ├── StudentAttendance (session/date scoped)
+  │     ├── PromotionRecord (source/target session,class)
+  │     └── StudentDocument
+  ├── FeeType
+  │     └── FeeStructure (session/class template, active)
+  │           └── LateFeePolicy (template policy)
+  ├── StudentFeeAssignment (snapshot financial record per student/session)
+  │     ├── FeeAdjustment (discount/waiver snapshots)
+  │     └── LateFeeLog
+  ├── FeePayment (append-only financial transactions)
+  ├── StudentFundingArrangement (session scoped coverage rules)
+  ├── TransportRoute
+  │     └── PickupPoint
+  │           └── TransportEnrollment (session scoped, active lifecycle)
+  └── Exam / ExamSubject / StudentMark / GradePolicy
 
 
 ---
