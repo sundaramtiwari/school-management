@@ -479,6 +479,49 @@ export default function StudentsPage() {
     }
   }, [selectedClass, currentPage, loadStudents, showToast]);
 
+  const openEditStudentFromProfile = useCallback(() => {
+    if (!profileStudent) return;
+    setIsEditing(true);
+    setStudentForm({
+      admissionNumber: profileStudent.admissionNumber || "",
+      firstName: profileStudent.firstName || "",
+      lastName: profileStudent.lastName || "",
+      dob: profileStudent.dob || "",
+      gender: profileStudent.gender || "",
+      pen: profileStudent.pen || "",
+      aadharNumber: profileStudent.aadharNumber || "",
+      religion: profileStudent.religion || "",
+      caste: profileStudent.caste || "",
+      category: profileStudent.category || "",
+      address: profileStudent.address || "",
+      city: profileStudent.city || "",
+      state: profileStudent.state || "",
+      pincode: profileStudent.pincode || "",
+      contactNumber: profileStudent.contactNumber || "",
+      email: profileStudent.email || "",
+      bloodGroup: profileStudent.bloodGroup || "",
+      dateOfAdmission: profileStudent.dateOfAdmission || new Date().toISOString().split('T')[0],
+      remarks: profileStudent.remarks || "",
+      previousSchoolName: profileStudent.previousSchoolName || "",
+      previousSchoolBoard: profileStudent.previousSchoolBoard || "",
+      previousClass: profileStudent.previousClass || "",
+      previousYearOfPassing: profileStudent.previousYearOfPassing?.toString() || "",
+      transferCertificateNumber: profileStudent.transferCertificateNumber || "",
+      previousSchoolAddress: profileStudent.previousSchoolAddress || "",
+      previousSchoolContact: profileStudent.previousSchoolContact || "",
+      reasonForLeavingPreviousSchool: profileStudent.reasonForLeavingPreviousSchool || "",
+      classId: selectedClass?.toString() || "",
+      guardians: profileStudent.guardians || [],
+      fundingType: "NONE",
+      fundingMode: "FIXED_AMOUNT",
+      fundingValue: "0",
+      fundingValidFrom: "",
+      fundingValidTo: "",
+    });
+    setShowProfileModal(false);
+    setShowAddModal(true);
+  }, [profileStudent, selectedClass]);
+
   function goToPage(nextPage: number) {
     if (!selectedClass || nextPage < 0 || nextPage >= totalPages || nextPage === currentPage) return;
     setCurrentPage(nextPage);
@@ -1403,31 +1446,44 @@ export default function StudentsPage() {
         maxWidth="max-w-3xl"
       >
         <div className="space-y-4">
-          <div className="flex gap-2 border-b pb-2">
-            <button
-              onClick={() => setProfileTab("overview")}
-              className={`px-3 py-1.5 rounded-md text-base font-medium ${profileTab === "overview" ? "bg-blue-600 text-white hover:bg-blue-700" : "bg-white border border-gray-300 text-gray-700 hover:bg-gray-50"}`}
-            >
-              Overview
-            </button>
-            <button
-              onClick={() => setProfileTab("ledger")}
-              className={`px-3 py-1.5 rounded-md text-base font-medium ${profileTab === "ledger" ? "bg-blue-600 text-white hover:bg-blue-700" : "bg-white border border-gray-300 text-gray-700 hover:bg-gray-50"}`}
-            >
-              Financial Ledger
-            </button>
-            <button
-              onClick={() => setProfileTab("enrollments")}
-              className={`px-3 py-1.5 rounded-md text-base font-medium ${profileTab === "enrollments" ? "bg-blue-600 text-white hover:bg-blue-700" : "bg-white border border-gray-300 text-gray-700 hover:bg-gray-50"}`}
-            >
-              Enrollments
-            </button>
-            <button
-              onClick={() => setProfileTab("funding")}
-              className={`px-3 py-1.5 rounded-md text-base font-medium ${profileTab === "funding" ? "bg-blue-600 text-white hover:bg-blue-700" : "bg-white border border-gray-300 text-gray-700 hover:bg-gray-50"}`}
-            >
-              Funding
-            </button>
+          <div className="flex items-start justify-between gap-3 border-b pb-2">
+            <div className="flex gap-2 flex-wrap">
+              <button
+                onClick={() => setProfileTab("overview")}
+                className={`px-3 py-1.5 rounded-md text-base font-medium ${profileTab === "overview" ? "bg-blue-600 text-white hover:bg-blue-700" : "bg-white border border-gray-300 text-gray-700 hover:bg-gray-50"}`}
+              >
+                Overview
+              </button>
+              <button
+                onClick={() => setProfileTab("ledger")}
+                className={`px-3 py-1.5 rounded-md text-base font-medium ${profileTab === "ledger" ? "bg-blue-600 text-white hover:bg-blue-700" : "bg-white border border-gray-300 text-gray-700 hover:bg-gray-50"}`}
+              >
+                Financial Ledger
+              </button>
+              <button
+                onClick={() => setProfileTab("enrollments")}
+                className={`px-3 py-1.5 rounded-md text-base font-medium ${profileTab === "enrollments" ? "bg-blue-600 text-white hover:bg-blue-700" : "bg-white border border-gray-300 text-gray-700 hover:bg-gray-50"}`}
+              >
+                Enrollments
+              </button>
+              <button
+                onClick={() => setProfileTab("funding")}
+                className={`px-3 py-1.5 rounded-md text-base font-medium ${profileTab === "funding" ? "bg-blue-600 text-white hover:bg-blue-700" : "bg-white border border-gray-300 text-gray-700 hover:bg-gray-50"}`}
+              >
+                Funding
+              </button>
+            </div>
+            {canUserEditStudent && profileStudent && (
+              <button
+                onClick={openEditStudentFromProfile}
+                className="bg-blue-600 text-white px-4 py-1.5 rounded-md font-medium hover:bg-blue-700 flex items-center gap-2 text-sm whitespace-nowrap"
+              >
+                <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.172-2.172a2.828 2.828 0 114 4L11.828 15H9v-2.828l8.586-8.586z" />
+                </svg>
+                Edit Student Details
+              </button>
+            )}
           </div>
 
           {profileTab === "overview" && (
@@ -1489,6 +1545,38 @@ export default function StudentsPage() {
                   </div>
                 </div>
 
+                <div className="space-y-2">
+                  <span className="text-[10px] font-bold text-gray-400 uppercase block tracking-wider">Address</span>
+                  <p className="text-gray-700 leading-relaxed text-xs">
+                    {[profileStudent.address, profileStudent.city, profileStudent.state, profileStudent.pincode].filter(Boolean).join(", ")}
+                    {!profileStudent.address && "-"}
+                  </p>
+                </div>
+
+                {!!profileStudent.remarks && (
+                  <div className="space-y-2">
+                    <span className="text-[10px] font-bold text-gray-400 uppercase block tracking-wider">Remarks</span>
+                    <p className="text-gray-700 leading-relaxed text-xs">{profileStudent.remarks}</p>
+                  </div>
+                )}
+
+                {profileStudent.guardians && profileStudent.guardians.length > 0 && (
+                  <div className="space-y-3">
+                    <h4 className="text-[10px] font-bold text-gray-400 uppercase tracking-widest border-b pb-2">Guardians</h4>
+                    <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
+                      {profileStudent.guardians.map((g, idx) => (
+                        <div key={idx} className={`p-3 rounded-xl border flex justify-between items-center ${g.primaryGuardian ? 'bg-blue-50/50 border-blue-100' : 'bg-white border-gray-100'}`}>
+                          <div>
+                            <p className="text-xs font-bold text-gray-800">{g.name} <span className="text-[9px] text-gray-400 font-normal">({g.relation})</span></p>
+                            <p className="text-[10px] text-gray-500">{g.contactNumber}</p>
+                          </div>
+                          {g.primaryGuardian && <span className="text-[8px] bg-blue-600 text-white px-1.5 py-0.5 rounded-full font-bold uppercase">Primary</span>}
+                        </div>
+                      ))}
+                    </div>
+                  </div>
+                )}
+
                 <div className="bg-gray-50/50 p-4 rounded-2xl border space-y-4">
                   <h4 className="text-[10px] font-bold text-blue-600 uppercase tracking-widest border-b pb-2">Identity & Demographics</h4>
                   <div className="grid grid-cols-2 lg:grid-cols-3 gap-4 text-xs">
@@ -1499,14 +1587,6 @@ export default function StudentsPage() {
                     <div><span className="text-gray-400 block mb-0.5">Category:</span> {profileStudent.category || "-"}</div>
                     <div><span className="text-gray-400 block mb-0.5">Caste:</span> {profileStudent.caste || "-"}</div>
                   </div>
-                </div>
-
-                <div className="space-y-2">
-                  <span className="text-[10px] font-bold text-gray-400 uppercase block tracking-wider">Address</span>
-                  <p className="text-gray-700 leading-relaxed text-xs">
-                    {[profileStudent.address, profileStudent.city, profileStudent.state, profileStudent.pincode].filter(Boolean).join(", ")}
-                    {!profileStudent.address && "-"}
-                  </p>
                 </div>
 
                 <div className="bg-gray-50/50 p-4 rounded-2xl border space-y-4">
@@ -1551,76 +1631,6 @@ export default function StudentsPage() {
                   </div>
                 )}
 
-                {profileStudent.guardians && profileStudent.guardians.length > 0 && (
-                  <div className="space-y-3">
-                    <h4 className="text-[10px] font-bold text-gray-400 uppercase tracking-widest border-b pb-2">Guardians</h4>
-                    <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
-                      {profileStudent.guardians.map((g, idx) => (
-                        <div key={idx} className={`p-3 rounded-xl border flex justify-between items-center ${g.primaryGuardian ? 'bg-blue-50/50 border-blue-100' : 'bg-white border-gray-100'}`}>
-                          <div>
-                            <p className="text-xs font-bold text-gray-800">{g.name} <span className="text-[9px] text-gray-400 font-normal">({g.relation})</span></p>
-                            <p className="text-[10px] text-gray-500">{g.contactNumber}</p>
-                          </div>
-                          {g.primaryGuardian && <span className="text-[8px] bg-blue-600 text-white px-1.5 py-0.5 rounded-full font-bold uppercase">Primary</span>}
-                        </div>
-                      ))}
-                    </div>
-                  </div>
-                )}
-
-                {canUserEditStudent && (
-                  <div className="flex justify-end pt-4 border-t">
-                    <button
-                      onClick={() => {
-                        setIsEditing(true);
-                        setStudentForm({
-                          admissionNumber: profileStudent.admissionNumber || "",
-                          firstName: profileStudent.firstName || "",
-                          lastName: profileStudent.lastName || "",
-                          dob: profileStudent.dob || "",
-                          gender: profileStudent.gender || "",
-                          pen: profileStudent.pen || "",
-                          aadharNumber: profileStudent.aadharNumber || "",
-                          religion: profileStudent.religion || "",
-                          caste: profileStudent.caste || "",
-                          category: profileStudent.category || "",
-                          address: profileStudent.address || "",
-                          city: profileStudent.city || "",
-                          state: profileStudent.state || "",
-                          pincode: profileStudent.pincode || "",
-                          contactNumber: profileStudent.contactNumber || "",
-                          email: profileStudent.email || "",
-                          bloodGroup: profileStudent.bloodGroup || "",
-                          dateOfAdmission: profileStudent.dateOfAdmission || new Date().toISOString().split('T')[0],
-                          remarks: profileStudent.remarks || "",
-                          previousSchoolName: profileStudent.previousSchoolName || "",
-                          previousSchoolBoard: profileStudent.previousSchoolBoard || "",
-                          previousClass: profileStudent.previousClass || "",
-                          previousYearOfPassing: profileStudent.previousYearOfPassing?.toString() || "",
-                          transferCertificateNumber: profileStudent.transferCertificateNumber || "",
-                          previousSchoolAddress: profileStudent.previousSchoolAddress || "",
-                          previousSchoolContact: profileStudent.previousSchoolContact || "",
-                          reasonForLeavingPreviousSchool: profileStudent.reasonForLeavingPreviousSchool || "",
-                          classId: selectedClass?.toString() || "",
-                          guardians: profileStudent.guardians || [],
-                          fundingType: "NONE", // Funding editing might need more logic
-                          fundingMode: "FIXED_AMOUNT",
-                          fundingValue: "0",
-                          fundingValidFrom: "",
-                          fundingValidTo: "",
-                        });
-                        setShowProfileModal(false);
-                        setShowAddModal(true);
-                      }}
-                      className="bg-blue-600 text-white px-6 py-2 rounded-md font-medium hover:bg-blue-700 flex items-center gap-2"
-                    >
-                      <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.172-2.172a2.828 2.828 0 114 4L11.828 15H9v-2.828l8.586-8.586z" />
-                      </svg>
-                      Edit Student Details
-                    </button>
-                  </div>
-                )}
               </div>
             ) : (
               <div className="py-20 text-center text-gray-400 italic bg-gray-50 rounded-2xl border border-dashed">
