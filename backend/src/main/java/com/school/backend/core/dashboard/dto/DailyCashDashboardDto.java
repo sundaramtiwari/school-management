@@ -8,6 +8,7 @@ import lombok.Data;
 import lombok.NoArgsConstructor;
 
 import java.math.BigDecimal;
+import java.util.ArrayList;
 import java.util.List;
 
 @Data
@@ -15,9 +16,26 @@ import java.util.List;
 @NoArgsConstructor
 @AllArgsConstructor
 public class DailyCashDashboardDto {
-    private BigDecimal totalFeeCollected;
-    private BigDecimal totalExpense;
-    private BigDecimal netCash;
-    private List<FeeTypeHeadSummaryDto> headWiseCollection;
-    private List<ExpenseHeadTotalDto> expenseBreakdown;
+    @Builder.Default
+    private BigDecimal totalFeeCollected = BigDecimal.ZERO;
+    @Builder.Default
+    private BigDecimal totalExpense = BigDecimal.ZERO;
+    @Builder.Default
+    private BigDecimal netCash = BigDecimal.ZERO;
+    @Builder.Default
+    private BigDecimal cashRevenue = BigDecimal.ZERO;
+    @Builder.Default
+    private BigDecimal bankRevenue = BigDecimal.ZERO;
+    @Builder.Default
+    private BigDecimal cashExpense = BigDecimal.ZERO;
+    @Builder.Default
+    private BigDecimal bankExpense = BigDecimal.ZERO;
+    @Builder.Default
+    private BigDecimal netBank = BigDecimal.ZERO;
+    @Builder.Default
+    private BigDecimal netAmount = BigDecimal.ZERO;
+    @Builder.Default
+    private List<FeeTypeHeadSummaryDto> headWiseCollection = new ArrayList<>();
+    @Builder.Default
+    private List<ExpenseHeadTotalDto> expenseBreakdown = new ArrayList<>();
 }

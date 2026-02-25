@@ -178,13 +178,19 @@ public class DailyCashDashboardIntegrationTest extends BaseAuthenticatedIntegrat
                                 DailyCashDashboardDto.class);
 
                 Assertions.assertThat(response.getStatusCode()).isEqualTo(HttpStatus.OK);
-                DailyCashDashboardDto body = Objects.requireNonNull(response.getBody());
-                Assertions.assertThat(body.getTotalFeeCollected()).isEqualByComparingTo(new BigDecimal("500.00"));
-                Assertions.assertThat(body.getTotalExpense()).isEqualByComparingTo(new BigDecimal("200.00"));
-                Assertions.assertThat(body.getNetCash()).isEqualByComparingTo(new BigDecimal("300.00"));
-                Assertions.assertThat(body.getHeadWiseCollection()).hasSize(1);
-                Assertions.assertThat(body.getHeadWiseCollection().get(0).getTotalCollected())
-                                .isEqualByComparingTo(new BigDecimal("500.00"));
+        DailyCashDashboardDto body = Objects.requireNonNull(response.getBody());
+        Assertions.assertThat(body.getTotalFeeCollected()).isEqualByComparingTo(new BigDecimal("500.00"));
+        Assertions.assertThat(body.getTotalExpense()).isEqualByComparingTo(new BigDecimal("200.00"));
+        Assertions.assertThat(body.getCashRevenue()).isEqualByComparingTo(new BigDecimal("500.00"));
+        Assertions.assertThat(body.getBankRevenue()).isEqualByComparingTo(new BigDecimal("100.00"));
+        Assertions.assertThat(body.getCashExpense()).isEqualByComparingTo(new BigDecimal("200.00"));
+        Assertions.assertThat(body.getBankExpense()).isEqualByComparingTo(new BigDecimal("50.00"));
+        Assertions.assertThat(body.getNetCash()).isEqualByComparingTo(new BigDecimal("300.00"));
+        Assertions.assertThat(body.getNetBank()).isEqualByComparingTo(new BigDecimal("50.00"));
+        Assertions.assertThat(body.getNetAmount()).isEqualByComparingTo(new BigDecimal("300.00"));
+        Assertions.assertThat(body.getHeadWiseCollection()).hasSize(1);
+        Assertions.assertThat(body.getHeadWiseCollection().get(0).getTotalCollected())
+                .isEqualByComparingTo(new BigDecimal("500.00"));
                 Assertions.assertThat(body.getExpenseBreakdown()).hasSize(1);
                 ExpenseHeadTotalDto expenseHeadTotal = body.getExpenseBreakdown().get(0);
                 Assertions.assertThat(expenseHeadTotal.getTotalAmount()).isEqualByComparingTo(new BigDecimal("200.00"));
