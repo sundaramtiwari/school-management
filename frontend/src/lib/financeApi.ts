@@ -34,6 +34,40 @@ export interface DailyCashSummary {
     totalFeeCollected: number;
     totalExpense: number;
     netCash: number;
+    cashRevenue: number;
+    bankRevenue: number;
+    cashExpense: number;
+    bankExpense: number;
+    netBank: number;
+    netAmount: number;
+}
+
+export interface MonthlyPLData {
+    year: number;
+    month: number;
+    totalRevenue: number;
+    totalExpense: number;
+    netProfit: number;
+    cashRevenue: number;
+    bankRevenue: number;
+    cashExpense: number;
+    bankExpense: number;
+    netCash: number;
+    netBank: number;
+}
+
+export interface SessionPLData {
+    sessionId: number;
+    sessionName: string;
+    totalRevenue: number;
+    totalExpense: number;
+    netProfit: number;
+    cashRevenue: number;
+    bankRevenue: number;
+    cashExpense: number;
+    bankExpense: number;
+    netCash: number;
+    netBank: number;
 }
 
 export interface FeeHeadSummary {
@@ -52,6 +86,17 @@ export const financeApi = {
 
     getFeeHeadSummary: async (date: string) => {
         const response = await api.get<FeeHeadSummary[]>(`/api/fees/payments/head-summary?date=${date}`);
+        return response.data;
+    },
+
+    // P&L Reports
+    getMonthlyPL: async (year: number, month: number) => {
+        const response = await api.get<MonthlyPLData>(`/api/finance/monthly-pl?year=${year}&month=${month}`);
+        return response.data;
+    },
+
+    getSessionPL: async () => {
+        const response = await api.get<SessionPLData>("/api/finance/session-pl");
         return response.data;
     },
 

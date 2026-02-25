@@ -79,47 +79,99 @@ export default function DailyCashPage() {
                 <p className="text-gray-600 mt-1">Date: {new Date(selectedDate).toLocaleDateString()}</p>
             </div>
 
-            {/* Summary Cards */}
-            <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
-                <div className="bg-white rounded-xl shadow-sm border p-6 flex items-center gap-4">
-                    <div className="p-3 bg-blue-100 text-blue-600 rounded-lg text-2xl">💰</div>
-                    <div>
-                        <p className="text-sm font-medium text-gray-500">Total Fee Collected</p>
-                        {loading ? (
-                            <Skeleton className="h-8 w-24 mt-1" />
-                        ) : (
-                            <h3 className="text-2xl font-bold text-gray-900 text-blue-600">
-                                ₹{(summary?.totalFeeCollected ?? 0).toLocaleString()}
-                            </h3>
-                        )}
+            {/* Summary Sections */}
+            <div className="space-y-8">
+                {/* Core Summary (Row 1) */}
+                <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+                    <div className="bg-blue-50/50 rounded-xl border border-blue-100 p-6 flex items-center gap-4">
+                        <div className="p-3 bg-blue-100 text-blue-600 rounded-lg text-2xl">💰</div>
+                        <div>
+                            <p className="text-xs font-bold uppercase tracking-wider text-blue-600/70">Total Revenue</p>
+                            {loading ? (
+                                <Skeleton className="h-8 w-24 mt-1" />
+                            ) : (
+                                <h3 className="text-2xl font-black text-blue-600">
+                                    ₹{(summary?.totalFeeCollected ?? 0).toLocaleString("en-IN")}
+                                </h3>
+                            )}
+                        </div>
+                    </div>
+
+                    <div className="bg-red-50/50 rounded-xl border border-red-100 p-6 flex items-center gap-4">
+                        <div className="p-3 bg-red-100 text-red-600 rounded-lg text-2xl">📉</div>
+                        <div>
+                            <p className="text-xs font-bold uppercase tracking-wider text-red-600/70">Total Expense</p>
+                            {loading ? (
+                                <Skeleton className="h-8 w-24 mt-1" />
+                            ) : (
+                                <h3 className="text-2xl font-black text-red-600">
+                                    ₹{(summary?.totalExpense ?? 0).toLocaleString("en-IN")}
+                                </h3>
+                            )}
+                        </div>
+                    </div>
+
+                    <div className="bg-green-50/50 rounded-xl border border-green-100 p-6 flex items-center gap-4">
+                        <div className="p-3 bg-green-100 text-green-600 rounded-lg text-2xl">⚖️</div>
+                        <div>
+                            <p className="text-xs font-bold uppercase tracking-wider text-green-600/70">Net</p>
+                            {loading ? (
+                                <Skeleton className="h-8 w-24 mt-1" />
+                            ) : (
+                                <h3 className={`text-2xl font-black ${(summary?.netAmount ?? 0) >= 0 ? "text-green-600" : "text-red-600"}`}>
+                                    ₹{(summary?.netAmount ?? 0).toLocaleString("en-IN")}
+                                </h3>
+                            )}
+                        </div>
                     </div>
                 </div>
 
-                <div className="bg-white rounded-xl shadow-sm border p-6 flex items-center gap-4">
-                    <div className="p-3 bg-red-100 text-red-600 rounded-lg text-2xl">📉</div>
-                    <div>
-                        <p className="text-sm font-medium text-gray-500">Total Expense</p>
-                        {loading ? (
-                            <Skeleton className="h-8 w-24 mt-1" />
-                        ) : (
-                            <h3 className="text-2xl font-bold text-gray-900 text-red-600">
-                                ₹{(summary?.totalExpense ?? 0).toLocaleString()}
-                            </h3>
-                        )}
+                <div className="grid grid-cols-1 lg:grid-cols-2 gap-8">
+                    {/* Cash Section (Row 2) */}
+                    <div className="bg-white rounded-2xl border shadow-sm overflow-hidden">
+                        <div className="px-6 py-3 bg-amber-50 border-b border-amber-100 flex justify-between items-center">
+                            <h4 className="text-xs font-black uppercase tracking-widest text-amber-700">Cash Flow</h4>
+                            <span className="text-xl">💵</span>
+                        </div>
+                        <div className="p-6 grid grid-cols-3 gap-4">
+                            <div>
+                                <p className="text-[10px] font-bold text-gray-400 uppercase mb-1">Revenue</p>
+                                {loading ? <Skeleton className="h-6 w-16" /> : <p className="text-lg font-bold text-gray-800">₹{(summary?.cashRevenue ?? 0).toLocaleString("en-IN")}</p>}
+                            </div>
+                            <div>
+                                <p className="text-[10px] font-bold text-gray-400 uppercase mb-1">Expense</p>
+                                {loading ? <Skeleton className="h-6 w-16" /> : <p className="text-lg font-bold text-red-600">₹{(summary?.cashExpense ?? 0).toLocaleString("en-IN")}</p>}
+                            </div>
+                            <div className="text-right">
+                                <p className="text-[10px] font-bold text-gray-400 uppercase mb-1">Net Cash</p>
+                                {loading ? <Skeleton className="h-6 w-16 ml-auto" /> : <p className={`text-lg font-black ${(summary?.netCash ?? 0) >= 0 ? "text-green-600" : "text-red-600"}`}>₹{(summary?.netCash ?? 0).toLocaleString("en-IN")}</p>}
+                            </div>
+                        </div>
                     </div>
-                </div>
 
-                <div className="bg-white rounded-xl shadow-sm border p-6 flex items-center gap-4">
-                    <div className="p-3 bg-green-100 text-green-600 rounded-lg text-2xl">💵</div>
-                    <div>
-                        <p className="text-sm font-medium text-gray-500">Net Cash</p>
-                        {loading ? (
-                            <Skeleton className="h-8 w-24 mt-1" />
-                        ) : (
-                            <h3 className={`text-2xl font-bold ${(summary?.netCash || 0) >= 0 ? 'text-green-600' : 'text-red-600'}`}>
-                                ₹{(summary?.netCash ?? 0).toLocaleString()}
-                            </h3>
-                        )}
+                    {/* Subtle Divider for Desktop */}
+                    <div className="hidden lg:block w-px bg-gray-100 self-stretch my-4"></div>
+
+                    {/* Bank Section (Row 3 Equivalent Layout) */}
+                    <div className="bg-white rounded-2xl border shadow-sm overflow-hidden">
+                        <div className="px-6 py-3 bg-purple-50 border-b border-purple-100 flex justify-between items-center">
+                            <h4 className="text-xs font-black uppercase tracking-widest text-purple-700">Bank Flow</h4>
+                            <span className="text-xl">🏦</span>
+                        </div>
+                        <div className="p-6 grid grid-cols-3 gap-4">
+                            <div>
+                                <p className="text-[10px] font-bold text-gray-400 uppercase mb-1">Revenue</p>
+                                {loading ? <Skeleton className="h-6 w-16" /> : <p className="text-lg font-bold text-gray-800">₹{(summary?.bankRevenue ?? 0).toLocaleString("en-IN")}</p>}
+                            </div>
+                            <div>
+                                <p className="text-[10px] font-bold text-gray-400 uppercase mb-1">Expense</p>
+                                {loading ? <Skeleton className="h-6 w-16" /> : <p className="text-lg font-bold text-red-600">₹{(summary?.bankExpense ?? 0).toLocaleString("en-IN")}</p>}
+                            </div>
+                            <div className="text-right">
+                                <p className="text-[10px] font-bold text-gray-400 uppercase mb-1">Net Bank</p>
+                                {loading ? <Skeleton className="h-6 w-16 ml-auto" /> : <p className={`text-lg font-black ${(summary?.netBank ?? 0) >= 0 ? "text-green-600" : "text-red-600"}`}>₹{(summary?.netBank ?? 0).toLocaleString("en-IN")}</p>}
+                            </div>
+                        </div>
                     </div>
                 </div>
             </div>

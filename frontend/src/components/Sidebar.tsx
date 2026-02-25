@@ -45,6 +45,8 @@ const menu = [
       { name: "Defaulters", path: "/fees/defaulters", roles: ["SUPER_ADMIN", "SCHOOL_ADMIN", "ACCOUNTANT"] },
       { name: "Fee Structures", path: "/fees/structures", roles: ["SUPER_ADMIN", "SCHOOL_ADMIN", "ACCOUNTANT"] },
       { name: "Daily Cash", path: "/finance/daily-cash", roles: ["SUPER_ADMIN", "SCHOOL_ADMIN", "ACCOUNTANT"] },
+      { name: "Monthly P&L", path: "/finance/monthly-pl", roles: ["SUPER_ADMIN", "SCHOOL_ADMIN", "ACCOUNTANT"] },
+      { name: "Session P&L", path: "/finance/session-pl", roles: ["SUPER_ADMIN", "SCHOOL_ADMIN", "ACCOUNTANT"] },
       { name: "Expenses", path: "/finance/expenses", roles: ["SUPER_ADMIN", "SCHOOL_ADMIN", "ACCOUNTANT"] },
     ]
   },

@@ -287,7 +287,7 @@ export default function FeeDefaultersPage() {
               <option value="">All Sessions</option>
               {sessions.map(s => (
                 <option key={s.id} value={s.id}>
-                  {s.name} {s.isActive ? "(Active)" : ""}
+                  {s.name} {s.active ? "(Active)" : ""}
                 </option>
               ))}
             </select>

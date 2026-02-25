@@ -96,8 +96,9 @@ export default function ClassesPage() {
     }, [canManageClasses]);
 
     function updateField(e: ChangeEvent<HTMLInputElement | HTMLSelectElement | HTMLTextAreaElement>) {
-        const value = e.target.type === "checkbox" ? e.target.checked : e.target.value;
-        setForm({ ...form, [e.target.name]: value });
+        const target = e.target as HTMLInputElement;
+        const value = target.type === "checkbox" ? target.checked : target.value;
+        setForm({ ...form, [target.name]: value });
     }
 
     function resetForm() {
