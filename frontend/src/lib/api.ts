@@ -40,6 +40,11 @@ api.interceptors.response.use(
       if (!window.location.pathname.startsWith("/login")) {
         window.location.href = `/login?expired=true`;
       }
+    } else if (error.response?.status === 403) {
+      // Special handle for forbidden access to show a better message
+      if (error.response.data && !error.response.data.message) {
+        error.response.data.message = "Access Denied: You do not have permission to view or perform this action.";
+      }
     }
     return Promise.reject(error);
   }

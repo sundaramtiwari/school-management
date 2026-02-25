@@ -16,6 +16,15 @@ const menu = [
   { name: "Staff", path: "/staff", icon: "👥", roles: ["SUPER_ADMIN", "PLATFORM_ADMIN", "SCHOOL_ADMIN"] },
   { name: "Teacher Assignments", path: "/staff/assignments", icon: "📋", roles: ["SUPER_ADMIN", "PLATFORM_ADMIN", "SCHOOL_ADMIN"] },
   { name: "Fees", path: "/fees", icon: "💰", roles: ["SUPER_ADMIN", "PLATFORM_ADMIN", "SCHOOL_ADMIN", "ACCOUNTANT"] },
+  {
+    name: "Finance",
+    icon: "💵",
+    roles: ["SUPER_ADMIN", "SCHOOL_ADMIN", "ACCOUNTANT"],
+    children: [
+      { name: "Daily Cash", path: "/finance/daily-cash", roles: ["SUPER_ADMIN", "SCHOOL_ADMIN", "ACCOUNTANT"] },
+      { name: "Expenses", path: "/finance/expenses", roles: ["SUPER_ADMIN", "SCHOOL_ADMIN", "ACCOUNTANT"] },
+    ]
+  },
   { name: "Transport", path: "/transport", icon: "🚌", roles: ["SUPER_ADMIN", "PLATFORM_ADMIN", "SCHOOL_ADMIN"] },
   { name: "Attendance", path: "/attendance", icon: "✓", roles: ["SUPER_ADMIN", "PLATFORM_ADMIN", "SCHOOL_ADMIN", "TEACHER"] },
   { name: "Exams", path: "/exams", icon: "📝", roles: ["SUPER_ADMIN", "PLATFORM_ADMIN", "SCHOOL_ADMIN", "TEACHER"] },
@@ -44,11 +53,25 @@ export default function Sidebar() {
   const { showToast } = useToast();
   const [schoolId, setSchoolId] = useState<string | null>(null);
   const [schoolName, setSchoolName] = useState<string | null>(null);
+  const [expandedMenus, setExpandedMenus] = useState<Record<string, boolean>>({});
 
   useEffect(() => {
     setSchoolId(localStorage.getItem("schoolId"));
     setSchoolName(localStorage.getItem("schoolName"));
-  }, []);
+
+    // Auto-expand menu if current path is in children
+    const newExpanded: Record<string, boolean> = {};
+    menu.forEach(item => {
+      if (item.children?.some(child => pathname === child.path)) {
+        newExpanded[item.name] = true;
+      }
+    });
+    setExpandedMenus(newExpanded);
+  }, [pathname]);
+
+  const toggleMenu = (menuName: string) => {
+    setExpandedMenus(prev => ({ ...prev, [menuName]: !prev[menuName] }));
+  };
 
   const clearContext = () => {
     localStorage.removeItem("schoolId");
@@ -74,11 +97,13 @@ export default function Sidebar() {
       <nav className="p-2 space-y-1 flex-1 overflow-y-auto">
 
         {menu.map((item) => {
-          const active = pathname === item.path;
           const userRole = user?.role?.toUpperCase();
           const hasAccess = item.roles.includes(userRole as string);
 
           if (!hasAccess) return null;
+
+          const active = pathname === item.path || (item.children && item.children.some(child => pathname === child.path));
+          const isExpanded = expandedMenus[item.name];
 
           // GATING LOGIC
           // 1. !currentSession (No Session) -> Disable everything except Dashboard, Staff, Transport, Sessions
@@ -88,8 +113,8 @@ export default function Sidebar() {
           const isSchoolScoped = ["SCHOOL_ADMIN", "TEACHER", "ACCOUNTANT"].includes(userRole as string);
           const isPlatformRole = ["SUPER_ADMIN", "PLATFORM_ADMIN"].includes(userRole as string);
 
-          const requiresSession = ["Classes", "Students", "Fees", "Marksheets", "Attendance", "Exams"].includes(item.name);
-          const requiresClasses = ["Students", "Fees", "Marksheets", "Attendance", "Exams"].includes(item.name);
+          const requiresSession = ["Classes", "Students", "Fees", "Marksheets", "Attendance", "Exams", "Finance"].includes(item.name);
+          const requiresClasses = ["Students", "Fees", "Marksheets", "Attendance", "Exams", "Finance"].includes(item.name);
 
           let isRestricted = false;
           let restrictionMessage = "";
@@ -117,10 +142,69 @@ export default function Sidebar() {
             redirectPath = "/schools";
           }
 
+          if (item.children) {
+            return (
+              <div key={item.name} className="block">
+                <button
+                  onClick={() => {
+                    if (isRestricted) {
+                      showToast(restrictionMessage, "warning");
+                      if (redirectPath) router.push(redirectPath);
+                    } else {
+                      toggleMenu(item.name);
+                    }
+                  }}
+                  className={`
+                    w-full px-4 py-2.5 rounded-lg flex items-center justify-between
+                    ${active
+                      ? "bg-blue-50 text-blue-700 font-semibold"
+                      : "text-gray-700 hover:bg-gray-100"
+                    }
+                    ${isRestricted ? "opacity-50 cursor-not-allowed" : ""}
+                  `}
+                >
+                  <div className="flex items-center gap-3">
+                    <span className="text-lg">{item.icon}</span>
+                    <span>{item.name}</span>
+                  </div>
+                  <span className={`transform transition-transform text-xs ${isExpanded ? "rotate-180" : ""}`}>
+                    ▼
+                  </span>
+                </button>
+
+                {isExpanded && !isRestricted && (
+                  <div className="ml-9 mt-1 space-y-1">
+                    {item.children.map(child => {
+                      const childHasAccess = child.roles.includes(userRole as string);
+                      if (!childHasAccess) return null;
+                      const childActive = pathname === child.path;
+
+                      return (
+                        <Link
+                          key={child.path}
+                          href={child.path || "#"}
+                          className={`
+                            block px-4 py-2 text-sm rounded-lg
+                            ${childActive
+                              ? "bg-blue-100 text-blue-800 font-medium"
+                              : "text-gray-600 hover:bg-gray-100 hover:text-gray-900"
+                            }
+                          `}
+                        >
+                          {child.name}
+                        </Link>
+                      );
+                    })}
+                  </div>
+                )}
+              </div>
+            );
+          }
+
           return (
             <Link
-              key={item.path}
-              href={isRestricted ? "#" : item.path}
+              key={item.path || item.name}
+              href={isRestricted || !item.path ? "#" : item.path}
               onClick={(e) => {
                 if (isRestricted) {
                   e.preventDefault();
