@@ -3,6 +3,7 @@ package com.school.backend.core.student.service;
 import com.school.backend.common.enums.StudentStatus;
 import com.school.backend.common.exception.InvalidOperationException;
 import com.school.backend.common.exception.ResourceNotFoundException;
+import com.school.backend.common.tenant.SessionContext;
 import com.school.backend.common.tenant.TenantContext;
 import com.school.backend.core.classsubject.repository.SchoolClassRepository;
 import com.school.backend.core.student.dto.StudentEnrollmentDto;
@@ -39,6 +40,11 @@ public class EnrollmentService {
     @Transactional
     public StudentEnrollmentDto enroll(StudentEnrollmentRequest req) {
         Long schoolId = TenantContext.getSchoolId();
+        Long sessionId = requireSessionId();
+        if (req.getSessionId() != null && !req.getSessionId().equals(sessionId)) {
+            throw new InvalidOperationException("Session mismatch between request and context");
+        }
+        req.setSessionId(sessionId);
 
         // verify student & class
         studentRepository.findById(req.getStudentId())
@@ -47,7 +53,7 @@ public class EnrollmentService {
                 .orElseThrow(() -> new ResourceNotFoundException("Class not found"));
 
         long activeCount = enrollmentRepository.countByStudentIdAndSessionIdAndSchoolIdAndActiveTrue(
-                req.getStudentId(), req.getSessionId(), schoolId);
+                req.getStudentId(), sessionId, schoolId);
         if (activeCount > 1) {
             throw new InvalidOperationException(
                     "Data integrity violation: multiple active enrollments found for student/session.");
@@ -69,7 +75,7 @@ public class EnrollmentService {
 
         // Trigger Auto-Assignment of Fees
         List<FeeStructure> existingFees = feeStructureRepository.findByClassIdAndSessionIdAndSchoolIdAndActiveTrue(
-                req.getClassId(), req.getSessionId(), schoolId);
+                req.getClassId(), sessionId, schoolId);
 
         for (FeeStructure fs : existingFees) {
             feeStructureService.assignFeeToStudent(fs, req.getStudentId());
@@ -80,6 +86,15 @@ public class EnrollmentService {
 
     @Transactional(readOnly = true)
     public Page<StudentEnrollmentDto> listByClass(Long classId, Pageable pageable) {
-        return enrollmentRepository.findByClassId(classId, pageable).map(enrollmentMapper::toDto);
+        return enrollmentRepository.findByClassIdAndSessionId(classId, requireSessionId(), pageable)
+                .map(enrollmentMapper::toDto);
+    }
+
+    private Long requireSessionId() {
+        Long sessionId = SessionContext.getSessionId();
+        if (sessionId == null) {
+            throw new InvalidOperationException("Session context is missing in request");
+        }
+        return sessionId;
     }
 }

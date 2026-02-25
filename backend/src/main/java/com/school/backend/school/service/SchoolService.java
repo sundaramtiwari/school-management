@@ -199,15 +199,4 @@ public class SchoolService {
         return code;
     }
 
-    /**
-     * Update the current session for a school
-     */
-    @Transactional
-    public void updateCurrentSession(Long schoolId, Long sessionId) {
-        log.info("Updating school's currentSession schoolId={} sessionId={}", schoolId, sessionId);
-        School school = schoolRepository.findById(schoolId)
-                .orElseThrow(() -> new ResourceNotFoundException("School not found with id: " + schoolId));
-        school.setCurrentSessionId(sessionId);
-        schoolRepository.save(school);
-    }
 }

@@ -6,6 +6,7 @@ import lombok.RequiredArgsConstructor;
 import org.springframework.http.HttpHeaders;
 import org.springframework.http.MediaType;
 import org.springframework.http.ResponseEntity;
+import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PathVariable;
 import org.springframework.web.bind.annotation.RequestMapping;
@@ -19,6 +20,7 @@ public class MarksheetController {
     private final MarksheetService service;
 
     @GetMapping("/exam/{examId}/student/{studentId}")
+    @PreAuthorize("hasAnyRole('SUPER_ADMIN', 'PLATFORM_ADMIN', 'SCHOOL_ADMIN', 'TEACHER')")
     public MarksheetDto generate(
             @PathVariable Long examId,
             @PathVariable Long studentId) {
@@ -27,6 +29,7 @@ public class MarksheetController {
     }
 
     @GetMapping("/exam/{examId}/student/{studentId}/pdf")
+    @PreAuthorize("hasAnyRole('SUPER_ADMIN', 'PLATFORM_ADMIN', 'SCHOOL_ADMIN', 'TEACHER')")
     public ResponseEntity<byte[]> downloadPdf(
             @PathVariable Long examId,
             @PathVariable Long studentId) {

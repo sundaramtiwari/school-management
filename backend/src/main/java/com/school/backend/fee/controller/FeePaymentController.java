@@ -39,9 +39,8 @@ public class FeePaymentController {
     // Payment history
     @GetMapping("/students/{studentId}")
     @PreAuthorize("hasAnyRole('SCHOOL_ADMIN', 'ACCOUNTANT', 'SUPER_ADMIN', 'PLATFORM_ADMIN')")
-    public List<FeePaymentDto> history(@PathVariable Long studentId,
-                                       @RequestParam(required = false) Long sessionId) {
-        return service.getStudentPayments(studentId, sessionId);
+    public List<FeePaymentDto> history(@PathVariable Long studentId) {
+        return service.getStudentPayments(studentId);
     }
 
     // Download Receipt

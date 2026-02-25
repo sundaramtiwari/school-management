@@ -4,7 +4,6 @@ import com.school.backend.testmanagement.dto.BulkMarksDto;
 import com.school.backend.testmanagement.dto.ExamCreateRequest;
 import com.school.backend.testmanagement.entity.Exam;
 import com.school.backend.testmanagement.service.ExamService;
-import com.school.backend.common.tenant.SessionResolver;
 import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
 import org.springframework.http.ResponseEntity;
@@ -19,7 +18,6 @@ import java.util.List;
 public class ExamController {
 
     private final ExamService service;
-    private final SessionResolver sessionResolver;
 
     @PostMapping
     @PreAuthorize("hasAnyRole('SUPER_ADMIN', 'PLATFORM_ADMIN', 'SCHOOL_ADMIN', 'TEACHER')")
@@ -29,12 +27,8 @@ public class ExamController {
 
     @GetMapping("/by-class/{classId}")
     @PreAuthorize("hasAnyRole('SUPER_ADMIN', 'PLATFORM_ADMIN', 'SCHOOL_ADMIN', 'TEACHER')")
-    public List<Exam> listByClass(
-            @PathVariable Long classId,
-            @RequestParam(required = false) Long sessionId) {
-
-        Long effectiveSessionId = sessionId != null ? sessionId : sessionResolver.resolveForCurrentSchool();
-        return service.listByClass(classId, effectiveSessionId);
+    public List<Exam> listByClass(@PathVariable Long classId) {
+        return service.listByClass(classId);
     }
 
     @PostMapping("/{examId}/marks/bulk")

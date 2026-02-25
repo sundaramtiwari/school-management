@@ -1,7 +1,6 @@
 package com.school.backend.fee.controller;
 
 import com.school.backend.fee.entity.StudentFundingArrangement;
-import com.school.backend.fee.repository.StudentFundingArrangementRepository;
 import com.school.backend.fee.service.StudentFundingArrangementService;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
@@ -17,7 +16,6 @@ import java.util.List;
 @Slf4j
 public class StudentFundingArrangementController {
 
-    private final StudentFundingArrangementRepository fundingRepository;
     private final StudentFundingArrangementService fundingService;
 
     @PostMapping
@@ -37,8 +35,9 @@ public class StudentFundingArrangementController {
     public ResponseEntity<StudentFundingArrangement> getActive(
             @PathVariable Long studentId,
             @PathVariable Long sessionId) {
-        log.debug("Fetching active funding arrangement: studentId={}, sessionId={}", studentId, sessionId);
-        return fundingService.getActive(studentId, sessionId)
+        log.debug("Fetching active funding arrangement from session context: studentId={}, requestedSessionId={}",
+                studentId, sessionId);
+        return fundingService.getActive(studentId)
                 .map(ResponseEntity::ok)
                 .orElse(ResponseEntity.ok().build());
     }
@@ -54,10 +53,7 @@ public class StudentFundingArrangementController {
     @PreAuthorize("hasAnyRole('SCHOOL_ADMIN', 'SUPER_ADMIN')")
     public ResponseEntity<Void> delete(@PathVariable Long id) {
         log.info("Deactivating funding arrangement: id={}", id);
-        fundingRepository.findById(id).ifPresent(f -> {
-            f.setActive(false);
-            fundingRepository.save(f);
-        });
+        fundingService.deactivate(id);
         log.info("Funding arrangement deactivated (if existed): id={}", id);
         return ResponseEntity.noContent().build();
     }

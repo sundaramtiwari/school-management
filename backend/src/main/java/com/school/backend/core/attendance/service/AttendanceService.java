@@ -1,6 +1,8 @@
 package com.school.backend.core.attendance.service;
 
 import com.school.backend.common.exception.BusinessException;
+import com.school.backend.common.exception.InvalidOperationException;
+import com.school.backend.common.tenant.SessionContext;
 import com.school.backend.core.attendance.entity.StudentAttendance;
 import com.school.backend.core.attendance.enums.AttendanceStatus;
 import com.school.backend.core.attendance.repository.AttendanceRepository;
@@ -59,6 +61,12 @@ public class AttendanceService {
     }
 
     @Transactional
+    public void markAttendanceBulk(LocalDate date, Long classId,
+            Map<Long, AttendanceStatus> attendanceMap, Long schoolId) {
+        markAttendanceBulk(date, classId, requireSessionId(), attendanceMap, schoolId);
+    }
+
+    @Transactional
     public void markAttendanceBulk(LocalDate date, Long classId, Long sessionId,
             Map<Long, AttendanceStatus> attendanceMap, Long schoolId) {
         // 1. Validate edit permission
@@ -98,6 +106,11 @@ public class AttendanceService {
     }
 
     @Transactional(readOnly = true)
+    public List<StudentAttendance> getAttendanceByClassAndDate(Long classId, LocalDate date) {
+        return getAttendanceByClassAndDate(classId, requireSessionId(), date);
+    }
+
+    @Transactional(readOnly = true)
     public List<StudentAttendance> getAttendanceByClassAndDate(Long classId, Long sessionId, LocalDate date) {
         List<Long> studentIds = enrollmentRepository.findByClassIdAndSessionId(classId, sessionId)
                 .stream()
@@ -108,6 +121,11 @@ public class AttendanceService {
             return new ArrayList<>();
 
         return attendanceRepository.findByAttendanceDateAndStudentIdIn(date, studentIds);
+    }
+
+    @Transactional(readOnly = true)
+    public double getTodayStats(Long schoolId) {
+        return getTodayStats(schoolId, requireSessionId());
     }
 
     @Transactional(readOnly = true)
@@ -127,6 +145,14 @@ public class AttendanceService {
                 AttendanceStatus.HALF_DAY, schoolId);
 
         return ((double) (present + late + halfDay) / totalStudents) * 100.0;
+    }
+
+    private Long requireSessionId() {
+        Long sessionId = SessionContext.getSessionId();
+        if (sessionId == null) {
+            throw new InvalidOperationException("Session context is missing in request");
+        }
+        return sessionId;
     }
 
 }

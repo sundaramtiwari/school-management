@@ -2,7 +2,9 @@ package com.school.backend.fee.service;
 
 import com.school.backend.common.enums.LateFeeType;
 import com.school.backend.common.exception.BusinessException;
+import com.school.backend.common.exception.InvalidOperationException;
 import com.school.backend.common.exception.ResourceNotFoundException;
+import com.school.backend.common.tenant.SessionContext;
 import com.school.backend.common.tenant.TenantContext;
 import com.school.backend.core.student.entity.Student;
 import com.school.backend.core.student.repository.StudentRepository;
@@ -14,7 +16,6 @@ import com.school.backend.fee.entity.StudentFeeAssignment;
 import com.school.backend.fee.repository.FeePaymentRepository;
 import com.school.backend.fee.repository.LateFeeLogRepository;
 import com.school.backend.fee.repository.StudentFeeAssignmentRepository;
-import com.school.backend.school.repository.SchoolRepository;
 import lombok.RequiredArgsConstructor;
 import org.springframework.data.domain.PageRequest;
 import org.springframework.data.domain.Pageable;
@@ -33,7 +34,6 @@ public class FeePaymentService {
 
     private final FeePaymentRepository paymentRepository;
     private final StudentRepository studentRepository;
-    private final SchoolRepository schoolRepository;
     private final StudentFeeAssignmentRepository assignmentRepository;
     private final LateFeeLogRepository lateFeeLogRepository;
     private final LateFeeCalculator lateFeeCalculator;
@@ -50,14 +50,9 @@ public class FeePaymentService {
             throw new BusinessException("Payment amount must be greater than zero.");
         }
 
-        Long sessionId = req.getSessionId();
-        if (sessionId == null) {
-            sessionId = schoolRepository.findById(TenantContext.getSchoolId())
-                    .map(com.school.backend.school.entity.School::getCurrentSessionId)
-                    .orElse(null);
-        }
-        if (sessionId == null) {
-            throw new BusinessException("Session is required for fee payment.");
+        Long sessionId = requireSessionId();
+        if (req.getSessionId() != null && !req.getSessionId().equals(sessionId)) {
+            throw new InvalidOperationException("Session mismatch between request and context");
         }
 
         // Fetch active assignments for this student and session with PESSIMISTIC lock
@@ -162,15 +157,15 @@ public class FeePaymentService {
         return toDto(paymentRepository.save(payment));
     }
 
-    // ---------------- HISTORY ----------------
     @Transactional(readOnly = true)
-    public List<FeePaymentDto> getHistory(Long studentId) {
-        return getStudentPayments(studentId, null);
+    public List<FeePaymentDto> getStudentPayments(Long studentId) {
+        return getStudentPayments(studentId, requireSessionId());
     }
 
     @Transactional(readOnly = true)
     public List<FeePaymentDto> getStudentPayments(Long studentId, Long sessionId) {
         Long schoolId = TenantContext.getSchoolId();
+        Long effectiveSessionId = sessionId != null ? sessionId : requireSessionId();
 
         Optional<Student> student = studentRepository.findByIdAndSchoolId(studentId, schoolId);
         if (student.isEmpty()) {
@@ -178,10 +173,8 @@ public class FeePaymentService {
         }
         String studentName = buildStudentName(student.get().getFirstName(), student.get().getLastName());
 
-        List<FeePayment> payments = sessionId != null
-                ? paymentRepository.findByStudentIdAndSessionIdAndSchoolIdOrderByPaymentDateDescIdDesc(
-                        studentId, sessionId, schoolId)
-                : paymentRepository.findByStudentIdAndSchoolIdOrderByPaymentDateDescIdDesc(studentId, schoolId);
+        List<FeePayment> payments = paymentRepository.findByStudentIdAndSessionIdAndSchoolIdOrderByPaymentDateDescIdDesc(
+                studentId, effectiveSessionId, schoolId);
 
         return payments
                 .stream()
@@ -249,5 +242,13 @@ public class FeePaymentService {
         if (assignment.getAmount() == null) {
             assignment.setAmount(BigDecimal.ZERO);
         }
+    }
+
+    private Long requireSessionId() {
+        Long sessionId = SessionContext.getSessionId();
+        if (sessionId == null) {
+            throw new InvalidOperationException("Session context is missing in request");
+        }
+        return sessionId;
     }
 }

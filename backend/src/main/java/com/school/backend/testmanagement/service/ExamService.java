@@ -2,10 +2,15 @@ package com.school.backend.testmanagement.service;
 
 import com.school.backend.common.enums.ExamStatus;
 import com.school.backend.common.exception.BusinessException;
-import com.school.backend.user.security.SecurityUtil;
+import com.school.backend.common.exception.InvalidOperationException;
+import com.school.backend.common.tenant.SessionContext;
+import com.school.backend.core.classsubject.entity.ClassSubject;
+import com.school.backend.core.classsubject.repository.ClassSubjectRepository;
 import com.school.backend.core.student.repository.StudentEnrollmentRepository;
-import com.school.backend.testmanagement.dto.BulkMarksDto;
+import com.school.backend.core.teacher.entity.Teacher;
+import com.school.backend.core.teacher.repository.TeacherRepository;
 import com.school.backend.testmanagement.dto.BulkMarkEntryResponse;
+import com.school.backend.testmanagement.dto.BulkMarksDto;
 import com.school.backend.testmanagement.dto.ExamCreateRequest;
 import com.school.backend.testmanagement.dto.ExamDto;
 import com.school.backend.testmanagement.entity.Exam;
@@ -15,19 +20,18 @@ import com.school.backend.testmanagement.mapper.ExamMapper;
 import com.school.backend.testmanagement.repository.ExamRepository;
 import com.school.backend.testmanagement.repository.ExamSubjectRepository;
 import com.school.backend.testmanagement.repository.StudentMarkRepository;
-import com.school.backend.core.teacher.entity.Teacher;
-import com.school.backend.core.teacher.repository.TeacherRepository;
-import com.school.backend.core.classsubject.repository.ClassSubjectRepository;
-import com.school.backend.school.entity.School;
+import com.school.backend.user.security.SecurityUtil;
 import lombok.RequiredArgsConstructor;
 import org.springframework.security.access.AccessDeniedException;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
+import java.util.HashSet;
 import java.util.List;
 import java.util.Map;
-import java.util.stream.Collectors;
+import java.util.Set;
 import java.util.function.Function;
+import java.util.stream.Collectors;
 
 @Service
 @RequiredArgsConstructor
@@ -122,10 +126,14 @@ public class ExamService {
     @Transactional
     public Exam create(ExamCreateRequest req) {
         Long schoolId = SecurityUtil.schoolId();
+        Long effectiveSessionId = requireSessionId();
         if (schoolId == null) {
             throw new AccessDeniedException("School context is required");
         }
-        setupValidationService.ensureAtLeastOneClassExists(schoolId, req.getSessionId());
+        if (req.getSessionId() != null && !req.getSessionId().equals(effectiveSessionId)) {
+            throw new InvalidOperationException("Session mismatch between request and context");
+        }
+        setupValidationService.ensureAtLeastOneClassExists(schoolId, effectiveSessionId);
 
         // Authority Check
         if (SecurityUtil.hasRole("TEACHER")) {
@@ -136,7 +144,7 @@ public class ExamService {
             // Check if teacher is assigned to this class in this session for AT LEAST ONE
             // subject
             List<com.school.backend.core.classsubject.entity.ClassSubject> assignments = classSubjectRepository
-                    .findByTeacherIdAndSessionId(teacher.getId(), req.getSessionId(), schoolId);
+                    .findByTeacherIdAndSessionId(teacher.getId(), effectiveSessionId, schoolId);
 
             boolean assigned = assignments.stream()
                     .anyMatch(a -> a.getSchoolClass().getId().equals(req.getClassId()));
@@ -149,7 +157,7 @@ public class ExamService {
         Exam exam = Exam.builder()
                 .schoolId(schoolId)
                 .classId(req.getClassId())
-                .sessionId(req.getSessionId())
+                .sessionId(effectiveSessionId)
                 .name(req.getName())
                 .examType(req.getExamType())
                 .startDate(req.getStartDate())
@@ -162,8 +170,12 @@ public class ExamService {
 
     // List exams
     @Transactional(readOnly = true)
-    public List<Exam> listByClass(Long classId, Long sessionId) {
+    public List<Exam> listByClass(Long classId) {
+        return repository.findByClassIdAndSessionId(classId, requireSessionId());
+    }
 
+    @Transactional(readOnly = true)
+    public List<Exam> listByClass(Long classId, Long sessionId) {
         return repository.findByClassIdAndSessionId(classId, sessionId);
     }
 
@@ -184,7 +196,7 @@ public class ExamService {
                 .collect(Collectors.toMap(ExamSubject::getId, Function.identity()));
 
         List<BulkMarkEntryResponse.SkippedSubject> skipped = new java.util.ArrayList<>();
-        java.util.Set<Long> assignedSubjectIds = new java.util.HashSet<>();
+        Set<Long> assignedSubjectIds = new HashSet<>();
 
         if (SecurityUtil.hasRole("TEACHER")) {
             Long userId = SecurityUtil.current().getUserId();
@@ -192,7 +204,7 @@ public class ExamService {
                     .orElseThrow(() -> new BusinessException("Teacher record not found for user"));
 
             // Get all active assignments for this teacher in this class/session
-            List<com.school.backend.core.classsubject.entity.ClassSubject> assignments = classSubjectRepository
+            List<ClassSubject> assignments = classSubjectRepository
                     .findByTeacherIdAndSessionId(teacher.getId(), exam.getSessionId(), exam.getSchoolId());
 
             assignedSubjectIds = assignments.stream()
@@ -226,7 +238,7 @@ public class ExamService {
 
             // Upsert (Find existing or create new)
             StudentMark mark = markRepository.findByExamSubjectIdAndStudentId(
-                    item.getExamSubjectId(), item.getStudentId())
+                            item.getExamSubjectId(), item.getStudentId())
                     .orElseGet(() -> StudentMark.builder()
                             .examId(examId) // Ensure examId is populated
                             .examSubjectId(item.getExamSubjectId())
@@ -244,5 +256,13 @@ public class ExamService {
                 .skippedCount(skipped.size())
                 .skippedSubjects(skipped)
                 .build();
+    }
+
+    private Long requireSessionId() {
+        Long sessionId = SessionContext.getSessionId();
+        if (sessionId == null) {
+            throw new InvalidOperationException("Session context is missing in request");
+        }
+        return sessionId;
     }
 }

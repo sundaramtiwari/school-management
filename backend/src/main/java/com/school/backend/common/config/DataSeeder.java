@@ -1,7 +1,6 @@
 package com.school.backend.common.config;
 
-import com.school.backend.common.enums.Gender;
-import com.school.backend.common.enums.UserRole;
+import com.school.backend.common.enums.*;
 import com.school.backend.common.tenant.TenantContext;
 import com.school.backend.core.classsubject.dto.ClassSubjectDto;
 import com.school.backend.core.classsubject.dto.SchoolClassDto;
@@ -16,9 +15,6 @@ import com.school.backend.core.student.service.EnrollmentService;
 import com.school.backend.core.student.service.StudentService;
 import com.school.backend.fee.dto.FeePaymentRequest;
 import com.school.backend.fee.dto.FeeStructureCreateRequest;
-import com.school.backend.common.enums.FeeFrequency;
-import com.school.backend.common.enums.LateFeeCapType;
-import com.school.backend.common.enums.LateFeeType;
 import com.school.backend.fee.repository.FeeStructureRepository;
 import com.school.backend.fee.service.FeePaymentService;
 import com.school.backend.fee.service.FeeStructureService;
@@ -517,7 +513,7 @@ public class DataSeeder implements CommandLineRunner {
         var classesPage = schoolClassService.getBySchoolAndSession(
                 schoolId,
                 sessionId,
-                org.springframework.data.domain.PageRequest.of(0, 10));
+                PageRequest.of(0, 10));
 
         if (classesPage.isEmpty()) {
             return;
@@ -525,14 +521,14 @@ public class DataSeeder implements CommandLineRunner {
 
         SchoolClassDto targetClass = classesPage.getContent().get(0);
 
-        Exam unitTest = createExamIfMissing(schoolId, sessionId, targetClass.getId(), "Unit Test 1", "UNIT_TEST");
-        Exam halfYearly = createExamIfMissing(schoolId, sessionId, targetClass.getId(), "Half Yearly", "TERM");
+        Exam unitTest = createExamIfMissing(sessionId, targetClass.getId(), "Unit Test 1", "UNIT_TEST");
+        Exam halfYearly = createExamIfMissing(sessionId, targetClass.getId(), "Half Yearly", "TERM");
 
         attachSubjectsToExam(unitTest);
         attachSubjectsToExam(halfYearly);
     }
 
-    private Exam createExamIfMissing(Long schoolId, Long sessionId, Long classId, String name, String examType) {
+    private Exam createExamIfMissing(Long sessionId, Long classId, String name, String examType) {
         // Use listByClass to check existing exams by name
         try {
             List<Exam> existing = examService.listByClass(classId, sessionId);

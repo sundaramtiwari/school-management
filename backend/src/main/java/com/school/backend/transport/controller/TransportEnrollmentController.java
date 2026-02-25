@@ -25,28 +25,22 @@ public class TransportEnrollmentController {
 
     @GetMapping("/student/{studentId}")
     @PreAuthorize("hasAnyRole('SUPER_ADMIN', 'PLATFORM_ADMIN', 'SCHOOL_ADMIN', 'ACCOUNTANT', 'TEACHER')")
-    public ResponseEntity<TransportEnrollmentDto> getByStudent(
-            @PathVariable Long studentId,
-            @RequestParam Long sessionId) {
-        return enrollmentService.getStudentEnrollment(studentId, sessionId)
+    public ResponseEntity<TransportEnrollmentDto> getByStudent(@PathVariable Long studentId) {
+        return enrollmentService.getStudentEnrollment(studentId)
                 .map(ResponseEntity::ok)
                 .orElse(ResponseEntity.noContent().build());
     }
 
     @GetMapping("/active-status")
     @PreAuthorize("hasAnyRole('SUPER_ADMIN', 'PLATFORM_ADMIN', 'SCHOOL_ADMIN', 'ACCOUNTANT', 'TEACHER')")
-    public ResponseEntity<List<TransportEnrollmentDto>> getBatchStatus(
-            @RequestParam Collection<Long> studentIds,
-            @RequestParam Long sessionId) {
-        return ResponseEntity.ok(enrollmentService.getActiveEnrollmentsForStudents(studentIds, sessionId));
+    public ResponseEntity<List<TransportEnrollmentDto>> getBatchStatus(@RequestParam Collection<Long> studentIds) {
+        return ResponseEntity.ok(enrollmentService.getActiveEnrollmentsForStudents(studentIds));
     }
 
     @DeleteMapping("/student/{studentId}")
     @PreAuthorize("hasAnyRole('SUPER_ADMIN', 'SCHOOL_ADMIN', 'ACCOUNTANT')")
-    public ResponseEntity<Void> unenroll(
-            @PathVariable Long studentId,
-            @RequestParam Long sessionId) {
-        enrollmentService.unenrollStudent(studentId, sessionId);
+    public ResponseEntity<Void> unenroll(@PathVariable Long studentId) {
+        enrollmentService.unenrollStudent(studentId);
         return ResponseEntity.ok().build();
     }
 }

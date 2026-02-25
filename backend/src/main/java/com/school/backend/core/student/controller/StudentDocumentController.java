@@ -8,6 +8,7 @@ import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
 import org.springframework.data.domain.Pageable;
 import org.springframework.http.ResponseEntity;
+import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.web.bind.annotation.*;
 
 @RestController
@@ -18,6 +19,7 @@ public class StudentDocumentController {
     private final StudentDocumentService service;
 
     @PostMapping
+    @PreAuthorize("isAuthenticated()")
     public ResponseEntity<StudentDocumentDto> create(
             @PathVariable Long studentId,
             @Valid @RequestBody StudentDocumentCreateRequest req) {
@@ -27,6 +29,7 @@ public class StudentDocumentController {
     }
 
     @GetMapping
+    @PreAuthorize("isAuthenticated()")
     public PageResponse<StudentDocumentDto> listDocuments(
             @PathVariable Long studentId,
             Pageable pageable
@@ -35,6 +38,7 @@ public class StudentDocumentController {
     }
 
     @DeleteMapping("/{documentId}")
+    @PreAuthorize("isAuthenticated()")
     public ResponseEntity<Void> delete(
             @PathVariable Long studentId,
             @PathVariable Long documentId) {

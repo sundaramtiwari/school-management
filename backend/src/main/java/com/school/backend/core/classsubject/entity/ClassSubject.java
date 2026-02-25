@@ -53,7 +53,4 @@ public class ClassSubject extends TenantEntity {
     @ManyToOne(fetch = FetchType.LAZY)
     @JoinColumn(name = "school_id", insertable = false, updatable = false)
     private School school;
-
-    @Builder.Default
-    private boolean active = true;
 }

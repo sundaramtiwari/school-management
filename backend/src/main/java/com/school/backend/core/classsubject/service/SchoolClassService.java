@@ -25,11 +25,25 @@ public class SchoolClassService {
 
     public SchoolClassDto create(SchoolClassDto dto) {
         Long schoolId = TenantContext.getSchoolId();
-        System.err.println("SchoolID: " + schoolId);
-        // duplication check using repository method
-        if (repository.existsByNameAndSectionAndSessionIdAndSchoolId(dto.getName(),
-                dto.getSection(), dto.getSessionId(), schoolId)) {
-            throw new IllegalArgumentException("Class with same name/section/session already exists for this school");
+        var existing = repository.findByNameAndSectionAndSessionIdAndSchoolId(
+                dto.getName(), dto.getSection(), dto.getSessionId(), schoolId);
+        if (existing.isPresent()) {
+            SchoolClass current = existing.get();
+            if (current.isActive()) {
+                throw new IllegalArgumentException("Class with same name/section/session already exists for this school");
+            }
+            current.setActive(true);
+            current.setCapacity(dto.getCapacity());
+            current.setRemarks(dto.getRemarks());
+            if (dto.getClassTeacherId() != null) {
+                Teacher t = new Teacher();
+                t.setId(dto.getClassTeacherId());
+                t.setSchoolId(schoolId);
+                current.setClassTeacher(t);
+            } else {
+                current.setClassTeacher(null);
+            }
+            return mapper.toDto(repository.save(current));
         }
 
         SchoolClass entity = mapper.toEntity(dto);
@@ -49,7 +63,8 @@ public class SchoolClassService {
     }
 
     public SchoolClassDto update(Long id, SchoolClassDto dto) {
-        SchoolClass existing = repository.findById(id)
+        Long schoolId = TenantContext.getSchoolId();
+        SchoolClass existing = repository.findByIdAndSchoolIdAndActiveTrue(id, schoolId)
                 .orElseThrow(() -> new ResourceNotFoundException("SchoolClass not found: " + id));
 
         existing.setName(dto.getName());
@@ -63,7 +78,7 @@ public class SchoolClassService {
         if (dto.getClassTeacherId() != null) {
             Teacher t = new Teacher();
             t.setId(dto.getClassTeacherId());
-            t.setSchoolId(TenantContext.getSchoolId());
+            t.setSchoolId(schoolId);
             existing.setClassTeacher(t);
         } else {
             existing.setClassTeacher(null);
@@ -73,20 +88,21 @@ public class SchoolClassService {
     }
 
     public SchoolClassDto getById(Long id) {
-        SchoolClass entity = repository.findById(id)
+        Long schoolId = TenantContext.getSchoolId();
+        SchoolClass entity = repository.findByIdAndSchoolIdAndActiveTrue(id, schoolId)
                 .orElseThrow(() -> new ResourceNotFoundException("SchoolClass not found: " + id));
         return mapper.toDto(entity);
     }
 
     public SchoolClassDto getByIdAndSchool(Long id, Long schoolId) {
-        SchoolClass entity = repository.findByIdAndSchoolId(id, schoolId)
+        SchoolClass entity = repository.findByIdAndSchoolIdAndActiveTrue(id, schoolId)
                 .orElseThrow(() -> new ResourceNotFoundException("SchoolClass not found for given school: " + id));
         return mapper.toDto(entity);
     }
 
     public Page<SchoolClassDto> getBySchool(Long schoolId, Pageable pageable) {
         Long sessionId = sessionResolver.resolveForCurrentSchool();
-        return repository.findBySchoolIdAndSessionId(schoolId, sessionId, pageable).map(mapper::toDto);
+        return repository.findBySchoolIdAndSessionIdAndActiveTrue(schoolId, sessionId, pageable).map(mapper::toDto);
     }
 
     public Page<SchoolClassDto> getMyClasses(Long userId, Long schoolId, Pageable pageable) {
@@ -94,28 +110,29 @@ public class SchoolClassService {
         Teacher teacher = teacherRepository.findByUserId(userId)
                 .orElseThrow(() -> new ResourceNotFoundException("Teacher profile not found for user: " + userId));
 
-        return repository.findByClassTeacherIdAndSchoolId(teacher.getId(), schoolId, pageable)
+        return repository.findByClassTeacherIdAndSchoolIdAndActiveTrue(teacher.getId(), schoolId, pageable)
                 .map(mapper::toDto);
     }
 
     public Page<SchoolClassDto> getBySchoolAndSession(Long schoolId, Long sessionId, Pageable pageable) {
-        return repository.findBySchoolIdAndSessionId(schoolId, sessionId, pageable).map(mapper::toDto);
+        return repository.findBySchoolIdAndSessionIdAndActiveTrue(schoolId, sessionId, pageable).map(mapper::toDto);
     }
 
     public Page<SchoolClassDto> getAll(Pageable pageable) {
-        return repository.findAll(pageable).map(mapper::toDto);
+        return repository.findByActiveTrue(pageable).map(mapper::toDto);
     }
 
     public void delete(Long id) {
-        if (!repository.existsById(id)) {
-            throw new ResourceNotFoundException("SchoolClass not found: " + id);
-        }
-        repository.deleteById(id);
+        Long schoolId = TenantContext.getSchoolId();
+        SchoolClass schoolClass = repository.findByIdAndSchoolIdAndActiveTrue(id, schoolId)
+                .orElseThrow(() -> new ResourceNotFoundException("SchoolClass not found: " + id));
+        schoolClass.setActive(false);
+        repository.save(schoolClass);
     }
 
     public long getClassCount() {
         Long schoolId = TenantContext.getSchoolId();
         Long sessionId = sessionResolver.resolveForCurrentSchool();
-        return repository.countBySchoolIdAndSessionId(schoolId, sessionId);
+        return repository.countBySchoolIdAndSessionIdAndActiveTrue(schoolId, sessionId);
     }
 }

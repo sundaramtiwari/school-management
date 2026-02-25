@@ -23,6 +23,7 @@ public class TransportPointController {
     }
 
     @GetMapping("/route/{routeId}")
+    @PreAuthorize("hasAnyRole('SUPER_ADMIN', 'PLATFORM_ADMIN', 'SCHOOL_ADMIN', 'ACCOUNTANT')")
     public ResponseEntity<List<PickupPointDto>> getByRoute(@PathVariable Long routeId) {
         return ResponseEntity.ok(pickupPointService.getByRoute(routeId));
     }

@@ -3,7 +3,9 @@ package com.school.backend.fee.service;
 import com.school.backend.common.enums.FeeFrequency;
 import com.school.backend.common.enums.LateFeeCapType;
 import com.school.backend.common.enums.LateFeeType;
+import com.school.backend.common.exception.InvalidOperationException;
 import com.school.backend.common.exception.ResourceNotFoundException;
+import com.school.backend.common.tenant.SessionContext;
 import com.school.backend.core.student.entity.StudentEnrollment;
 import com.school.backend.core.student.repository.StudentEnrollmentRepository;
 import com.school.backend.fee.dto.FeeStructureCreateRequest;
@@ -52,6 +54,11 @@ public class FeeStructureService {
     // ---------------- CREATE ----------------
     @Transactional
     public FeeStructureDto create(FeeStructureCreateRequest req) {
+        Long effectiveSessionId = requireSessionId();
+        if (req.getSessionId() != null && !req.getSessionId().equals(effectiveSessionId)) {
+            throw new InvalidOperationException("Session mismatch between request and context");
+        }
+        req.setSessionId(effectiveSessionId);
         setupValidationService.ensureAtLeastOneClassExists(SecurityUtil.schoolId(), req.getSessionId());
 
         FeeType feeType = feeTypeRepository.findByIdAndSchoolId(req.getFeeTypeId(), SecurityUtil.schoolId())
@@ -218,12 +225,20 @@ public class FeeStructureService {
     // ---------------- LIST ----------------
     @Transactional(readOnly = true)
     public List<FeeStructureDto> listByClass(Long classId, Long sessionId, Long schoolId) {
-
+        Long effectiveSessionId = sessionId != null ? sessionId : requireSessionId();
         return feeStructureRepository
-                .findByClassIdAndSessionIdAndSchoolId(classId, sessionId, schoolId)
+                .findByClassIdAndSessionIdAndSchoolId(classId, effectiveSessionId, schoolId)
                 .stream()
                 .map(this::toDto)
                 .toList();
+    }
+
+    private Long requireSessionId() {
+        Long sessionId = SessionContext.getSessionId();
+        if (sessionId == null) {
+            throw new InvalidOperationException("Session context is missing in request");
+        }
+        return sessionId;
     }
 
     private BigDecimal computeAmount(FeeStructure fs, Long studentId) {

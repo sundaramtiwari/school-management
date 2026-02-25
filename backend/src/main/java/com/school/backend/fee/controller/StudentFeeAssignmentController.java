@@ -39,11 +39,8 @@ public class StudentFeeAssignmentController {
     // List student's assigned fees
     @GetMapping("/students/{studentId}")
     @PreAuthorize("hasAnyRole('SCHOOL_ADMIN', 'ACCOUNTANT', 'SUPER_ADMIN', 'PLATFORM_ADMIN')")
-    public List<StudentFeeAssignmentDto> listByStudent(
-            @PathVariable Long studentId,
-            @RequestParam Long sessionId) {
-
-        return assignmentService.listByStudent(studentId, sessionId);
+    public List<StudentFeeAssignmentDto> listByStudent(@PathVariable Long studentId) {
+        return assignmentService.listByStudent(studentId);
     }
 
     @PostMapping("/{assignmentId}/discount")

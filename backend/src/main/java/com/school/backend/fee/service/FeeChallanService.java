@@ -14,7 +14,10 @@ import com.lowagie.text.Element;
 import com.lowagie.text.PageSize;
 import com.lowagie.text.Chunk;
 import com.lowagie.text.DocumentException;
+import com.school.backend.common.exception.InvalidOperationException;
 import com.school.backend.common.exception.ResourceNotFoundException;
+import com.school.backend.common.tenant.SessionContext;
+import com.school.backend.common.tenant.TenantContext;
 import com.school.backend.core.student.entity.Student;
 import com.school.backend.core.student.repository.StudentRepository;
 import com.school.backend.fee.entity.FeeStructure;
@@ -51,7 +54,12 @@ public class FeeChallanService {
     private final AcademicSessionRepository academicSessionRepository;
 
     @Transactional(readOnly = true)
-    public byte[] generateChallan(Long studentId, Long sessionId, Long schoolId, int months) {
+    public byte[] generateChallan(Long studentId, int months) {
+        Long schoolId = TenantContext.getSchoolId();
+        Long sessionId = SessionContext.getSessionId();
+        if (sessionId == null) {
+            throw new InvalidOperationException("Session context is missing in request");
+        }
         Student student = studentRepository.findById(studentId)
                 .orElseThrow(() -> new ResourceNotFoundException("Student not found: " + studentId));
 

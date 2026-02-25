@@ -2,7 +2,8 @@ package com.school.backend.core.student.service;
 
 import com.school.backend.common.exception.ResourceNotFoundException;
 import com.school.backend.core.student.repository.StudentRepository;
-import com.school.backend.fee.repository.FeePaymentRepository;
+import com.school.backend.fee.entity.StudentFeeAssignment;
+import com.school.backend.fee.service.FeeMath;
 import com.school.backend.fee.repository.StudentFeeAssignmentRepository;
 import com.school.backend.school.entity.AcademicSession;
 import com.school.backend.school.repository.AcademicSessionRepository;
@@ -27,7 +28,6 @@ public class StudentLedgerService {
 
     private final StudentRepository studentRepository;
     private final StudentFeeAssignmentRepository studentFeeAssignmentRepository;
-    private final FeePaymentRepository feePaymentRepository;
     private final AcademicSessionRepository academicSessionRepository;
 
     @Transactional(readOnly = true)
@@ -40,7 +40,6 @@ public class StudentLedgerService {
 
         Map<Long, LedgerSummaryDto> ledgerMap = new LinkedHashMap<>();
         mergeAssigned(studentId, ledgerMap);
-        mergePaid(studentId, ledgerMap);
 
         Set<Long> sessionIds = ledgerMap.keySet();
         log.debug("Ledger aggregation complete for studentId={}, sessionsFound={}", studentId, sessionIds.size());
@@ -51,11 +50,6 @@ public class StudentLedgerService {
         List<LedgerSummaryDto> result = ledgerMap.values().stream()
                 .peek(item -> {
                     item.setSessionName(sessionNames.getOrDefault(item.getSessionId(), "Unknown Session"));
-                    item.setTotalPending(item.getTotalAssigned()
-                            .add(item.getTotalLateFee())
-                            .subtract(item.getTotalDiscount())
-                            .subtract(item.getTotalFunding())
-                            .subtract(item.getTotalPaid()));
                 })
                 .sorted(Comparator.comparing(LedgerSummaryDto::getSessionId))
                 .toList();
@@ -75,19 +69,21 @@ public class StudentLedgerService {
             dto.setTotalDiscount(row[2] == null ? BigDecimal.ZERO : (BigDecimal) row[2]);
             dto.setTotalFunding(row[3] == null ? BigDecimal.ZERO : (BigDecimal) row[3]);
             dto.setTotalLateFee(row[4] == null ? BigDecimal.ZERO : (BigDecimal) row[4]);
-        }
-    }
 
-    private void mergePaid(Long studentId, Map<Long, LedgerSummaryDto> ledgerMap) {
-        List<Object[]> paid = feePaymentRepository.sumPaidByStudentGroupedBySession(studentId);
-        for (Object[] row : paid) {
-            Long sessionId = (Long) row[0];
-            if (sessionId == null) {
-                continue;
-            }
-            BigDecimal total = row[1] == null ? BigDecimal.ZERO : (BigDecimal) row[1];
-            LedgerSummaryDto dto = ledgerMap.computeIfAbsent(sessionId, this::newLedgerEntry);
-            dto.setTotalPaid(total);
+            BigDecimal lateFeePaid = row[5] == null ? BigDecimal.ZERO : (BigDecimal) row[5];
+            BigDecimal lateFeeWaived = row[6] == null ? BigDecimal.ZERO : (BigDecimal) row[6];
+            BigDecimal principalPaid = row[7] == null ? BigDecimal.ZERO : (BigDecimal) row[7];
+
+            dto.setTotalPaid(principalPaid.add(lateFeePaid));
+            dto.setTotalPending(FeeMath.computePending(StudentFeeAssignment.builder()
+                    .amount(dto.getTotalAssigned())
+                    .lateFeeAccrued(dto.getTotalLateFee())
+                    .totalDiscountAmount(dto.getTotalDiscount())
+                    .sponsorCoveredAmount(dto.getTotalFunding())
+                    .lateFeeWaived(lateFeeWaived)
+                    .principalPaid(principalPaid)
+                    .lateFeePaid(lateFeePaid)
+                    .build()));
         }
     }
 

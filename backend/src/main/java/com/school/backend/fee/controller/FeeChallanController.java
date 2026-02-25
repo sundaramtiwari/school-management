@@ -1,7 +1,7 @@
 package com.school.backend.fee.controller;
 
 import com.school.backend.fee.service.FeeChallanService;
-import com.school.backend.user.security.SecurityUtil;
+import com.school.backend.common.tenant.SessionContext;
 import lombok.RequiredArgsConstructor;
 import org.springframework.http.HttpHeaders;
 import org.springframework.http.MediaType;
@@ -20,17 +20,16 @@ public class FeeChallanController {
      * Download fee challan for a student
      *
      * @param studentId Student ID
-     * @param sessionId Academic session (e.g., "2024-25")
      * @return PDF file as byte array
      */
     @GetMapping("/student/{studentId}")
     @PreAuthorize("hasAnyRole('SCHOOL_ADMIN', 'ACCOUNTANT', 'SUPER_ADMIN', 'PLATFORM_ADMIN')")
     public ResponseEntity<byte[]> downloadChallan(
             @PathVariable Long studentId,
-            @RequestParam Long sessionId,
             @RequestParam(defaultValue = "1") Integer months) {
 
-        byte[] pdf = challanService.generateChallan(studentId, sessionId, SecurityUtil.schoolId(), months);
+        Long sessionId = SessionContext.getSessionId();
+        byte[] pdf = challanService.generateChallan(studentId, months);
 
         return ResponseEntity.ok()
                 .header(HttpHeaders.CONTENT_DISPOSITION,

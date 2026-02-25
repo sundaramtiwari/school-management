@@ -6,7 +6,6 @@ import lombok.RequiredArgsConstructor;
 import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.RequestMapping;
-import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.RestController;
 
 @RestController
@@ -18,7 +17,7 @@ public class DashboardStatsController {
 
     @GetMapping("/school-admin/stats")
     @PreAuthorize("hasAnyRole('SUPER_ADMIN', 'PLATFORM_ADMIN', 'SCHOOL_ADMIN')")
-    public SchoolAdminStatsDto getSchoolAdminStats(@RequestParam(required = false) Long sessionId) {
-        return service.getSchoolAdminStats(sessionId);
+    public SchoolAdminStatsDto getSchoolAdminStats() {
+        return service.getSchoolAdminStats();
     }
 }

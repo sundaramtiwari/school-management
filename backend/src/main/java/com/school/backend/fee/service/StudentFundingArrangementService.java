@@ -2,6 +2,7 @@ package com.school.backend.fee.service;
 
 import com.school.backend.common.enums.FundingCoverageMode;
 import com.school.backend.common.exception.InvalidOperationException;
+import com.school.backend.common.tenant.SessionContext;
 import com.school.backend.common.tenant.TenantContext;
 import com.school.backend.fee.entity.StudentFundingArrangement;
 import com.school.backend.fee.repository.StudentFundingArrangementRepository;
@@ -22,6 +23,15 @@ public class StudentFundingArrangementService {
     @Transactional
     public StudentFundingArrangement create(StudentFundingArrangement arrangement) {
         Long schoolId = TenantContext.getSchoolId();
+        Long sessionId = SessionContext.getSessionId();
+
+        if (sessionId == null) {
+            throw new InvalidOperationException("Session context is missing in request");
+        }
+        if (arrangement.getSessionId() != null && !arrangement.getSessionId().equals(sessionId)) {
+            throw new InvalidOperationException("Session mismatch between request and context");
+        }
+        arrangement.setSessionId(sessionId);
 
         if (arrangement.getCoverageValue() == null ||
                 arrangement.getCoverageValue().compareTo(BigDecimal.ZERO) <= 0) {
@@ -56,7 +66,24 @@ public class StudentFundingArrangementService {
     }
 
     @Transactional(readOnly = true)
-    public Optional<StudentFundingArrangement> getActive(Long studentId, Long sessionId) {
+    public Optional<StudentFundingArrangement> getActive(Long studentId) {
+        Long sessionId = SessionContext.getSessionId();
+        if (sessionId == null) {
+            throw new InvalidOperationException("Session context is missing in request");
+        }
+        return getActive(studentId, sessionId);
+    }
+
+    /**
+     * Fetches the active funding arrangement for a student in a specific session. Caller should ensure session is not null.
+     *
+     * @param studentId ID of the student for whom to fetch the active arrangement. Should not be null.
+     * @param sessionId Session for which to fetch the active arrangement. Should not be null.
+     * @return Optional containing the active StudentFundingArrangement if found,
+     * or empty if no active arrangement exists for the given student and session.
+     */
+    @Transactional(readOnly = true)
+    private Optional<StudentFundingArrangement> getActive(Long studentId, Long sessionId) {
         return fundingRepository.findByStudentIdAndSessionIdAndSchoolIdAndActiveTrue(
                 studentId, sessionId, TenantContext.getSchoolId());
     }
@@ -64,5 +91,17 @@ public class StudentFundingArrangementService {
     @Transactional(readOnly = true)
     public List<StudentFundingArrangement> getAllForStudent(Long studentId) {
         return fundingRepository.findByStudentIdAndSchoolIdOrderByValidFromDescIdDesc(studentId, TenantContext.getSchoolId());
+    }
+
+    @Transactional
+    public void deactivate(Long id) {
+        Long schoolId = TenantContext.getSchoolId();
+        fundingRepository.findById(id).ifPresent(arrangement -> {
+            if (!schoolId.equals(arrangement.getSchoolId())) {
+                throw new InvalidOperationException("Access denied for funding arrangement: " + id);
+            }
+            arrangement.setActive(false);
+            fundingRepository.save(arrangement);
+        });
     }
 }

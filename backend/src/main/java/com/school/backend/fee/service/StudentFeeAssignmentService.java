@@ -1,25 +1,26 @@
 package com.school.backend.fee.service;
 
+import com.school.backend.common.enums.FeeFrequency;
 import com.school.backend.common.enums.LateFeeCapType;
+import com.school.backend.common.exception.InvalidOperationException;
 import com.school.backend.common.exception.ResourceNotFoundException;
+import com.school.backend.common.tenant.SessionContext;
 import com.school.backend.common.tenant.TenantContext;
 import com.school.backend.core.student.repository.StudentRepository;
 import com.school.backend.fee.dto.StudentFeeAssignRequest;
 import com.school.backend.fee.dto.StudentFeeAssignmentDto;
 import com.school.backend.fee.entity.FeeStructure;
+import com.school.backend.fee.entity.LateFeePolicy;
 import com.school.backend.fee.entity.StudentFeeAssignment;
-import com.school.backend.common.enums.FeeFrequency;
 import com.school.backend.fee.repository.FeeStructureRepository;
+import com.school.backend.fee.repository.LateFeePolicyRepository;
 import com.school.backend.fee.repository.StudentFeeAssignmentRepository;
+import com.school.backend.fee.repository.StudentFundingArrangementRepository;
 import com.school.backend.school.entity.AcademicSession;
 import com.school.backend.school.repository.AcademicSessionRepository;
-import com.school.backend.fee.repository.StudentFundingArrangementRepository;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
-
-import com.school.backend.fee.entity.LateFeePolicy;
-import com.school.backend.fee.repository.LateFeePolicyRepository;
 
 import java.math.BigDecimal;
 import java.math.RoundingMode;
@@ -43,6 +44,11 @@ public class StudentFeeAssignmentService {
     // ---------------- ASSIGN ----------------
     @Transactional
     public StudentFeeAssignmentDto assign(StudentFeeAssignRequest req) {
+        Long effectiveSessionId = requireSessionId();
+        if (req.getSessionId() != null && !req.getSessionId().equals(effectiveSessionId)) {
+            throw new InvalidOperationException("Session mismatch between request and context");
+        }
+        req.setSessionId(effectiveSessionId);
 
         if (!studentRepository.existsById(req.getStudentId())) {
             throw new ResourceNotFoundException("Student not found: " + req.getStudentId());
@@ -105,9 +111,31 @@ public class StudentFeeAssignmentService {
     }
 
     // ---------------- LIST ----------------
-    @Transactional(readOnly = true)
-    public List<StudentFeeAssignmentDto> listByStudent(Long studentId, Long sessionId) {
 
+    /**
+     * Lists fee assignments for a student in the current session context.
+     *
+     * @param studentId ID of the student whose fee assignments are to be listed.
+     * @return List of StudentFeeAssignmentDto for the specified student and current session.
+     */
+    @Transactional(readOnly = true)
+    public List<StudentFeeAssignmentDto> listByStudent(Long studentId) {
+        return listByStudent(studentId, requireSessionId());
+    }
+
+    /**
+     * Lists fee assignments for a student within a specific session context.
+     * This is used internally to support session override scenarios, but is not exposed directly via API.
+     * The session context is required to ensure we are showing assignments relevant to the current academic session,
+     * and to prevent accidental cross-session data exposure.
+     *
+     * @param studentId ID of the student whose fee assignments are to be listed.
+     * @param sessionId Caller should ensure this is a valid session for the current school,
+     *                  typically by using requireSessionId() or validating against SessionResolver.
+     * @return List of StudentFeeAssignmentDto for the specified student and session.
+     */
+    @Transactional(readOnly = true)
+    private List<StudentFeeAssignmentDto> listByStudent(Long studentId, Long sessionId) {
         if (!studentRepository.existsById(studentId)) {
             throw new ResourceNotFoundException("Student not found: " + studentId);
         }
@@ -174,13 +202,7 @@ public class StudentFeeAssignmentService {
     }
 
     private BigDecimal calculatePendingFromPersistedValues(StudentFeeAssignment sfa) {
-        return nz(sfa.getAmount())
-                .add(nz(sfa.getLateFeeAccrued()))
-                .subtract(nz(sfa.getTotalDiscountAmount()))
-                .subtract(nz(sfa.getSponsorCoveredAmount()))
-                .subtract(nz(sfa.getPrincipalPaid()))
-                .subtract(nz(sfa.getLateFeePaid()))
-                .subtract(nz(sfa.getLateFeeWaived()));
+        return FeeMath.computePending(sfa);
     }
 
     private LocalDate resolveDerivedDueDate(Long sessionId, Long schoolId, Integer dueDayOfMonth) {
@@ -209,5 +231,13 @@ public class StudentFeeAssignmentService {
     private LocalDate clampDay(LocalDate baseMonth, int day) {
         int lastDay = baseMonth.lengthOfMonth();
         return baseMonth.withDayOfMonth(Math.min(day, lastDay));
+    }
+
+    private Long requireSessionId() {
+        Long sessionId = SessionContext.getSessionId();
+        if (sessionId == null) {
+            throw new InvalidOperationException("Session context is missing in request");
+        }
+        return sessionId;
     }
 }

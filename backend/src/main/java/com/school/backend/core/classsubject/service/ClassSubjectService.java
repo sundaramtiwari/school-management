@@ -127,9 +127,9 @@ public class ClassSubjectService {
     }
 
     @Transactional(readOnly = true)
-    public List<ClassSubjectAssignmentDto> listAssignments(Long sessionId, Long teacherId) {
+    public List<ClassSubjectAssignmentDto> listAssignments(Long teacherId) {
         Long schoolId = SecurityUtil.schoolId();
-        Long effectiveSessionId = validateAndGetSessionId(sessionId, schoolId);
+        Long effectiveSessionId = validateAndGetSessionId(SessionContext.getSessionId(), schoolId);
 
         List<ClassSubject> assignments;
         if (teacherId != null) {
@@ -179,20 +179,20 @@ public class ClassSubjectService {
     }
 
     @Transactional(readOnly = true)
-    public List<SchoolClass> getMyAssignedClasses(Long sessionId) {
+    public List<SchoolClass> getMyAssignedClasses() {
         Long schoolId = SecurityUtil.schoolId();
+        Long effectiveSessionId = validateAndGetSessionId(SessionContext.getSessionId(), schoolId);
         Long userId = SecurityUtil.userId();
-        Long effectiveSessionId = validateAndGetSessionId(sessionId, schoolId);
         Teacher teacher = teacherRepo.findByUserId(userId)
                 .orElseThrow(() -> new BusinessException("Teacher profile not found for current user"));
         return repository.findDistinctClassesByTeacherAndSession(teacher.getId(), effectiveSessionId, schoolId);
     }
 
     @Transactional(readOnly = true)
-    public List<Subject> getMyAssignedSubjects(Long sessionId, Long classId) {
+    public List<Subject> getMyAssignedSubjects(Long classId) {
         Long schoolId = SecurityUtil.schoolId();
         Long userId = SecurityUtil.userId();
-        Long effectiveSessionId = validateAndGetSessionId(sessionId, schoolId);
+        Long effectiveSessionId = validateAndGetSessionId(SessionContext.getSessionId(), schoolId);
         Teacher teacher = teacherRepo.findByUserId(userId)
                 .orElseThrow(() -> new BusinessException("Teacher profile not found for current user"));
         return repository.findDistinctSubjectsByTeacherSessionAndClass(teacher.getId(), effectiveSessionId, classId,

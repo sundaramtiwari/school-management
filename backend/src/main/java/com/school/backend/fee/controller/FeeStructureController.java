@@ -4,7 +4,6 @@ import com.school.backend.fee.dto.FeeStructureCreateRequest;
 import com.school.backend.fee.dto.FeeStructureDto;
 import com.school.backend.fee.dto.FeeStructurePatchRequest;
 import com.school.backend.fee.service.FeeStructureService;
-import com.school.backend.common.tenant.SessionResolver;
 import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
 import org.springframework.security.access.prepost.PreAuthorize;
@@ -19,7 +18,6 @@ import java.util.List;
 public class FeeStructureController {
 
     private final FeeStructureService service;
-    private final SessionResolver sessionResolver;
 
     // Create fee structure
     @PostMapping
@@ -43,11 +41,7 @@ public class FeeStructureController {
     // List by class+session
     @GetMapping("/by-class/{classId}")
     @PreAuthorize("hasAnyRole('SCHOOL_ADMIN', 'ACCOUNTANT', 'SUPER_ADMIN', 'PLATFORM_ADMIN')")
-    public List<FeeStructureDto> listByClass(
-            @PathVariable Long classId,
-            @RequestParam(required = false) Long sessionId) {
-
-        Long effectiveSessionId = sessionId != null ? sessionId : sessionResolver.resolveForCurrentSchool();
-        return service.listByClass(classId, effectiveSessionId, SecurityUtil.schoolId());
+    public List<FeeStructureDto> listByClass(@PathVariable Long classId) {
+        return service.listByClass(classId, null, SecurityUtil.schoolId());
     }
 }

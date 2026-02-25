@@ -1,6 +1,8 @@
 package com.school.backend.transport.service;
 
+import com.school.backend.common.exception.InvalidOperationException;
 import com.school.backend.common.exception.ResourceNotFoundException;
+import com.school.backend.common.tenant.SessionContext;
 import com.school.backend.common.tenant.TenantContext;
 import com.school.backend.core.student.entity.Student;
 import com.school.backend.core.student.repository.StudentRepository;
@@ -24,6 +26,7 @@ import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
 import java.math.BigDecimal;
+import java.util.Collection;
 import java.util.List;
 import java.util.Optional;
 
@@ -64,6 +67,11 @@ public class TransportEnrollmentService {
     @Transactional
     public TransportEnrollmentDto enrollStudent(TransportEnrollmentDto dto) {
         Long schoolId = TenantContext.getSchoolId();
+        Long effectiveSessionId = requireSessionId();
+        if (dto.getSessionId() != null && !dto.getSessionId().equals(effectiveSessionId)) {
+            throw new InvalidOperationException("Session mismatch between request and context");
+        }
+        dto.setSessionId(effectiveSessionId);
         log.info("Enrolling student {} in transport for session {} [Tenant: {}]",
                 dto.getStudentId(), dto.getSessionId(), schoolId);
 
@@ -200,18 +208,23 @@ public class TransportEnrollmentService {
      * 3. Validate rows updated to ensure invariant safety
      *
      * @param studentId Student ID
-     * @param sessionId Session ID
      * @throws ResourceNotFoundException if active enrollment not found
      * @throws IllegalStateException     if invariant violation detected
      */
     @Transactional
+    public void unenrollStudent(Long studentId) {
+        unenrollStudent(studentId, requireSessionId());
+    }
+
+    @Transactional
     public void unenrollStudent(Long studentId, Long sessionId) {
         Long schoolId = TenantContext.getSchoolId();
+        Long effectiveSessionId = sessionId != null ? sessionId : requireSessionId();
         log.info("Unenrolling student {} from transport for session {} [Tenant: {}]",
-                studentId, sessionId, schoolId);
+                studentId, effectiveSessionId, schoolId);
 
         TransportEnrollment enrollment = enrollmentRepository
-                .findByStudentIdAndSessionIdAndSchoolId(studentId, sessionId, schoolId)
+                .findByStudentIdAndSessionIdAndSchoolId(studentId, effectiveSessionId, schoolId)
                 .orElseThrow(() -> new ResourceNotFoundException(
                         "No transport enrollment found for student " + studentId));
 
@@ -241,7 +254,7 @@ public class TransportEnrollmentService {
         }
 
         // 3. Deactivate transport fee assignment
-        deactivateTransportFeeAssignment(studentId, sessionId, enrollment.getPickupPoint());
+        deactivateTransportFeeAssignment(studentId, effectiveSessionId, enrollment.getPickupPoint());
 
         log.info("Student {} successfully unenrolled from transport. Capacity restored for route {}",
                 studentId, routeId);
@@ -252,13 +265,18 @@ public class TransportEnrollmentService {
      * Used for bulk status fetching in UI to avoid N+1 queries.
      *
      * @param studentIds List of student IDs
-     * @param sessionId  Current session ID
      * @return List of active enrollment DTOs
      */
     @Transactional(readOnly = true)
-    public List<TransportEnrollmentDto> getActiveEnrollmentsForStudents(java.util.Collection<Long> studentIds,
+    public List<TransportEnrollmentDto> getActiveEnrollmentsForStudents(Collection<Long> studentIds) {
+        return getActiveEnrollmentsForStudents(studentIds, requireSessionId());
+    }
+
+    @Transactional(readOnly = true)
+    public List<TransportEnrollmentDto> getActiveEnrollmentsForStudents(Collection<Long> studentIds,
                                                                         Long sessionId) {
-        return enrollmentRepository.findByStudentIdInAndSessionIdAndActiveTrue(studentIds, sessionId)
+        Long effectiveSessionId = sessionId != null ? sessionId : requireSessionId();
+        return enrollmentRepository.findByStudentIdInAndSessionIdAndActiveTrue(studentIds, effectiveSessionId)
                 .stream()
                 .map(this::mapToDto)
                 .toList();
@@ -402,15 +420,28 @@ public class TransportEnrollmentService {
      * Retrieves a student's transport enrollment for a session.
      *
      * @param studentId Student ID
-     * @param sessionId Session ID
      * @return Optional containing enrollment DTO if exists
      */
     @Transactional(readOnly = true)
+    public Optional<TransportEnrollmentDto> getStudentEnrollment(Long studentId) {
+        return getStudentEnrollment(studentId, requireSessionId());
+    }
+
+    @Transactional(readOnly = true)
     public Optional<TransportEnrollmentDto> getStudentEnrollment(Long studentId, Long sessionId) {
         Long schoolId = TenantContext.getSchoolId();
+        Long effectiveSessionId = sessionId != null ? sessionId : requireSessionId();
         log.debug("Fetching transport enrollment for student {} in session {} [Tenant: {}]",
-                studentId, sessionId, schoolId);
-        return enrollmentRepository.findByStudentIdAndSessionIdAndSchoolId(studentId, sessionId, schoolId)
+                studentId, effectiveSessionId, schoolId);
+        return enrollmentRepository.findByStudentIdAndSessionIdAndSchoolId(studentId, effectiveSessionId, schoolId)
                 .map(this::mapToDto);
+    }
+
+    private Long requireSessionId() {
+        Long sessionId = SessionContext.getSessionId();
+        if (sessionId == null) {
+            throw new InvalidOperationException("Session context is missing in request");
+        }
+        return sessionId;
     }
 }

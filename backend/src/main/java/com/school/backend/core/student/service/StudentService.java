@@ -1,7 +1,8 @@
 package com.school.backend.core.student.service;
 
 import com.school.backend.common.exception.ResourceNotFoundException;
-import com.school.backend.common.tenant.SessionResolver;
+import com.school.backend.common.exception.InvalidOperationException;
+import com.school.backend.common.tenant.SessionContext;
 import com.school.backend.common.tenant.TenantContext;
 import com.school.backend.core.guardian.dto.GuardianCreateRequest;
 import com.school.backend.core.guardian.entity.Guardian;
@@ -36,7 +37,6 @@ public class StudentService {
 
     private final StudentRepository repository;
     private final StudentMapper mapper;
-    private final SessionResolver sessionResolver;
     private final SetupValidationService setupValidationService;
     private final GuardianService guardianService;
     private final StudentGuardianRepository studentGuardianRepository;
@@ -181,7 +181,7 @@ public class StudentService {
     @Transactional
     public StudentDto register(StudentCreateRequest req) {
         Long schoolId = TenantContext.getSchoolId();
-        Long sessionId = sessionResolver.resolveForCurrentSchool();
+        Long sessionId = requireSessionId();
 
         // Validate that at least one class exists
         setupValidationService.ensureAtLeastOneClassExists(schoolId, sessionId);
@@ -313,7 +313,7 @@ public class StudentService {
 
     @Transactional(readOnly = true)
     public Page<StudentDto> listByClass(Long classId, Pageable pageable) {
-        Long sessionId = sessionResolver.resolveForCurrentSchool();
+        Long sessionId = requireSessionId();
 
         return repository
                 .findByClassIdAndSessionId(classId, sessionId, pageable)
@@ -329,13 +329,13 @@ public class StudentService {
         if (!s.getSchoolId().equals(TenantContext.getSchoolId())) {
             throw new AccessDeniedException("Unauthorized access to student");
         }
-        Long sessionId = sessionResolver.resolveForCurrentSchool();
+        Long sessionId = requireSessionId();
         return mapper.toDto(s, enrollmentRepository.existsByStudentIdAndSessionIdAndActiveTrue(id, sessionId));
     }
 
     @Transactional(readOnly = true)
     public Page<StudentDto> listBySchool(Long schoolId, Pageable pageable) {
-        Long sessionId = sessionResolver.resolveForCurrentSchool();
+        Long sessionId = requireSessionId();
         return repository.findBySchoolIdAndSessionId(schoolId, sessionId, pageable)
                 .map(s -> mapper.toDto(s,
                         enrollmentRepository.existsByStudentIdAndSessionIdAndActiveTrue(s.getId(), sessionId)));
@@ -368,5 +368,14 @@ public class StudentService {
         // Soft delete by marking as inactive
         s.setActive(false);
         repository.save(s);
+    }
+
+    private Long requireSessionId() {
+        Long sessionId = SessionContext.getSessionId();
+        if (sessionId == null) {
+            throw new InvalidOperationException("Session context is missing in request");
+        }
+        setupValidationService.validateSessionBelongsToTenant(sessionId);
+        return sessionId;
     }
 }

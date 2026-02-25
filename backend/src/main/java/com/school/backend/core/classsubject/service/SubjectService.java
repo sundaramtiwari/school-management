@@ -1,11 +1,14 @@
 package com.school.backend.core.classsubject.service;
 
+import com.school.backend.common.exception.BusinessException;
 import com.school.backend.common.exception.ResourceNotFoundException;
 import com.school.backend.core.classsubject.dto.SubjectDto;
 import com.school.backend.core.classsubject.entity.Subject;
 import com.school.backend.core.classsubject.mapper.SubjectMapper;
 import com.school.backend.core.classsubject.repository.SubjectRepository;
+import com.school.backend.user.security.SecurityUtil;
 import lombok.RequiredArgsConstructor;
+import org.jspecify.annotations.NonNull;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
 import org.springframework.stereotype.Service;
@@ -17,13 +20,28 @@ public class SubjectService {
     private final SubjectRepository repository;
     private final SubjectMapper mapper;
 
+    private static @NonNull Subject getCurrent(SubjectDto dto, Subject current) {
+        if (current.isActive()) {
+            throw new BusinessException(
+                    "Subject already exists in this school: " + dto.getName());
+        }
+        current.setActive(true);
+        current.setCode(dto.getCode());
+        current.setType(dto.getType());
+        current.setMaxMarks(dto.getMaxMarks());
+        current.setMinMarks(dto.getMinMarks());
+        current.setRemarks(dto.getRemarks());
+        return current;
+    }
+
     public SubjectDto create(SubjectDto dto) {
-        Long schoolId = com.school.backend.user.security.SecurityUtil.schoolId();
+        Long schoolId = SecurityUtil.schoolId();
         dto.setSchoolId(schoolId);
 
-        if (repository.existsByNameIgnoreCaseAndSchoolId(dto.getName(), schoolId)) {
-            throw new com.school.backend.common.exception.BusinessException(
-                    "Subject already exists in this school: " + dto.getName());
+        var existing = repository.findByNameIgnoreCaseAndSchoolId(dto.getName(), schoolId);
+        if (existing.isPresent()) {
+            Subject current = getCurrent(dto, existing.get());
+            return mapper.toDto(repository.save(current));
         }
         Subject entity = mapper.toEntity(dto);
         entity.setSchoolId(schoolId);
@@ -35,7 +53,7 @@ public class SubjectService {
         Subject existing = repository.findById(id)
                 .orElseThrow(() -> new ResourceNotFoundException("Subject not found: " + id));
 
-        if (!existing.getSchoolId().equals(com.school.backend.user.security.SecurityUtil.schoolId())) {
+        if (!existing.getSchoolId().equals(SecurityUtil.schoolId())) {
             throw new com.school.backend.common.exception.BusinessException(
                     "Access Denied: Subject belongs to another school.");
         }
@@ -54,6 +72,9 @@ public class SubjectService {
     public SubjectDto getById(Long id) {
         Subject subject = repository.findById(id)
                 .orElseThrow(() -> new ResourceNotFoundException("Subject not found: " + id));
+        if (!subject.isActive()) {
+            throw new ResourceNotFoundException("Subject not found: " + id);
+        }
 
         // Optional: strict read validation
         // if (!subject.getSchoolId().equals(SecurityUtil.schoolId())) ...
@@ -83,32 +104,10 @@ public class SubjectService {
         Subject subject = repository.findById(id)
                 .orElseThrow(() -> new ResourceNotFoundException("Subject not found: " + id));
 
-        if (!subject.getSchoolId().equals(com.school.backend.user.security.SecurityUtil.schoolId())) {
-            throw new com.school.backend.common.exception.BusinessException(
+        if (!subject.getSchoolId().equals(SecurityUtil.schoolId())) {
+            throw new BusinessException(
                     "Access Denied: Subject belongs to another school.");
         }
-
-        // Soft delete preference
-        // repository.deleteById(id);
-        // User requested active=false, but here we invoke delete.
-        // We should probably just soft delete here if not physical.
-        // But the user said "Subjects must use: active = false ... Update listing
-        // methods ... All subject listing APIs must return
-        // findBySchoolIdAndActiveTrue".
-        // The user also said "Frontend: Implement Deactivate Subject (Toggle Active
-        // status)".
-        // So the "Delete" endpoint might be reserved for physical delete (admin) or
-        // strictly soft delete.
-        // If I change this to soft delete, it changes semantics of DELETE verb.
-        // Usually, DELETE = physical, PUT active=false = soft.
-        // I will keep DELETE as physical for now as per `repository.deleteById(id)` in
-        // original code,
-        // trusting the frontend will use PUT for deactivation.
-        // BUT user said "Subject Deactivation (Soft Delete) ... Must NOT auto-delete
-        // ClassSubject".
-        // If I physically delete, it MIGHT cascade.
-        // I will stick to physical delete here, assuming Frontend uses Update for
-        // deactivation.
         repository.delete(subject);
     }
 }

@@ -1,7 +1,8 @@
 package com.school.backend.core.dashboard.service;
 
 import com.school.backend.common.enums.UserRole;
-import com.school.backend.common.tenant.SessionResolver;
+import com.school.backend.common.exception.InvalidOperationException;
+import com.school.backend.common.tenant.SessionContext;
 import com.school.backend.common.tenant.TenantContext;
 import com.school.backend.core.dashboard.dto.SchoolAdminStatsDto;
 import com.school.backend.core.student.repository.StudentRepository;
@@ -25,11 +26,13 @@ public class DashboardStatsService {
         private final ExamRepository examRepository;
         private final FeeSummaryService feeSummaryService;
         private final com.school.backend.core.attendance.service.AttendanceService attendanceService;
-        private final SessionResolver sessionResolver;
 
-        public SchoolAdminStatsDto getSchoolAdminStats(Long sessionId) {
+        public SchoolAdminStatsDto getSchoolAdminStats() {
                 Long schoolId = TenantContext.getSchoolId();
-                Long effectiveSessionId = sessionId != null ? sessionId : sessionResolver.resolveForCurrentSchool();
+                Long effectiveSessionId = SessionContext.getSessionId();
+                if (effectiveSessionId == null) {
+                        throw new InvalidOperationException("Session context is missing in request");
+                }
 
                 // 1. Basic Counts
                 long totalStudents = studentRepository.countBySchoolIdAndSessionId(schoolId, effectiveSessionId);

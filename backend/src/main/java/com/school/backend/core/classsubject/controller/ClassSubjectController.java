@@ -24,18 +24,20 @@ public class ClassSubjectController {
     private final ClassSubjectService service;
 
     @PostMapping
-    @PreAuthorize("hasAnyRole('SCHOOL_ADMIN', 'SUPER_ADMIN')")
+    @PreAuthorize("hasAnyRole('SCHOOL_ADMIN', 'SUPER_ADMIN', 'PLATFORM_ADMIN')")
     public ResponseEntity<ClassSubjectDto> create(@RequestBody ClassSubjectDto dto) {
         dto.setSchoolId(SecurityUtil.schoolId());
         return ResponseEntity.ok(service.create(dto));
     }
 
     @GetMapping("/{id}")
+    @PreAuthorize("hasAnyRole('SCHOOL_ADMIN', 'TEACHER', 'ACCOUNTANT', 'SUPER_ADMIN', 'PLATFORM_ADMIN')")
     public ResponseEntity<ClassSubjectDto> getById(@PathVariable Long id) {
         return ResponseEntity.ok(service.getById(id));
     }
 
     @GetMapping("/by-class/{classId}")
+    @PreAuthorize("hasAnyRole('SCHOOL_ADMIN', 'TEACHER', 'ACCOUNTANT', 'SUPER_ADMIN', 'PLATFORM_ADMIN')")
     public ResponseEntity<Page<ClassSubjectDto>> byClass(
             @PathVariable Long classId,
             @RequestParam(defaultValue = "0") int page,
@@ -46,7 +48,7 @@ public class ClassSubjectController {
     }
 
     @GetMapping("/mine")
-    @PreAuthorize("hasAnyRole('SCHOOL_ADMIN', 'TEACHER', 'ACCOUNTANT', 'SUPER_ADMIN')")
+    @PreAuthorize("hasAnyRole('SCHOOL_ADMIN', 'TEACHER', 'ACCOUNTANT', 'SUPER_ADMIN', 'PLATFORM_ADMIN')")
     public ResponseEntity<Page<ClassSubjectDto>> bySchool(
             @RequestParam(defaultValue = "0") int page,
             @RequestParam(defaultValue = "20") int size) {
@@ -56,6 +58,7 @@ public class ClassSubjectController {
     }
 
     @DeleteMapping("/{id}")
+    @PreAuthorize("hasAnyRole('SCHOOL_ADMIN', 'PLATFORM_ADMIN', 'SUPER_ADMIN')")
     public ResponseEntity<Void> delete(@PathVariable Long id) {
         service.delete(id);
         return ResponseEntity.noContent().build();
@@ -70,9 +73,8 @@ public class ClassSubjectController {
     @GetMapping("/assignments")
     @PreAuthorize("hasAnyRole('SCHOOL_ADMIN', 'PLATFORM_ADMIN', 'SUPER_ADMIN')")
     public List<ClassSubjectAssignmentDto> listAssignments(
-            @RequestParam(required = false) Long sessionId,
             @RequestParam(required = false) Long teacherId) {
-        return service.listAssignments(sessionId, teacherId);
+        return service.listAssignments(teacherId);
     }
 
     @DeleteMapping("/assignments/{id}")
@@ -84,13 +86,13 @@ public class ClassSubjectController {
 
     @GetMapping("/my-classes")
     @PreAuthorize("hasAnyRole('TEACHER', 'SCHOOL_ADMIN', 'PLATFORM_ADMIN', 'SUPER_ADMIN')")
-    public List<SchoolClass> getMyAssignedClasses(@RequestParam Long sessionId) {
-        return service.getMyAssignedClasses(sessionId);
+    public List<SchoolClass> getMyAssignedClasses() {
+        return service.getMyAssignedClasses();
     }
 
     @GetMapping("/my-subjects")
     @PreAuthorize("hasAnyRole('TEACHER', 'SCHOOL_ADMIN', 'PLATFORM_ADMIN', 'SUPER_ADMIN')")
-    public List<Subject> getMyAssignedSubjects(@RequestParam Long sessionId, @RequestParam Long classId) {
-        return service.getMyAssignedSubjects(sessionId, classId);
+    public List<Subject> getMyAssignedSubjects(@RequestParam Long classId) {
+        return service.getMyAssignedSubjects(classId);
     }
 }

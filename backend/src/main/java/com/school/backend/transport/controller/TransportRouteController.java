@@ -23,6 +23,7 @@ public class TransportRouteController {
     }
 
     @GetMapping
+    @PreAuthorize("hasAnyRole('SUPER_ADMIN', 'PLATFORM_ADMIN', 'SCHOOL_ADMIN', 'ACCOUNTANT', 'TEACHER')")
     public ResponseEntity<List<TransportRouteDto>> getAllActiveRoutes() {
         return ResponseEntity.ok(routeService.getAllActiveRoutes());
     }
