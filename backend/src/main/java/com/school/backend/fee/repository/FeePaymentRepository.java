@@ -87,4 +87,18 @@ public interface FeePaymentRepository extends JpaRepository<FeePayment, Long> {
                         """)
         List<Object[]> sumPaidByStudentGroupedBySession(@Param("studentId") Long studentId);
 
+        @Query("""
+                            SELECT COALESCE(SUM(p.principalPaid + p.lateFeePaid), 0)
+                            FROM FeePayment p
+                            WHERE p.schoolId = :schoolId
+                              AND p.sessionId = :sessionId
+                              AND p.paymentDate = :date
+                              AND UPPER(COALESCE(p.mode, '')) = UPPER(:mode)
+                        """)
+        BigDecimal sumTotalPaidBySchoolSessionDateAndMode(
+                        @Param("schoolId") Long schoolId,
+                        @Param("sessionId") Long sessionId,
+                        @Param("date") LocalDate date,
+                        @Param("mode") String mode);
+
 }

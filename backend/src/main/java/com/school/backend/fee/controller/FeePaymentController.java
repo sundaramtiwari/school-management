@@ -2,6 +2,7 @@ package com.school.backend.fee.controller;
 
 import com.school.backend.fee.dto.FeePaymentDto;
 import com.school.backend.fee.dto.FeePaymentRequest;
+import com.school.backend.fee.dto.FeeTypeHeadSummaryDto;
 import com.school.backend.fee.service.FeePaymentService;
 import com.school.backend.fee.service.FeeReceiptService;
 import jakarta.validation.Valid;
@@ -12,6 +13,7 @@ import org.springframework.http.ResponseEntity;
 import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.web.bind.annotation.*;
 
+import java.time.LocalDate;
 import java.util.List;
 
 @RestController
@@ -41,6 +43,12 @@ public class FeePaymentController {
     @PreAuthorize("hasAnyRole('SCHOOL_ADMIN', 'ACCOUNTANT', 'SUPER_ADMIN', 'PLATFORM_ADMIN')")
     public List<FeePaymentDto> history(@PathVariable Long studentId) {
         return service.getStudentPayments(studentId);
+    }
+
+    @GetMapping("/head-summary")
+    @PreAuthorize("hasAnyRole('SCHOOL_ADMIN', 'ACCOUNTANT', 'SUPER_ADMIN')")
+    public List<FeeTypeHeadSummaryDto> getHeadSummary(@RequestParam LocalDate date) {
+        return service.getHeadSummaryByDate(date);
     }
 
     // Download Receipt

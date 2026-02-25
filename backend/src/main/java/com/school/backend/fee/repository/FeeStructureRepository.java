@@ -15,6 +15,7 @@ public interface FeeStructureRepository extends JpaRepository<FeeStructure, Long
     List<FeeStructure> findByClassIdAndSessionIdAndSchoolIdAndActiveTrue(Long classId, Long sessionId, Long schoolId);
 
     Optional<FeeStructure> findByIdAndSchoolId(Long id, Long schoolId);
+    List<FeeStructure> findByIdInAndSchoolId(List<Long> ids, Long schoolId);
 
     List<FeeStructure> findByFeeTypeIdAndSessionIdAndClassIdIsNull(Long feeTypeId, Long sessionId);
 

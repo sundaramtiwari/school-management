@@ -9,7 +9,10 @@ import com.school.backend.core.student.repository.StudentEnrollmentRepository;
 import com.school.backend.core.student.repository.StudentGuardianRepository;
 import com.school.backend.core.student.repository.StudentRepository;
 import com.school.backend.core.teacher.repository.TeacherRepository;
+import com.school.backend.expense.repository.ExpenseHeadRepository;
+import com.school.backend.expense.repository.ExpenseVoucherRepository;
 import com.school.backend.fee.repository.FeePaymentRepository;
+import com.school.backend.fee.repository.FeePaymentAllocationRepository;
 import com.school.backend.fee.repository.LateFeePolicyRepository;
 import com.school.backend.fee.repository.FeeStructureRepository;
 import com.school.backend.fee.repository.FeeTypeRepository;
@@ -75,11 +78,17 @@ public abstract class BaseAuthenticatedIntegrationTest {
     @Autowired
     protected FeePaymentRepository feePaymentRepository;
     @Autowired
+    protected FeePaymentAllocationRepository feePaymentAllocationRepository;
+    @Autowired
     protected TransportEnrollmentRepository transportEnrollmentRepository;
     @Autowired
     protected PickupPointRepository pickupPointRepository;
     @Autowired
     protected TransportRouteRepository transportRouteRepository;
+    @Autowired
+    protected ExpenseHeadRepository expenseHeadRepository;
+    @Autowired
+    protected ExpenseVoucherRepository expenseVoucherRepository;
 
     protected String token;
     protected HttpHeaders headers;
@@ -130,6 +139,9 @@ public abstract class BaseAuthenticatedIntegrationTest {
         studentEnrollmentRepository.deleteAll();
         studentGuardianRepository.deleteAll();
         guardianRepository.deleteAll();
+        expenseVoucherRepository.deleteAll();
+        expenseHeadRepository.deleteAll();
+        feePaymentAllocationRepository.deleteAll();
         feePaymentRepository.deleteAll();
         assignmentRepository.deleteAll();
         lateFeePolicyRepository.deleteAll();

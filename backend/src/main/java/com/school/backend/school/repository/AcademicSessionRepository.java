@@ -1,7 +1,9 @@
 package com.school.backend.school.repository;
 
 import com.school.backend.school.entity.AcademicSession;
+import jakarta.persistence.LockModeType;
 import org.springframework.data.jpa.repository.JpaRepository;
+import org.springframework.data.jpa.repository.Lock;
 import org.springframework.data.jpa.repository.Modifying;
 import org.springframework.data.jpa.repository.Query;
 import org.springframework.data.repository.query.Param;
@@ -21,6 +23,9 @@ public interface AcademicSessionRepository extends JpaRepository<AcademicSession
     boolean existsBySchoolIdAndName(Long schoolId, String name);
 
     boolean existsByIdAndSchoolId(Long id, Long schoolId);
+
+    @Lock(LockModeType.PESSIMISTIC_WRITE)
+    Optional<AcademicSession> findByIdAndSchoolId(Long id, Long schoolId);
 
     @Modifying
     @Query("""
