@@ -47,11 +47,4 @@ public class SubjectController {
         Pageable pageable = PageRequest.of(page, size);
         return ResponseEntity.ok(service.getBySchool(SecurityUtil.schoolId(), active, pageable));
     }
-
-    @DeleteMapping("/{id}")
-    @PreAuthorize("hasAnyRole('SUPER_ADMIN', 'PLATFORM_ADMIN')")
-    public ResponseEntity<Void> delete(@PathVariable Long id) {
-        service.delete(id);
-        return ResponseEntity.noContent().build();
-    }
 }

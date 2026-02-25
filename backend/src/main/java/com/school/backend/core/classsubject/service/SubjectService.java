@@ -99,15 +99,4 @@ public class SubjectService {
     public Page<SubjectDto> getAll(Pageable pageable) {
         return repository.findAll(pageable).map(mapper::toDto);
     }
-
-    public void delete(Long id) {
-        Subject subject = repository.findById(id)
-                .orElseThrow(() -> new ResourceNotFoundException("Subject not found: " + id));
-
-        if (!subject.getSchoolId().equals(SecurityUtil.schoolId())) {
-            throw new BusinessException(
-                    "Access Denied: Subject belongs to another school.");
-        }
-        repository.delete(subject);
-    }
 }
