@@ -90,7 +90,8 @@ public class DataSeeder implements CommandLineRunner {
         return req;
     }
 
-    private static @NonNull FeeStructureCreateRequest getFeeStructureCreateRequest(SchoolClassDto c, Long sessionId, Long tuitionFeeTypeId) {
+    private static @NonNull FeeStructureCreateRequest getFeeStructureCreateRequest(SchoolClassDto c, Long sessionId,
+            Long tuitionFeeTypeId) {
         FeeStructureCreateRequest req = new FeeStructureCreateRequest();
         req.setClassId(c.getId());
         req.setSessionId(sessionId);
@@ -242,7 +243,7 @@ public class DataSeeder implements CommandLineRunner {
         // We assume classes were created in seedClasses; fetch them via service
         List<SchoolClassDto> classes = schoolClassService
                 .getBySchoolAndSession(schoolId, sessionId,
-                        PageRequest.of(0, 10))
+                        PageRequest.of(0, 10), false)
                 .getContent();
 
         if (classes.isEmpty()) {
@@ -340,7 +341,7 @@ public class DataSeeder implements CommandLineRunner {
         var classesPage = schoolClassService.getBySchoolAndSession(
                 schoolId,
                 sessionId,
-                org.springframework.data.domain.PageRequest.of(0, 20));
+                org.springframework.data.domain.PageRequest.of(0, 20), false);
 
         classesPage.getContent().forEach(c -> {
             var existing = feeStructureRepository.findByClassIdAndSessionIdAndSchoolId(
@@ -442,7 +443,7 @@ public class DataSeeder implements CommandLineRunner {
         var classesPage = schoolClassService.getBySchoolAndSession(
                 schoolId,
                 sessionId,
-                org.springframework.data.domain.PageRequest.of(0, 20));
+                org.springframework.data.domain.PageRequest.of(0, 20), false);
 
         classesPage.getContent().forEach(c -> {
             int order = 1;
@@ -513,7 +514,7 @@ public class DataSeeder implements CommandLineRunner {
         var classesPage = schoolClassService.getBySchoolAndSession(
                 schoolId,
                 sessionId,
-                PageRequest.of(0, 10));
+                PageRequest.of(0, 10), false);
 
         if (classesPage.isEmpty()) {
             return;

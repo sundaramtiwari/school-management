@@ -19,7 +19,6 @@ public class ClassSubjectMapperImpl implements ClassSubjectMapper {
             dto.setSubjectId(entity.getSubject().getId());
         dto.setTeacherId(entity.getTeacher() != null ? entity.getTeacher().getId() : null);
         dto.setDisplayOrder(entity.getDisplayOrder());
-        dto.setActive(entity.isActive());
         dto.setSchoolId(entity.getSchoolId());
 
         // Populate flattened subject fields
@@ -37,7 +36,6 @@ public class ClassSubjectMapperImpl implements ClassSubjectMapper {
             return null;
         ClassSubject entity = new ClassSubject();
         entity.setDisplayOrder(dto.getDisplayOrder());
-        entity.setActive(dto.isActive());
         // service will set schoolClass, subject, teacher, school explicitly
         return entity;
     }

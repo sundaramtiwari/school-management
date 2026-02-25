@@ -18,10 +18,7 @@ export default function SubjectList() {
     const fetchSubjects = useCallback(async () => {
         setLoading(true);
         try {
-            // If showInactive is true -> We want ALL subjects -> active=undefined
-            // If showInactive is false -> We want ACTIVE ONLY -> active=true
-            const activeParam = showInactive ? undefined : true;
-            const data = await subjectApi.getAll(page, 20, activeParam);
+            const data = await subjectApi.getAll(page, 20, showInactive);
             setSubjects(data.content);
             setTotalPages(data.totalPages);
         } catch (error) {
@@ -47,6 +44,21 @@ export default function SubjectList() {
 
     const handleSuccess = () => {
         fetchSubjects();
+    };
+
+    const handleToggle = async (subject: SubjectData) => {
+        const action = subject.active ? "deactivate" : "reactivate";
+        if (!confirm(`Are you sure you want to ${action} "${subject.name}"?`)) {
+            return;
+        }
+
+        try {
+            await subjectApi.toggle(subject.id!);
+            fetchSubjects();
+        } catch (error) {
+            console.error(`Failed to ${action} subject`, error);
+            alert(`Failed to ${action} subject. Please try again.`);
+        }
     };
 
     return (
@@ -111,15 +123,23 @@ export default function SubjectList() {
                                             {subject.active ? "Active" : "Inactive"}
                                         </span>
                                     </td>
-                                    <td className="px-6 py-4">
+                                    <td className="px-6 py-4 flex gap-2">
                                         {/* Expand FE gating to match backend permissions */}
                                         {["SCHOOL_ADMIN", "SUPER_ADMIN", "PLATFORM_ADMIN"].includes(user?.role?.toUpperCase() ?? "") && (
-                                            <button
-                                                onClick={() => handleEdit(subject)}
-                                                className="text-blue-600 hover:text-blue-800 font-medium bg-blue-50 px-3 py-1 rounded hover:bg-blue-100 transition-colors"
-                                            >
-                                                Edit
-                                            </button>
+                                            <>
+                                                <button
+                                                    onClick={() => handleEdit(subject)}
+                                                    className="text-blue-600 hover:text-blue-800 font-medium bg-blue-50 px-3 py-1 rounded hover:bg-blue-100 transition-colors"
+                                                >
+                                                    Edit
+                                                </button>
+                                                <button
+                                                    onClick={() => handleToggle(subject)}
+                                                    className={`${subject.active ? 'text-red-600 bg-red-50 hover:bg-red-100' : 'text-green-600 bg-green-50 hover:bg-green-100'} font-medium px-3 py-1 rounded transition-colors`}
+                                                >
+                                                    {subject.active ? "Deactivate" : "Reactivate"}
+                                                </button>
+                                            </>
                                         )}
                                     </td>
                                 </tr>

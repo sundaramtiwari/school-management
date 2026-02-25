@@ -47,7 +47,7 @@ public class MarkEntryService {
                                         .orElseThrow(() -> new BusinessException("Teacher record not found for user"));
 
                         boolean assigned = classSubjectRepository
-                                        .existsBySchoolClassSessionIdAndTeacherIdAndSchoolClassIdAndSubjectIdAndSchoolIdAndActiveTrue(
+                                        .existsBySchoolClassSessionIdAndTeacherIdAndSchoolClassIdAndSubjectIdAndSchoolId(
                                                         exam.getSessionId(), teacher.getId(), exam.getClassId(),
                                                         subject.getSubjectId(), schoolId);
 

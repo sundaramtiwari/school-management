@@ -14,58 +14,56 @@ import java.util.Optional;
 
 public interface ClassSubjectRepository extends JpaRepository<ClassSubject, Long> {
 
-    Page<ClassSubject> findBySchoolClassId(Long classId, Pageable pageable);
+        Page<ClassSubject> findBySchoolClassId(Long classId, Pageable pageable);
 
-    Page<ClassSubject> findBySchoolId(Long schoolId, Pageable pageable);
+        Page<ClassSubject> findBySchoolId(Long schoolId, Pageable pageable);
 
-    Optional<ClassSubject> findBySchoolClassIdAndSubjectId(Long classId, Long subjectId);
+        Optional<ClassSubject> findBySchoolClassIdAndSubjectId(Long classId, Long subjectId);
 
-    boolean existsBySchoolClassIdAndSubjectId(Long classId, Long subjectId);
+        boolean existsBySchoolClassIdAndSubjectId(Long classId, Long subjectId);
 
-    @Query("""
-            select cs from ClassSubject cs
-            where cs.schoolClass.sessionId = :sessionId
-              and cs.schoolId = :schoolId
-              and cs.teacher is not null
-              and cs.active = true
-            """)
-    List<ClassSubject> findAssignmentsBySession(@Param("sessionId") Long sessionId, @Param("schoolId") Long schoolId);
+        @Query("""
+                        select cs from ClassSubject cs
+                        where cs.schoolClass.sessionId = :sessionId
+                          and cs.schoolId = :schoolId
+                          and cs.teacher is not null
+                        """)
+        List<ClassSubject> findAssignmentsBySession(@Param("sessionId") Long sessionId,
+                        @Param("schoolId") Long schoolId);
 
-    @Query("""
-            select cs from ClassSubject cs
-            where cs.teacher.id = :teacherId
-              and cs.schoolClass.sessionId = :sessionId
-              and cs.schoolId = :schoolId
-              and cs.active = true
-            """)
-    List<ClassSubject> findByTeacherIdAndSessionId(@Param("teacherId") Long teacherId,
-            @Param("sessionId") Long sessionId,
-            @Param("schoolId") Long schoolId);
+        @Query("""
+                        select cs from ClassSubject cs
+                        where cs.teacher.id = :teacherId
+                          and cs.schoolClass.sessionId = :sessionId
+                          and cs.schoolId = :schoolId
+                        """)
+        List<ClassSubject> findByTeacherIdAndSessionId(@Param("teacherId") Long teacherId,
+                        @Param("sessionId") Long sessionId,
+                        @Param("schoolId") Long schoolId);
 
-    @Query("""
-            select distinct cs.schoolClass from ClassSubject cs
-            where cs.teacher.id = :teacherId
-              and cs.schoolClass.sessionId = :sessionId
-              and cs.schoolId = :schoolId
-              and cs.active = true
-            """)
-    List<SchoolClass> findDistinctClassesByTeacherAndSession(@Param("teacherId") Long teacherId,
-            @Param("sessionId") Long sessionId, @Param("schoolId") Long schoolId);
+        @Query("""
+                        select distinct cs.schoolClass from ClassSubject cs
+                        where cs.teacher.id = :teacherId
+                          and cs.schoolClass.sessionId = :sessionId
+                          and cs.schoolId = :schoolId
+                        """)
+        List<SchoolClass> findDistinctClassesByTeacherAndSession(@Param("teacherId") Long teacherId,
+                        @Param("sessionId") Long sessionId, @Param("schoolId") Long schoolId);
 
-    @Query("""
-            select distinct cs.subject from ClassSubject cs
-            where cs.teacher.id = :teacherId
-              and cs.schoolClass.sessionId = :sessionId
-              and cs.schoolClass.id = :classId
-              and cs.schoolId = :schoolId
-              and cs.active = true
-            """)
-    List<Subject> findDistinctSubjectsByTeacherSessionAndClass(@Param("teacherId") Long teacherId,
-            @Param("sessionId") Long sessionId, @Param("classId") Long classId, @Param("schoolId") Long schoolId);
+        @Query("""
+                        select distinct cs.subject from ClassSubject cs
+                        where cs.teacher.id = :teacherId
+                          and cs.schoolClass.sessionId = :sessionId
+                          and cs.schoolClass.id = :classId
+                          and cs.schoolId = :schoolId
+                        """)
+        List<Subject> findDistinctSubjectsByTeacherSessionAndClass(@Param("teacherId") Long teacherId,
+                        @Param("sessionId") Long sessionId, @Param("classId") Long classId,
+                        @Param("schoolId") Long schoolId);
 
-    boolean existsBySchoolClassSessionIdAndTeacherIdAndSchoolClassIdAndSubjectIdAndSchoolIdAndActiveTrue(
-            Long sessionId, Long teacherId, Long classId, Long subjectId, Long schoolId);
+        boolean existsBySchoolClassSessionIdAndTeacherIdAndSchoolClassIdAndSubjectIdAndSchoolId(
+                        Long sessionId, Long teacherId, Long classId, Long subjectId, Long schoolId);
 
-    List<ClassSubject> findByTeacherIdAndSchoolClassSessionIdAndSchoolIdAndActiveTrue(Long teacherId, Long sessionId,
-            Long schoolId);
+        List<ClassSubject> findByTeacherIdAndSchoolClassSessionIdAndSchoolId(Long teacherId, Long sessionId,
+                        Long schoolId);
 }

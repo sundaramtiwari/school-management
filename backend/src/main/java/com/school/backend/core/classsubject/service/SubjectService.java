@@ -20,12 +20,28 @@ public class SubjectService {
     private final SubjectRepository repository;
     private final SubjectMapper mapper;
 
-    private static @NonNull Subject getCurrent(SubjectDto dto, Subject current) {
+    private String toTitleCase(String input) {
+        if (input == null || input.isBlank())
+            return "";
+        String[] words = input.trim().toLowerCase().split("\\s+");
+        StringBuilder sb = new StringBuilder();
+        for (String word : words) {
+            if (!word.isEmpty()) {
+                sb.append(Character.toUpperCase(word.charAt(0)))
+                        .append(word.substring(1))
+                        .append(" ");
+            }
+        }
+        return sb.toString().trim();
+    }
+
+    private static @NonNull Subject getCurrent(SubjectDto dto, Subject current, String normalizedName) {
         if (current.isActive()) {
             throw new BusinessException(
-                    "Subject already exists in this school: " + dto.getName());
+                    "Subject already exists in this school: " + normalizedName);
         }
         current.setActive(true);
+        current.setName(normalizedName);
         current.setCode(dto.getCode());
         current.setType(dto.getType());
         current.setMaxMarks(dto.getMaxMarks());
@@ -38,12 +54,18 @@ public class SubjectService {
         Long schoolId = SecurityUtil.schoolId();
         dto.setSchoolId(schoolId);
 
-        var existing = repository.findByNameIgnoreCaseAndSchoolId(dto.getName(), schoolId);
+        String normalizedName = toTitleCase(dto.getName());
+        var existing = repository.findByNameIgnoreCaseAndSchoolId(normalizedName, schoolId);
         if (existing.isPresent()) {
-            Subject current = getCurrent(dto, existing.get());
-            return mapper.toDto(repository.save(current));
+            Subject entity = existing.get();
+            if (entity.isActive()) {
+                throw new BusinessException("Subject already exists in this school: " + normalizedName);
+            } else {
+                throw new BusinessException("Subject exists but inactive. Please reactivate instead.");
+            }
         }
         Subject entity = mapper.toEntity(dto);
+        entity.setName(normalizedName);
         entity.setSchoolId(schoolId);
         entity.setActive(true); // Default to active
         return mapper.toDto(repository.save(entity));
@@ -53,12 +75,25 @@ public class SubjectService {
         Subject existing = repository.findById(id)
                 .orElseThrow(() -> new ResourceNotFoundException("Subject not found: " + id));
 
-        if (!existing.getSchoolId().equals(SecurityUtil.schoolId())) {
-            throw new com.school.backend.common.exception.BusinessException(
+        Long schoolId = SecurityUtil.schoolId();
+        if (!existing.getSchoolId().equals(schoolId)) {
+            throw new BusinessException(
                     "Access Denied: Subject belongs to another school.");
         }
 
-        existing.setName(dto.getName());
+        String normalizedName = toTitleCase(dto.getName());
+        // Check for duplicate name if name is changed
+        if (!existing.getName().equalsIgnoreCase(normalizedName)) {
+            repository.findByNameIgnoreCaseAndSchoolId(normalizedName, schoolId).ifPresent(s -> {
+                if (s.isActive()) {
+                    throw new BusinessException("Subject already exists in this school: " + normalizedName);
+                } else {
+                    throw new BusinessException("Subject exists but inactive. Please reactivate instead.");
+                }
+            });
+        }
+
+        existing.setName(normalizedName);
         existing.setCode(dto.getCode());
         existing.setType(dto.getType());
         existing.setMaxMarks(dto.getMaxMarks());
@@ -67,6 +102,19 @@ public class SubjectService {
         existing.setRemarks(dto.getRemarks());
 
         return mapper.toDto(repository.save(existing));
+    }
+
+    @org.springframework.transaction.annotation.Transactional
+    public SubjectDto toggleActive(Long id) {
+        Subject subject = repository.findById(id)
+                .orElseThrow(() -> new ResourceNotFoundException("Subject not found: " + id));
+
+        if (!subject.getSchoolId().equals(SecurityUtil.schoolId())) {
+            throw new BusinessException("Access Denied");
+        }
+
+        subject.setActive(!subject.isActive());
+        return mapper.toDto(repository.save(subject));
     }
 
     public SubjectDto getById(Long id) {

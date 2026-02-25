@@ -40,6 +40,7 @@ export default function ClassesPage() {
     const [isDeleting, setIsDeleting] = useState(false);
     const [showForm, setShowForm] = useState(false);
     const [editId, setEditId] = useState<number | null>(null);
+    const [showInactive, setShowInactive] = useState(false);
     const [postCreateClass, setPostCreateClass] = useState<{ id: number; name: string } | null>(null);
     const [teachers, setTeachers] = useState<Teacher[]>([]);
 
@@ -63,11 +64,11 @@ export default function ClassesPage() {
                     setClasses([]);
                     return;
                 }
-                const res = await api.get(`/api/class-subjects/my-classes?sessionId=${currentSession.id}`);
-                setClasses(res.data || []);
+                const res = await api.get(`/api/classes/my-classes?includeInactive=${showInactive}`);
+                setClasses(res.data.content || []);
             } else {
                 const endpoint = "/api/classes/mine";
-                const res = await api.get(`${endpoint}?size=100`);
+                const res = await api.get(`${endpoint}?size=100&includeInactive=${showInactive}`);
                 setClasses(res.data.content || []);
             }
         } catch {
@@ -79,7 +80,7 @@ export default function ClassesPage() {
 
     useEffect(() => {
         void loadClasses();
-    }, [currentSession, loadClasses]);
+    }, [currentSession, loadClasses, showInactive]);
 
     useEffect(() => {
         if (!canManageClasses) return;
@@ -181,13 +182,23 @@ export default function ClassesPage() {
             await api.delete(`/api/classes/${id}`);
             showToast("Class deleted successfully", "success");
             void loadClasses();
-        } catch (e: unknown) {
-            const msg = typeof e === "object" && e !== null && "message" in e
-                ? String((e as { message?: string }).message || "Unknown error")
-                : "Unknown error";
-            showToast("Delete failed: " + msg, "error");
+        } catch (error: any) {
+            showToast("Delete failed: " + (error.response?.data?.message || error.message), "error");
         } finally {
             setIsDeleting(false);
+        }
+    }
+
+    async function handleToggle(c: SchoolClass) {
+        const action = c.active ? "deactivate" : "reactivate";
+        if (!confirm(`Are you sure you want to ${action} "${c.name}"?`)) return;
+
+        try {
+            await api.patch(`/api/classes/${c.id}/toggle`);
+            showToast(`Class ${action}d successfully`, "success");
+            void loadClasses();
+        } catch (error: any) {
+            showToast(`Failed to ${action} class: ` + (error.response?.data?.message || error.message), "error");
         }
     }
 
@@ -198,18 +209,29 @@ export default function ClassesPage() {
                     <h1 className="text-lg font-semibold">Class Management</h1>
                     <p className="text-gray-500 text-base mt-1">Define and organize academic classes for <span className="text-blue-600 font-bold">{currentSession?.name || "current session"}</span>.</p>
                 </div>
-                {canManageClasses && (
-                    <button
-                        onClick={() => {
-                            resetForm();
-                            setEditId(null);
-                            setShowForm(true);
-                        }}
-                        className="bg-blue-600 text-white px-6 py-2.5 rounded-md font-medium hover:bg-blue-700 flex items-center gap-2 text-base"
-                    >
-                        <span className="text-xl">+</span> Add Class
-                    </button>
-                )}
+                <div className="flex items-center gap-4">
+                    <label className="flex items-center gap-2 cursor-pointer bg-white border border-gray-200 px-4 py-2 rounded-md shadow-sm">
+                        <input
+                            type="checkbox"
+                            checked={showInactive}
+                            onChange={(e) => setShowInactive(e.target.checked)}
+                            className="w-4 h-4 text-blue-600 rounded"
+                        />
+                        <span className="text-sm font-medium text-gray-700">Show Inactive</span>
+                    </label>
+                    {canManageClasses && (
+                        <button
+                            onClick={() => {
+                                resetForm();
+                                setEditId(null);
+                                setShowForm(true);
+                            }}
+                            className="bg-blue-600 text-white px-6 py-2.5 rounded-md font-medium hover:bg-blue-700 flex items-center gap-2 text-base"
+                        >
+                            <span className="text-xl">+</span> Add Class
+                        </button>
+                    )}
+                </div>
             </div>
 
             {loading ? (
@@ -224,7 +246,8 @@ export default function ClassesPage() {
                                 <th className="px-6 py-4 text-left">Class Name</th>
                                 <th className="px-6 py-4 text-center">Section</th>
                                 <th className="px-6 py-4 text-center">Stream</th>
-                                <th className="px-6 py-4 text-center w-32">Actions</th>
+                                <th className="px-6 py-4 text-center">Status</th>
+                                <th className="px-6 py-4 text-center w-48">Actions</th>
                             </tr>
                         </thead>
                         <tbody className="divide-y divide-gray-100">
@@ -240,20 +263,42 @@ export default function ClassesPage() {
                                     </td>
                                     <td className="p-4 text-center text-gray-500 uppercase text-xs">{c.stream || "-"}</td>
                                     <td className="p-4 text-center">
+                                        <span className={`px-2 py-1 rounded text-[10px] uppercase font-bold ${c.active ? 'bg-green-100 text-green-700' : 'bg-red-100 text-red-700'}`}>
+                                            {c.active ? "Active" : "Inactive"}
+                                        </span>
+                                    </td>
+                                    <td className="p-4 text-center">
                                         {canManageClasses ? (
                                             <div className="flex justify-center gap-2">
                                                 <button
                                                     onClick={() => openEdit(c)}
                                                     className="p-2 text-blue-600 hover:bg-blue-50 rounded-md"
+                                                    title="Edit Class"
                                                 >
                                                     <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                                                         <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M11 5H6a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2v-5M16.5 3.5a2.121 2.121 0 113 3L11.707 15.364a2 2 0 01-.88.524l-4 1a1 1 0 01-1.213-1.213l1-4a2 2 0 01.524-.88L16.5 3.5z" />
                                                     </svg>
                                                 </button>
                                                 <button
+                                                    onClick={() => handleToggle(c)}
+                                                    className={`p-2 rounded-md ${c.active ? 'text-orange-600 hover:bg-orange-50' : 'text-emerald-600 hover:bg-emerald-50'}`}
+                                                    title={c.active ? "Deactivate Class" : "Reactivate Class"}
+                                                >
+                                                    {c.active ? (
+                                                        <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                                                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M18.364 18.364A9 9 0 005.636 5.636m12.728 12.728A9 9 0 015.636 5.636m12.728 12.728L5.636 5.636" />
+                                                        </svg>
+                                                    ) : (
+                                                        <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                                                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z" />
+                                                        </svg>
+                                                    )}
+                                                </button>
+                                                <button
                                                     onClick={() => deleteClass(c.id)}
                                                     disabled={isDeleting}
                                                     className="p-2 text-red-600 hover:bg-red-50 rounded-md disabled:opacity-30"
+                                                    title="Permanently Deactivate (Soft Delete)"
                                                 >
                                                     <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                                                         <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" />

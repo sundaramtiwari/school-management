@@ -172,7 +172,7 @@ public class ClassSubjectService {
     public void deactivateAllForTeacherInSession(Long teacherId, Long sessionId) {
         Long schoolId = SecurityUtil.schoolId();
         Long effectiveSessionId = validateAndGetSessionId(sessionId, schoolId);
-        List<ClassSubject> assignments = repository.findByTeacherIdAndSchoolClassSessionIdAndSchoolIdAndActiveTrue(
+        List<ClassSubject> assignments = repository.findByTeacherIdAndSchoolClassSessionIdAndSchoolId(
                 teacherId, effectiveSessionId, schoolId);
         assignments.forEach(a -> a.setTeacher(null));
         repository.saveAll(assignments);

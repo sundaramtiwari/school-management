@@ -25,15 +25,15 @@ import java.util.stream.Collectors;
 public class ClassSubjectSeeder {
 
     private static final List<String> CLASS_NAMES = List.of(
-            "Nursery", "LKG", "UKG", "1", "2", "3", "4", "5", "6", "7", "8", "9", "10", "11", "12"
-    );
+            "Nursery", "LKG", "UKG", "1", "2", "3", "4", "5", "6", "7", "8", "9", "10", "11", "12");
 
     private static final List<String> PRIMARY_SUBJECTS = List.of("English", "Hindi", "Maths", "EVS");
-    private static final List<String> MIDDLE_SUBJECTS = List.of("English", "Hindi", "Maths", "Science", "SST", "Computer");
-    private static final List<String> SECONDARY_SUBJECTS = List.of("English", "Hindi", "Maths", "Physics", "Chemistry", "Biology", "SST", "Computer");
+    private static final List<String> MIDDLE_SUBJECTS = List.of("English", "Hindi", "Maths", "Science", "SST",
+            "Computer");
+    private static final List<String> SECONDARY_SUBJECTS = List.of("English", "Hindi", "Maths", "Physics", "Chemistry",
+            "Biology", "SST", "Computer");
     private static final List<String> ALL_SUBJECTS = List.of(
-            "English", "Hindi", "Maths", "EVS", "Science", "SST", "Computer", "Physics", "Chemistry", "Biology"
-    );
+            "English", "Hindi", "Maths", "EVS", "Science", "SST", "Computer", "Physics", "Chemistry", "Biology");
 
     private final SchoolClassRepository schoolClassRepository;
     private final SubjectRepository subjectRepository;
@@ -71,8 +71,7 @@ public class ClassSubjectSeeder {
             List<AcademicSession> sessions = List.of(
                     sessionResult.sessionsBySchool().get(school.getId()).completed(),
                     sessionResult.sessionsBySchool().get(school.getId()).active(),
-                    sessionResult.sessionsBySchool().get(school.getId()).planned()
-            );
+                    sessionResult.sessionsBySchool().get(school.getId()).planned());
 
             int classIndex = 0;
             for (AcademicSession session : sessions) {
@@ -119,7 +118,6 @@ public class ClassSubjectSeeder {
                             .subject(subject)
                             .teacher(teacher)
                             .displayOrder(i + 1)
-                            .active(true)
                             .build();
                     classSubject.setSchoolId(school.getId());
                     classSubjectsToSave.add(classSubject);
@@ -130,7 +128,8 @@ public class ClassSubjectSeeder {
 
         List<ClassSubject> classSubjects = classSubjectRepository.saveAll(classSubjectsToSave);
         Map<Long, List<ClassSubject>> classSubjectsByClassId = classSubjects.stream()
-                .collect(Collectors.groupingBy(cs -> cs.getSchoolClass().getId(), LinkedHashMap::new, Collectors.toList()));
+                .collect(Collectors.groupingBy(cs -> cs.getSchoolClass().getId(), LinkedHashMap::new,
+                        Collectors.toList()));
 
         return new Result(classesBySchool, classBySchoolSessionName, classSubjectsByClassId);
     }
@@ -156,7 +155,6 @@ public class ClassSubjectSeeder {
     public record Result(
             Map<Long, List<SchoolClass>> classesBySchool,
             Map<Long, Map<Long, Map<String, SchoolClass>>> classBySchoolSessionName,
-            Map<Long, List<ClassSubject>> classSubjectsByClassId
-    ) {
+            Map<Long, List<ClassSubject>> classSubjectsByClassId) {
     }
 }

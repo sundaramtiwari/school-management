@@ -37,14 +37,20 @@ public class SubjectController {
         return ResponseEntity.ok(service.getById(id));
     }
 
+    @PatchMapping("/{id}/toggle")
+    @PreAuthorize("hasAnyRole('SCHOOL_ADMIN', 'SUPER_ADMIN', 'PLATFORM_ADMIN')")
+    public ResponseEntity<SubjectDto> toggle(@PathVariable Long id) {
+        return ResponseEntity.ok(service.toggleActive(id));
+    }
+
     @GetMapping("/mine")
     @PreAuthorize("hasAnyRole('SCHOOL_ADMIN', 'TEACHER', 'ACCOUNTANT', 'SUPER_ADMIN', 'PLATFORM_ADMIN')")
     public ResponseEntity<Page<SubjectDto>> list(
             @RequestParam(defaultValue = "0") int page,
             @RequestParam(defaultValue = "20") int size,
-            @RequestParam(required = false) Boolean active) {
+            @RequestParam(defaultValue = "false") boolean includeInactive) {
 
         Pageable pageable = PageRequest.of(page, size);
-        return ResponseEntity.ok(service.getBySchool(SecurityUtil.schoolId(), active, pageable));
+        return ResponseEntity.ok(service.getBySchool(SecurityUtil.schoolId(), !includeInactive, pageable));
     }
 }

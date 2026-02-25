@@ -21,12 +21,10 @@ export interface PageResponse<T> {
 }
 
 export const subjectApi = {
-    getAll: async (page = 0, size = 20, active?: boolean) => {
-        let url = `/api/subjects/mine?page=${page}&size=${size}`;
-        if (active !== undefined) {
-            url += `&active=${active}`;
-        }
-        const response = await api.get<PageResponse<SubjectData>>(url);
+    getAll: async (page = 0, size = 20, includeInactive = false) => {
+        const response = await api.get<PageResponse<SubjectData>>(
+            `/api/subjects/mine?page=${page}&size=${size}&includeInactive=${includeInactive}`
+        );
         return response.data;
     },
 
@@ -40,7 +38,13 @@ export const subjectApi = {
         return response.data;
     },
 
+    toggle: async (id: number) => {
+        const response = await api.patch<SubjectData>(`/api/subjects/${id}/toggle`);
+        return response.data;
+    },
+
     delete: async (id: number) => {
+        // Historically delete might have been used, but we now prefer toggle for soft-delete
         await api.delete(`/api/subjects/${id}`);
     },
 };

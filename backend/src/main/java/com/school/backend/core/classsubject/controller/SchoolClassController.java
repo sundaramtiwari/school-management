@@ -43,31 +43,39 @@ public class SchoolClassController {
     @PreAuthorize("hasAnyRole('SCHOOL_ADMIN', 'TEACHER', 'ACCOUNTANT', 'SUPER_ADMIN', 'PLATFORM_ADMIN')")
     public ResponseEntity<Page<SchoolClassDto>> getBySchool(
             @RequestParam(defaultValue = "0") int page,
-            @RequestParam(defaultValue = "20") int size) {
-
+            @RequestParam(defaultValue = "20") int size,
+            @RequestParam(defaultValue = "false") boolean includeInactive) {
         Pageable pageable = PageRequest.of(page, size);
-        return ResponseEntity.ok(service.getBySchool(SecurityUtil.schoolId(), pageable));
+        return ResponseEntity.ok(service.getBySchool(SecurityUtil.schoolId(), pageable, includeInactive));
     }
 
     @GetMapping("/my-classes")
     @PreAuthorize("hasAnyRole('SCHOOL_ADMIN', 'TEACHER', 'SUPER_ADMIN', 'PLATFORM_ADMIN')")
     public ResponseEntity<Page<SchoolClassDto>> getMyClasses(
             @RequestParam(defaultValue = "0") int page,
-            @RequestParam(defaultValue = "20") int size) {
+            @RequestParam(defaultValue = "20") int size,
+            @RequestParam(defaultValue = "false") boolean includeInactive) {
         Pageable pageable = PageRequest.of(page, size);
-        return ResponseEntity
-                .ok(service.getMyClasses(SecurityUtil.current().getUserId(), SecurityUtil.schoolId(), pageable));
+        return ResponseEntity.ok(service.getMyClasses(SecurityUtil.current().getUserId(), SecurityUtil.schoolId(),
+                pageable, includeInactive));
     }
 
     @GetMapping("/mine/session/{sessionId}")
     @PreAuthorize("hasAnyRole('SCHOOL_ADMIN', 'TEACHER', 'ACCOUNTANT', 'SUPER_ADMIN', 'PLATFORM_ADMIN')")
     public ResponseEntity<Page<SchoolClassDto>> getBySchoolAndSession(
-            @PathVariable Long sessionId,
+            @RequestParam Long schoolId,
+            @RequestParam Long sessionId,
             @RequestParam(defaultValue = "0") int page,
-            @RequestParam(defaultValue = "20") int size) {
-
+            @RequestParam(defaultValue = "20") int size,
+            @RequestParam(defaultValue = "false") boolean includeInactive) {
         Pageable pageable = PageRequest.of(page, size);
-        return ResponseEntity.ok(service.getBySchoolAndSession(SecurityUtil.schoolId(), sessionId, pageable));
+        return ResponseEntity.ok(service.getBySchoolAndSession(schoolId, sessionId, pageable, includeInactive));
+    }
+
+    @PatchMapping("/{id}/toggle")
+    @PreAuthorize("hasAnyRole('SCHOOL_ADMIN', 'SUPER_ADMIN', 'PLATFORM_ADMIN')")
+    public ResponseEntity<SchoolClassDto> toggleActive(@PathVariable Long id) {
+        return ResponseEntity.ok(service.toggleActive(id));
     }
 
     // Allow School Admin to delete classes
