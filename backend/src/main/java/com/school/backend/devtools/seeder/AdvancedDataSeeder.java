@@ -33,6 +33,7 @@ public class AdvancedDataSeeder implements CommandLineRunner {
     private final TransportSeeder transportSeeder;
     private final FeeSeeder feeSeeder;
     private final ExamSeeder examSeeder;
+    private final FinanceVerificationSeeder financeVerificationSeeder;
 
     @Override
     public void run(String... args) {
@@ -40,6 +41,7 @@ public class AdvancedDataSeeder implements CommandLineRunner {
 
         if (schoolRepository.count() > 0) {
             log.info("Advanced data seeding skipped because schools already exist.");
+            financeVerificationSeeder.seed();
             return;
         }
 
@@ -53,6 +55,7 @@ public class AdvancedDataSeeder implements CommandLineRunner {
         TransportSeeder.Result transportResult = transportSeeder.seed(random, sessionResult, studentResult);
         feeSeeder.seed(random, sessionResult, classSubjectResult, studentResult, transportResult);
         examSeeder.seed(random, classSubjectResult, studentResult);
+        financeVerificationSeeder.seed();
 
         log.info("Advanced data seeding completed.");
     }

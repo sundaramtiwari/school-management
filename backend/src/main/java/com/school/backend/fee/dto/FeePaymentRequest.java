@@ -1,10 +1,12 @@
 package com.school.backend.fee.dto;
 
+import jakarta.validation.Valid;
+import jakarta.validation.constraints.NotEmpty;
 import jakarta.validation.constraints.NotNull;
-import jakarta.validation.constraints.Positive;
 import lombok.Data;
 
 import java.time.LocalDate;
+import java.util.List;
 
 @Data
 public class FeePaymentRequest {
@@ -13,12 +15,9 @@ public class FeePaymentRequest {
     private Long studentId;
     private Long sessionId;
 
-    @NotNull
-    @Positive
-    private java.math.BigDecimal amountPaid; // Total
-
-    private java.math.BigDecimal principalPaid;
-    private java.math.BigDecimal lateFeePaid;
+    @NotEmpty
+    @Valid
+    private List<FeePaymentAllocationRequest> allocations;
 
     // Optional (defaults to today)
     private LocalDate paymentDate;

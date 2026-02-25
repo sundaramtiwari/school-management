@@ -13,8 +13,10 @@ import com.school.backend.core.student.dto.StudentCreateRequest;
 import com.school.backend.core.student.dto.StudentEnrollmentRequest;
 import com.school.backend.core.student.service.EnrollmentService;
 import com.school.backend.core.student.service.StudentService;
+import com.school.backend.fee.dto.FeePaymentAllocationRequest;
 import com.school.backend.fee.dto.FeePaymentRequest;
 import com.school.backend.fee.dto.FeeStructureCreateRequest;
+import com.school.backend.fee.repository.StudentFeeAssignmentRepository;
 import com.school.backend.fee.repository.FeeStructureRepository;
 import com.school.backend.fee.service.FeePaymentService;
 import com.school.backend.fee.service.FeeStructureService;
@@ -63,6 +65,7 @@ public class DataSeeder implements CommandLineRunner {
     private final FeePaymentService feePaymentService;
     private final FeeTypeService feeTypeService;
     private final FeeStructureRepository feeStructureRepository;
+    private final StudentFeeAssignmentRepository studentFeeAssignmentRepository;
     private final SubjectService subjectService;
     private final ClassSubjectService classSubjectService;
     private final ExamService examService;
@@ -413,10 +416,22 @@ public class DataSeeder implements CommandLineRunner {
         }
 
         studentsPage.getContent().stream().limit(2).forEach(s -> {
+            var assignments = studentFeeAssignmentRepository.findByStudentIdAndSessionId(s.getId(), sessionId);
+            if (assignments.isEmpty()) {
+                return;
+            }
+
             FeePaymentRequest req = new FeePaymentRequest();
             req.setStudentId(s.getId());
             req.setSessionId(sessionId);
-            req.setAmountPaid(java.math.BigDecimal.valueOf(5000));
+
+            // Pay 5000 towards the first assignment found
+            req.setAllocations(List.of(
+                    FeePaymentAllocationRequest.builder()
+                            .assignmentId(assignments.get(0).getId())
+                            .principalAmount(java.math.BigDecimal.valueOf(5000))
+                            .build()));
+
             req.setPaymentDate(LocalDate.now());
             req.setMode("CASH");
             req.setRemarks("Initial installment (demo)");

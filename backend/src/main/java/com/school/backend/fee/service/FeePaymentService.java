@@ -8,14 +8,11 @@ import com.school.backend.common.tenant.SessionContext;
 import com.school.backend.common.tenant.TenantContext;
 import com.school.backend.core.student.entity.Student;
 import com.school.backend.core.student.repository.StudentRepository;
+import com.school.backend.fee.dto.FeePaymentAllocationRequest;
 import com.school.backend.fee.dto.FeePaymentDto;
 import com.school.backend.fee.dto.FeePaymentRequest;
 import com.school.backend.fee.dto.FeeTypeHeadSummaryDto;
-import com.school.backend.fee.entity.FeePaymentAllocation;
-import com.school.backend.fee.entity.FeePayment;
-import com.school.backend.fee.entity.FeeStructure;
-import com.school.backend.fee.entity.LateFeeLog;
-import com.school.backend.fee.entity.StudentFeeAssignment;
+import com.school.backend.fee.entity.*;
 import com.school.backend.fee.repository.FeePaymentAllocationRepository;
 import com.school.backend.fee.repository.FeePaymentRepository;
 import com.school.backend.fee.repository.FeeStructureRepository;
@@ -29,12 +26,7 @@ import org.springframework.transaction.annotation.Transactional;
 
 import java.math.BigDecimal;
 import java.time.LocalDate;
-import java.util.ArrayList;
-import java.util.Comparator;
-import java.util.LinkedHashMap;
-import java.util.List;
-import java.util.Map;
-import java.util.Optional;
+import java.util.*;
 
 @Service
 @RequiredArgsConstructor
@@ -56,8 +48,8 @@ public class FeePaymentService {
             throw new ResourceNotFoundException("Student not found: " + req.getStudentId());
         }
 
-        if (req.getAmountPaid() == null || req.getAmountPaid().compareTo(BigDecimal.ZERO) <= 0) {
-            throw new BusinessException("Payment amount must be greater than zero.");
+        if (req.getAllocations() == null || req.getAllocations().isEmpty()) {
+            throw new BusinessException("At least one allocation is required.");
         }
 
         Long sessionId = requireSessionId();
@@ -65,102 +57,114 @@ public class FeePaymentService {
             throw new InvalidOperationException("Session mismatch between request and context");
         }
         Long schoolId = TenantContext.getSchoolId();
-
-        // Fetch active assignments for this student and session with PESSIMISTIC lock
-        List<StudentFeeAssignment> assignments = assignmentRepository
-                .findByStudentIdAndSessionIdWithLock(req.getStudentId(), sessionId);
-        if (assignments.isEmpty()) {
-            throw new BusinessException("No fee assignments found for this student in current session.");
-        }
-
-        BigDecimal totalIncoming = req.getAmountPaid();
-        BigDecimal principalToPay = BigDecimal.ZERO;
-        BigDecimal lateFeeToPay = BigDecimal.ZERO;
-        Map<Long, AssignmentAllocation> allocationByAssignmentId = new LinkedHashMap<>();
-
-        BigDecimal remainingIncoming = totalIncoming;
         LocalDate effectivePaymentDate = req.getPaymentDate() != null ? req.getPaymentDate() : LocalDate.now();
 
-        // Sort by due date (oldest first), nulls last for legacy data safety
-        assignments.sort(Comparator.comparing(a -> a.getDueDate() != null ? a.getDueDate() : LocalDate.MAX));
+        BigDecimal totalPrincipalPaid = BigDecimal.ZERO;
+        BigDecimal totalLateFeePaid = BigDecimal.ZERO;
 
-        for (StudentFeeAssignment assignment : assignments) {
-            hydrateDefaults(assignment);
-            if (remainingIncoming.compareTo(BigDecimal.ZERO) <= 0) {
-                break;
+        Map<Long, AssignmentAllocation> allocationByAssignmentId = new LinkedHashMap<>();
+        Set<Long> processedAssignmentIds = new HashSet<>();
+
+        List<StudentFeeAssignment> assignmentsToSave = new ArrayList<>();
+
+        for (FeePaymentAllocationRequest allocReq : req.getAllocations()) {
+            Long assignmentId = allocReq.getAssignmentId();
+            BigDecimal amountProvided = allocReq.getPrincipalAmount();
+
+            if (amountProvided.compareTo(BigDecimal.ZERO) <= 0) {
+                throw new BusinessException(
+                        "Allocation amount must be greater than zero for assignment ID: " + assignmentId);
             }
 
-            BigDecimal principalDue = assignment.getAmount()
+            if (!processedAssignmentIds.add(assignmentId)) {
+                throw new BusinessException("Duplicate allocation for assignment ID: " + assignmentId);
+            }
+
+            // Fetch with PESSIMISTIC_WRITE lock
+            StudentFeeAssignment assignment = assignmentRepository.findByIdWithLock(assignmentId)
+                    .orElseThrow(() -> new ResourceNotFoundException("Fee assignment not found: " + assignmentId));
+
+            // Security check: must belong to student and school
+            if (!assignment.getStudentId().equals(req.getStudentId()) || !assignment.getSchoolId().equals(schoolId)) {
+                throw new BusinessException("Unauthorized or mismatched assignment: " + assignmentId);
+            }
+
+            hydrateDefaults(assignment);
+
+            BigDecimal principalDueBeforeLate = assignment.getAmount()
                     .subtract(assignment.getPrincipalPaid())
                     .subtract(assignment.getTotalDiscountAmount())
                     .subtract(assignment.getSponsorCoveredAmount());
-            if (principalDue.compareTo(BigDecimal.ZERO) < 0) {
-                principalDue = BigDecimal.ZERO;
-            }
 
-            // Calculate and accrue late fee from snapshot at payment time
-            BigDecimal incrementalLateFee = lateFeeCalculator.calculateLateFee(assignment, principalDue,
+            // 1. Accrue any pending late fees up to today/payment date
+            BigDecimal incrementalLateFee = lateFeeCalculator.calculateLateFee(assignment, principalDueBeforeLate,
                     effectivePaymentDate);
             if (incrementalLateFee.compareTo(BigDecimal.ZERO) > 0) {
                 assignment.setLateFeeAccrued(assignment.getLateFeeAccrued().add(incrementalLateFee));
 
-                // For one-time late fees, mark as applied
-                if (assignment.getLateFeeType() == LateFeeType.FLAT ||
-                        assignment.getLateFeeType() == LateFeeType.PERCENTAGE) {
+                if (assignment.getLateFeeType() == LateFeeType.FLAT
+                        || assignment.getLateFeeType() == LateFeeType.PERCENTAGE) {
                     assignment.setLateFeeApplied(true);
                 }
 
                 lateFeeLogRepository.save(LateFeeLog.builder()
-                        .schoolId(TenantContext.getSchoolId())
+                        .schoolId(schoolId)
                         .assignmentId(assignment.getId())
                         .computedAmount(incrementalLateFee)
                         .appliedDate(effectivePaymentDate)
-                        .reason("Payment-time late fee accrual")
+                        .reason("Payment-time late fee accrual (Head-wise)")
                         .build());
             }
 
-            // Allocate to late fee first
-            BigDecimal lateFeeDue = assignment.getLateFeeAccrued().subtract(assignment.getLateFeePaid())
+            BigDecimal lateFeeDue = assignment.getLateFeeAccrued()
+                    .subtract(assignment.getLateFeePaid())
                     .subtract(assignment.getLateFeeWaived());
 
-            if (lateFeeDue.compareTo(BigDecimal.ZERO) > 0) {
-                BigDecimal lateFeeAllocation = remainingIncoming.min(lateFeeDue);
-                assignment.setLateFeePaid(assignment.getLateFeePaid().add(lateFeeAllocation));
-                lateFeeToPay = lateFeeToPay.add(lateFeeAllocation);
-                remainingIncoming = remainingIncoming.subtract(lateFeeAllocation);
-                addAllocationPortion(allocationByAssignmentId, assignment.getId(), BigDecimal.ZERO, lateFeeAllocation);
+            if (lateFeeDue.compareTo(BigDecimal.ZERO) < 0)
+                lateFeeDue = BigDecimal.ZERO;
+
+            // 2. Strict Late Fee Policy: Must clear full late fee if pending
+            if (lateFeeDue.compareTo(BigDecimal.ZERO) > 0 && amountProvided.compareTo(lateFeeDue) < 0) {
+                throw new BusinessException(
+                        "Late fee (₹ " + lateFeeDue + ") must be fully cleared first for assignment: " + assignmentId);
             }
 
-            if (remainingIncoming.compareTo(BigDecimal.ZERO) <= 0) {
-                break;
-            }
-
-            // Allocate to principal
-            principalDue = assignment.getAmount()
+            // 3. Overpayment Guard
+            BigDecimal principalDue = assignment.getAmount()
                     .subtract(assignment.getPrincipalPaid())
                     .subtract(assignment.getTotalDiscountAmount())
                     .subtract(assignment.getSponsorCoveredAmount());
-            if (principalDue.compareTo(BigDecimal.ZERO) > 0) {
-                BigDecimal principalAllocation = remainingIncoming.min(principalDue);
-                assignment.setPrincipalPaid(assignment.getPrincipalPaid().add(principalAllocation));
-                principalToPay = principalToPay.add(principalAllocation);
-                remainingIncoming = remainingIncoming.subtract(principalAllocation);
-                addAllocationPortion(allocationByAssignmentId, assignment.getId(), principalAllocation, BigDecimal.ZERO);
-            }
-        }
+            if (principalDue.compareTo(BigDecimal.ZERO) < 0)
+                principalDue = BigDecimal.ZERO;
 
-        if (remainingIncoming.compareTo(BigDecimal.ZERO) > 0) {
-            throw new BusinessException("Payment exceeds outstanding dues by ₹ " + remainingIncoming);
+            BigDecimal totalPending = lateFeeDue.add(principalDue);
+            if (amountProvided.compareTo(totalPending) > 0) {
+                throw new BusinessException("Payment (₹ " + amountProvided + ") exceeds total outstanding (₹ "
+                        + totalPending + ") for assignment: " + assignmentId);
+            }
+
+            // 4. Perform Allocation
+            BigDecimal lateFeeAllocation = amountProvided.min(lateFeeDue);
+            BigDecimal principalAllocation = amountProvided.subtract(lateFeeAllocation);
+
+            assignment.setLateFeePaid(assignment.getLateFeePaid().add(lateFeeAllocation));
+            assignment.setPrincipalPaid(assignment.getPrincipalPaid().add(principalAllocation));
+
+            totalLateFeePaid = totalLateFeePaid.add(lateFeeAllocation);
+            totalPrincipalPaid = totalPrincipalPaid.add(principalAllocation);
+
+            addAllocationPortion(allocationByAssignmentId, assignment.getId(), principalAllocation, lateFeeAllocation);
+            assignmentsToSave.add(assignment);
         }
 
         // Save updated assignments
-        assignmentRepository.saveAll(assignments);
+        assignmentRepository.saveAll(assignmentsToSave);
 
         FeePayment savedPayment = paymentRepository.save(FeePayment.builder()
                 .studentId(req.getStudentId())
                 .sessionId(sessionId)
-                .principalPaid(principalToPay)
-                .lateFeePaid(lateFeeToPay)
+                .principalPaid(totalPrincipalPaid)
+                .lateFeePaid(totalLateFeePaid)
                 .paymentDate(effectivePaymentDate)
                 .mode(req.getMode())
                 .transactionReference(req.getTransactionReference())
@@ -168,7 +172,7 @@ public class FeePaymentService {
                 .schoolId(schoolId)
                 .build());
 
-        savePaymentAllocations(savedPayment, assignments, allocationByAssignmentId, sessionId, schoolId);
+        savePaymentAllocations(savedPayment, assignmentsToSave, allocationByAssignmentId, sessionId, schoolId);
 
         return toDto(savedPayment);
     }
@@ -189,8 +193,9 @@ public class FeePaymentService {
         }
         String studentName = buildStudentName(student.get().getFirstName(), student.get().getLastName());
 
-        List<FeePayment> payments = paymentRepository.findByStudentIdAndSessionIdAndSchoolIdOrderByPaymentDateDescIdDesc(
-                studentId, effectiveSessionId, schoolId);
+        List<FeePayment> payments = paymentRepository
+                .findByStudentIdAndSessionIdAndSchoolIdOrderByPaymentDateDescIdDesc(
+                        studentId, effectiveSessionId, schoolId);
 
         return payments
                 .stream()
@@ -273,7 +278,8 @@ public class FeePaymentService {
             Long assignmentId,
             BigDecimal principal,
             BigDecimal lateFee) {
-        AssignmentAllocation allocation = allocationByAssignmentId.computeIfAbsent(assignmentId, ignored -> new AssignmentAllocation());
+        AssignmentAllocation allocation = allocationByAssignmentId.computeIfAbsent(assignmentId,
+                ignored -> new AssignmentAllocation());
         allocation.principal = allocation.principal.add(nz(principal));
         allocation.lateFee = allocation.lateFee.add(nz(lateFee));
     }
@@ -296,7 +302,8 @@ public class FeePaymentService {
                 .distinct()
                 .toList();
 
-        Map<Long, FeeStructure> feeStructureById = feeStructureRepository.findByIdInAndSchoolId(feeStructureIds, schoolId)
+        Map<Long, FeeStructure> feeStructureById = feeStructureRepository
+                .findByIdInAndSchoolId(feeStructureIds, schoolId)
                 .stream()
                 .collect(java.util.stream.Collectors.toMap(FeeStructure::getId, fs -> fs));
 
@@ -318,7 +325,8 @@ public class FeePaymentService {
 
             FeeStructure feeStructure = feeStructureById.get(assignment.getFeeStructureId());
             if (feeStructure == null || feeStructure.getFeeType() == null) {
-                throw new ResourceNotFoundException("Fee structure or fee type not found for assignment " + assignment.getId());
+                throw new ResourceNotFoundException(
+                        "Fee structure or fee type not found for assignment " + assignment.getId());
             }
 
             allocationRows.add(FeePaymentAllocation.builder()

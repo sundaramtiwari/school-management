@@ -114,6 +114,7 @@ function FeeCollectContent() {
     const [selectedAssignmentPendingLateFee, setSelectedAssignmentPendingLateFee] = useState(0);
     const [waiverForm, setWaiverForm] = useState({ amount: "", remarks: "" });
     const [isApplyingWaiver, setIsApplyingWaiver] = useState(false);
+    const [allocations, setAllocations] = useState<Record<number, { principal: string; payLateFee: boolean }>>({});
 
     const [loading, setLoading] = useState(false);
     const [loadingStudents, setLoadingStudents] = useState(false);
@@ -225,6 +226,13 @@ function FeeCollectContent() {
             setSummary(sumRes.data);
             setHistory(histRes.data || []);
             setBreakdown(breakRes.data || []);
+
+            // Initialize allocations
+            const initialAllocations: Record<number, { principal: string; payLateFee: boolean }> = {};
+            (breakRes.data || []).forEach((item: FeeAssignment) => {
+                initialAllocations[item.id] = { principal: "", payLateFee: false };
+            });
+            setAllocations(initialAllocations);
         } catch {
             showToast("Billing synchronization failed", "error");
         } finally {
@@ -232,19 +240,44 @@ function FeeCollectContent() {
         }
     }
 
+    const calculateTotalAllocated = useCallback(() => {
+        let total = 0;
+        Object.keys(allocations).forEach(id => {
+            const alloc = allocations[Number(id)];
+            const principal = Number(alloc.principal) || 0;
+            const item = breakdown.find(b => b.id === Number(id));
+            const lateFee = (alloc.payLateFee && item) ? Math.max(0, item.lateFeeAccrued - item.lateFeePaid - item.lateFeeWaived) : 0;
+            total += principal + lateFee;
+        });
+        return total;
+    }, [allocations, breakdown]);
+
     async function makePayment() {
-        if (!selectedStudent || !paymentAmount) return;
-        const amount = Number(paymentAmount);
-        if (amount <= 0) {
-            showToast("Please enter valid amount", "warning");
+        if (!selectedStudent) return;
+
+        const totalAmount = calculateTotalAllocated();
+        if (totalAmount <= 0) {
+            showToast("Please allocate some amount to pay", "warning");
             return;
         }
+
+        const paymentAllocations = Object.entries(allocations)
+            .filter(([, alloc]) => Number(alloc.principal) > 0 || alloc.payLateFee)
+            .map(([id, alloc]) => {
+                const item = breakdown.find(b => b.id === Number(id));
+                const lateFeeAmount = (alloc.payLateFee && item) ? Math.max(0, item.lateFeeAccrued - item.lateFeePaid - item.lateFeeWaived) : 0;
+                return {
+                    assignmentId: Number(id),
+                    principalAmount: Number(alloc.principal) || 0,
+                    lateFeeAmount: lateFeeAmount
+                };
+            });
 
         try {
             setIsProcessing(true);
             await api.post("/api/fees/payments", {
                 studentId: selectedStudent,
-                amountPaid: amount,
+                allocations: paymentAllocations,
                 mode: paymentMode,
                 remarks,
                 paymentDate: new Date().toISOString().split('T')[0]
@@ -253,12 +286,11 @@ function FeeCollectContent() {
             showToast("Payment Processed Successfully!", "success");
             setPaymentAmount("");
             setRemarks("");
+            setAllocations({});
             loadStudentData(Number(selectedStudent));
         } catch (e: unknown) {
-            const message = typeof e === "object" && e !== null && "message" in e
-                ? String((e as { message?: string }).message || "Unknown error")
-                : "Unknown error";
-            showToast("Processing failed: " + message, "error");
+            const message = extractApiErrorMessage(e) || "Processing failed";
+            showToast(message, "error");
         } finally {
             setIsProcessing(false);
         }
@@ -505,16 +537,12 @@ function FeeCollectContent() {
                                 <h3 className="font-black text-gray-800 border-b pb-4 text-xs uppercase tracking-widest">Post Payment Transaction</h3>
                                 <div className="space-y-4">
                                     <div>
-                                        <label className="block text-[10px] font-black uppercase text-gray-400 mb-1 ml-1">Collection Amount *</label>
+                                        <label className="block text-[10px] font-black uppercase text-gray-400 mb-1 ml-1">Total Collection Amount</label>
                                         <div className="relative">
                                             <span className="absolute left-4 top-1/2 -translate-y-1/2 font-bold text-gray-400">₹</span>
-                                            <input
-                                                type="number"
-                                                placeholder="0.00"
-                                                className="input-ref pl-10 text-xl font-black"
-                                                value={paymentAmount}
-                                                onChange={e => setPaymentAmount(e.target.value)}
-                                            />
+                                            <div className="input-ref pl-10 text-xl font-black bg-gray-50 flex items-center">
+                                                {calculateTotalAllocated().toLocaleString(undefined, { minimumFractionDigits: 2 })}
+                                            </div>
                                         </div>
                                     </div>
                                     <div>
@@ -538,7 +566,7 @@ function FeeCollectContent() {
                                     {canUserCollectFees ? (
                                         <button
                                             onClick={makePayment}
-                                            disabled={!paymentAmount || isProcessing}
+                                            disabled={calculateTotalAllocated() <= 0 || isProcessing}
                                             className="w-full bg-green-600 hover:bg-green-700 text-white py-4 rounded-xl font-black shadow-lg shadow-green-200 transition-all disabled:opacity-50 uppercase text-xs tracking-widest"
                                         >
                                             {isProcessing ? "Transacting..." : "Commit Transaction"}
@@ -572,6 +600,7 @@ function FeeCollectContent() {
                                                     <th className="pb-2 text-right">Funding</th>
                                                     <th className="pb-2 text-right">Pending</th>
                                                     <th className="pb-2 text-center">Status</th>
+                                                    <th className="pb-2 text-center">Pay Now</th>
                                                     {canUserManageFees && <th className="pb-2 text-center w-36">Actions</th>}
                                                 </tr>
                                             </thead>
@@ -599,6 +628,47 @@ function FeeCollectContent() {
                                                                     <span className={`px-2 py-0.5 rounded-full text-[9px] font-black uppercase ${item.status === 'PAID' ? 'bg-green-100 text-green-600' : 'bg-red-100 text-red-600'}`}>
                                                                         {item.status}
                                                                     </span>
+                                                                </td>
+                                                                <td className="py-2.5 text-center">
+                                                                    <div className="flex flex-col gap-1 items-center">
+                                                                        <div className="relative">
+                                                                            <span className="absolute left-2 top-1/2 -translate-y-1/2 text-[9px] text-gray-400">₹</span>
+                                                                            <input
+                                                                                type="number"
+                                                                                placeholder="Princ."
+                                                                                className="w-20 text-[10px] pl-4 pr-1 py-1 border rounded focus:ring-1 focus:ring-blue-500 outline-none"
+                                                                                value={allocations[item.id]?.principal || ""}
+                                                                                onChange={e => {
+                                                                                    const val = e.target.value;
+                                                                                    const pendingPrincipal = item.amount - item.totalDiscountAmount - item.sponsorCoveredAmount - item.principalPaid;
+                                                                                    if (Number(val) > pendingPrincipal) {
+                                                                                        showToast(`Principal exposure for ${item.feeTypeName} cannot exceed ₹${pendingPrincipal}`, "warning");
+                                                                                        return;
+                                                                                    }
+                                                                                    setAllocations(prev => ({
+                                                                                        ...prev,
+                                                                                        [item.id]: { ...prev[item.id], principal: val }
+                                                                                    }));
+                                                                                }}
+                                                                            />
+                                                                        </div>
+                                                                        {outstandingLateFee > 0 && (
+                                                                            <label className="flex items-center gap-1 cursor-pointer">
+                                                                                <input
+                                                                                    type="checkbox"
+                                                                                    className="w-3 h-3 text-blue-600 rounded"
+                                                                                    checked={allocations[item.id]?.payLateFee || false}
+                                                                                    onChange={e => {
+                                                                                        setAllocations(prev => ({
+                                                                                            ...prev,
+                                                                                            [item.id]: { ...prev[item.id], payLateFee: e.target.checked }
+                                                                                        }));
+                                                                                    }}
+                                                                                />
+                                                                                <span className="text-[9px] font-bold text-orange-600">Late Fee (₹{outstandingLateFee})</span>
+                                                                            </label>
+                                                                        )}
+                                                                    </div>
                                                                 </td>
                                                                 {canUserManageFees && (
                                                                     <td className="py-2.5 text-center">

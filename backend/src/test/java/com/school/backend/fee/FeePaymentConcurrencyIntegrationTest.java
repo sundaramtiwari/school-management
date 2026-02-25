@@ -113,10 +113,17 @@ public class FeePaymentConcurrencyIntegrationTest extends BaseAuthenticatedInteg
     }
 
     private ResponseEntity<FeePaymentDto> pay(BigDecimal amount) {
+        Long assignmentId = assignmentRepository.findByStudentIdAndSessionId(studentId, sessionId)
+                .get(0).getId();
+
         FeePaymentRequest payReq = new FeePaymentRequest();
         payReq.setStudentId(studentId);
         payReq.setSessionId(sessionId);
-        payReq.setAmountPaid(amount);
+        payReq.setAllocations(List.of(
+                FeePaymentAllocationRequest.builder()
+                        .assignmentId(assignmentId)
+                        .principalAmount(amount)
+                        .build()));
         payReq.setMode("CASH");
 
         HttpEntity<FeePaymentRequest> payEntity = new HttpEntity<>(payReq, headers);

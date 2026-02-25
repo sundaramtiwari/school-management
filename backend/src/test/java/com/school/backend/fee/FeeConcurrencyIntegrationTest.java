@@ -50,10 +50,17 @@ public class FeeConcurrencyIntegrationTest extends BaseAuthenticatedIntegrationT
             futures.add(executor.submit(() -> {
                 try {
                     latch.await();
+                    Long assignmentId = assignmentRepository.findByStudentIdAndSessionId(studentId, sessionId)
+                            .get(0).getId();
+
                     FeePaymentRequest payReq = new FeePaymentRequest();
                     payReq.setStudentId(studentId);
                     payReq.setSessionId(sessionId);
-                    payReq.setAmountPaid(BigDecimal.valueOf(100));
+                    payReq.setAllocations(List.of(
+                            FeePaymentAllocationRequest.builder()
+                                    .assignmentId(assignmentId)
+                                    .principalAmount(BigDecimal.valueOf(100))
+                                    .build()));
                     payReq.setMode("CASH");
 
                     HttpEntity<FeePaymentRequest> payEntity = new HttpEntity<>(payReq, headers);
@@ -114,10 +121,17 @@ public class FeeConcurrencyIntegrationTest extends BaseAuthenticatedIntegrationT
             futures.add(executor.submit(() -> {
                 try {
                     latch.await();
+                    Long assignmentId = assignmentRepository.findByStudentIdAndSessionId(studentId, sessionId)
+                            .get(0).getId();
+
                     FeePaymentRequest payReq = new FeePaymentRequest();
                     payReq.setStudentId(studentId);
                     payReq.setSessionId(sessionId);
-                    payReq.setAmountPaid(BigDecimal.valueOf(500));
+                    payReq.setAllocations(List.of(
+                            FeePaymentAllocationRequest.builder()
+                                    .assignmentId(assignmentId)
+                                    .principalAmount(BigDecimal.valueOf(500))
+                                    .build()));
                     payReq.setMode("CASH");
 
                     HttpEntity<FeePaymentRequest> payEntity = new HttpEntity<>(payReq, headers);
