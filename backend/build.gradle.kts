@@ -52,6 +52,7 @@ dependencies {
     
     // PDF Generation
     implementation("com.github.librepdf:openpdf:1.4.1")
+    implementation("org.apache.poi:poi-ooxml:5.4.1")
 
     // DB Drivers
     runtimeOnly("org.postgresql:postgresql")
