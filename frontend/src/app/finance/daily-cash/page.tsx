@@ -159,10 +159,10 @@ export default function DailyCashPage() {
                                 ) : (
                                     feeHeads.map((item, idx) => (
                                         <tr key={idx} className="hover:bg-gray-50">
-                                            <td className="px-6 py-3 font-medium text-gray-900">{item.feeHeadName}</td>
+                                            <td className="px-6 py-3 font-medium text-gray-900">{item.feeTypeName}</td>
                                             <td className="px-6 py-3 text-right">₹{(item.totalPrincipal ?? 0).toLocaleString()}</td>
                                             <td className="px-6 py-3 text-right">₹{(item.totalLateFee ?? 0).toLocaleString()}</td>
-                                            <td className="px-6 py-3 text-right font-bold text-gray-900">₹{(item.totalCollection ?? 0).toLocaleString()}</td>
+                                            <td className="px-6 py-3 text-right font-bold text-gray-900">₹{(item.totalCollected ?? 0).toLocaleString()}</td>
                                         </tr>
                                     ))
                                 )}
@@ -178,7 +178,7 @@ export default function DailyCashPage() {
                                             ₹{feeHeads.reduce((sum, item) => sum + (item.totalLateFee ?? 0), 0).toLocaleString()}
                                         </td>
                                         <td className="px-6 py-3 text-right text-green-700">
-                                            ₹{feeHeads.reduce((sum, item) => sum + (item.totalCollection ?? 0), 0).toLocaleString()}
+                                            ₹{feeHeads.reduce((sum, item) => sum + (item.totalCollected ?? 0), 0).toLocaleString()}
                                         </td>
                                     </tr>
                                 </tfoot>

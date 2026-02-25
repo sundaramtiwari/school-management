@@ -37,10 +37,10 @@ export interface DailyCashSummary {
 }
 
 export interface FeeHeadSummary {
-    feeHeadName: string;
+    feeTypeName: string;
     totalPrincipal: number;
     totalLateFee: number;
-    totalCollection: number;
+    totalCollected: number;
 }
 
 export const financeApi = {

@@ -8,31 +8,69 @@ import { useSession } from "@/context/SessionContext";
 import { useToast } from "@/components/ui/Toast";
 
 const menu = [
-  { name: "Dashboard", path: "/", icon: "📊", roles: ["SUPER_ADMIN", "PLATFORM_ADMIN", "SCHOOL_ADMIN", "TEACHER", "ACCOUNTANT"] },
-  { name: "Schools", path: "/schools", icon: "🏫", roles: ["SUPER_ADMIN", "PLATFORM_ADMIN"] },
-  { name: "Students", path: "/students", icon: "👨‍🎓", roles: ["SUPER_ADMIN", "PLATFORM_ADMIN", "SCHOOL_ADMIN", "TEACHER", "ACCOUNTANT"] },
-  { name: "Classes", path: "/classes", icon: "📚", roles: ["SUPER_ADMIN", "PLATFORM_ADMIN", "SCHOOL_ADMIN", "TEACHER"] },
-  { name: "Subjects", path: "/subjects", icon: "📖", roles: ["SUPER_ADMIN", "PLATFORM_ADMIN", "SCHOOL_ADMIN", "TEACHER"] },
-  { name: "Staff", path: "/staff", icon: "👥", roles: ["SUPER_ADMIN", "PLATFORM_ADMIN", "SCHOOL_ADMIN"] },
-  { name: "Teacher Assignments", path: "/staff/assignments", icon: "📋", roles: ["SUPER_ADMIN", "PLATFORM_ADMIN", "SCHOOL_ADMIN"] },
-  { name: "Fees", path: "/fees", icon: "💰", roles: ["SUPER_ADMIN", "PLATFORM_ADMIN", "SCHOOL_ADMIN", "ACCOUNTANT"] },
+  {
+    name: "Dashboard",
+    path: "/",
+    icon: "📊",
+    roles: ["SUPER_ADMIN", "PLATFORM_ADMIN", "SCHOOL_ADMIN", "TEACHER", "ACCOUNTANT"]
+  },
+  {
+    name: "Schools",
+    path: "/schools",
+    icon: "🏫",
+    roles: ["SUPER_ADMIN", "PLATFORM_ADMIN"]
+  },
+  {
+    name: "Academics",
+    icon: "🎓",
+    roles: ["SUPER_ADMIN", "PLATFORM_ADMIN", "SCHOOL_ADMIN", "TEACHER", "ACCOUNTANT"],
+    children: [
+      { name: "Students", path: "/students", roles: ["SUPER_ADMIN", "PLATFORM_ADMIN", "SCHOOL_ADMIN", "TEACHER", "ACCOUNTANT"] },
+      { name: "Classes", path: "/classes", roles: ["SUPER_ADMIN", "PLATFORM_ADMIN", "SCHOOL_ADMIN", "TEACHER"] },
+      { name: "Subjects", path: "/subjects", roles: ["SUPER_ADMIN", "PLATFORM_ADMIN", "SCHOOL_ADMIN", "TEACHER"] },
+      { name: "Staff", path: "/staff", roles: ["SUPER_ADMIN", "PLATFORM_ADMIN", "SCHOOL_ADMIN"] },
+      { name: "Teacher Assignments", path: "/staff/assignments", roles: ["SUPER_ADMIN", "PLATFORM_ADMIN", "SCHOOL_ADMIN"] },
+      { name: "Attendance", path: "/attendance", roles: ["SUPER_ADMIN", "PLATFORM_ADMIN", "SCHOOL_ADMIN", "TEACHER"] },
+      { name: "Exams", path: "/exams", roles: ["SUPER_ADMIN", "PLATFORM_ADMIN", "SCHOOL_ADMIN", "TEACHER"] },
+      { name: "Marksheet", path: "/marksheets", roles: ["SUPER_ADMIN", "PLATFORM_ADMIN", "SCHOOL_ADMIN", "TEACHER"] },
+    ]
+  },
   {
     name: "Finance",
     icon: "💵",
     roles: ["SUPER_ADMIN", "SCHOOL_ADMIN", "ACCOUNTANT"],
     children: [
+      { name: "Fee Collection", path: "/fees/collect", roles: ["SUPER_ADMIN", "SCHOOL_ADMIN", "ACCOUNTANT"] },
+      { name: "Fee Summary", path: "/fees", roles: ["SUPER_ADMIN", "SCHOOL_ADMIN", "ACCOUNTANT"] },
+      { name: "Fee Structures", path: "/fees/structures", roles: ["SUPER_ADMIN", "SCHOOL_ADMIN", "ACCOUNTANT"] },
       { name: "Daily Cash", path: "/finance/daily-cash", roles: ["SUPER_ADMIN", "SCHOOL_ADMIN", "ACCOUNTANT"] },
       { name: "Expenses", path: "/finance/expenses", roles: ["SUPER_ADMIN", "SCHOOL_ADMIN", "ACCOUNTANT"] },
     ]
   },
-  { name: "Transport", path: "/transport", icon: "🚌", roles: ["SUPER_ADMIN", "PLATFORM_ADMIN", "SCHOOL_ADMIN"] },
-  { name: "Attendance", path: "/attendance", icon: "✓", roles: ["SUPER_ADMIN", "PLATFORM_ADMIN", "SCHOOL_ADMIN", "TEACHER"] },
-  { name: "Exams", path: "/exams", icon: "📝", roles: ["SUPER_ADMIN", "PLATFORM_ADMIN", "SCHOOL_ADMIN", "TEACHER"] },
-  { name: "Marksheets", path: "/marksheets", icon: "📊", roles: ["SUPER_ADMIN", "PLATFORM_ADMIN", "SCHOOL_ADMIN", "TEACHER"] },
-  { name: "Sessions", path: "/sessions", icon: "📅", roles: ["SUPER_ADMIN", "PLATFORM_ADMIN", "SCHOOL_ADMIN"] },
+  {
+    name: "Transport",
+    path: "/transport",
+    icon: "🚌",
+    roles: ["SUPER_ADMIN", "PLATFORM_ADMIN", "SCHOOL_ADMIN"]
+  },
+  {
+    name: "Sessions",
+    path: "/sessions",
+    icon: "📅",
+    roles: ["SUPER_ADMIN", "PLATFORM_ADMIN", "SCHOOL_ADMIN"]
+  },
 ];
 
-// ✅ FIXED: Proper role display mapping
+const REQUIRES_SESSION = [
+  "Academics", "Finance", "Classes", "Students", "Fees", "Marksheets", "Attendance", "Exams",
+  "Fee Collection", "Fee Summary", "Fee Structures", "Daily Cash", "Expenses", "Marksheet"
+];
+
+const REQUIRES_CLASSES = [
+  "Students", "Fees", "Marksheets", "Attendance", "Exams", "Finance",
+  "Fee Collection", "Fee Summary", "Fee Structures", "Daily Cash", "Expenses", "Marksheet"
+];
+
 const getRoleDisplay = (role: string | undefined): string => {
   const displays: Record<string, string> = {
     SUPER_ADMIN: "Platform Owner",
@@ -59,7 +97,6 @@ export default function Sidebar() {
     setSchoolId(localStorage.getItem("schoolId"));
     setSchoolName(localStorage.getItem("schoolName"));
 
-    // Auto-expand menu if current path is in children
     const newExpanded: Record<string, boolean> = {};
     menu.forEach(item => {
       if (item.children?.some(child => pathname === child.path)) {
@@ -73,6 +110,51 @@ export default function Sidebar() {
     setExpandedMenus(prev => ({ ...prev, [menuName]: !prev[menuName] }));
   };
 
+  const checkRestriction = (name: string) => {
+    const userRole = user?.role?.toUpperCase();
+
+    // GATING LOGIC
+    // 1. !currentSession (No Session) -> Disable everything except Dashboard, Staff, Transport, Sessions
+    // 2. currentSession && !hasClasses -> Enable Classes. Disable Students, Fees, Attendance, Marksheets, Finance.
+
+    const isSchoolScoped = ["SCHOOL_ADMIN", "TEACHER", "ACCOUNTANT"].includes(userRole as string);
+    const isPlatformRole = ["SUPER_ADMIN", "PLATFORM_ADMIN"].includes(userRole as string);
+
+    if (isSchoolScoped) {
+      if (!currentSession && REQUIRES_SESSION.includes(name)) {
+        return {
+          isRestricted: true,
+          message: "Please create an academic session first.",
+          redirectPath: "/school/setup/session"
+        };
+      }
+      if (currentSession && !hasClasses && REQUIRES_CLASSES.includes(name)) {
+        return {
+          isRestricted: true,
+          message: "Please create at least one class to access this section.",
+          redirectPath: "/classes"
+        };
+      }
+    }
+
+    // Platform Role Gating: If no school selected, block school-specific links
+    // School-specific modules exclude: Dashboard, Schools, Staff, Sessions, Transport
+    const isSchoolModule = !["Dashboard", "Schools", "Staff", "Sessions", "Transport"].includes(name);
+
+    // Group headers themselves should also be gated if they enclose school modules
+    const isGroupHeader = ["Academics", "Finance"].includes(name);
+
+    if (isPlatformRole && (isSchoolModule || isGroupHeader) && !schoolId) {
+      return {
+        isRestricted: true,
+        message: "Please select a school first from the Schools list.",
+        redirectPath: "/schools"
+      };
+    }
+
+    return { isRestricted: false, message: "", redirectPath: "" };
+  };
+
   const clearContext = () => {
     localStorage.removeItem("schoolId");
     localStorage.removeItem("schoolName");
@@ -81,114 +163,73 @@ export default function Sidebar() {
 
   return (
     <aside className="w-64 bg-white border-r flex flex-col h-screen">
-
       <div className="p-4 border-b">
-        <div className="text-xl font-bold text-blue-600">
+        <div className="text-xl font-bold text-blue-600 tracking-tight">
           {getRoleDisplay(user?.role)}
         </div>
-        {currentSession && (
-          <div className="mt-1 px-2 py-0.5 bg-blue-50 text-blue-700 text-[10px] font-black uppercase rounded border border-blue-100 inline-block">
-            Session {currentSession.name}
-          </div>
-        )}
       </div>
 
-      {/* Menu - ADDED ICONS */}
       <nav className="p-2 space-y-1 flex-1 overflow-y-auto">
-
         {menu.map((item) => {
           const userRole = user?.role?.toUpperCase();
           const hasAccess = item.roles.includes(userRole as string);
-
           if (!hasAccess) return null;
 
           const active = pathname === item.path || (item.children && item.children.some(child => pathname === child.path));
           const isExpanded = expandedMenus[item.name];
-
-          // GATING LOGIC
-          // 1. !currentSession (No Session) -> Disable everything except Dashboard, Staff, Transport, Sessions
-          //    (Sessions is effectively /school/setup/session redirect or manual management)
-          // 2. currentSession && !hasClasses -> Enable Classes. Disable Students, Fees, Attendance, Marksheets.
-
-          const isSchoolScoped = ["SCHOOL_ADMIN", "TEACHER", "ACCOUNTANT"].includes(userRole as string);
-          const isPlatformRole = ["SUPER_ADMIN", "PLATFORM_ADMIN"].includes(userRole as string);
-
-          const requiresSession = ["Classes", "Students", "Fees", "Marksheets", "Attendance", "Exams", "Finance"].includes(item.name);
-          const requiresClasses = ["Students", "Fees", "Marksheets", "Attendance", "Exams", "Finance"].includes(item.name);
-
-          let isRestricted = false;
-          let restrictionMessage = "";
-          let redirectPath = "";
-
-          if (isSchoolScoped) {
-            if (!currentSession && requiresSession) {
-              // State 1: No Session
-              isRestricted = true;
-              restrictionMessage = "Please create an academic session first.";
-              redirectPath = "/school/setup/session";
-            } else if (currentSession && !hasClasses && requiresClasses) {
-              // State 2: Session exists, no classes -> Classes allowed, others restricted
-              isRestricted = true;
-              restrictionMessage = "Please create at least one class to access this section.";
-              redirectPath = "/classes";
-            }
-          }
-
-          // Platform Role Gating: If no school selected, block school-specific links
-          const isSchoolModule = !["Dashboard", "Schools", "Staff"].includes(item.name);
-          if (isPlatformRole && isSchoolModule && !schoolId) {
-            isRestricted = true;
-            restrictionMessage = "Please select a school first from the Schools list.";
-            redirectPath = "/schools";
-          }
+          const restriction = checkRestriction(item.name);
 
           if (item.children) {
             return (
               <div key={item.name} className="block">
                 <button
                   onClick={() => {
-                    if (isRestricted) {
-                      showToast(restrictionMessage, "warning");
-                      if (redirectPath) router.push(redirectPath);
+                    if (restriction.isRestricted) {
+                      showToast(restriction.message, "warning");
+                      if (restriction.redirectPath) router.push(restriction.redirectPath);
                     } else {
                       toggleMenu(item.name);
                     }
                   }}
                   className={`
-                    w-full px-4 py-2.5 rounded-lg flex items-center justify-between
-                    ${active
-                      ? "bg-blue-50 text-blue-700 font-semibold"
-                      : "text-gray-700 hover:bg-gray-100"
-                    }
-                    ${isRestricted ? "opacity-50 cursor-not-allowed" : ""}
+                    w-full px-4 py-2.5 rounded-lg flex items-center justify-between transition-all
+                    ${active ? "bg-blue-50 text-blue-700 font-bold" : "text-gray-700 hover:bg-gray-100"}
+                    ${restriction.isRestricted ? "opacity-50 cursor-not-allowed" : ""}
                   `}
                 >
                   <div className="flex items-center gap-3">
                     <span className="text-lg">{item.icon}</span>
-                    <span>{item.name}</span>
+                    <span className="text-sm font-semibold tracking-wide uppercase">{item.name}</span>
                   </div>
-                  <span className={`transform transition-transform text-xs ${isExpanded ? "rotate-180" : ""}`}>
+                  <span className={`transform transition-transform text-[10px] ${isExpanded ? "rotate-180" : ""}`}>
                     ▼
                   </span>
                 </button>
 
-                {isExpanded && !isRestricted && (
-                  <div className="ml-9 mt-1 space-y-1">
+                {isExpanded && !restriction.isRestricted && (
+                  <div className="ml-9 mt-1 space-y-0.5 border-l-2 border-blue-50 pl-2">
                     {item.children.map(child => {
                       const childHasAccess = child.roles.includes(userRole as string);
                       if (!childHasAccess) return null;
+
                       const childActive = pathname === child.path;
+                      const childRestriction = checkRestriction(child.name);
 
                       return (
                         <Link
                           key={child.path}
-                          href={child.path || "#"}
-                          className={`
-                            block px-4 py-2 text-sm rounded-lg
-                            ${childActive
-                              ? "bg-blue-100 text-blue-800 font-medium"
-                              : "text-gray-600 hover:bg-gray-100 hover:text-gray-900"
+                          href={childRestriction.isRestricted || !child.path ? "#" : child.path}
+                          onClick={(e) => {
+                            if (childRestriction.isRestricted) {
+                              e.preventDefault();
+                              showToast(childRestriction.message, "warning");
+                              if (childRestriction.redirectPath) router.push(childRestriction.redirectPath);
                             }
+                          }}
+                          className={`
+                            block px-3 py-2 text-sm rounded-lg transition-colors
+                            ${childActive ? "bg-blue-100 text-blue-800 font-semibold" : "text-gray-600 hover:bg-gray-100 hover:text-gray-900"}
+                            ${childRestriction.isRestricted ? "opacity-50 cursor-not-allowed" : ""}
                           `}
                         >
                           {child.name}
@@ -204,61 +245,44 @@ export default function Sidebar() {
           return (
             <Link
               key={item.path || item.name}
-              href={isRestricted || !item.path ? "#" : item.path}
+              href={restriction.isRestricted || !item.path ? "#" : item.path}
               onClick={(e) => {
-                if (isRestricted) {
+                if (restriction.isRestricted) {
                   e.preventDefault();
-                  showToast(restrictionMessage, "warning");
-                  if (redirectPath) {
-                    router.push(redirectPath);
-                  }
+                  showToast(restriction.message, "warning");
+                  if (restriction.redirectPath) router.push(restriction.redirectPath);
                 }
               }}
               className={`
-                block px-4 py-2.5 rounded-lg flex items-center gap-3
-                ${active
-                  ? "bg-blue-100 text-blue-700 font-semibold"
-                  : "text-gray-700 hover:bg-gray-100"
-                }
-                ${isRestricted ? "opacity-50 cursor-not-allowed" : ""}
+                block px-4 py-2.5 rounded-lg flex items-center gap-3 transition-all
+                ${active ? "bg-blue-100 text-blue-700 font-bold" : "text-gray-700 hover:bg-gray-100"}
+                ${restriction.isRestricted ? "opacity-50 cursor-not-allowed" : ""}
               `}
             >
               <span className="text-lg">{item.icon}</span>
-              <span>{item.name}</span>
+              <span className="text-sm">{item.name}</span>
             </Link>
           );
         })}
-
       </nav>
 
-      {/* School Context Banner for Platform Roles */}
       {schoolName && (user?.role === "SUPER_ADMIN" || user?.role === "PLATFORM_ADMIN") && (
-        <div className="border-t p-4 bg-gray-50 flex items-center justify-between text-[11px] font-bold">
-          <div className="flex items-center gap-2 text-gray-600 truncate">
-            <span>📍</span> Viewing: {schoolName}
+        <div className="mx-2 mb-2 p-3 bg-blue-50 rounded-lg flex items-center justify-between text-[11px] border border-blue-100 shadow-sm">
+          <div className="flex items-center gap-2 text-blue-700 font-medium truncate">
+            <span>📍</span> {schoolName}
           </div>
-          <button
-            onClick={clearContext}
-            className="text-red-500 hover:text-red-700 ml-2 font-black flex items-center gap-1"
-          >
-            ✕ Exit
+          <button onClick={clearContext} className="text-red-500 hover:text-red-700 font-black p-1">
+            ✕
           </button>
         </div>
       )}
 
-      {/* User Info & Logout */}
-      <div className="border-t p-4 space-y-2">
-        <div className="text-sm text-gray-600">
-          <div className="font-semibold">{getRoleDisplay(user?.role)}</div>
-          <div className="text-xs text-gray-500">
-            {user?.schoolId ? `School ID: ${user.schoolId}` : "Platform Level"}
-          </div>
-        </div>
+      <div className="border-t p-4">
         <button
           onClick={logout}
-          className="w-full bg-red-600 text-white px-4 py-2 rounded hover:bg-red-700 transition"
+          className="w-full flex items-center justify-center gap-2 bg-red-50 text-red-600 px-4 py-2.5 rounded-lg hover:bg-red-100 transition-all font-semibold text-sm border border-red-100"
         >
-          Logout
+          <span>🚪</span> Logout
         </button>
       </div>
     </aside>
