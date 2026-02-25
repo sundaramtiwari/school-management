@@ -88,6 +88,11 @@ public interface FeePaymentRepository extends JpaRepository<FeePayment, Long> {
         List<Object[]> sumPaidByStudentGroupedBySession(@Param("studentId") Long studentId);
 
         List<FeePayment> findBySchoolIdAndSessionIdAndPaymentDate(Long schoolId, Long sessionId, LocalDate paymentDate);
+        List<FeePayment> findBySchoolIdAndSessionIdAndPaymentDateBetween(
+                        Long schoolId,
+                        Long sessionId,
+                        LocalDate startDate,
+                        LocalDate endDate);
 
         @Query("""
                             SELECT COALESCE(SUM(p.principalPaid + p.lateFeePaid), 0)

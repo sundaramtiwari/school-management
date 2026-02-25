@@ -24,6 +24,11 @@ public interface ExpenseVoucherRepository extends JpaRepository<ExpenseVoucher, 
             Long schoolId,
             Long sessionId,
             LocalDate date);
+    List<ExpenseVoucher> findBySchoolIdAndSessionIdAndExpenseDateBetweenAndActiveTrueOrderByExpenseDateDescIdDesc(
+            Long schoolId,
+            Long sessionId,
+            LocalDate startDate,
+            LocalDate endDate);
 
     @Query("""
             SELECT v
