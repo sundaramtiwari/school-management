@@ -120,9 +120,6 @@ export default function SessionPLPage() {
                             </div>
                         </div>
 
-                        {/* Subtle Divider for Desktop */}
-                        <div className="hidden lg:block w-px bg-gray-100 self-stretch my-4"></div>
-
                         {/* Row 3 equivalent: Bank Flow */}
                         <div className="bg-white rounded-2xl border shadow-sm overflow-hidden">
                             <div className="px-6 py-4 bg-purple-50 border-b border-purple-100 flex justify-between items-center">

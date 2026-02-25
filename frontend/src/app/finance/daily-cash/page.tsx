@@ -149,9 +149,6 @@ export default function DailyCashPage() {
                         </div>
                     </div>
 
-                    {/* Subtle Divider for Desktop */}
-                    <div className="hidden lg:block w-px bg-gray-100 self-stretch my-4"></div>
-
                     {/* Bank Section (Row 3 Equivalent Layout) */}
                     <div className="bg-white rounded-2xl border shadow-sm overflow-hidden">
                         <div className="px-6 py-3 bg-purple-50 border-b border-purple-100 flex justify-between items-center">
