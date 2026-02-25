@@ -172,7 +172,7 @@ export default function ExamDetailView({ exam: initialExam, classId, onClose }: 
                 const skippedText = data.skippedSubjects
                     .map((s: any) => s.subjectName || `Subject #${s.subjectId}`)
                     .join(", ");
-                showToast(`Saved ${data.savedCount} entries. Skipped: ${skippedText}`, "warning", 8000);
+                showToast(`Saved ${data.savedCount} entries. Skipped: ${skippedText}`, "warning");
             } else {
                 showToast(`Marks saved successfully (${data.savedCount} entries)`, "success");
             }

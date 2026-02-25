@@ -4,6 +4,7 @@ import { useState, useEffect, useCallback } from "react";
 import { financeApi, MonthlyPLData } from "@/lib/financeApi";
 import { useToast } from "@/components/ui/Toast";
 import { Skeleton } from "@/components/ui/Skeleton";
+import { downloadExcel } from "@/lib/fileUtils";
 
 export default function MonthlyPLPage() {
     const { showToast } = useToast();
@@ -12,6 +13,7 @@ export default function MonthlyPLPage() {
     const [year, setYear] = useState<number>(now.getFullYear());
     const [month, setMonth] = useState<number>(now.getMonth() + 1);
     const [loading, setLoading] = useState(true);
+    const [isExporting, setIsExporting] = useState(false);
     const [data, setData] = useState<MonthlyPLData | null>(null);
     const [error, setError] = useState<string | null>(null);
 
@@ -46,6 +48,21 @@ export default function MonthlyPLPage() {
         }
     }, [year, month, showToast]);
 
+    const handleExport = async () => {
+        try {
+            setIsExporting(true);
+            const blob = await financeApi.exportMonthlyPL(year, month);
+            const formattedMonth = String(month).padStart(2, "0");
+            downloadExcel(blob, `monthly-pl-${year}-${formattedMonth}.xlsx`);
+            showToast("Export successful", "success");
+        } catch (error: any) {
+            console.error("Export failed:", error);
+            showToast(error.message || "Export failed", "error");
+        } finally {
+            setIsExporting(false);
+        }
+    };
+
     useEffect(() => {
         fetchData();
     }, [fetchData]);
@@ -62,6 +79,18 @@ export default function MonthlyPLPage() {
                     <p className="text-gray-500">Financial performance for {months.find(m => m.value === month)?.label} {year}</p>
                 </div>
                 <div className="flex items-center gap-3">
+                    <button
+                        onClick={handleExport}
+                        disabled={loading || isExporting}
+                        className="px-4 py-2 bg-green-600 text-white rounded-lg hover:bg-green-700 disabled:opacity-50 transition-colors flex items-center gap-2 font-medium"
+                    >
+                        {isExporting ? (
+                            <span className="w-4 h-4 border-2 border-white/30 border-t-white rounded-full animate-spin"></span>
+                        ) : (
+                            <span>📊</span>
+                        )}
+                        Export Excel
+                    </button>
                     <select
                         value={year}
                         onChange={(e) => setYear(Number(e.target.value))}

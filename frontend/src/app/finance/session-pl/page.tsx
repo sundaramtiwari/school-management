@@ -4,10 +4,12 @@ import { useState, useEffect, useCallback } from "react";
 import { financeApi, SessionPLData } from "@/lib/financeApi";
 import { useToast } from "@/components/ui/Toast";
 import { Skeleton } from "@/components/ui/Skeleton";
+import { downloadExcel } from "@/lib/fileUtils";
 
 export default function SessionPLPage() {
     const { showToast } = useToast();
     const [loading, setLoading] = useState(true);
+    const [isExporting, setIsExporting] = useState(false);
     const [data, setData] = useState<SessionPLData | null>(null);
     const [error, setError] = useState<string | null>(null);
 
@@ -25,6 +27,22 @@ export default function SessionPLPage() {
             setLoading(false);
         }
     }, [showToast]);
+
+    const handleExport = async () => {
+        try {
+            setIsExporting(true);
+            const blob = await financeApi.exportSessionPL();
+            const sessionName = data?.sessionName || "Active-Session";
+            const sanitizedSessionName = sessionName.replace(/\s+/g, "-");
+            downloadExcel(blob, `session-pl-${sanitizedSessionName}.xlsx`);
+            showToast("Export successful", "success");
+        } catch (error: any) {
+            console.error("Export failed:", error);
+            showToast(error.message || "Export failed", "error");
+        } finally {
+            setIsExporting(false);
+        }
+    };
 
     useEffect(() => {
         fetchData();
@@ -47,13 +65,27 @@ export default function SessionPLPage() {
                         </div>
                     )}
                 </div>
-                <button
-                    onClick={fetchData}
-                    disabled={loading}
-                    className="px-6 py-2 bg-gray-900 text-white rounded-xl font-bold hover:bg-gray-800 transition-colors disabled:opacity-50"
-                >
-                    Refresh Data
-                </button>
+                <div className="flex items-center gap-3">
+                    <button
+                        onClick={handleExport}
+                        disabled={loading || isExporting}
+                        className="px-6 py-2 bg-green-600 text-white rounded-xl font-bold hover:bg-green-700 disabled:opacity-50 transition-colors flex items-center gap-2"
+                    >
+                        {isExporting ? (
+                            <span className="w-4 h-4 border-2 border-white/30 border-t-white rounded-full animate-spin"></span>
+                        ) : (
+                            <span>📊</span>
+                        )}
+                        Export Excel
+                    </button>
+                    <button
+                        onClick={fetchData}
+                        disabled={loading || isExporting}
+                        className="px-6 py-2 bg-gray-900 text-white rounded-xl font-bold hover:bg-gray-800 transition-colors disabled:opacity-50"
+                    >
+                        Refresh Data
+                    </button>
+                </div>
             </div>
 
             {error ? (

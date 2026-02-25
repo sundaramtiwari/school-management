@@ -5,6 +5,7 @@ import { financeApi, ExpenseVoucherData } from "@/lib/financeApi";
 import { useToast } from "@/components/ui/Toast";
 import { Skeleton } from "@/components/ui/Skeleton";
 import CreateExpenseModal from "./CreateExpenseModal";
+import { downloadExcel } from "@/lib/fileUtils";
 
 export default function ExpensesPage() {
     const { showToast } = useToast();
@@ -15,6 +16,7 @@ export default function ExpensesPage() {
     );
 
     const [loading, setLoading] = useState(true);
+    const [isExporting, setIsExporting] = useState(false);
     const [expenses, setExpenses] = useState<ExpenseVoucherData[]>([]);
     const [isModalOpen, setIsModalOpen] = useState(false);
 
@@ -30,6 +32,20 @@ export default function ExpensesPage() {
             setLoading(false);
         }
     }, [selectedDate, showToast]);
+
+    const handleExport = async () => {
+        try {
+            setIsExporting(true);
+            const blob = await financeApi.exportExpenses(selectedDate);
+            downloadExcel(blob, `expenses-${selectedDate}.xlsx`);
+            showToast("Export successful", "success");
+        } catch (error: any) {
+            console.error("Export failed:", error);
+            showToast(error.message || "Export failed", "error");
+        } finally {
+            setIsExporting(false);
+        }
+    };
 
     useEffect(() => {
         fetchExpenses();
@@ -53,8 +69,21 @@ export default function ExpensesPage() {
                         className="px-3 py-2 border rounded-lg shadow-sm focus:ring-2 focus:ring-blue-500 focus:border-blue-500 disabled:opacity-50"
                     />
                     <button
+                        onClick={handleExport}
+                        disabled={loading || isExporting}
+                        className="px-4 py-2 bg-green-600 text-white rounded-lg hover:bg-green-700 disabled:opacity-50 transition-colors flex items-center gap-2 font-medium"
+                    >
+                        {isExporting ? (
+                            <span className="w-4 h-4 border-2 border-white/30 border-t-white rounded-full animate-spin"></span>
+                        ) : (
+                            <span>📊</span>
+                        )}
+                        Export Excel
+                    </button>
+                    <button
                         onClick={() => setIsModalOpen(true)}
-                        className="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors flex items-center gap-2 font-medium"
+                        disabled={loading || isExporting}
+                        className="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors flex items-center gap-2 font-medium disabled:opacity-50"
                     >
                         <span>➕</span> Create Voucher
                     </button>

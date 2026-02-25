@@ -38,7 +38,7 @@ export const studentApi = {
     updateGuardians: (id: number, guardians: StudentPayload[]) =>
         api.put(`/api/guardians/${id}/guardians`, guardians),
 
-    withdraw: (studentId: number, body: { sessionId: number; withdrawalDate: string; status: "PASSED_OUT" | "LEFT" | "SUSPENDED"; reason?: string }) =>
+    withdraw: (studentId: number, body: { sessionId: number; withdrawalDate: string; status: "PASSED_OUT" | "LEFT" | "SUSPENDED" | "WITHDRAWN"; reason?: string }) =>
         api.post(`/api/students/${studentId}/withdraw`, body),
 
 };

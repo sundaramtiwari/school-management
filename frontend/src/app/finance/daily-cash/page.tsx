@@ -4,6 +4,7 @@ import { useState, useEffect } from "react";
 import { financeApi, DailyCashSummary, FeeHeadSummary, ExpenseVoucherData } from "@/lib/financeApi";
 import { useToast } from "@/components/ui/Toast";
 import { Skeleton } from "@/components/ui/Skeleton";
+import { downloadExcel } from "@/lib/fileUtils";
 
 export default function DailyCashPage() {
     const { showToast } = useToast();
@@ -14,6 +15,7 @@ export default function DailyCashPage() {
     );
 
     const [loading, setLoading] = useState(true);
+    const [isExporting, setIsExporting] = useState(false);
 
     // Data state
     const [summary, setSummary] = useState<DailyCashSummary | null>(null);
@@ -49,6 +51,20 @@ export default function DailyCashPage() {
         window.print();
     };
 
+    const handleExport = async () => {
+        try {
+            setIsExporting(true);
+            const blob = await financeApi.exportDailyCash(selectedDate);
+            downloadExcel(blob, `daily-cash-${selectedDate}.xlsx`);
+            showToast("Export successful", "success");
+        } catch (error: any) {
+            console.error("Export failed:", error);
+            showToast(error.message || "Export failed", "error");
+        } finally {
+            setIsExporting(false);
+        }
+    };
+
     return (
         <div className="max-w-7xl mx-auto space-y-6">
 
@@ -64,8 +80,20 @@ export default function DailyCashPage() {
                         className="px-3 py-2 border rounded-lg shadow-sm focus:ring-2 focus:ring-blue-500 focus:border-blue-500 disabled:opacity-50"
                     />
                     <button
+                        onClick={handleExport}
+                        disabled={loading || isExporting}
+                        className="px-4 py-2 bg-green-600 text-white rounded-lg hover:bg-green-700 disabled:opacity-50 transition-colors flex items-center gap-2 font-medium"
+                    >
+                        {isExporting ? (
+                            <span className="w-4 h-4 border-2 border-white/30 border-t-white rounded-full animate-spin"></span>
+                        ) : (
+                            <span>📊</span>
+                        )}
+                        Export Excel
+                    </button>
+                    <button
                         onClick={handlePrint}
-                        disabled={loading}
+                        disabled={loading || isExporting}
                         className="px-4 py-2 bg-gray-100 text-gray-700 rounded-lg hover:bg-gray-200 disabled:opacity-50 transition-colors flex items-center gap-2"
                     >
                         <span>🖨️</span> Print View

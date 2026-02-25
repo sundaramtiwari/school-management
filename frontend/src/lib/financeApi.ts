@@ -100,6 +100,27 @@ export const financeApi = {
         return response.data;
     },
 
+    // Export Reports
+    exportDailyCash: async (date: string) => {
+        const response = await api.get(`/api/finance/export/daily-cash?date=${date}`, { responseType: "blob" });
+        return new Blob([response.data], { type: "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet" });
+    },
+
+    exportMonthlyPL: async (year: number, month: number) => {
+        const response = await api.get(`/api/finance/export/monthly-pl?year=${year}&month=${month}`, { responseType: "blob" });
+        return new Blob([response.data], { type: "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet" });
+    },
+
+    exportSessionPL: async () => {
+        const response = await api.get("/api/finance/export/session-pl", { responseType: "blob" });
+        return new Blob([response.data], { type: "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet" });
+    },
+
+    exportExpenses: async (date: string) => {
+        const response = await api.get(`/api/finance/export/expenses?date=${date}`, { responseType: "blob" });
+        return new Blob([response.data], { type: "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet" });
+    },
+
     // Expenses
     getExpenseHeads: async () => {
         const response = await api.get<ExpenseHeadData[]>("/api/expenses/heads");
