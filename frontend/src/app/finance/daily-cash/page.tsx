@@ -6,9 +6,12 @@ import { useToast } from "@/components/ui/Toast";
 import { Skeleton } from "@/components/ui/Skeleton";
 import { downloadExcel } from "@/lib/fileUtils";
 import Modal from "@/components/ui/Modal";
+import { useAuth } from "@/context/AuthContext";
 
 export default function DailyCashPage() {
     const { showToast } = useToast();
+    const { user } = useAuth();
+    const userRole = user?.role?.toUpperCase();
 
     // Default to today
     const [selectedDate, setSelectedDate] = useState<string>(
@@ -32,6 +35,11 @@ export default function DailyCashPage() {
         referenceNumber: "",
         remarks: ""
     });
+
+    // Day Closing state
+    const [isCloseDayModalOpen, setIsCloseDayModalOpen] = useState(false);
+    const [isOverrideModalOpen, setIsOverrideModalOpen] = useState(false);
+    const [isDayClosingSubmitting, setIsDayClosingSubmitting] = useState(false);
 
     const fetchData = async () => {
         setLoading(true);
@@ -105,6 +113,36 @@ export default function DailyCashPage() {
         }
     };
 
+    const handleCloseDay = async () => {
+        try {
+            setIsDayClosingSubmitting(true);
+            await financeApi.closeDay(selectedDate);
+            showToast("Financial day closed successfully", "success");
+            setIsCloseDayModalOpen(false);
+            fetchData();
+        } catch (error: any) {
+            console.error("Day closing failed:", error);
+            showToast(error.message || "Failed to close day", "error");
+        } finally {
+            setIsDayClosingSubmitting(false);
+        }
+    };
+
+    const handleEnableOverride = async () => {
+        try {
+            setIsDayClosingSubmitting(true);
+            await financeApi.enableOverride(selectedDate);
+            showToast("Override enabled - you can now record transactions", "success");
+            setIsOverrideModalOpen(false);
+            fetchData();
+        } catch (error: any) {
+            console.error("Override failed:", error);
+            showToast(error.message || "Failed to enable override", "error");
+        } finally {
+            setIsDayClosingSubmitting(false);
+        }
+    };
+
     return (
         <div className="max-w-7xl mx-auto space-y-6">
 
@@ -112,17 +150,49 @@ export default function DailyCashPage() {
             <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4 print:hidden">
                 <div className="flex items-center gap-3">
                     <h1 className="text-2xl font-bold text-gray-900">Daily Cash Dashboard</h1>
-                    {summary?.closed && (
-                        <span className="px-2 py-1 bg-red-100 text-red-700 text-[10px] font-black uppercase tracking-widest rounded-md border border-red-200">
+                    {summary?.closed ? (
+                        <span className="px-2 py-1 bg-red-100 text-red-700 text-[10px] font-black uppercase tracking-widest rounded-md border border-red-200 shadow-sm animate-pulse">
                             Closed
+                        </span>
+                    ) : (
+                        <span className="px-2 py-1 bg-green-100 text-green-700 text-[10px] font-black uppercase tracking-widest rounded-md border border-green-200 shadow-sm">
+                            Open
                         </span>
                     )}
                 </div>
                 <div className="flex items-center gap-4">
+                    {/* Day Closing Actions */}
+                    {!summary?.closed ? (
+                        (userRole === "SCHOOL_ADMIN" || userRole === "ACCOUNTANT" || userRole === "SUPER_ADMIN") && (
+                            <button
+                                onClick={() => setIsCloseDayModalOpen(true)}
+                                disabled={loading || isDayClosingSubmitting}
+                                className="px-4 py-2 bg-indigo-600 text-white rounded-lg hover:bg-indigo-700 disabled:opacity-50 transition-all flex items-center gap-2 font-medium shadow-md active:scale-95"
+                                title="Lock all financial transactions for this date"
+                            >
+                                <span>🔒</span> Close Day
+                            </button>
+                        )
+                    ) : (
+                        userRole === "SUPER_ADMIN" && (
+                            <button
+                                onClick={() => setIsOverrideModalOpen(true)}
+                                disabled={loading || isDayClosingSubmitting}
+                                className="px-4 py-2 bg-amber-500 text-white rounded-lg hover:bg-amber-600 disabled:opacity-50 transition-all flex items-center gap-2 font-medium shadow-md active:scale-95"
+                                title="Allow edits for this closed date (Super Admin only)"
+                            >
+                                <span>🔓</span> Enable Override
+                            </button>
+                        )
+                    )}
+
+                    <div className="w-[1px] h-8 bg-gray-200 mx-2 hidden sm:block"></div>
+
                     <button
                         onClick={() => setIsTransferModalOpen(true)}
                         disabled={loading || summary?.closed}
-                        className="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 disabled:opacity-50 transition-all flex items-center gap-2 font-medium shadow-sm active:scale-95"
+                        className={`px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 disabled:opacity-50 transition-all flex items-center gap-2 font-medium shadow-sm active:scale-95 ${summary?.closed ? "opacity-50 cursor-not-allowed grayscale" : ""}`}
+                        title={summary?.closed ? "Day is closed" : "Record Cash Deposit"}
                     >
                         <span>📥</span> Record Cash Deposit
                     </button>
@@ -482,6 +552,96 @@ export default function DailyCashPage() {
                         </button>
                     </div>
                 </form>
+            </Modal>
+
+            {/* Close Day Modal */}
+            <Modal
+                isOpen={isCloseDayModalOpen}
+                onClose={() => !isDayClosingSubmitting && setIsCloseDayModalOpen(false)}
+                title="Close Financial Day"
+                maxWidth="max-w-md"
+            >
+                <div className="space-y-4">
+                    <div className="p-4 bg-red-50 border border-red-100 rounded-xl flex gap-3">
+                        <span className="text-2xl">⚠️</span>
+                        <div>
+                            <p className="text-sm font-bold text-red-800">Final Action Warning</p>
+                            <p className="text-sm text-red-700 mt-1">
+                                This will <strong>lock all financial transactions</strong> for {new Date(selectedDate).toLocaleDateString()}.
+                                You will not be able to add payments, expenses, or transfers for this date.
+                            </p>
+                        </div>
+                    </div>
+
+                    <div className="flex flex-col gap-3">
+                        <button
+                            onClick={handleCloseDay}
+                            disabled={isDayClosingSubmitting}
+                            className="w-full py-3 bg-red-600 text-white rounded-xl font-bold hover:bg-red-700 transition-all shadow-md active:scale-[0.98] disabled:opacity-50"
+                        >
+                            {isDayClosingSubmitting ? (
+                                <span className="flex items-center justify-center gap-2">
+                                    <span className="w-4 h-4 border-2 border-white/30 border-t-white rounded-full animate-spin"></span>
+                                    Closing Day...
+                                </span>
+                            ) : (
+                                "Confirm Close Day"
+                            )}
+                        </button>
+                        <button
+                            onClick={() => setIsCloseDayModalOpen(false)}
+                            disabled={isDayClosingSubmitting}
+                            className="w-full py-2 text-sm font-medium text-gray-500 hover:text-gray-700 transition-colors"
+                        >
+                            Cancel
+                        </button>
+                    </div>
+                </div>
+            </Modal>
+
+            {/* Override Modal */}
+            <Modal
+                isOpen={isOverrideModalOpen}
+                onClose={() => !isDayClosingSubmitting && setIsOverrideModalOpen(false)}
+                title="Enable Override"
+                maxWidth="max-w-md"
+            >
+                <div className="space-y-4">
+                    <div className="p-4 bg-amber-50 border border-amber-100 rounded-xl flex gap-3">
+                        <span className="text-2xl">⚡</span>
+                        <div>
+                            <p className="text-sm font-bold text-amber-800">Super Admin Override</p>
+                            <p className="text-sm text-amber-700 mt-1">
+                                This allows financial edits for this closed date.
+                                Use with care for audit purposes.
+                            </p>
+                        </div>
+                    </div>
+
+                    <div className="flex flex-col gap-3">
+                        <button
+                            onClick={handleEnableOverride}
+                            disabled={isDayClosingSubmitting}
+                            className="w-full py-3 bg-amber-500 text-white rounded-xl font-bold hover:bg-amber-600 transition-all shadow-md active:scale-[0.98] disabled:opacity-50"
+                        >
+                            {isDayClosingSubmitting ? (
+                                <span className="flex items-center justify-center gap-2">
+                                    <span className="w-4 h-4 border-2 border-white/30 border-t-white rounded-full animate-spin"></span>
+                                    Enabling...
+                                </span>
+                            ) : (
+                                "Confirm Override"
+                            )}
+                        </button>
+                        <button
+                            onClick={() => setIsOverrideModalOpen(false)}
+                            disabled={isDayClosingSubmitting}
+                            className="w-full py-2 text-sm font-medium text-gray-500 hover:text-gray-700 transition-colors"
+                        >
+                            Cancel
+                        </button>
+                    </div>
+                </div>
             </Modal>
 
             {/* 

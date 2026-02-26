@@ -164,5 +164,14 @@ export const financeApi = {
     createTransfer: async (data: FinanceAccountTransferRequest) => {
         const response = await api.post<FinanceAccountTransferData>("/api/finance/transfers", data);
         return response.data;
+    },
+
+    // Day Closing
+    closeDay: async (date: string) => {
+        await api.post(`/api/finance/day-closing?date=${date}`);
+    },
+
+    enableOverride: async (date: string) => {
+        await api.patch(`/api/finance/day-closing/${date}/override`);
     }
 };
