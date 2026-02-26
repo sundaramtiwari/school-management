@@ -10,7 +10,10 @@ import lombok.experimental.SuperBuilder;
 import java.math.BigDecimal;
 
 @Entity
-@Table(name = "late_fee_policies")
+@Table(name = "late_fee_policies",
+        uniqueConstraints = {
+                @UniqueConstraint(columnNames = {"fee_structure_id"})
+        })
 @Getter
 @Setter
 @NoArgsConstructor

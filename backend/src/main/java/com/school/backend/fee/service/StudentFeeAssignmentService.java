@@ -1,6 +1,5 @@
 package com.school.backend.fee.service;
 
-import com.school.backend.common.enums.FeeFrequency;
 import com.school.backend.common.enums.LateFeeCapType;
 import com.school.backend.common.exception.InvalidOperationException;
 import com.school.backend.common.exception.ResourceNotFoundException;
@@ -68,11 +67,7 @@ public class StudentFeeAssignmentService {
             throw new IllegalStateException("Fee already assigned to student for this session");
         }
 
-        BigDecimal calculatedAmount = fs.getAmount();
-        if (fs.getFrequency() == FeeFrequency.MONTHLY) {
-            calculatedAmount = calculatedAmount.multiply(new BigDecimal(12));
-        }
-        final BigDecimal finalAmount = calculatedAmount;
+        final BigDecimal finalAmount = feeCalculationService.calculateAssignableAmount(fs, req.getStudentId());
 
         // --- Derive Due Date from session start/end or use request override ---
         LocalDate dueDate = req.getDueDate();
@@ -180,7 +175,7 @@ public class StudentFeeAssignmentService {
         dto.setSponsorCoveredAmount(sfa.getSponsorCoveredAmount());
         dto.setPrincipalPaid(sfa.getPrincipalPaid());
 
-        BigDecimal pending = calculatePendingFromPersistedValues(sfa);
+        BigDecimal pending = FeeMath.computePending(sfa);
 
         dto.setStatus(pending.compareTo(BigDecimal.ZERO) <= 0 ? "PAID" : "PENDING");
         BigDecimal remainingPrincipal = nz(sfa.getAmount())
@@ -199,10 +194,6 @@ public class StudentFeeAssignmentService {
 
     private BigDecimal nz(BigDecimal value) {
         return value != null ? value : ZERO;
-    }
-
-    private BigDecimal calculatePendingFromPersistedValues(StudentFeeAssignment sfa) {
-        return FeeMath.computePending(sfa);
     }
 
     private LocalDate resolveDerivedDueDate(Long sessionId, Long schoolId, Integer dueDayOfMonth) {

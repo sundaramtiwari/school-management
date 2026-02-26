@@ -74,11 +74,18 @@ public class FeePaymentService {
 
         for (FeePaymentAllocationRequest allocReq : req.getAllocations()) {
             Long assignmentId = allocReq.getAssignmentId();
-            BigDecimal amountProvided = allocReq.getPrincipalAmount();
+            BigDecimal principalRequested = nz(allocReq.getPrincipalAmount());
+            BigDecimal lateFeeRequested = nz(allocReq.getLateFeeAmount());
+            BigDecimal amountProvided = principalRequested.add(lateFeeRequested);
+
+            if (principalRequested.compareTo(BigDecimal.ZERO) < 0 || lateFeeRequested.compareTo(BigDecimal.ZERO) < 0) {
+                throw new BusinessException(
+                        "Allocation amounts must be non-negative for assignment ID: " + assignmentId);
+            }
 
             if (amountProvided.compareTo(BigDecimal.ZERO) <= 0) {
                 throw new BusinessException(
-                        "Allocation amount must be greater than zero for assignment ID: " + assignmentId);
+                        "Allocation total must be greater than zero for assignment ID: " + assignmentId);
             }
 
             if (!processedAssignmentIds.add(assignmentId)) {
@@ -128,6 +135,12 @@ public class FeePaymentService {
             if (lateFeeDue.compareTo(BigDecimal.ZERO) < 0)
                 lateFeeDue = BigDecimal.ZERO;
 
+            if (lateFeeRequested.compareTo(lateFeeDue) > 0) {
+                throw new BusinessException(
+                        "Late fee allocation (₹ " + lateFeeRequested + ") exceeds pending late fee (₹ "
+                                + lateFeeDue + ") for assignment: " + assignmentId);
+            }
+
             // 2. Strict Late Fee Policy: Must clear full late fee if pending
             if (lateFeeDue.compareTo(BigDecimal.ZERO) > 0 && amountProvided.compareTo(lateFeeDue) < 0) {
                 throw new BusinessException(
@@ -135,22 +148,24 @@ public class FeePaymentService {
             }
 
             // 3. Overpayment Guard
-            BigDecimal principalDue = assignment.getAmount()
-                    .subtract(assignment.getPrincipalPaid())
-                    .subtract(assignment.getTotalDiscountAmount())
-                    .subtract(assignment.getSponsorCoveredAmount());
-            if (principalDue.compareTo(BigDecimal.ZERO) < 0)
-                principalDue = BigDecimal.ZERO;
-
-            BigDecimal totalPending = lateFeeDue.add(principalDue);
+            BigDecimal totalPending = FeeMath.computePending(assignment);
             if (amountProvided.compareTo(totalPending) > 0) {
                 throw new BusinessException("Payment (₹ " + amountProvided + ") exceeds total outstanding (₹ "
                         + totalPending + ") for assignment: " + assignmentId);
             }
 
             // 4. Perform Allocation
-            BigDecimal lateFeeAllocation = amountProvided.min(lateFeeDue);
-            BigDecimal principalAllocation = amountProvided.subtract(lateFeeAllocation);
+            BigDecimal lateFeeAllocation = lateFeeRequested.min(lateFeeDue);
+            BigDecimal principalRemainder = principalRequested;
+
+            // Enforce late-fee-first policy using principal bucket when explicit late fee is lower.
+            BigDecimal lateFeeBalance = lateFeeDue.subtract(lateFeeAllocation);
+            if (lateFeeBalance.compareTo(BigDecimal.ZERO) > 0) {
+                lateFeeAllocation = lateFeeAllocation.add(lateFeeBalance);
+                principalRemainder = principalRemainder.subtract(lateFeeBalance);
+            }
+
+            BigDecimal principalAllocation = principalRemainder;
 
             assignment.setLateFeePaid(assignment.getLateFeePaid().add(lateFeeAllocation));
             assignment.setPrincipalPaid(assignment.getPrincipalPaid().add(principalAllocation));

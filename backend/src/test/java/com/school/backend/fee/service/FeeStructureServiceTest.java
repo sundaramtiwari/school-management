@@ -37,6 +37,8 @@ class FeeStructureServiceTest {
     private AcademicSessionRepository academicSessionRepository;
     @Mock
     private LateFeePolicyRepository lateFeePolicyRepository;
+    @Mock
+    private FeeCalculationService feeCalculationService;
 
     @InjectMocks
     private FeeStructureService feeStructureService;
@@ -75,6 +77,7 @@ class FeeStructureServiceTest {
     @DisplayName("Full Session: Enrollment at start should charge 12 months for Monthly fee")
     void testFullSessionMonthly() {
         setupMocks(LocalDate.of(2024, 4, 1));
+        when(feeCalculationService.calculateAssignableAmount(monthlyFee, 100L)).thenReturn(new BigDecimal("12000.00"));
 
         feeStructureService.assignFeeToStudent(monthlyFee, 100L);
 
@@ -90,6 +93,7 @@ class FeeStructureServiceTest {
     void testMidSessionMonthly() {
         // Enrolling on Oct 15th
         setupMocks(LocalDate.of(2024, 10, 15));
+        when(feeCalculationService.calculateAssignableAmount(monthlyFee, 100L)).thenReturn(new BigDecimal("6000.00"));
 
         feeStructureService.assignFeeToStudent(monthlyFee, 100L);
 
@@ -105,6 +109,7 @@ class FeeStructureServiceTest {
     @DisplayName("End-Session: Enrollment in last month should charge 1 month")
     void testEndSessionMonthly() {
         setupMocks(LocalDate.of(2025, 3, 15));
+        when(feeCalculationService.calculateAssignableAmount(monthlyFee, 100L)).thenReturn(new BigDecimal("1000.00"));
 
         feeStructureService.assignFeeToStudent(monthlyFee, 100L);
 
@@ -118,6 +123,7 @@ class FeeStructureServiceTest {
     @DisplayName("Annual Fixed: Enrollment mid-session should still charge 100% for Annual fee")
     void testMidSessionAnnual() {
         setupMocks(LocalDate.of(2024, 10, 1));
+        when(feeCalculationService.calculateAssignableAmount(annualFee, 100L)).thenReturn(new BigDecimal("5000.00"));
 
         feeStructureService.assignFeeToStudent(annualFee, 100L);
 

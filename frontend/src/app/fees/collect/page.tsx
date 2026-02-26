@@ -19,6 +19,7 @@ type FeeSummary = {
     pendingFee: number;
     totalLateFeeAccrued: number;
     totalLateFeePaid: number;
+    totalLateFeeWaived: number;
     status: string
 };
 type Payment = { id: number; amountPaid: number; paymentDate: string; mode: string; remarks: string };
@@ -502,6 +503,10 @@ function FeeCollectContent() {
                                     <div className="flex justify-between">
                                         <span className="text-gray-400">Accrued Late Fees:</span>
                                         <span className="text-orange-400">₹ {(summary.totalLateFeeAccrued ?? 0).toLocaleString()}</span>
+                                    </div>
+                                    <div className="flex justify-between">
+                                        <span className="text-gray-400">Late Fees Waived:</span>
+                                        <span className="text-red-400">₹ {(summary.totalLateFeeWaived ?? 0).toLocaleString()}</span>
                                     </div>
                                     <div className="flex justify-between border-t border-white/5 pt-2 mt-1">
                                         <span className="text-gray-400">Total Collected:</span>

@@ -12,10 +12,14 @@ import lombok.experimental.SuperBuilder;
 import java.time.LocalDate;
 
 @Entity
-@Table(name = "students", indexes = {
-        @Index(name = "idx_student_school_adm", columnList = "school_id,admission_number"),
-        @Index(name = "idx_student_school_aadhar", columnList = "school_id,aadhar_number")
-})
+@Table(name = "students",
+        uniqueConstraints = {
+                @UniqueConstraint(columnNames = {"school_id", "admission_number"})
+        },
+        indexes = {
+                @Index(name = "idx_student_school_adm", columnList = "school_id,admission_number"),
+                @Index(name = "idx_student_school_aadhar", columnList = "school_id,aadhar_number")
+        })
 @Getter
 @Setter
 @NoArgsConstructor

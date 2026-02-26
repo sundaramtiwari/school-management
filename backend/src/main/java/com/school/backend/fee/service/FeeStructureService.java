@@ -31,8 +31,6 @@ import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
 import java.math.BigDecimal;
-import java.time.LocalDate;
-import java.time.temporal.ChronoUnit;
 import java.time.Instant;
 import java.util.LinkedHashMap;
 import java.util.List;
@@ -50,6 +48,7 @@ public class FeeStructureService {
     private final SetupValidationService setupValidationService;
     private final LateFeePolicyRepository lateFeePolicyRepository;
     private final AcademicSessionRepository academicSessionRepository;
+    private final FeeCalculationService feeCalculationService;
 
     // ---------------- CREATE ----------------
     @Transactional
@@ -193,7 +192,7 @@ public class FeeStructureService {
             }
         }
 
-        BigDecimal finalAmount = computeAmount(fs, studentId);
+        BigDecimal finalAmount = feeCalculationService.calculateAssignableAmount(fs, studentId);
 
         // --- Snapshot Late Fee Policy ---
         LateFeePolicy policy = lateFeePolicyRepository.findByFeeStructureId(fs.getId()).orElse(null);
@@ -239,45 +238,6 @@ public class FeeStructureService {
             throw new InvalidOperationException("Session context is missing in request");
         }
         return sessionId;
-    }
-
-    private BigDecimal computeAmount(FeeStructure fs, Long studentId) {
-        if (fs.getFrequency() == null || fs.getFrequency() == FeeFrequency.ONE_TIME
-                || fs.getFrequency() == FeeFrequency.ANNUALLY) {
-            return fs.getAmount();
-        }
-
-        AcademicSession session = academicSessionRepository.findById(fs.getSessionId())
-                .filter(s -> fs.getSchoolId().equals(s.getSchoolId()))
-                .orElse(null);
-
-        // Fallback: If session or dates are missing, charge the full year amount
-        if (session == null || session.getStartDate() == null || session.getEndDate() == null) {
-            return fs.getAmount().multiply(BigDecimal.valueOf(fs.getFrequency().getPeriodsPerYear()));
-        }
-
-        // Use enrollment date if student joined mid-session, otherwise session start
-        LocalDate effectiveStart = enrollmentRepository
-                .findFirstByStudentIdAndSessionIdAndActiveTrue(studentId, fs.getSessionId())
-                .map(StudentEnrollment::getEnrollmentDate)
-                .filter(d -> d.isAfter(session.getStartDate()))
-                .orElse(session.getStartDate());
-
-        // Calculate total months remaining in session from effective start date
-        long monthsRemaining = ChronoUnit.MONTHS.between(
-                effectiveStart.withDayOfMonth(1), // normalize to month start
-                session.getEndDate().plusDays(1));
-
-        if (monthsRemaining <= 0) {
-            monthsRemaining = 1; // minimum 1 month
-        }
-
-        return switch (fs.getFrequency()) {
-            case MONTHLY -> fs.getAmount().multiply(BigDecimal.valueOf(monthsRemaining));
-            case QUARTERLY -> fs.getAmount().multiply(BigDecimal.valueOf(Math.ceil(monthsRemaining / 3.0)));
-            case HALF_YEARLY -> fs.getAmount().multiply(BigDecimal.valueOf(Math.ceil(monthsRemaining / 6.0)));
-            default -> fs.getAmount();
-        };
     }
 
     // ---------------- MAPPER ----------------
