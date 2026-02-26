@@ -12,6 +12,8 @@ import com.school.backend.expense.repository.ExpenseHeadRepository;
 import com.school.backend.expense.repository.ExpenseVoucherRepository;
 import com.school.backend.school.entity.AcademicSession;
 import com.school.backend.school.repository.AcademicSessionRepository;
+import com.school.backend.user.entity.User;
+import com.school.backend.user.repository.UserRepository;
 import com.school.backend.user.security.SecurityUtil;
 import lombok.RequiredArgsConstructor;
 import org.springframework.dao.DataIntegrityViolationException;
@@ -22,11 +24,13 @@ import java.math.BigDecimal;
 import java.time.LocalDate;
 import java.util.List;
 import java.util.Locale;
+import java.util.Optional;
 
 @Service
 @RequiredArgsConstructor
 public class ExpenseService {
 
+    private final UserRepository userRepository;
     private final ExpenseHeadRepository expenseHeadRepository;
     private final ExpenseVoucherRepository expenseVoucherRepository;
     private final AcademicSessionRepository academicSessionRepository;
@@ -122,9 +126,11 @@ public class ExpenseService {
         Long sessionId = requireSessionId();
 
         List<ExpenseVoucher> vouchers = (date == null)
-                ? expenseVoucherRepository.findBySchoolIdAndSessionIdAndActiveTrueOrderByExpenseDateDescIdDesc(schoolId, sessionId)
+                ? expenseVoucherRepository.findBySchoolIdAndSessionIdAndActiveTrueOrderByExpenseDateDescIdDesc(schoolId,
+                        sessionId)
                 : expenseVoucherRepository
-                        .findBySchoolIdAndSessionIdAndExpenseDateAndActiveTrueOrderByExpenseDateDescIdDesc(schoolId, sessionId, date);
+                        .findBySchoolIdAndSessionIdAndExpenseDateAndActiveTrueOrderByExpenseDateDescIdDesc(schoolId,
+                                sessionId, date);
 
         return vouchers.stream()
                 .map(this::toVoucherDto)
@@ -236,7 +242,8 @@ public class ExpenseService {
                 .description(voucher.getDescription())
                 .referenceNumber(voucher.getReferenceNumber())
                 .sessionId(voucher.getSessionId())
-                .createdBy(voucher.getCreatedBy())
+                .createdBy(Optional.ofNullable(voucher.getCreatedBy()).flatMap(userRepository::findById)
+                        .map(User::getFullName).orElse("Unknown"))
                 .active(voucher.isActive())
                 .build();
     }

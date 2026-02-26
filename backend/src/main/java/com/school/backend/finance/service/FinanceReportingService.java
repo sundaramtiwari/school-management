@@ -5,6 +5,7 @@ import com.school.backend.common.tenant.SessionContext;
 import com.school.backend.common.tenant.TenantContext;
 import com.school.backend.expense.entity.ExpenseVoucher;
 import com.school.backend.expense.repository.ExpenseVoucherRepository;
+import com.school.backend.finance.repository.FinanceAccountTransferRepository;
 import com.school.backend.fee.entity.FeePayment;
 import com.school.backend.fee.repository.FeePaymentRepository;
 import com.school.backend.finance.dto.MonthlyPLResponseDto;
@@ -27,6 +28,7 @@ public class FinanceReportingService {
     private final FeePaymentRepository feePaymentRepository;
     private final ExpenseVoucherRepository expenseVoucherRepository;
     private final AcademicSessionRepository academicSessionRepository;
+    private final FinanceAccountTransferRepository financeAccountTransferRepository;
 
     @Transactional(readOnly = true)
     public MonthlyPLResponseDto getMonthlyPL(int year, int month) {
@@ -70,6 +72,7 @@ public class FinanceReportingService {
 
         BigDecimal totalRevenue = cashRevenue.add(bankRevenue);
         BigDecimal totalExpense = cashExpense.add(bankExpense);
+        BigDecimal transferAmount = sumTransfers(schoolId, sessionId, startDate, endDate);
 
         return MonthlyPLResponseDto.builder()
                 .year(year)
@@ -81,8 +84,8 @@ public class FinanceReportingService {
                 .bankRevenue(bankRevenue)
                 .cashExpense(cashExpense)
                 .bankExpense(bankExpense)
-                .netCash(cashRevenue.subtract(cashExpense))
-                .netBank(bankRevenue.subtract(bankExpense))
+                .netCash(cashRevenue.subtract(cashExpense).subtract(transferAmount))
+                .netBank(bankRevenue.subtract(bankExpense).add(transferAmount))
                 .build();
     }
 
@@ -134,6 +137,7 @@ public class FinanceReportingService {
 
         BigDecimal totalRevenue = cashRevenue.add(bankRevenue);
         BigDecimal totalExpense = cashExpense.add(bankExpense);
+        BigDecimal transferAmount = sumTransfers(schoolId, sessionId, sessionStart, sessionEnd);
 
         return SessionPLResponseDto.builder()
                 .sessionId(session.getId())
@@ -145,9 +149,17 @@ public class FinanceReportingService {
                 .bankRevenue(bankRevenue)
                 .cashExpense(cashExpense)
                 .bankExpense(bankExpense)
-                .netCash(cashRevenue.subtract(cashExpense))
-                .netBank(bankRevenue.subtract(bankExpense))
+                .netCash(cashRevenue.subtract(cashExpense).subtract(transferAmount))
+                .netBank(bankRevenue.subtract(bankExpense).add(transferAmount))
                 .build();
+    }
+
+    private BigDecimal sumTransfers(Long schoolId, Long sessionId, LocalDate fromDate, LocalDate toDate) {
+        return financeAccountTransferRepository.findBySchoolIdAndSessionIdAndTransferDateBetween(
+                        schoolId, sessionId, fromDate, toDate)
+                .stream()
+                .map(t -> nz(t.getAmount()))
+                .reduce(BigDecimal.ZERO, BigDecimal::add);
     }
 
     private boolean isCashMode(String mode) {

@@ -24,6 +24,6 @@ public class ExpenseVoucherDto {
     private String description;
     private String referenceNumber;
     private Long sessionId;
-    private Long createdBy;
+    private String createdBy;
     private boolean active;
 }

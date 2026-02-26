@@ -10,6 +10,7 @@ import com.school.backend.core.dashboard.dto.SchoolAdminStatsDto;
 import com.school.backend.core.student.repository.StudentRepository;
 import com.school.backend.expense.entity.ExpenseVoucher;
 import com.school.backend.expense.repository.ExpenseVoucherRepository;
+import com.school.backend.finance.repository.FinanceAccountTransferRepository;
 import com.school.backend.fee.entity.FeePayment;
 import com.school.backend.fee.repository.FeePaymentAllocationRepository;
 import com.school.backend.fee.repository.FeePaymentRepository;
@@ -39,6 +40,7 @@ public class DashboardStatsService {
     private final FeePaymentRepository feePaymentRepository;
     private final FeePaymentAllocationRepository feePaymentAllocationRepository;
     private final ExpenseVoucherRepository expenseVoucherRepository;
+    private final FinanceAccountTransferRepository financeAccountTransferRepository;
 
     public SchoolAdminStatsDto getSchoolAdminStats() {
         Long schoolId = TenantContext.getSchoolId();
@@ -117,11 +119,17 @@ public class DashboardStatsService {
             }
         }
 
-        // Preserve existing totals behavior (cash-only aggregation)
+        BigDecimal transferOut = financeAccountTransferRepository
+                .findBySchoolIdAndSessionIdAndTransferDateBetween(schoolId, sessionId, effectiveDate, effectiveDate)
+                .stream()
+                .map(transfer -> nz(transfer.getAmount()))
+                .reduce(BigDecimal.ZERO, BigDecimal::add);
+
+        // Preserve existing totals behavior (cash-only operational aggregation)
         BigDecimal totalFeeCollected = cashRevenue;
         BigDecimal totalExpense = cashExpense;
-        BigDecimal netCash = cashRevenue.subtract(cashExpense);
-        BigDecimal netBank = bankRevenue.subtract(bankExpense);
+        BigDecimal netCash = cashRevenue.subtract(cashExpense).subtract(transferOut);
+        BigDecimal netBank = bankRevenue.subtract(bankExpense).add(transferOut);
         BigDecimal netAmount = totalFeeCollected.subtract(totalExpense);
 
         return DailyCashDashboardDto.builder()

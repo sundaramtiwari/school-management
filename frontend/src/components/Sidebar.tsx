@@ -25,14 +25,14 @@ const menu = [
     icon: "🎓",
     roles: ["SUPER_ADMIN", "PLATFORM_ADMIN", "SCHOOL_ADMIN", "TEACHER", "ACCOUNTANT"],
     children: [
-      { name: "Students", path: "/students", roles: ["SUPER_ADMIN", "PLATFORM_ADMIN", "SCHOOL_ADMIN", "TEACHER", "ACCOUNTANT"] },
-      { name: "Classes", path: "/classes", roles: ["SUPER_ADMIN", "PLATFORM_ADMIN", "SCHOOL_ADMIN", "TEACHER"] },
-      { name: "Subjects", path: "/subjects", roles: ["SUPER_ADMIN", "PLATFORM_ADMIN", "SCHOOL_ADMIN", "TEACHER"] },
-      { name: "Staff", path: "/staff", roles: ["SUPER_ADMIN", "PLATFORM_ADMIN", "SCHOOL_ADMIN"] },
-      { name: "Teacher Assignments", path: "/staff/assignments", roles: ["SUPER_ADMIN", "PLATFORM_ADMIN", "SCHOOL_ADMIN"] },
-      { name: "Attendance", path: "/attendance", roles: ["SUPER_ADMIN", "PLATFORM_ADMIN", "SCHOOL_ADMIN", "TEACHER"] },
-      { name: "Exams", path: "/exams", roles: ["SUPER_ADMIN", "PLATFORM_ADMIN", "SCHOOL_ADMIN", "TEACHER"] },
-      { name: "Marksheet", path: "/marksheets", roles: ["SUPER_ADMIN", "PLATFORM_ADMIN", "SCHOOL_ADMIN", "TEACHER"] },
+      { name: "Students", path: "/students", icon: "👥", roles: ["SUPER_ADMIN", "PLATFORM_ADMIN", "SCHOOL_ADMIN", "TEACHER", "ACCOUNTANT"] },
+      { name: "Classes", path: "/classes", icon: "🏢", roles: ["SUPER_ADMIN", "PLATFORM_ADMIN", "SCHOOL_ADMIN", "TEACHER"] },
+      { name: "Subjects", path: "/subjects", icon: "📚", roles: ["SUPER_ADMIN", "PLATFORM_ADMIN", "SCHOOL_ADMIN", "TEACHER"] },
+      { name: "Staff", path: "/staff", icon: "👨‍🏫", roles: ["SUPER_ADMIN", "PLATFORM_ADMIN", "SCHOOL_ADMIN"] },
+      { name: "Teacher Assignments", path: "/staff/assignments", icon: "📝", roles: ["SUPER_ADMIN", "PLATFORM_ADMIN", "SCHOOL_ADMIN"] },
+      { name: "Attendance", path: "/attendance", icon: "📅", roles: ["SUPER_ADMIN", "PLATFORM_ADMIN", "SCHOOL_ADMIN", "TEACHER"] },
+      { name: "Exams", path: "/exams", icon: "✍️", roles: ["SUPER_ADMIN", "PLATFORM_ADMIN", "SCHOOL_ADMIN", "TEACHER"] },
+      { name: "Marksheet", path: "/marksheets", icon: "📜", roles: ["SUPER_ADMIN", "PLATFORM_ADMIN", "SCHOOL_ADMIN", "TEACHER"] },
     ]
   },
   {
@@ -40,14 +40,14 @@ const menu = [
     icon: "💵",
     roles: ["SUPER_ADMIN", "SCHOOL_ADMIN", "ACCOUNTANT"],
     children: [
-      { name: "Fee Collection", path: "/fees/collect", roles: ["SUPER_ADMIN", "SCHOOL_ADMIN", "ACCOUNTANT"] },
-      { name: "Fee Summary", path: "/fees/summary", roles: ["SUPER_ADMIN", "SCHOOL_ADMIN", "ACCOUNTANT"] },
-      { name: "Defaulters", path: "/fees/defaulters", roles: ["SUPER_ADMIN", "SCHOOL_ADMIN", "ACCOUNTANT"] },
-      { name: "Fee Structures", path: "/fees/structures", roles: ["SUPER_ADMIN", "SCHOOL_ADMIN", "ACCOUNTANT"] },
-      { name: "Daily Cash", path: "/finance/daily-cash", roles: ["SUPER_ADMIN", "SCHOOL_ADMIN", "ACCOUNTANT"] },
-      { name: "Monthly P&L", path: "/finance/monthly-pl", roles: ["SUPER_ADMIN", "SCHOOL_ADMIN", "ACCOUNTANT"] },
-      { name: "Session P&L", path: "/finance/session-pl", roles: ["SUPER_ADMIN", "SCHOOL_ADMIN", "ACCOUNTANT"] },
-      { name: "Expenses", path: "/finance/expenses", roles: ["SUPER_ADMIN", "SCHOOL_ADMIN", "ACCOUNTANT"] },
+      { name: "Fee Summary", path: "/fees/summary", icon: "📋", roles: ["SUPER_ADMIN", "SCHOOL_ADMIN", "ACCOUNTANT"] },
+      { name: "Fee Structures", path: "/fees/structures", icon: "⚙️", roles: ["SUPER_ADMIN", "SCHOOL_ADMIN", "ACCOUNTANT"] },
+      { name: "Fee Collection", path: "/fees/collect", icon: "💰", roles: ["SUPER_ADMIN", "SCHOOL_ADMIN", "ACCOUNTANT"] },
+      { name: "Fee Defaulters", path: "/fees/defaulters", icon: "⚠️", roles: ["SUPER_ADMIN", "SCHOOL_ADMIN", "ACCOUNTANT"] },
+      { name: "Expenses", path: "/finance/expenses", icon: "💸", roles: ["SUPER_ADMIN", "SCHOOL_ADMIN", "ACCOUNTANT"] },
+      { name: "Daily Cash", path: "/finance/daily-cash", icon: "💹", roles: ["SUPER_ADMIN", "SCHOOL_ADMIN", "ACCOUNTANT"] },
+      { name: "Monthly P&L", path: "/finance/monthly-pl", icon: "📈", roles: ["SUPER_ADMIN", "SCHOOL_ADMIN", "ACCOUNTANT"] },
+      { name: "Session P&L", path: "/finance/session-pl", icon: "🏦", roles: ["SUPER_ADMIN", "SCHOOL_ADMIN", "ACCOUNTANT"] },
     ]
   },
   {
@@ -235,7 +235,11 @@ export default function Sidebar() {
                             ${childRestriction.isRestricted ? "opacity-50 cursor-not-allowed" : ""}
                           `}
                         >
-                          {child.name}
+                          <div className="flex items-center gap-2">
+                            {/* @ts-ignore */}
+                            {child.icon && <span className="text-base">{child.icon}</span>}
+                            <span>{child.name}</span>
+                          </div>
                         </Link>
                       );
                     })}
