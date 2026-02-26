@@ -40,6 +40,7 @@ export default function DailyCashPage() {
     const [isCloseDayModalOpen, setIsCloseDayModalOpen] = useState(false);
     const [isOverrideModalOpen, setIsOverrideModalOpen] = useState(false);
     const [isDayClosingSubmitting, setIsDayClosingSubmitting] = useState(false);
+    const [isActionsOpen, setIsActionsOpen] = useState(false);
 
     const fetchData = async () => {
         setLoading(true);
@@ -147,81 +148,90 @@ export default function DailyCashPage() {
         <div className="max-w-7xl mx-auto space-y-6">
 
             {/* Header controls (hidden when printing) */}
-            <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4 print:hidden">
-                <div className="flex items-center gap-3">
-                    <h1 className="text-2xl font-bold text-gray-900">Daily Cash Dashboard</h1>
+            <div className="flex flex-col sm:flex-row justify-between items-start sm:items-baseline gap-4 print:hidden border-b pb-6">
+                <div className="flex items-baseline gap-3">
+                    <h1 className="text-xl font-bold text-gray-800 tracking-tight">Daily Cash Dashboard</h1>
                     {summary?.closed ? (
-                        <span className="px-2 py-1 bg-red-100 text-red-700 text-[10px] font-black uppercase tracking-widest rounded-md border border-red-200 shadow-sm animate-pulse">
+                        <span className="px-2 py-0.5 bg-red-50 text-red-600 text-[10px] font-bold uppercase tracking-wider rounded-full border border-red-100">
                             Closed
                         </span>
                     ) : (
-                        <span className="px-2 py-1 bg-green-100 text-green-700 text-[10px] font-black uppercase tracking-widest rounded-md border border-green-200 shadow-sm">
+                        <span className="px-2 py-0.5 bg-green-50 text-green-600 text-[10px] font-bold uppercase tracking-wider rounded-full border border-green-100">
                             Open
                         </span>
                     )}
                 </div>
-                <div className="flex items-center gap-4">
-                    {/* Day Closing Actions */}
-                    {!summary?.closed ? (
-                        (userRole === "SCHOOL_ADMIN" || userRole === "ACCOUNTANT" || userRole === "SUPER_ADMIN") && (
-                            <button
-                                onClick={() => setIsCloseDayModalOpen(true)}
-                                disabled={loading || isDayClosingSubmitting}
-                                className="px-4 py-2 bg-indigo-600 text-white rounded-lg hover:bg-indigo-700 disabled:opacity-50 transition-all flex items-center gap-2 font-medium shadow-md active:scale-95"
-                                title="Lock all financial transactions for this date"
-                            >
-                                <span>🔒</span> Close Day
-                            </button>
-                        )
-                    ) : (
-                        userRole === "SUPER_ADMIN" && (
-                            <button
-                                onClick={() => setIsOverrideModalOpen(true)}
-                                disabled={loading || isDayClosingSubmitting}
-                                className="px-4 py-2 bg-amber-500 text-white rounded-lg hover:bg-amber-600 disabled:opacity-50 transition-all flex items-center gap-2 font-medium shadow-md active:scale-95"
-                                title="Allow edits for this closed date (Super Admin only)"
-                            >
-                                <span>🔓</span> Enable Override
-                            </button>
-                        )
-                    )}
 
-                    <div className="w-[1px] h-8 bg-gray-200 mx-2 hidden sm:block"></div>
-
-                    <button
-                        onClick={() => setIsTransferModalOpen(true)}
-                        disabled={loading || summary?.closed}
-                        className={`px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 disabled:opacity-50 transition-all flex items-center gap-2 font-medium shadow-sm active:scale-95 ${summary?.closed ? "opacity-50 cursor-not-allowed grayscale" : ""}`}
-                        title={summary?.closed ? "Day is closed" : "Record Cash Deposit"}
-                    >
-                        <span>📥</span> Record Cash Deposit
-                    </button>
+                <div className="flex items-center gap-3">
                     <input
                         type="date"
                         value={selectedDate}
                         onChange={(e) => setSelectedDate(e.target.value)}
                         disabled={loading}
-                        className="px-3 py-2 border rounded-lg shadow-sm focus:ring-2 focus:ring-blue-500 focus:border-blue-500 disabled:opacity-50"
+                        className="px-3 py-1.5 text-sm border border-gray-200 rounded-lg shadow-sm focus:ring-1 focus:ring-gray-300 focus:border-gray-400 bg-white text-gray-700 font-medium outline-none transition-all disabled:opacity-50"
                     />
-                    <button
-                        onClick={handleExport}
-                        disabled={loading || isExporting}
-                        className="px-4 py-2 bg-green-600 text-white rounded-lg hover:bg-green-700 disabled:opacity-50 transition-colors flex items-center gap-2 font-medium"
-                    >
-                        {isExporting ? (
-                            <span className="w-4 h-4 border-2 border-white/30 border-t-white rounded-full animate-spin"></span>
-                        ) : (
-                            <span>📊</span>
+
+                    {/* Actions Dropdown */}
+                    <div className="relative">
+                        <button
+                            onClick={() => setIsActionsOpen(!isActionsOpen)}
+                            className="px-4 py-1.5 bg-white border border-gray-200 text-gray-700 text-sm font-semibold rounded-lg hover:bg-gray-50 flex items-center gap-2 shadow-sm transition-all active:scale-95"
+                        >
+                            Actions <span className={`text-[10px] transition-transform ${isActionsOpen ? 'rotate-180' : ''}`}>▼</span>
+                        </button>
+
+                        {isActionsOpen && (
+                            <>
+                                <div className="fixed inset-0 z-10" onClick={() => setIsActionsOpen(false)}></div>
+                                <div className="absolute right-0 mt-2 w-56 bg-white border border-gray-100 rounded-xl shadow-xl z-20 py-2 animate-in fade-in zoom-in duration-75">
+                                    <button
+                                        onClick={() => { setIsTransferModalOpen(true); setIsActionsOpen(false); }}
+                                        disabled={summary?.closed}
+                                        className="w-full text-left px-4 py-2.5 text-sm text-gray-700 hover:bg-gray-50 flex items-center gap-3 disabled:opacity-40 disabled:grayscale transition-colors"
+                                    >
+                                        <span className="text-base">📥</span> Record Cash Deposit
+                                    </button>
+
+                                    {!summary?.closed ? (
+                                        (userRole === "SCHOOL_ADMIN" || userRole === "ACCOUNTANT" || userRole === "SUPER_ADMIN") && (
+                                            <button
+                                                onClick={() => { setIsCloseDayModalOpen(true); setIsActionsOpen(false); }}
+                                                className="w-full text-left px-4 py-2.5 text-sm text-gray-700 hover:bg-gray-50 flex items-center gap-3 transition-colors"
+                                            >
+                                                <span className="text-base text-gray-400">🔒</span> Close Day
+                                            </button>
+                                        )
+                                    ) : (
+                                        userRole === "SUPER_ADMIN" && (
+                                            <button
+                                                onClick={() => { setIsOverrideModalOpen(true); setIsActionsOpen(false); }}
+                                                className="w-full text-left px-4 py-2.5 text-sm text-amber-700 hover:bg-amber-50 flex items-center gap-3 transition-colors"
+                                            >
+                                                <span className="text-base">🔓</span> Enable Override
+                                            </button>
+                                        )
+                                    )}
+
+                                    <div className="h-px bg-gray-100 my-1 mx-2"></div>
+
+                                    <button
+                                        onClick={() => { handleExport(); setIsActionsOpen(false); }}
+                                        disabled={isExporting}
+                                        className="w-full text-left px-4 py-2.5 text-sm text-gray-700 hover:bg-gray-50 flex items-center gap-3 transition-colors"
+                                    >
+                                        <span className="text-base">{isExporting ? '⏳' : '📊'}</span> Export Excel
+                                    </button>
+
+                                    <button
+                                        onClick={() => { handlePrint(); setIsActionsOpen(false); }}
+                                        className="w-full text-left px-4 py-2.5 text-sm text-gray-700 hover:bg-gray-50 flex items-center gap-3 transition-colors"
+                                    >
+                                        <span className="text-base">🖨️</span> Print View
+                                    </button>
+                                </div>
+                            </>
                         )}
-                        Export Excel
-                    </button>
-                    <button
-                        onClick={handlePrint}
-                        disabled={loading || isExporting}
-                        className="px-4 py-2 bg-gray-100 text-gray-700 rounded-lg hover:bg-gray-200 disabled:opacity-50 transition-colors flex items-center gap-2"
-                    >
-                        <span>🖨️</span> Print View
-                    </button>
+                    </div>
                 </div>
             </div>
 
@@ -232,45 +242,45 @@ export default function DailyCashPage() {
             </div>
 
             {/* Summary Sections */}
-            <div className="space-y-8">
+            <div className="space-y-12">
                 {/* Core Summary (Row 1) */}
-                <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
-                    <div className="bg-blue-50/50 rounded-xl border border-blue-100 p-6 flex items-center gap-4">
-                        <div className="p-3 bg-blue-100 text-blue-600 rounded-lg text-2xl">💰</div>
+                <div className="grid grid-cols-1 md:grid-cols-3 gap-6 pt-4">
+                    <div className="bg-white rounded-xl border border-gray-100 p-6 flex items-center gap-4 shadow-sm hover:border-blue-100 transition-colors">
+                        <div className="p-3 bg-gray-50 text-gray-400 rounded-lg text-xl border border-gray-100">💰</div>
                         <div>
-                            <p className="text-xs font-bold uppercase tracking-wider text-blue-600/70">Total Revenue</p>
+                            <p className="text-[10px] font-bold uppercase tracking-widest text-gray-400">Total Revenue</p>
                             {loading ? (
                                 <Skeleton className="h-8 w-24 mt-1" />
                             ) : (
-                                <h3 className="text-2xl font-black text-blue-600">
+                                <h3 className="text-2xl font-bold text-gray-900 mt-1">
                                     ₹{(summary?.totalFeeCollected ?? 0).toLocaleString("en-IN")}
                                 </h3>
                             )}
                         </div>
                     </div>
 
-                    <div className="bg-red-50/50 rounded-xl border border-red-100 p-6 flex items-center gap-4">
-                        <div className="p-3 bg-red-100 text-red-600 rounded-lg text-2xl">📉</div>
+                    <div className="bg-white rounded-xl border border-gray-100 p-6 flex items-center gap-4 shadow-sm hover:border-red-100 transition-colors">
+                        <div className="p-3 bg-gray-50 text-gray-400 rounded-lg text-xl border border-gray-100">📉</div>
                         <div>
-                            <p className="text-xs font-bold uppercase tracking-wider text-red-600/70">Total Expense</p>
+                            <p className="text-[10px] font-bold uppercase tracking-widest text-gray-400">Total Expense</p>
                             {loading ? (
                                 <Skeleton className="h-8 w-24 mt-1" />
                             ) : (
-                                <h3 className="text-2xl font-black text-red-600">
+                                <h3 className="text-2xl font-bold text-gray-900 mt-1">
                                     ₹{(summary?.totalExpense ?? 0).toLocaleString("en-IN")}
                                 </h3>
                             )}
                         </div>
                     </div>
 
-                    <div className="bg-green-50/50 rounded-xl border border-green-100 p-6 flex items-center gap-4">
-                        <div className="p-3 bg-green-100 text-green-600 rounded-lg text-2xl">⚖️</div>
+                    <div className="bg-white rounded-xl border border-gray-100 p-6 flex items-center gap-4 shadow-sm hover:border-green-100 transition-colors">
+                        <div className="p-3 bg-gray-50 text-gray-400 rounded-lg text-xl border border-gray-100">⚖️</div>
                         <div>
-                            <p className="text-xs font-bold uppercase tracking-wider text-green-600/70">Net</p>
+                            <p className="text-[10px] font-bold uppercase tracking-widest text-gray-400">Net Balance</p>
                             {loading ? (
                                 <Skeleton className="h-8 w-24 mt-1" />
                             ) : (
-                                <h3 className={`text-2xl font-black ${(summary?.netAmount ?? 0) >= 0 ? "text-green-600" : "text-red-600"}`}>
+                                <h3 className={`text-2xl font-bold mt-1 ${(summary?.netAmount ?? 0) >= 0 ? "text-green-600" : "text-red-600"}`}>
                                     ₹{(summary?.netAmount ?? 0).toLocaleString("en-IN")}
                                 </h3>
                             )}
@@ -278,12 +288,12 @@ export default function DailyCashPage() {
                     </div>
                 </div>
 
-                <div className="grid grid-cols-1 lg:grid-cols-2 gap-8">
+                <div className="grid grid-cols-1 lg:grid-cols-2 gap-10">
                     {/* Cash Section (Row 2) */}
-                    <div className="bg-white rounded-2xl border shadow-sm overflow-hidden">
-                        <div className="px-6 py-3 bg-amber-50 border-b border-amber-100 flex justify-between items-center">
-                            <h4 className="text-xs font-black uppercase tracking-widest text-amber-700">Cash Flow</h4>
-                            <span className="text-xl">💵</span>
+                    <div className="bg-white rounded-2xl border border-gray-100 shadow-sm overflow-hidden">
+                        <div className="px-6 py-4 bg-gray-50/50 border-b border-gray-100 flex justify-between items-center">
+                            <h4 className="text-xs font-bold uppercase tracking-widest text-gray-500">Cash Flow</h4>
+                            <span className="text-lg grayscale opacity-50">💵</span>
                         </div>
                         <div className="p-6 grid grid-cols-4 gap-4">
                             <div>
@@ -295,21 +305,21 @@ export default function DailyCashPage() {
                                 {loading ? <Skeleton className="h-6 w-16" /> : <p className="text-lg font-bold text-red-600">₹{(summary?.cashExpense ?? 0).toLocaleString("en-IN")}</p>}
                             </div>
                             <div>
-                                <p className="text-[10px] font-bold text-gray-400 uppercase mb-1">Transfer Out</p>
-                                {loading ? <Skeleton className="h-6 w-16" /> : <p className="text-lg font-bold text-orange-600">₹{(summary?.transferOut ?? 0).toLocaleString("en-IN")}</p>}
+                                <p className="text-[10px] font-bold text-gray-400 uppercase mb-1">Trans Out</p>
+                                {loading ? <Skeleton className="h-6 w-16" /> : <p className="text-lg font-bold text-orange-500">₹{(summary?.transferOut ?? 0).toLocaleString("en-IN")}</p>}
                             </div>
-                            <div className="text-right">
+                            <div className="text-right border-l pl-4">
                                 <p className="text-[10px] font-bold text-gray-400 uppercase mb-1">Net Cash</p>
-                                {loading ? <Skeleton className="h-6 w-16 ml-auto" /> : <p className={`text-lg font-black ${(summary?.netCash ?? 0) >= 0 ? "text-green-600" : "text-red-600"}`}>₹{(summary?.netCash ?? 0).toLocaleString("en-IN")}</p>}
+                                {loading ? <Skeleton className="h-6 w-16 ml-auto" /> : <p className={`text-lg font-bold ${(summary?.netCash ?? 0) >= 0 ? "text-green-600" : "text-red-600"}`}>₹{(summary?.netCash ?? 0).toLocaleString("en-IN")}</p>}
                             </div>
                         </div>
                     </div>
 
                     {/* Bank Section (Row 3 Equivalent Layout) */}
-                    <div className="bg-white rounded-2xl border shadow-sm overflow-hidden">
-                        <div className="px-6 py-3 bg-purple-50 border-b border-purple-100 flex justify-between items-center">
-                            <h4 className="text-xs font-black uppercase tracking-widest text-purple-700">Bank Flow</h4>
-                            <span className="text-xl">🏦</span>
+                    <div className="bg-white rounded-2xl border border-gray-100 shadow-sm overflow-hidden">
+                        <div className="px-6 py-4 bg-gray-50/50 border-b border-gray-100 flex justify-between items-center">
+                            <h4 className="text-xs font-bold uppercase tracking-widest text-gray-500">Bank Flow</h4>
+                            <span className="text-lg grayscale opacity-50">🏦</span>
                         </div>
                         <div className="p-6 grid grid-cols-4 gap-4">
                             <div>
@@ -321,24 +331,23 @@ export default function DailyCashPage() {
                                 {loading ? <Skeleton className="h-6 w-16" /> : <p className="text-lg font-bold text-red-600">₹{(summary?.bankExpense ?? 0).toLocaleString("en-IN")}</p>}
                             </div>
                             <div>
-                                <p className="text-[10px] font-bold text-gray-400 uppercase mb-1">Transfer In</p>
-                                {loading ? <Skeleton className="h-6 w-16" /> : <p className="text-lg font-bold text-blue-600">₹{(summary?.transferIn ?? 0).toLocaleString("en-IN")}</p>}
+                                <p className="text-[10px] font-bold text-gray-400 uppercase mb-1">Trans In</p>
+                                {loading ? <Skeleton className="h-6 w-16" /> : <p className="text-lg font-bold text-indigo-500">₹{(summary?.transferIn ?? 0).toLocaleString("en-IN")}</p>}
                             </div>
-                            <div className="text-right">
+                            <div className="text-right border-l pl-4">
                                 <p className="text-[10px] font-bold text-gray-400 uppercase mb-1">Net Bank</p>
-                                {loading ? <Skeleton className="h-6 w-16 ml-auto" /> : <p className={`text-lg font-black ${(summary?.netBank ?? 0) >= 0 ? "text-green-600" : "text-red-600"}`}>₹{(summary?.netBank ?? 0).toLocaleString("en-IN")}</p>}
+                                {loading ? <Skeleton className="h-6 w-16 ml-auto" /> : <p className={`text-lg font-bold ${(summary?.netBank ?? 0) >= 0 ? "text-green-600" : "text-red-600"}`}>₹{(summary?.netBank ?? 0).toLocaleString("en-IN")}</p>}
                             </div>
                         </div>
                     </div>
                 </div>
             </div>
 
-            <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-
+            <div className="grid grid-cols-1 lg:grid-cols-2 gap-10 mt-12 pb-20">
                 {/* Section A: Head-wise Collection */}
-                <div className="bg-white rounded-xl shadow-sm border overflow-hidden flex flex-col">
-                    <div className="px-6 py-4 border-b bg-gray-50">
-                        <h2 className="text-lg font-semibold text-gray-900">Head-wise Collection</h2>
+                <div className="bg-white rounded-xl shadow-sm border border-gray-100 overflow-hidden flex flex-col">
+                    <div className="px-6 py-4 border-b bg-gray-50/30">
+                        <h2 className="text-sm font-bold text-gray-700 uppercase tracking-widest">Head-wise Collection</h2>
                     </div>
                     <div className="p-0 flex-1 overflow-x-auto">
                         <table className="w-full text-left border-collapse">
@@ -397,9 +406,9 @@ export default function DailyCashPage() {
                 </div>
 
                 {/* Section B: Expense Breakdown */}
-                <div className="bg-white rounded-xl shadow-sm border overflow-hidden flex flex-col">
-                    <div className="px-6 py-4 border-b bg-gray-50">
-                        <h2 className="text-lg font-semibold text-gray-900">Expense Breakdown</h2>
+                <div className="bg-white rounded-xl shadow-sm border border-gray-100 overflow-hidden flex flex-col">
+                    <div className="px-6 py-4 border-b bg-gray-50/30">
+                        <h2 className="text-sm font-bold text-gray-700 uppercase tracking-widest">Expense Breakdown</h2>
                     </div>
                     <div className="p-0 flex-1 overflow-x-auto">
                         <table className="w-full text-left border-collapse">
