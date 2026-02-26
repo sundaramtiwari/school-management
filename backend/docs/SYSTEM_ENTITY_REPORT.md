@@ -2,6 +2,8 @@
 
 Generated on: 2026-02-24
 Codebase: `/Users/sundaramtiwari/Documents/work/school-management/backend`
+Last verified against code on: 2026-02-26
+Verification scope: `src/main/java` + `src/test/java` (finance, expense, fee, dashboard, tenant/security touchpoints)
 
 ---
 
@@ -512,6 +514,25 @@ Legend:
   - `remarks: String (NULL)`
   - Inherited `TenantEntity` + `BaseEntity` fields
 
+##### FeePaymentAllocation
+- Class: `FeePaymentAllocation`
+- Table: `fee_payment_allocations`
+- PK: `id (Long, identity)`
+- Indexes:
+  - `idx_fee_payment_allocation_payment (fee_payment_id)`
+  - `idx_fee_payment_allocation_session (session_id)`
+- Unique: none declared
+- Soft delete flags: none
+- Fields:
+  - `id: Long (PK, NN)`
+  - `feePaymentId: Long (NN)`
+  - `assignmentId: Long (NN)`
+  - `feeType: ManyToOne FeeType (LAZY, join `fee_type_id`, NN)`
+  - `principalAmount: BigDecimal (NN, D=0, precision=19, scale=2)`
+  - `lateFeeAmount: BigDecimal (NN, D=0, precision=19, scale=2)`
+  - `sessionId: Long (NN)`
+  - Inherited `TenantEntity` + `BaseEntity` fields
+
 ##### FeeAdjustment
 - Class: `FeeAdjustment`
 - Table: `fee_adjustments`
@@ -583,6 +604,99 @@ Legend:
   - `validFrom: LocalDate (NULL)`
   - `validTo: LocalDate (NULL)`
   - `active: boolean (NN, D=true)`
+  - Inherited `TenantEntity` + `BaseEntity` fields
+
+#### Expense domain
+
+##### ExpenseHead
+- Class: `ExpenseHead`
+- Table: `expense_heads`
+- PK: `id (Long, identity)`
+- Unique:
+  - `uk_expense_head_school_normalized_name (school_id, normalized_name)`
+- Indexes: none declared
+- Soft delete flags:
+  - `active` (`boolean`, `D=true`)
+- Fields:
+  - `id: Long (PK, NN)`
+  - `name: String (NN, length=150)`
+  - `normalizedName: String (NN, length=150)`
+  - `description: String (NULL, length=500)`
+  - `active: boolean (NN, D=true)`
+  - Inherited `TenantEntity` + `BaseEntity` fields
+
+##### ExpenseVoucher
+- Class: `ExpenseVoucher`
+- Table: `expense_vouchers`
+- PK: `id (Long, identity)`
+- Unique:
+  - `uk_expense_voucher_school_voucher_number (school_id, voucher_number)`
+- Indexes:
+  - `idx_expense_voucher_school_session (school_id, session_id)`
+  - `idx_expense_voucher_school_date (school_id, expense_date)`
+- Soft delete flags:
+  - `active` (`boolean`, `D=true`)
+- Fields:
+  - `id: Long (PK, NN)`
+  - `version: Long (@Version)`
+  - `voucherNumber: String (NN, length=50)`
+  - `expenseDate: LocalDate (NN)`
+  - `expenseHead: ManyToOne ExpenseHead (LAZY, join `expense_head_id`, NN)`
+  - `amount: BigDecimal (NN, precision=19, scale=2)`
+  - `paymentMode: ExpensePaymentMode enum (NN, string)`
+  - `description: String (NULL, length=500)`
+  - `referenceNumber: String (NULL, length=100)`
+  - `sessionId: Long (NN)`
+  - `createdBy: Long (NN)`
+  - `active: boolean (NN, D=true)`
+  - Inherited `TenantEntity` + `BaseEntity` fields
+
+#### Finance domain
+
+##### FinanceAccountTransfer
+- Class: `FinanceAccountTransfer`
+- Table: `finance_account_transfers`
+- PK: `id (Long, identity)`
+- Unique: none declared
+- Indexes:
+  - `idx_fin_transfer_school_session_date (school_id, session_id, transfer_date)`
+- Soft delete flags: none
+- Fields:
+  - `id: Long (PK, NN)`
+  - `sessionId: Long (NN)`
+  - `transferDate: LocalDate (NN)`
+  - `amount: BigDecimal (NN, precision=19, scale=2)`
+  - `fromAccount: String (NN, length=20)` (service currently enforces `CASH`)
+  - `toAccount: String (NN, length=20)` (service currently enforces `BANK`)
+  - `referenceNumber: String (NULL, length=100)`
+  - `remarks: String (NULL, length=500)`
+  - Inherited `TenantEntity` + `BaseEntity` fields
+
+##### DayClosing
+- Class: `DayClosing`
+- Table: `day_closing`
+- PK: `id (Long, identity)`
+- Unique:
+  - `uk_day_closing_school_date (school_id, date)`
+- Indexes: none declared
+- Soft delete flags: none
+- Fields:
+  - `id: Long (PK, NN)`
+  - `date: LocalDate (NN)`
+  - `sessionId: Long (NN)`
+  - `openingCash: BigDecimal (NN, precision=19, scale=2)`
+  - `openingBank: BigDecimal (NN, precision=19, scale=2)`
+  - `cashRevenue: BigDecimal (NN, precision=19, scale=2)`
+  - `bankRevenue: BigDecimal (NN, precision=19, scale=2)`
+  - `cashExpense: BigDecimal (NN, precision=19, scale=2)`
+  - `bankExpense: BigDecimal (NN, precision=19, scale=2)`
+  - `transferOut: BigDecimal (NN, precision=19, scale=2)`
+  - `transferIn: BigDecimal (NN, precision=19, scale=2)`
+  - `closingCash: BigDecimal (NN, precision=19, scale=2)`
+  - `closingBank: BigDecimal (NN, precision=19, scale=2)`
+  - `overrideAllowed: boolean (NN, D=false)`
+  - `closedBy: Long (NULL)`
+  - `closedAt: LocalDateTime (NULL)`
   - Inherited `TenantEntity` + `BaseEntity` fields
 
 #### Transport domain
@@ -730,7 +844,9 @@ All relationships are owning-side references.
 | `Student.school` | `ManyToOne` | `School` | yes | n/a | `LAZY` | none | n/a | `school_id` (read-only) |
 | `Teacher.user` | `OneToOne` | `User` | yes | n/a | `LAZY` | none | n/a | `user_id` |
 | `FeeStructure.feeType` | `ManyToOne` | `FeeType` | yes | n/a | `LAZY` | none | n/a | `fee_type_id` |
+| `FeePaymentAllocation.feeType` | `ManyToOne` | `FeeType` | yes | n/a | `LAZY` | none | n/a | `fee_type_id` |
 | `LateFeePolicy.feeStructure` | `OneToOne` | `FeeStructure` | yes | n/a | `LAZY` | none | n/a | `fee_structure_id` |
+| `ExpenseVoucher.expenseHead` | `ManyToOne` | `ExpenseHead` | yes | n/a | `LAZY` | none | n/a | `expense_head_id` |
 | `Subscription.school` | `ManyToOne` | `School` | yes | n/a | `LAZY` | none | n/a | `school_id` (read-only) |
 | `SubscriptionPayment.subscription` | `ManyToOne` | `Subscription` | yes | n/a | `LAZY` | none | n/a | `subscription_id` |
 | `PickupPoint.route` | `ManyToOne` | `TransportRoute` | yes | n/a | `LAZY` | none | n/a | `route_id` |
@@ -794,6 +910,10 @@ Notable example:
 - `StudentFeeAssignment` (`sessionId`)
 - `StudentFundingArrangement` (`sessionId`)
 - `FeePayment` (`sessionId`, nullable)
+- `FeePaymentAllocation` (`sessionId`)
+- `ExpenseVoucher` (`sessionId`)
+- `FinanceAccountTransfer` (`sessionId`)
+- `DayClosing` (`sessionId`)
 - `School.currentSessionId` (selected current session pointer)
 
 ### 4.2 Session context plumbing
@@ -855,20 +975,26 @@ Source:
 ### 6.1 Entities effectively immutable after creation
 
 - `FeePayment` (append-only pattern, no update endpoint)
+- `FeePaymentAllocation` (append-only per payment write)
 - `FeeAdjustment` (append-only adjustment records)
 - `LateFeeLog` (append-only)
 - `PromotionRecord` (append-only)
+- `FinanceAccountTransfer` (append-only internal movement records)
 - `AcademicSession.startDate/endDate` are intentionally immutable after creation (`AcademicSessionService`)
+- `DayClosing` is persisted snapshot-per-day; record can be replaced only when override is enabled.
 
 ### 6.2 Entities with active flag / toggles
 
 Active flag present in many entities:
 - `School`, `AcademicSession`, `User`, `Student`, `StudentEnrollment`, `Guardian`, `Subject`, `SchoolClass`, `ClassSubject`, `FeeType`, `FeeStructure`, `LateFeePolicy`, `StudentFeeAssignment`, `DiscountDefinition`, `StudentFundingArrangement`, `TransportRoute`, `TransportEnrollment`, `Exam`, `ExamSubject`, `Subscription`.
+- `ExpenseHead`, `ExpenseVoucher`
 
 Explicit toggle endpoints/services:
 - `FeeStructure` (`PATCH /api/fees/structures/{id}/toggle`)
 - `FeeType` (`PATCH /api/fees/types/{id}/toggle`)
 - `DiscountDefinition` (`PATCH /api/fees/discount-definitions/{id}/toggle`)
+- `ExpenseHead` (`PATCH /api/expenses/heads/{id}/toggle-active`)
+- `ExpenseVoucher` (`PATCH /api/expenses/{id}/toggle-active`)
 
 ### 6.3 Delete semantics currently mixed
 
@@ -889,16 +1015,18 @@ Implication:
 
 ## 7) Critical Business Invariants
 
-### 7.1 Payment allocation order
+### 7.1 Payment allocation and head-wise posting
 
-In `FeePaymentService.pay()`:
-- Assignment rows are pessimistically locked: `findByStudentIdAndSessionIdWithLock`.
-- Sorted by due date ascending (oldest first).
-- Late fee accrued first from snapshot policy.
-- Allocation order:
-  1. Late fee due
-  2. Principal due
-- Rejects overpayment (`Payment exceeds outstanding dues by ...`).
+In current `FeePaymentService.pay()` (head-wise API):
+- Request requires explicit assignment allocations (`FeePaymentAllocationRequest` list).
+- Each target assignment is locked (`findByIdWithLock`).
+- Duplicate assignment rows in same payment are rejected.
+- Late fee is accrued at payment time from snapshot policy.
+- For each assignment allocation:
+  1. Full pending late fee must be cleared first if any is due.
+  2. Remaining amount is applied to principal.
+- Per-assignment overpayment is rejected.
+- `FeePaymentAllocation` rows are persisted and validated to exactly match stored payment principal/late totals.
 
 ### 7.2 Discount guard logic
 
@@ -957,6 +1085,8 @@ In `StudentWithdrawalService.withdrawStudent()`:
   - `PromotionService` check using `ExamRepository.countNonLockedBySessionIdAndClassId(...)`
 - Transport capacity invariant managed atomically:
   - increment/decrement update queries
+- Day-closing lock invariant:
+  - fee payments, expense vouchers, and internal transfers are blocked on closed dates unless override is enabled.
 
 ---
 
@@ -988,6 +1118,15 @@ Used in:
 - `FeePaymentRepository`:
   - grouped sums by student/session
   - last payment dates
+- `FeePaymentAllocationRepository`:
+  - fee-head daily summaries
+- `ExpenseVoucherRepository`:
+  - session/month/day totals and head breakdowns
+- `FinanceAccountTransferRepository`:
+  - transfer ranges used in net cash/bank adjustments
+- Service aggregators:
+  - `DashboardStatsService` (`/api/dashboard/daily-cash`)
+  - `FinanceReportingService` (`/api/finance/monthly-pl`, `/api/finance/session-pl`)
 
 ### 8.3 Aggregation drift and duplication risks
 
@@ -1030,6 +1169,9 @@ High-level pattern:
 - Read/report endpoints: often `SCHOOL_ADMIN`, `ACCOUNTANT`, `SUPER_ADMIN`, `PLATFORM_ADMIN`
 - Mutations: usually restricted to `SCHOOL_ADMIN` + admin roles
 - Teacher-scoped mutations require both role and service-level assignment checks
+- Finance module follows stricter split:
+  - mutation: school-admin focused (`/api/finance/transfers`, day-closing override super-admin only)
+  - reporting/export: `SCHOOL_ADMIN`, `ACCOUNTANT`, `SUPER_ADMIN`
 
 ### 9.3 Financial mutation endpoints
 
@@ -1047,6 +1189,23 @@ High-level pattern:
 - `PATCH /api/fees/discount-definitions/{id}/toggle`
 - `POST /api/fees/funding`
 - `DELETE /api/fees/funding/{id}` (soft deactivation behavior)
+- `POST /api/expenses`
+- `PATCH /api/expenses/{id}/toggle-active`
+- `POST /api/expenses/heads`
+- `PATCH /api/expenses/heads/{id}/toggle-active`
+- `POST /api/finance/transfers`
+- `POST /api/finance/day-closing`
+- `PATCH /api/finance/day-closing/{date}/override`
+
+Financial reporting/export endpoints (read-only):
+- `GET /api/dashboard/daily-cash`
+- `GET /api/fees/payments/head-summary`
+- `GET /api/finance/monthly-pl`
+- `GET /api/finance/session-pl`
+- `GET /api/finance/export/daily-cash`
+- `GET /api/finance/export/monthly-pl`
+- `GET /api/finance/export/session-pl`
+- `GET /api/finance/export/expenses`
 
 ### 9.4 Endpoints missing explicit method-level role annotation
 
@@ -1135,7 +1294,12 @@ School
   │     ├── FeeAdjustment (discount/waiver snapshots)
   │     └── LateFeeLog
   ├── FeePayment (append-only financial transactions)
+  │     └── FeePaymentAllocation (per-head principal/late split)
   ├── StudentFundingArrangement (session scoped coverage rules)
+  ├── ExpenseHead
+  │     └── ExpenseVoucher (session/date scoped expense entries)
+  ├── FinanceAccountTransfer (CASH→BANK movement, session/date scoped)
+  ├── DayClosing (daily financial snapshot/lock with override)
   ├── TransportRoute
   │     └── PickupPoint
   │           └── TransportEnrollment (session scoped, active lifecycle)
@@ -1151,6 +1315,7 @@ School
 - `LateFeeCapType`: `NONE`, `FIXED`, `PERCENTAGE`
 - `FundingCoverageType`: `FULL`, `PARTIAL`
 - `FundingCoverageMode`: `FIXED_AMOUNT`, `PERCENTAGE`
+- `ExpensePaymentMode`: `CASH`, `BANK`, `UPI`
 - `StudentStatus`: `ENROLLED`, `PASSED_OUT`, `LEFT`, `SUSPENDED`, `WITHDRAWN`
 
 ---
@@ -1162,4 +1327,3 @@ School
 3. Add explicit `@PreAuthorize` on currently authenticated-only sensitive endpoints.
 4. Move controller-level repository mutation (funding deactivate) into service with explicit tenant ownership guard.
 5. Standardize delete policy for master data linked to historical records (prefer soft delete).
-
