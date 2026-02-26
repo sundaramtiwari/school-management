@@ -42,6 +42,7 @@ const menu = [
     children: [
       { name: "Fee Summary", path: "/fees/summary", icon: "📋", roles: ["SUPER_ADMIN", "SCHOOL_ADMIN", "ACCOUNTANT"] },
       { name: "Fee Structures", path: "/fees/structures", icon: "⚙️", roles: ["SUPER_ADMIN", "SCHOOL_ADMIN", "ACCOUNTANT"] },
+      { name: "Fee Discounts", path: "/fees/discounts", icon: "🏷️", roles: ["SUPER_ADMIN", "SCHOOL_ADMIN", "ACCOUNTANT"] },
       { name: "Fee Collection", path: "/fees/collect", icon: "💰", roles: ["SUPER_ADMIN", "SCHOOL_ADMIN", "ACCOUNTANT"] },
       { name: "Fee Defaulters", path: "/fees/defaulters", icon: "⚠️", roles: ["SUPER_ADMIN", "SCHOOL_ADMIN", "ACCOUNTANT"] },
       { name: "Expenses", path: "/finance/expenses", icon: "💸", roles: ["SUPER_ADMIN", "SCHOOL_ADMIN", "ACCOUNTANT"] },

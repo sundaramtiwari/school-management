@@ -15,9 +15,9 @@ export default function FeesDashboard() {
 
     const canUserManageFees = canManageFees(user?.role);
     const [stats, setStats] = useState({
-        todayCollection: 0,
+        collectedToday: 0,
         pendingDues: 0,
-        totalStudents: 0
+        defaulterCount: 0
     });
     const [recentPayments, setRecentPayments] = useState<RecentPayment[]>([]);
     const [loading, setLoading] = useState(true);
@@ -30,7 +30,11 @@ export default function FeesDashboard() {
                 api.get(`/api/fees/summary/stats?sessionId=${currentSession.id}`),
                 api.get("/api/fees/payments/recent")
             ]);
-            setStats(statsRes.data);
+            setStats({
+                collectedToday: statsRes.data.collectedToday ?? 0,
+                pendingDues: statsRes.data.pendingDues ?? 0,
+                defaulterCount: statsRes.data.defaulterCount ?? 0
+            });
             setRecentPayments(paymentsRes.data || []);
         } catch (err) {
             console.error(err);
@@ -46,9 +50,9 @@ export default function FeesDashboard() {
     }, [sessionLoading, currentSession, loadStats]);
 
     const cards = [
-        { label: "Today's Collection", value: stats.todayCollection, prefix: "₹", color: "text-green-600", bg: "bg-green-50" },
+        { label: "Today's Collection", value: stats.collectedToday, prefix: "₹", color: "text-green-600", bg: "bg-green-50" },
         { label: "Pending Dues", value: stats.pendingDues, prefix: "₹", color: "text-red-600", bg: "bg-red-50" },
-        { label: "Total Students", value: stats.totalStudents, prefix: "", color: "text-blue-600", bg: "bg-blue-50" },
+        { label: "Defaulters", value: stats.defaulterCount, prefix: "", color: "text-blue-600", bg: "bg-blue-50" },
     ];
 
     return (

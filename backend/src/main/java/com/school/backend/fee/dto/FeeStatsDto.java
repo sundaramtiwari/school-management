@@ -11,7 +11,9 @@ import java.math.BigDecimal;
 @NoArgsConstructor
 @AllArgsConstructor
 public class FeeStatsDto {
-    private BigDecimal todayCollection;
+    private BigDecimal collectedToday;
     private BigDecimal pendingDues;
-    private long totalStudents;
+    private long transactionsToday;
+    private BigDecimal collectedThisMonth;
+    private long defaulterCount;
 }

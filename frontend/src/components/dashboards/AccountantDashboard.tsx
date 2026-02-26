@@ -23,11 +23,19 @@ type Defaulter = {
   daysPending: number;
 };
 
+type AccountantStats = {
+  collectedToday: number;
+  transactionsToday: number;
+  collectedThisMonth: number;
+  pendingDues: number;
+  defaulterCount: number;
+};
+
 export default function AccountantDashboard() {
   const { currentSession, isSessionLoading: sessionLoading } = useSession();
   const router = useRouter();
   const { showToast } = useToast();
-  const [stats, setStats] = useState({
+  const [stats, setStats] = useState<AccountantStats>({
     collectedToday: 0,
     transactionsToday: 0,
     collectedThisMonth: 0,
@@ -46,12 +54,13 @@ export default function AccountantDashboard() {
 
       // Load fee statistics
       const [statsRes, paymentsRes, defaultersRes] = await Promise.all([
-        api.get(`/api/fees/summary/stats?sessionId=${currentSession.id}`).catch(() => ({
+        api.get<AccountantStats>(`/api/fees/summary/stats?sessionId=${currentSession.id}`).catch(() => ({
           data: {
             collectedToday: 0,
             transactionsToday: 0,
             collectedThisMonth: 0,
-            pendingTotal: 0
+            pendingDues: 0,
+            defaulterCount: 0
           }
         })),
         api.get('/api/fees/payments/recent?limit=5').catch(() => ({ data: [] })),
@@ -59,11 +68,11 @@ export default function AccountantDashboard() {
       ]);
 
       setStats({
-        collectedToday: statsRes.data.collectedToday || 0,
-        transactionsToday: statsRes.data.transactionsToday || 0,
-        collectedThisMonth: statsRes.data.collectedThisMonth || 0,
-        pendingDues: statsRes.data.pendingTotal || 0,
-        defaulterCount: statsRes.data.defaulterCount || 0,
+        collectedToday: statsRes.data.collectedToday,
+        transactionsToday: statsRes.data.transactionsToday,
+        collectedThisMonth: statsRes.data.collectedThisMonth,
+        pendingDues: statsRes.data.pendingDues,
+        defaulterCount: statsRes.data.defaulterCount,
       });
 
       setRecentPayments(paymentsRes.data || []);

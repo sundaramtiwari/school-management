@@ -56,16 +56,23 @@ public class FeeSummaryService {
     public FeeStatsDto getDashboardStats() {
         Long effectiveSessionId = validateAndGetSessionId();
         Long schoolId = TenantContext.getSchoolId();
+        LocalDate today = LocalDate.now();
 
         // 1. Today's Collection
         BigDecimal todayPaid = paymentRepository
-                .sumTotalPaidBySchoolIdAndPaymentDate(schoolId, LocalDate.now());
+                .sumTotalPaidBySchoolIdAndPaymentDate(schoolId, today);
 
-        BigDecimal todayCollection = todayPaid != null ? todayPaid : ZERO;
-
-        // 2. Total Students (SESSION AWARE)
-        long totalStudents = enrollmentRepository
-                .countBySchoolIdAndSessionIdAndActiveTrue(schoolId, effectiveSessionId);
+        BigDecimal collectedToday = todayPaid != null ? todayPaid : ZERO;
+        long transactionsToday = paymentRepository
+                .findBySchoolIdAndSessionIdAndPaymentDate(schoolId, effectiveSessionId, today)
+                .size();
+        LocalDate monthStart = today.withDayOfMonth(1);
+        BigDecimal collectedThisMonth = paymentRepository
+                .findBySchoolIdAndSessionIdAndPaymentDateBetween(schoolId, effectiveSessionId, monthStart, today)
+                .stream()
+                .map(payment -> nz(payment.getPrincipalPaid()).add(nz(payment.getLateFeePaid())))
+                .reduce(ZERO, BigDecimal::add);
+        long defaulterCount = countDefaulters();
 
         // 3. Optimized Pending Calculation (NO N+1)
         Object[] pendingComponentsRaw = assignmentRepository
@@ -89,9 +96,11 @@ public class FeeSummaryService {
                 totalLateFeePaid);
 
         return FeeStatsDto.builder()
-                .todayCollection(todayCollection)
-                .totalStudents(totalStudents)
+                .collectedToday(collectedToday)
                 .pendingDues(totalPending)
+                .transactionsToday(transactionsToday)
+                .collectedThisMonth(collectedThisMonth)
+                .defaulterCount(defaulterCount)
                 .build();
     }
 

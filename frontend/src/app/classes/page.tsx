@@ -76,7 +76,7 @@ export default function ClassesPage() {
         } finally {
             setLoading(false);
         }
-    }, [showToast, user, currentSession]);
+    }, [showToast, user, currentSession, showInactive]);
 
     useEffect(() => {
         void loadClasses();

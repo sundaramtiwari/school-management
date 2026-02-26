@@ -33,7 +33,7 @@ public class FeePayment extends TenantEntity {
     @Column(name = "student_id", nullable = false)
     private Long studentId;
 
-    @Column(name = "session_id")
+    @Column(name = "session_id", nullable = false)
     private Long sessionId;
 
     @Column(nullable = false, precision = 15, scale = 2)

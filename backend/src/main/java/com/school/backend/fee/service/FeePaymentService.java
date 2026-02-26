@@ -54,8 +54,8 @@ public class FeePaymentService {
             throw new BusinessException("At least one allocation is required.");
         }
 
-        Long sessionId = requireSessionId();
-        if (req.getSessionId() != null && !req.getSessionId().equals(sessionId)) {
+        Long contextSessionId = SessionContext.getSessionId();
+        if (req.getSessionId() != null && contextSessionId != null && !req.getSessionId().equals(contextSessionId)) {
             throw new InvalidOperationException("Session mismatch between request and context");
         }
         Long schoolId = TenantContext.getSchoolId();
@@ -180,9 +180,11 @@ public class FeePaymentService {
         // Save updated assignments
         assignmentRepository.saveAll(assignmentsToSave);
 
+        Long paymentSessionId = resolvePaymentSessionId(contextSessionId, assignmentsToSave);
+
         FeePayment savedPayment = paymentRepository.save(FeePayment.builder()
                 .studentId(req.getStudentId())
-                .sessionId(sessionId)
+                .sessionId(paymentSessionId)
                 .principalPaid(totalPrincipalPaid)
                 .lateFeePaid(totalLateFeePaid)
                 .paymentDate(effectivePaymentDate)
@@ -192,7 +194,7 @@ public class FeePaymentService {
                 .schoolId(schoolId)
                 .build());
 
-        savePaymentAllocations(savedPayment, assignmentsToSave, allocationByAssignmentId, sessionId, schoolId);
+        savePaymentAllocations(savedPayment, assignmentsToSave, allocationByAssignmentId, paymentSessionId, schoolId);
 
         return toDto(savedPayment);
     }
@@ -387,6 +389,20 @@ public class FeePaymentService {
             throw new InvalidOperationException("Session context is missing in request");
         }
         return sessionId;
+    }
+
+    private Long resolvePaymentSessionId(Long contextSessionId, List<StudentFeeAssignment> assignments) {
+        if (contextSessionId != null) {
+            return contextSessionId;
+        }
+        if (assignments == null || assignments.isEmpty()) {
+            throw new InvalidOperationException("Session context is missing in request");
+        }
+        Long assignmentSessionId = assignments.get(0).getSessionId();
+        if (assignmentSessionId == null) {
+            throw new InvalidOperationException("Session is missing on fee assignment");
+        }
+        return assignmentSessionId;
     }
 
     private static final class AssignmentAllocation {

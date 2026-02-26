@@ -20,6 +20,7 @@ import com.school.backend.testmanagement.repository.ExamRepository;
 import com.school.backend.transport.repository.TransportEnrollmentRepository;
 import com.school.backend.user.repository.UserRepository;
 import lombok.RequiredArgsConstructor;
+import org.springframework.data.domain.PageRequest;
 import org.springframework.stereotype.Service;
 
 import java.math.BigDecimal;
@@ -65,13 +66,12 @@ public class DashboardStatsService {
         // 4. Upcoming Exams
         LocalDate now = LocalDate.now();
         var upcomingExams = examRepository
-                .findBySchoolIdAndSessionIdAndStartDateAfter(schoolId, effectiveSessionId, now)
+                .findUpcomingExamViews(schoolId, effectiveSessionId, now, PageRequest.of(0, 5))
                 .stream()
-                .limit(5)
                 .map(e -> SchoolAdminStatsDto.UpcomingExamDto.builder()
                         .name(e.getName())
                         .date(e.getStartDate() != null ? e.getStartDate().toString() : "TBD")
-                        .className("Class " + e.getClassId()) // Need class name here ideally
+                        .className(formatClassDisplay(e.getClassName(), e.getClassSection()))
                         .build())
                 .collect(Collectors.toList());
 
@@ -164,5 +164,17 @@ public class DashboardStatsService {
 
     private BigDecimal nz(BigDecimal value) {
         return value != null ? value : BigDecimal.ZERO;
+    }
+
+    private String formatClassDisplay(String className, String classSection) {
+        String normalizedClass = className == null ? "" : className.trim();
+        String normalizedSection = classSection == null ? "" : classSection.trim();
+        if (normalizedClass.isEmpty()) {
+            return "Class";
+        }
+        if (normalizedSection.isEmpty()) {
+            return "Class " + normalizedClass;
+        }
+        return "Class " + normalizedClass + " - " + normalizedSection;
     }
 }
