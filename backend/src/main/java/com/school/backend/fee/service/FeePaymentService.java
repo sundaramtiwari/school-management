@@ -13,6 +13,7 @@ import com.school.backend.fee.dto.FeePaymentDto;
 import com.school.backend.fee.dto.FeePaymentRequest;
 import com.school.backend.fee.dto.FeeTypeHeadSummaryDto;
 import com.school.backend.fee.entity.*;
+import com.school.backend.finance.repository.DayClosingRepository;
 import com.school.backend.fee.repository.FeePaymentAllocationRepository;
 import com.school.backend.fee.repository.FeePaymentRepository;
 import com.school.backend.fee.repository.FeeStructureRepository;
@@ -39,6 +40,7 @@ public class FeePaymentService {
     private final LateFeeCalculator lateFeeCalculator;
     private final FeeStructureRepository feeStructureRepository;
     private final FeePaymentAllocationRepository feePaymentAllocationRepository;
+    private final DayClosingRepository dayClosingRepository;
 
     // ---------------- PAY ----------------
     @Transactional
@@ -58,6 +60,9 @@ public class FeePaymentService {
         }
         Long schoolId = TenantContext.getSchoolId();
         LocalDate effectivePaymentDate = req.getPaymentDate() != null ? req.getPaymentDate() : LocalDate.now();
+        if (dayClosingRepository.existsBySchoolIdAndDateAndOverrideAllowedFalse(schoolId, effectivePaymentDate)) {
+            throw new InvalidOperationException("Date already closed");
+        }
 
         BigDecimal totalPrincipalPaid = BigDecimal.ZERO;
         BigDecimal totalLateFeePaid = BigDecimal.ZERO;

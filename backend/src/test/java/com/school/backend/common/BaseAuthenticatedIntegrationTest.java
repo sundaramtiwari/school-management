@@ -11,6 +11,7 @@ import com.school.backend.core.student.repository.StudentRepository;
 import com.school.backend.core.teacher.repository.TeacherRepository;
 import com.school.backend.expense.repository.ExpenseHeadRepository;
 import com.school.backend.expense.repository.ExpenseVoucherRepository;
+import com.school.backend.finance.repository.DayClosingRepository;
 import com.school.backend.finance.repository.FinanceAccountTransferRepository;
 import com.school.backend.fee.repository.FeePaymentRepository;
 import com.school.backend.fee.repository.FeePaymentAllocationRepository;
@@ -92,6 +93,8 @@ public abstract class BaseAuthenticatedIntegrationTest {
     protected ExpenseVoucherRepository expenseVoucherRepository;
     @Autowired
     protected FinanceAccountTransferRepository financeAccountTransferRepository;
+    @Autowired
+    protected DayClosingRepository dayClosingRepository;
 
     protected String token;
     protected HttpHeaders headers;
@@ -142,6 +145,7 @@ public abstract class BaseAuthenticatedIntegrationTest {
         studentEnrollmentRepository.deleteAll();
         studentGuardianRepository.deleteAll();
         guardianRepository.deleteAll();
+        dayClosingRepository.deleteAll();
         financeAccountTransferRepository.deleteAll();
         expenseVoucherRepository.deleteAll();
         expenseHeadRepository.deleteAll();

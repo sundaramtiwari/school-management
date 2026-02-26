@@ -10,6 +10,7 @@ import com.school.backend.expense.entity.ExpenseHead;
 import com.school.backend.expense.entity.ExpenseVoucher;
 import com.school.backend.expense.repository.ExpenseHeadRepository;
 import com.school.backend.expense.repository.ExpenseVoucherRepository;
+import com.school.backend.finance.repository.DayClosingRepository;
 import com.school.backend.school.entity.AcademicSession;
 import com.school.backend.school.repository.AcademicSessionRepository;
 import com.school.backend.user.entity.User;
@@ -34,6 +35,7 @@ public class ExpenseService {
     private final ExpenseHeadRepository expenseHeadRepository;
     private final ExpenseVoucherRepository expenseVoucherRepository;
     private final AcademicSessionRepository academicSessionRepository;
+    private final DayClosingRepository dayClosingRepository;
 
     @Transactional
     public ExpenseHeadDto createHead(ExpenseHeadCreateRequest req) {
@@ -85,6 +87,9 @@ public class ExpenseService {
         }
         if (req.getAmount() == null || req.getAmount().compareTo(BigDecimal.ZERO) <= 0) {
             throw new BusinessException("Expense amount must be greater than zero.");
+        }
+        if (dayClosingRepository.existsBySchoolIdAndDateAndOverrideAllowedFalse(schoolId, req.getExpenseDate())) {
+            throw new InvalidOperationException("Date already closed");
         }
 
         // Serialize voucher sequencing per school+session using session row lock

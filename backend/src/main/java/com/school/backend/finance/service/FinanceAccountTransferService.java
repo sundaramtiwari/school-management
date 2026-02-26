@@ -8,6 +8,7 @@ import com.school.backend.core.dashboard.dto.DailyCashDashboardDto;
 import com.school.backend.core.dashboard.service.DashboardStatsService;
 import com.school.backend.finance.dto.FinanceAccountTransferDto;
 import com.school.backend.finance.entity.FinanceAccountTransfer;
+import com.school.backend.finance.repository.DayClosingRepository;
 import com.school.backend.finance.repository.FinanceAccountTransferRepository;
 import com.school.backend.school.entity.AcademicSession;
 import com.school.backend.school.repository.AcademicSessionRepository;
@@ -30,6 +31,7 @@ public class FinanceAccountTransferService {
     private final FinanceAccountTransferRepository transferRepository;
     private final AcademicSessionRepository academicSessionRepository;
     private final DashboardStatsService dashboardStatsService;
+    private final DayClosingRepository dayClosingRepository;
 
     @Transactional
     public FinanceAccountTransferDto createTransfer(
@@ -52,6 +54,9 @@ public class FinanceAccountTransferService {
                 .orElseThrow(() -> new InvalidOperationException("Session not found for school: " + sessionId));
 
         LocalDate transferDate = date != null ? date : LocalDate.now();
+        if (dayClosingRepository.existsBySchoolIdAndDateAndOverrideAllowedFalse(schoolId, transferDate)) {
+            throw new InvalidOperationException("Date already closed");
+        }
         LocalDate sessionStart = session.getStartDate();
         LocalDate sessionEnd = session.getEndDate() != null ? session.getEndDate() : LocalDate.now();
         if (sessionStart == null) {
