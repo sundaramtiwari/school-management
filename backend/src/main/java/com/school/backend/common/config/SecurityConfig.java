@@ -48,8 +48,8 @@ public class SecurityConfig {
                 .authorizeHttpRequests(auth -> auth
                         .requestMatchers(org.springframework.http.HttpMethod.OPTIONS, "/**").permitAll()
                         .requestMatchers("/api/auth/**").permitAll()
-                        .requestMatchers("/swagger-ui/**").permitAll()
-                        .requestMatchers("/v3/api-docs/**").permitAll()
+                        .requestMatchers("/swagger-ui/**").hasRole("SUPER_ADMIN")
+                        .requestMatchers("/v3/api-docs/**").hasRole("SUPER_ADMIN")
                         // Explicitly allow fee stats for authenticated users
                         .requestMatchers("/api/fees/summary/stats").authenticated()
                         .requestMatchers("/api/fees/payments/recent").authenticated()

@@ -1,10 +1,6 @@
 package com.school.backend.fee.controller;
 
-import com.school.backend.fee.dto.FeeDiscountApplyRequest;
-import com.school.backend.fee.dto.FeeAdjustmentDto;
-import com.school.backend.fee.dto.LateFeeWaiverRequest;
-import com.school.backend.fee.dto.StudentFeeAssignRequest;
-import com.school.backend.fee.dto.StudentFeeAssignmentDto;
+import com.school.backend.fee.dto.*;
 import com.school.backend.fee.service.FeeAdjustmentService;
 import com.school.backend.fee.service.FeeDiscountService;
 import com.school.backend.fee.service.LateFeeWaiverService;
@@ -29,7 +25,7 @@ public class StudentFeeAssignmentController {
 
     // Assign fee to student
     @PostMapping
-    @PreAuthorize("hasAnyRole('SCHOOL_ADMIN', 'SUPER_ADMIN')")
+    @PreAuthorize("hasAnyRole('SCHOOL_ADMIN', 'SUPER_ADMIN', 'ACCOUNTANT')")
     public StudentFeeAssignmentDto assign(
             @Valid @RequestBody StudentFeeAssignRequest req) {
 
@@ -44,7 +40,7 @@ public class StudentFeeAssignmentController {
     }
 
     @PostMapping("/{assignmentId}/discount")
-    @PreAuthorize("hasAnyRole('SCHOOL_ADMIN','ACCOUNTANT','SUPER_ADMIN','PLATFORM_ADMIN')")
+    @PreAuthorize("hasAnyRole('SCHOOL_ADMIN','ACCOUNTANT','SUPER_ADMIN')")
     public StudentFeeAssignmentDto applyDiscount(
             @PathVariable Long assignmentId,
             @Valid @RequestBody FeeDiscountApplyRequest req) {
@@ -58,13 +54,13 @@ public class StudentFeeAssignmentController {
     }
 
     @GetMapping("/{assignmentId}/adjustments")
-    @PreAuthorize("hasAnyRole('SCHOOL_ADMIN','ACCOUNTANT','SUPER_ADMIN','PLATFORM_ADMIN')")
+    @PreAuthorize("hasAnyRole('SCHOOL_ADMIN','ACCOUNTANT','SUPER_ADMIN', 'PLATFORM_ADMIN')")
     public List<FeeAdjustmentDto> getAdjustments(@PathVariable Long assignmentId) {
         return feeAdjustmentService.getAdjustmentsForAssignment(assignmentId, SecurityUtil.schoolId());
     }
 
     @PostMapping("/{assignmentId}/waive-late-fee")
-    @PreAuthorize("hasAnyRole('SCHOOL_ADMIN','ACCOUNTANT','SUPER_ADMIN','PLATFORM_ADMIN')")
+    @PreAuthorize("hasAnyRole('SCHOOL_ADMIN','ACCOUNTANT','SUPER_ADMIN')")
     public StudentFeeAssignmentDto waiveLateFee(
             @PathVariable Long assignmentId,
             @Valid @RequestBody LateFeeWaiverRequest req) {
