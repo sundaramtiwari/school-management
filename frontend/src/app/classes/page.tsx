@@ -18,6 +18,7 @@ type SchoolClass = {
     stream?: string;
     capacity?: number | null;
     classTeacherId?: number | null;
+    classTeacherName?: string | null;
     remarks?: string | null;
     sessionId: number;
     active: boolean;
@@ -247,6 +248,7 @@ export default function ClassesPage() {
                                 <th className="px-6 py-4 text-left">Class Name</th>
                                 <th className="px-6 py-4 text-center">Section</th>
                                 <th className="px-6 py-4 text-center">Stream</th>
+                                <th className="px-6 py-4 text-center">Class Teacher</th>
                                 <th className="px-6 py-4 text-center">Status</th>
                                 <th className="px-6 py-4 text-center w-48">Actions</th>
                             </tr>
@@ -263,6 +265,7 @@ export default function ClassesPage() {
                                         <span className="px-2 py-1 bg-gray-100 rounded text-xs font-bold">{c.section}</span>
                                     </td>
                                     <td className="p-4 text-center text-gray-500 uppercase text-xs">{c.stream || "-"}</td>
+                                    <td className="p-4 text-center text-gray-800 font-medium">{c.classTeacherName || "-"}</td>
                                     <td className="p-4 text-center">
                                         <span className={`px-2 py-1 rounded text-[10px] uppercase font-bold ${c.active ? 'bg-green-100 text-green-700' : 'bg-red-100 text-red-700'}`}>
                                             {c.active ? "Active" : "Inactive"}

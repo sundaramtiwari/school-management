@@ -22,6 +22,9 @@ public class SchoolClassMapperImpl implements SchoolClassMapper {
 
         if (entity.getClassTeacher() != null) {
             dto.setClassTeacherId(entity.getClassTeacher().getId());
+            if (entity.getClassTeacher().getUser() != null) {
+                dto.setClassTeacherName(entity.getClassTeacher().getUser().getFullName());
+            }
         }
         return dto;
     }

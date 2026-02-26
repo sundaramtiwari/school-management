@@ -13,6 +13,7 @@ public class SchoolClassDto {
     private Long sessionId;
     private Integer capacity;
     private Long classTeacherId;
+    private String classTeacherName;
     private boolean active = true;
     private String remarks;
     private Long schoolId;
