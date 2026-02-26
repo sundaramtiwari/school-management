@@ -10,6 +10,7 @@ import com.school.backend.core.dashboard.dto.SchoolAdminStatsDto;
 import com.school.backend.core.student.repository.StudentRepository;
 import com.school.backend.expense.entity.ExpenseVoucher;
 import com.school.backend.expense.repository.ExpenseVoucherRepository;
+import com.school.backend.finance.repository.DayClosingRepository;
 import com.school.backend.finance.repository.FinanceAccountTransferRepository;
 import com.school.backend.fee.entity.FeePayment;
 import com.school.backend.fee.repository.FeePaymentAllocationRepository;
@@ -41,6 +42,7 @@ public class DashboardStatsService {
     private final FeePaymentAllocationRepository feePaymentAllocationRepository;
     private final ExpenseVoucherRepository expenseVoucherRepository;
     private final FinanceAccountTransferRepository financeAccountTransferRepository;
+    private final DayClosingRepository dayClosingRepository;
 
     public SchoolAdminStatsDto getSchoolAdminStats() {
         Long schoolId = TenantContext.getSchoolId();
@@ -141,7 +143,10 @@ public class DashboardStatsService {
                 .cashExpense(cashExpense)
                 .bankExpense(bankExpense)
                 .netBank(netBank)
+                .transferOut(transferOut)
+                .transferIn(transferOut) // same as transferOut for now (cash -> bank)
                 .netAmount(netAmount)
+                .closed(dayClosingRepository.existsBySchoolIdAndDate(schoolId, effectiveDate))
                 .headWiseCollection(feePaymentAllocationRepository
                         .findHeadSummaryBySchoolSessionDateAndMode(
                                 schoolId, sessionId, effectiveDate, CASH))

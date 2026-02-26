@@ -1,10 +1,11 @@
 "use client";
 
 import { useState, useEffect } from "react";
-import { financeApi, DailyCashSummary, FeeHeadSummary, ExpenseVoucherData } from "@/lib/financeApi";
+import { financeApi, DailyCashSummary, FeeHeadSummary, ExpenseVoucherData, FinanceAccountTransferRequest } from "@/lib/financeApi";
 import { useToast } from "@/components/ui/Toast";
 import { Skeleton } from "@/components/ui/Skeleton";
 import { downloadExcel } from "@/lib/fileUtils";
+import Modal from "@/components/ui/Modal";
 
 export default function DailyCashPage() {
     const { showToast } = useToast();
@@ -22,33 +23,72 @@ export default function DailyCashPage() {
     const [feeHeads, setFeeHeads] = useState<FeeHeadSummary[]>([]);
     const [expenses, setExpenses] = useState<ExpenseVoucherData[]>([]);
 
+    // Transfer Modal state
+    const [isTransferModalOpen, setIsTransferModalOpen] = useState(false);
+    const [isSubmitting, setIsSubmitting] = useState(false);
+    const [transferForm, setTransferForm] = useState<FinanceAccountTransferRequest>({
+        transferDate: new Date().toISOString().split("T")[0],
+        amount: 0,
+        referenceNumber: "",
+        remarks: ""
+    });
+
+    const fetchData = async () => {
+        setLoading(true);
+        try {
+            // Fetch daily cash summary
+            const [summaryData, feeHeadsData, expensesData] = await Promise.all([
+                financeApi.getDailyCashSummary(selectedDate),
+                financeApi.getFeeHeadSummary(selectedDate),
+                financeApi.getExpensesByDate(selectedDate)
+            ]);
+
+            setSummary(summaryData);
+            setFeeHeads(feeHeadsData);
+            setExpenses(expensesData);
+        } catch (error: any) {
+            console.error("Error fetching daily cash data:", error);
+            showToast(error.message || "Failed to fetch daily cash data", "error");
+        } finally {
+            setLoading(false);
+        }
+    };
+
     useEffect(() => {
-        const fetchData = async () => {
-            setLoading(true);
-            try {
-                // Fetch daily cash summary
-                const [summaryData, feeHeadsData, expensesData] = await Promise.all([
-                    financeApi.getDailyCashSummary(selectedDate),
-                    financeApi.getFeeHeadSummary(selectedDate),
-                    financeApi.getExpensesByDate(selectedDate)
-                ]);
-
-                setSummary(summaryData);
-                setFeeHeads(feeHeadsData);
-                setExpenses(expensesData);
-            } catch (error: any) {
-                console.error("Error fetching daily cash data:", error);
-                showToast(error.message || "Failed to fetch daily cash data", "error");
-            } finally {
-                setLoading(false);
-            }
-        };
-
         fetchData();
     }, [selectedDate, showToast]);
 
     const handlePrint = () => {
         window.print();
+    };
+
+    const handleTransferSubmit = async (e: React.FormEvent) => {
+        e.preventDefault();
+        if (transferForm.amount <= 0) {
+            showToast("Amount must be greater than 0", "error");
+            return;
+        }
+
+        try {
+            setIsSubmitting(true);
+            await financeApi.createTransfer(transferForm);
+            showToast("Cash deposit recorded successfully", "success");
+            setIsTransferModalOpen(false);
+            // Reset form
+            setTransferForm({
+                transferDate: new Date().toISOString().split("T")[0],
+                amount: 0,
+                referenceNumber: "",
+                remarks: ""
+            });
+            // Refresh data
+            fetchData();
+        } catch (error: any) {
+            console.error("Transfer failed:", error);
+            showToast(error.message || "Failed to record transfer", "error");
+        } finally {
+            setIsSubmitting(false);
+        }
     };
 
     const handleExport = async () => {
@@ -70,8 +110,22 @@ export default function DailyCashPage() {
 
             {/* Header controls (hidden when printing) */}
             <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4 print:hidden">
-                <h1 className="text-2xl font-bold text-gray-900">Daily Cash Dashboard</h1>
+                <div className="flex items-center gap-3">
+                    <h1 className="text-2xl font-bold text-gray-900">Daily Cash Dashboard</h1>
+                    {summary?.closed && (
+                        <span className="px-2 py-1 bg-red-100 text-red-700 text-[10px] font-black uppercase tracking-widest rounded-md border border-red-200">
+                            Closed
+                        </span>
+                    )}
+                </div>
                 <div className="flex items-center gap-4">
+                    <button
+                        onClick={() => setIsTransferModalOpen(true)}
+                        disabled={loading || summary?.closed}
+                        className="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 disabled:opacity-50 transition-all flex items-center gap-2 font-medium shadow-sm active:scale-95"
+                    >
+                        <span>📥</span> Record Cash Deposit
+                    </button>
                     <input
                         type="date"
                         value={selectedDate}
@@ -161,7 +215,7 @@ export default function DailyCashPage() {
                             <h4 className="text-xs font-black uppercase tracking-widest text-amber-700">Cash Flow</h4>
                             <span className="text-xl">💵</span>
                         </div>
-                        <div className="p-6 grid grid-cols-3 gap-4">
+                        <div className="p-6 grid grid-cols-4 gap-4">
                             <div>
                                 <p className="text-[10px] font-bold text-gray-400 uppercase mb-1">Revenue</p>
                                 {loading ? <Skeleton className="h-6 w-16" /> : <p className="text-lg font-bold text-gray-800">₹{(summary?.cashRevenue ?? 0).toLocaleString("en-IN")}</p>}
@@ -169,6 +223,10 @@ export default function DailyCashPage() {
                             <div>
                                 <p className="text-[10px] font-bold text-gray-400 uppercase mb-1">Expense</p>
                                 {loading ? <Skeleton className="h-6 w-16" /> : <p className="text-lg font-bold text-red-600">₹{(summary?.cashExpense ?? 0).toLocaleString("en-IN")}</p>}
+                            </div>
+                            <div>
+                                <p className="text-[10px] font-bold text-gray-400 uppercase mb-1">Transfer Out</p>
+                                {loading ? <Skeleton className="h-6 w-16" /> : <p className="text-lg font-bold text-orange-600">₹{(summary?.transferOut ?? 0).toLocaleString("en-IN")}</p>}
                             </div>
                             <div className="text-right">
                                 <p className="text-[10px] font-bold text-gray-400 uppercase mb-1">Net Cash</p>
@@ -183,7 +241,7 @@ export default function DailyCashPage() {
                             <h4 className="text-xs font-black uppercase tracking-widest text-purple-700">Bank Flow</h4>
                             <span className="text-xl">🏦</span>
                         </div>
-                        <div className="p-6 grid grid-cols-3 gap-4">
+                        <div className="p-6 grid grid-cols-4 gap-4">
                             <div>
                                 <p className="text-[10px] font-bold text-gray-400 uppercase mb-1">Revenue</p>
                                 {loading ? <Skeleton className="h-6 w-16" /> : <p className="text-lg font-bold text-gray-800">₹{(summary?.bankRevenue ?? 0).toLocaleString("en-IN")}</p>}
@@ -191,6 +249,10 @@ export default function DailyCashPage() {
                             <div>
                                 <p className="text-[10px] font-bold text-gray-400 uppercase mb-1">Expense</p>
                                 {loading ? <Skeleton className="h-6 w-16" /> : <p className="text-lg font-bold text-red-600">₹{(summary?.bankExpense ?? 0).toLocaleString("en-IN")}</p>}
+                            </div>
+                            <div>
+                                <p className="text-[10px] font-bold text-gray-400 uppercase mb-1">Transfer In</p>
+                                {loading ? <Skeleton className="h-6 w-16" /> : <p className="text-lg font-bold text-blue-600">₹{(summary?.transferIn ?? 0).toLocaleString("en-IN")}</p>}
                             </div>
                             <div className="text-right">
                                 <p className="text-[10px] font-bold text-gray-400 uppercase mb-1">Net Bank</p>
@@ -337,9 +399,94 @@ export default function DailyCashPage() {
                 </div>
 
             </div>
+            {/* Record Cash Deposit Modal */}
+            <Modal
+                isOpen={isTransferModalOpen}
+                onClose={() => !isSubmitting && setIsTransferModalOpen(false)}
+                title="Record Cash Deposit (Cash ➔ Bank)"
+                maxWidth="max-w-md"
+            >
+                <form onSubmit={handleTransferSubmit} className="space-y-4">
+                    <div>
+                        <label className="block text-sm font-bold text-gray-700 mb-1">Date</label>
+                        <input
+                            type="date"
+                            required
+                            value={transferForm.transferDate}
+                            onChange={(e) => setTransferForm({ ...transferForm, transferDate: e.target.value })}
+                            className="w-full px-4 py-2 border rounded-xl focus:ring-2 focus:ring-blue-500 bg-gray-50 font-medium"
+                        />
+                    </div>
+
+                    <div>
+                        <label className="block text-sm font-bold text-gray-700 mb-1">Amount (₹)</label>
+                        <input
+                            type="number"
+                            required
+                            min="0.01"
+                            step="0.01"
+                            placeholder="0.00"
+                            value={transferForm.amount || ""}
+                            onChange={(e) => setTransferForm({ ...transferForm, amount: parseFloat(e.target.value) })}
+                            className="w-full px-4 py-2 border rounded-xl focus:ring-2 focus:ring-blue-500 font-bold text-lg"
+                        />
+                    </div>
+
+                    <div>
+                        <label className="block text-sm font-bold text-gray-700 mb-1">Reference Number (Optional)</label>
+                        <input
+                            type="text"
+                            placeholder="Bank Txn ID / Receipt No"
+                            value={transferForm.referenceNumber || ""}
+                            onChange={(e) => setTransferForm({ ...transferForm, referenceNumber: e.target.value })}
+                            className="w-full px-4 py-2 border rounded-xl focus:ring-2 focus:ring-blue-500"
+                        />
+                    </div>
+
+                    <div>
+                        <label className="block text-sm font-bold text-gray-700 mb-1">Remarks (Optional)</label>
+                        <textarea
+                            rows={2}
+                            placeholder="Add any internal notes..."
+                            value={transferForm.remarks || ""}
+                            onChange={(e) => setTransferForm({ ...transferForm, remarks: e.target.value })}
+                            className="w-full px-4 py-2 border rounded-xl focus:ring-2 focus:ring-blue-500 text-sm"
+                        />
+                    </div>
+
+                    <div className="pt-2 flex flex-col gap-3">
+                        <button
+                            type="submit"
+                            disabled={isSubmitting || loading}
+                            className={`w-full py-3 rounded-xl font-bold transition-all shadow-md active:scale-[0.98] ${isSubmitting
+                                ? "bg-gray-100 text-gray-400 cursor-not-allowed"
+                                : "bg-blue-600 text-white hover:bg-blue-700"
+                                }`}
+                        >
+                            {isSubmitting ? (
+                                <span className="flex items-center justify-center gap-2">
+                                    <span className="w-4 h-4 border-2 border-gray-300 border-t-gray-600 rounded-full animate-spin"></span>
+                                    Recording...
+                                </span>
+                            ) : (
+                                "Record Deposit"
+                            )}
+                        </button>
+                        <button
+                            type="button"
+                            onClick={() => setIsTransferModalOpen(false)}
+                            disabled={isSubmitting}
+                            className="w-full py-2 text-sm font-medium text-gray-500 hover:text-gray-700 transition-colors"
+                        >
+                            Cancel
+                        </button>
+                    </div>
+                </form>
+            </Modal>
+
             {/* 
             styles for printing layout properly
-*/}
+            */}
             <style jsx global>{`
                 @media print {
                     body {

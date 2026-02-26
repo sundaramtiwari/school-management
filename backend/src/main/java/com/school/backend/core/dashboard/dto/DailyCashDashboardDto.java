@@ -33,7 +33,13 @@ public class DailyCashDashboardDto {
     @Builder.Default
     private BigDecimal netBank = BigDecimal.ZERO;
     @Builder.Default
+    private BigDecimal transferOut = BigDecimal.ZERO;
+    @Builder.Default
+    private BigDecimal transferIn = BigDecimal.ZERO;
+    @Builder.Default
     private BigDecimal netAmount = BigDecimal.ZERO;
+    @Builder.Default
+    private boolean closed = false;
     @Builder.Default
     private List<FeeTypeHeadSummaryDto> headWiseCollection = new ArrayList<>();
     @Builder.Default

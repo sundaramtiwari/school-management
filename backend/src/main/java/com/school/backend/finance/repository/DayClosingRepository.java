@@ -9,6 +9,8 @@ import java.util.Optional;
 public interface DayClosingRepository extends JpaRepository<DayClosing, Long> {
     Optional<DayClosing> findBySchoolIdAndDate(Long schoolId, LocalDate date);
 
+    boolean existsBySchoolIdAndDate(Long schoolId, LocalDate date);
+
     boolean existsBySchoolIdAndDateAndOverrideAllowedFalse(Long schoolId, LocalDate date);
 
     Optional<DayClosing> findFirstBySchoolIdAndDateLessThanOrderByDateDesc(Long schoolId, LocalDate date);

@@ -16,6 +16,26 @@ export interface ExpenseVoucherRequest {
     referenceNumber?: string;
 }
 
+export interface FinanceAccountTransferRequest {
+    transferDate: string; // YYYY-MM-DD
+    amount: number;
+    referenceNumber?: string;
+    remarks?: string;
+}
+
+export interface FinanceAccountTransferData {
+    id: number;
+    sessionId: number;
+    transferDate: string;
+    amount: number;
+    fromAccount: string;
+    toAccount: string;
+    referenceNumber?: string;
+    remarks?: string;
+    createdBy: number;
+    createdAt: string;
+}
+
 export interface ExpenseVoucherData {
     id: number;
     voucherNumber: string;
@@ -39,7 +59,10 @@ export interface DailyCashSummary {
     cashExpense: number;
     bankExpense: number;
     netBank: number;
+    transferOut: number;
+    transferIn: number;
     netAmount: number;
+    closed: boolean;
 }
 
 export interface MonthlyPLData {
@@ -134,6 +157,12 @@ export const financeApi = {
 
     getExpensesByDate: async (date: string) => {
         const response = await api.get<ExpenseVoucherData[]>(`/api/expenses?date=${date}`);
+        return response.data;
+    },
+
+    // Transfers
+    createTransfer: async (data: FinanceAccountTransferRequest) => {
+        const response = await api.post<FinanceAccountTransferData>("/api/finance/transfers", data);
         return response.data;
     }
 };
