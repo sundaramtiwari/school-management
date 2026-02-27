@@ -27,6 +27,7 @@ public class StudentFeeAssignmentDto {
     private BigDecimal dueTillDate;
     private LocalDate nextDueDate;
     private BigDecimal pendingTillDate;
+    private BigDecimal remainingForSession;
 
     // Snapshot
     private LocalDate dueDate;

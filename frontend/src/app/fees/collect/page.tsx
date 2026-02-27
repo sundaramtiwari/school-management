@@ -111,6 +111,7 @@ function FeeCollectContent() {
     const [breakdown, setBreakdown] = useState<FeeAssignment[]>([]);
 
     const [expandedAssignmentId, setExpandedAssignmentId] = useState<number | null>(null);
+    const [activeActionDropdown, setActiveActionDropdown] = useState<number | null>(null);
     const [adjustmentHistory, setAdjustmentHistory] = useState<Record<number, FeeAdjustment[]>>({});
     const [loadingAdjustments, setLoadingAdjustments] = useState<Record<number, boolean>>({});
 
@@ -451,7 +452,12 @@ function FeeCollectContent() {
         }
     }
 
+    const totalAnnual = breakdown.reduce((sum, item) => sum + (item.annualAmount ?? 0), 0);
+    const totalPaid = breakdown.reduce((sum, item) => sum + (item.principalPaid ?? 0), 0);
+    const totalAccrued = breakdown.reduce((sum, item) => sum + (item.dueTillDate ?? 0), 0);
     const accruedPending = breakdown.reduce((sum, item) => sum + (item.pendingTillDate ?? 0), 0);
+    const remainingForSession = breakdown.reduce((sum, item) => sum + (item.remainingForSession ?? 0), 0);
+    const totalAdvance = breakdown.reduce((sum, item) => sum + Math.max(0, (item.principalPaid ?? 0) - (item.dueTillDate ?? 0)), 0);
 
     return (
         <div className="space-y-6">
@@ -484,41 +490,42 @@ function FeeCollectContent() {
             ) : (selectedStudent && summary) ? (
                 <div className="flex flex-col gap-6">
                     {/* Single 3-col grid: left = controls stacked, right = tables stacked with no gap */}
-                    <div className="grid grid-cols-1 xl:grid-cols-3 gap-6 items-start">
-
-                        {/* LEFT COLUMN: Outstanding Balance card + Post Payment Transaction form */}
-                        <div className="xl:col-span-1 flex flex-col gap-6">
-
-                            {/* Outstanding Balance card */}
-                            <div className="bg-gray-900 text-white rounded-2xl p-8 shadow-2xl relative overflow-hidden">
+                    <div className="flex flex-col gap-6">
+                        {/* TOP SECTION: Snapshot Card + Post Payment Transaction (side-by-side on wide monitors) */}
+                        <div className="grid grid-cols-1 lg:grid-cols-2 gap-6 items-stretch">
+                            {/* Finance Position card */}
+                            <div className="bg-gray-900 text-white rounded-2xl p-8 shadow-2xl relative overflow-hidden flex flex-col justify-between">
                                 <div className="absolute top-0 right-0 p-4 opacity-10 text-6xl">₹</div>
-                                <h3 className="text-xs font-black uppercase tracking-widest text-gray-400 mb-2">Outstanding Balance</h3>
-                                <p className="text-5xl font-black">₹ {accruedPending.toLocaleString()}</p>
+                                <div>
+                                    <h3 className="text-xs font-black uppercase tracking-widest text-gray-400 mb-2">Finance Position</h3>
+                                    <p className="text-5xl font-black">₹ {remainingForSession.toLocaleString()}</p>
+                                    <p className="text-[10px] text-gray-400 font-bold uppercase mt-1">Total Remaining For Session</p>
+                                </div>
 
                                 <div className="mt-6 flex flex-col gap-2 text-[10px] font-bold uppercase tracking-tight border-t border-white/10 pt-4">
                                     <div className="flex justify-between">
-                                        <span className="text-gray-400">Principal Amount:</span>
-                                        <span className="text-white">₹ {summary.totalFee.toLocaleString()}</span>
+                                        <span className="text-gray-400">Total Annual Principal:</span>
+                                        <span className="text-white">₹ {totalAnnual.toLocaleString()}</span>
                                     </div>
                                     <div className="flex justify-between">
-                                        <span className="text-gray-400">Total Discount:</span>
-                                        <span className="text-blue-400">₹ {(summary.totalDiscount ?? 0).toLocaleString()}</span>
+                                        <span className="text-gray-400">Total Principal Paid:</span>
+                                        <span className="text-green-400">₹ {totalPaid.toLocaleString()}</span>
                                     </div>
                                     <div className="flex justify-between">
-                                        <span className="text-gray-400">Sponsor Covered:</span>
-                                        <span className="text-indigo-400">₹ {(summary.totalFunding ?? 0).toLocaleString()}</span>
+                                        <span className="text-gray-400">Accrued Till Today:</span>
+                                        <span className="text-blue-400">₹ {totalAccrued.toLocaleString()}</span>
                                     </div>
                                     <div className="flex justify-between">
-                                        <span className="text-gray-400">Accrued Late Fees:</span>
-                                        <span className="text-orange-400">₹ {(summary.totalLateFeeAccrued ?? 0).toLocaleString()}</span>
+                                        <span className="text-gray-400">Accrued Pending Now:</span>
+                                        <span className="text-red-400 font-black">₹ {accruedPending.toLocaleString()}</span>
                                     </div>
                                     <div className="flex justify-between">
-                                        <span className="text-gray-400">Late Fees Waived:</span>
-                                        <span className="text-red-400">₹ {(summary.totalLateFeeWaived ?? 0).toLocaleString()}</span>
+                                        <span className="text-gray-400">Advance Paid:</span>
+                                        <span className="text-emerald-400">₹ {totalAdvance.toLocaleString()}</span>
                                     </div>
                                     <div className="flex justify-between border-t border-white/5 pt-2 mt-1">
-                                        <span className="text-gray-400">Total Collected:</span>
-                                        <span className="text-green-400">₹ {summary.totalPaid.toLocaleString()}</span>
+                                        <span className="text-gray-400">Accrued Late Fees (O/S):</span>
+                                        <span className="text-orange-400">₹ {((summary.totalLateFeeAccrued ?? 0) - (summary.totalLateFeePaid ?? 0) - (summary.totalLateFeeWaived ?? 0)).toLocaleString()}</span>
                                     </div>
                                 </div>
 
@@ -534,36 +541,42 @@ function FeeCollectContent() {
                             </div>
 
                             {/* Post Payment Transaction form */}
-                            <div className="bg-white border rounded-2xl p-6 shadow-sm space-y-5">
+                            <div className="bg-white border rounded-2xl p-8 shadow-sm space-y-5 flex flex-col justify-between">
                                 <h3 className="font-black text-gray-800 border-b pb-4 text-xs uppercase tracking-widest">Post Payment Transaction</h3>
-                                <div className="space-y-4">
-                                    <div>
-                                        <label className="block text-[10px] font-black uppercase text-gray-400 mb-1 ml-1">Total Collection Amount</label>
-                                        <div className="relative">
-                                            <span className="absolute left-4 top-1/2 -translate-y-1/2 font-bold text-gray-400">₹</span>
-                                            <div className="input-ref pl-10 text-xl font-black bg-gray-50 flex items-center">
-                                                {calculateTotalAllocated().toLocaleString(undefined, { minimumFractionDigits: 2 })}
+                                <div className="grid grid-cols-1 md:grid-cols-2 gap-6 items-start">
+                                    <div className="space-y-4">
+                                        <div>
+                                            <label className="block text-[10px] font-black uppercase text-gray-400 mb-1 ml-1">Total Collection Amount</label>
+                                            <div className="relative">
+                                                <span className="absolute left-4 top-1/2 -translate-y-1/2 font-bold text-gray-400">₹</span>
+                                                <div className="input-ref pl-10 text-xl font-black bg-gray-50 flex items-center">
+                                                    {calculateTotalAllocated().toLocaleString(undefined, { minimumFractionDigits: 2 })}
+                                                </div>
                                             </div>
                                         </div>
+                                        <div>
+                                            <label className="block text-[10px] font-black uppercase text-gray-400 mb-1 ml-1">Payment Channel</label>
+                                            <select className="input-ref font-bold" value={paymentMode} onChange={e => setPaymentMode(e.target.value)}>
+                                                <option value="CASH">Liquid Cash</option>
+                                                <option value="ONLINE">Digital/UPI</option>
+                                                <option value="BANK_TRANSFER">Bank Transfer</option>
+                                                <option value="CHEQUE">Banker&apos;s Cheque</option>
+                                            </select>
+                                        </div>
                                     </div>
-                                    <div>
-                                        <label className="block text-[10px] font-black uppercase text-gray-400 mb-1 ml-1">Payment Channel</label>
-                                        <select className="input-ref font-bold" value={paymentMode} onChange={e => setPaymentMode(e.target.value)}>
-                                            <option value="CASH">Liquid Cash</option>
-                                            <option value="ONLINE">Digital/UPI</option>
-                                            <option value="BANK_TRANSFER">Bank Transfer</option>
-                                            <option value="CHEQUE">Banker&apos;s Cheque</option>
-                                        </select>
+                                    <div className="space-y-4">
+                                        <div>
+                                            <label className="block text-[10px] font-black uppercase text-gray-400 mb-1 ml-1">Internal Remarks</label>
+                                            <textarea
+                                                placeholder="Reference or narration..."
+                                                className="input-ref h-[106px] text-sm"
+                                                value={remarks}
+                                                onChange={e => setRemarks(e.target.value)}
+                                            />
+                                        </div>
                                     </div>
-                                    <div>
-                                        <label className="block text-[10px] font-black uppercase text-gray-400 mb-1 ml-1">Internal Remarks</label>
-                                        <textarea
-                                            placeholder="Reference or narration..."
-                                            className="input-ref h-20 text-sm"
-                                            value={remarks}
-                                            onChange={e => setRemarks(e.target.value)}
-                                        />
-                                    </div>
+                                </div>
+                                <div className="pt-4 border-t mt-4">
                                     {canUserCollectFees ? (
                                         <button
                                             onClick={makePayment}
@@ -581,8 +594,8 @@ function FeeCollectContent() {
                             </div>
                         </div>
 
-                        {/* RIGHT COLUMN: Fee Breakdown + Transaction Audit Log (seamlessly stacked, no gap) */}
-                        <div className="xl:col-span-2 flex flex-col">
+                        {/* BOTTOM SECTION: Fee Breakdown + Transaction Audit Log (Stacked beneath) */}
+                        <div className="flex flex-col">
 
                             {/* Fee Breakdown — top half of right column */}
                             <div className="bg-white border border-b-0 rounded-t-2xl overflow-hidden shadow-sm">
@@ -598,10 +611,10 @@ function FeeCollectContent() {
                                                     <th className="pb-2">Type</th>
                                                     <th className="pb-2 text-right">Annual</th>
                                                     <th className="pb-2 text-right">Accrued</th>
-                                                    <th className="pb-2 text-right">Next Due</th>
-                                                    <th className="pb-2 text-right">Discount</th>
-                                                    <th className="pb-2 text-right">Funding</th>
+                                                    <th className="pb-2 text-right">Paid</th>
+                                                    <th className="pb-2 text-right">Advance</th>
                                                     <th className="pb-2 text-right">Pending Now</th>
+                                                    <th className="pb-2 text-right">Remaining</th>
                                                     <th className="pb-2 text-center">Status</th>
                                                     <th className="pb-2 text-center">Pay Now</th>
                                                     {canUserManageFees && <th className="pb-2 text-center w-36">Actions</th>}
@@ -610,7 +623,26 @@ function FeeCollectContent() {
                                             <tbody className="divide-y divide-gray-100">
                                                 {breakdown.map((item) => {
                                                     const pendingAmount = item.pendingTillDate ?? 0;
-                                                    const accrualStatus = pendingAmount <= 0 ? "CLEARED" : "DUE";
+                                                    const principalPaid = item.principalPaid ?? 0;
+                                                    const dueTillDate = item.dueTillDate ?? 0;
+                                                    const remainingAmount = item.remainingForSession ?? 0;
+                                                    const advanceAmount = Math.max(0, principalPaid - dueTillDate);
+
+                                                    let accrualStatus: "CLEARED" | "DUE" | "PARTIAL" = "DUE";
+                                                    if (pendingAmount > 0) {
+                                                        accrualStatus = "DUE";
+                                                    } else if (remainingAmount > 0) {
+                                                        accrualStatus = "PARTIAL";
+                                                    } else {
+                                                        accrualStatus = "CLEARED";
+                                                    }
+
+                                                    const statusColors = {
+                                                        CLEARED: "bg-green-100 text-green-600",
+                                                        DUE: "bg-red-100 text-red-600",
+                                                        PARTIAL: "bg-amber-100 text-amber-600"
+                                                    };
+
                                                     const outstandingLateFee = Math.max(0, (item.lateFeeAccrued || 0) - (item.lateFeePaid || 0) - (item.lateFeeWaived || 0));
                                                     return (
                                                         <React.Fragment key={item.id}>
@@ -625,13 +657,19 @@ function FeeCollectContent() {
                                                                 </td>
                                                                 <td className="py-2.5 font-bold text-gray-700">{item.feeTypeName || "Miscellaneous"}</td>
                                                                 <td className="py-2.5 text-right">₹ {(item.annualAmount ?? 0).toLocaleString()}</td>
-                                                                <td className="py-2.5 text-right">₹ {(item.dueTillDate ?? 0).toLocaleString()}</td>
-                                                                <td className="py-2.5 text-right">{item.nextDueDate ? new Date(item.nextDueDate).toLocaleDateString() : "—"}</td>
-                                                                <td className="py-2.5 text-right text-blue-600">₹ {item.totalDiscountAmount.toLocaleString()}</td>
-                                                                <td className="py-2.5 text-right text-indigo-600">₹ {item.sponsorCoveredAmount.toLocaleString()}</td>
-                                                                <td className="py-2.5 text-right font-black">₹ {Math.max(0, pendingAmount).toLocaleString()}</td>
+                                                                <td className="py-2.5 text-right font-medium">₹ {dueTillDate.toLocaleString()}</td>
+                                                                <td className="py-2.5 text-right text-green-600">₹ {principalPaid.toLocaleString()}</td>
+                                                                <td className="py-2.5 text-right">
+                                                                    {advanceAmount > 0 ? (
+                                                                        <span className="text-emerald-600 font-bold">₹ {advanceAmount.toLocaleString()}</span>
+                                                                    ) : (
+                                                                        <span className="text-gray-300">—</span>
+                                                                    )}
+                                                                </td>
+                                                                <td className={`py-2.5 text-right font-black ${pendingAmount > 0 ? "text-red-600" : "text-green-600"}`}>₹ {Math.max(0, pendingAmount).toLocaleString()}</td>
+                                                                <td className="py-2.5 text-right font-medium text-gray-400">₹ {remainingAmount.toLocaleString()}</td>
                                                                 <td className="py-2.5 text-center">
-                                                                    <span className={`px-2 py-0.5 rounded-full text-[9px] font-black uppercase ${accrualStatus === 'CLEARED' ? 'bg-green-100 text-green-600' : 'bg-red-100 text-red-600'}`}>
+                                                                    <span className={`px-2 py-0.5 rounded-full text-[9px] font-black uppercase ${statusColors[accrualStatus]}`}>
                                                                         {accrualStatus}
                                                                     </span>
                                                                 </td>
@@ -646,9 +684,9 @@ function FeeCollectContent() {
                                                                                 value={allocations[item.id]?.principal || ""}
                                                                                 onChange={e => {
                                                                                     const val = e.target.value;
-                                                                                    const pendingPrincipal = item.pendingTillDate ?? 0;
-                                                                                    if (Number(val) > pendingPrincipal) {
-                                                                                        showToast(`Principal exposure for ${item.feeTypeName} cannot exceed ₹${pendingPrincipal}`, "warning");
+                                                                                    const maxPrincipal = item.remainingForSession ?? 0;
+                                                                                    if (Number(val) > maxPrincipal) {
+                                                                                        showToast(`Principal payment for ${item.feeTypeName} cannot exceed ₹${maxPrincipal}`, "warning");
                                                                                         return;
                                                                                     }
                                                                                     setAllocations(prev => ({
@@ -678,32 +716,45 @@ function FeeCollectContent() {
                                                                 </td>
                                                                 {canUserManageFees && (
                                                                     <td className="py-2.5 text-center">
-                                                                        {accrualStatus !== 'CLEARED' && (
-                                                                            <div className="flex items-center justify-center gap-1">
-                                                                                <button
-                                                                                    onClick={() => {
-                                                                                        setSelectedAssignmentForDiscount(item.id);
-                                                                                        setShowDiscountModal(true);
-                                                                                    }}
-                                                                                    className="text-[10px] font-bold uppercase text-blue-600 bg-blue-50 px-2 py-1 rounded hover:bg-blue-100 transition-colors"
-                                                                                >
-                                                                                    + Discount
-                                                                                </button>
-                                                                                <button
-                                                                                    onClick={() => {
-                                                                                        if (outstandingLateFee <= 0) return;
-                                                                                        setSelectedAssignmentForWaiver(item.id);
-                                                                                        setSelectedAssignmentPendingLateFee(outstandingLateFee);
-                                                                                        setWaiverForm({ amount: String(outstandingLateFee.toFixed(2)), remarks: "" });
-                                                                                        setShowWaiverModal(true);
-                                                                                    }}
-                                                                                    disabled={outstandingLateFee <= 0}
-                                                                                    className="text-[10px] font-bold uppercase text-orange-600 bg-orange-50 px-2 py-1 rounded hover:bg-orange-100 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
-                                                                                >
-                                                                                    Waive Late Fee
-                                                                                </button>
-                                                                            </div>
-                                                                        )}
+                                                                        <div className="relative inline-block text-left">
+                                                                            <button
+                                                                                onClick={() => setActiveActionDropdown(activeActionDropdown === item.id ? null : item.id)}
+                                                                                className="text-[10px] font-bold uppercase text-gray-600 bg-gray-100 px-3 py-1.5 rounded-lg hover:bg-gray-200 transition-all flex items-center gap-1.5"
+                                                                            >
+                                                                                Actions <span className={`text-[8px] transition-transform ${activeActionDropdown === item.id ? 'rotate-180' : ''}`}>▼</span>
+                                                                            </button>
+                                                                            {activeActionDropdown === item.id && (
+                                                                                <>
+                                                                                    <div className="fixed inset-0 z-10" onClick={() => setActiveActionDropdown(null)}></div>
+                                                                                    <div className="absolute right-0 mt-1 w-40 bg-white border border-gray-100 rounded-xl shadow-xl z-50 py-1.5 overflow-hidden animate-in fade-in zoom-in duration-100">
+                                                                                        <button
+                                                                                            onClick={() => {
+                                                                                                setSelectedAssignmentForDiscount(item.id);
+                                                                                                setShowDiscountModal(true);
+                                                                                                setActiveActionDropdown(null);
+                                                                                            }}
+                                                                                            className="w-full text-left px-4 py-2 text-[10px] font-bold uppercase text-blue-600 hover:bg-blue-50 transition-colors"
+                                                                                        >
+                                                                                            Apply Discount
+                                                                                        </button>
+                                                                                        <button
+                                                                                            onClick={() => {
+                                                                                                if (outstandingLateFee <= 0) return;
+                                                                                                setSelectedAssignmentForWaiver(item.id);
+                                                                                                setSelectedAssignmentPendingLateFee(outstandingLateFee);
+                                                                                                setWaiverForm({ amount: String(outstandingLateFee.toFixed(2)), remarks: "" });
+                                                                                                setShowWaiverModal(true);
+                                                                                                setActiveActionDropdown(null);
+                                                                                            }}
+                                                                                            disabled={outstandingLateFee <= 0}
+                                                                                            className="w-full text-left px-4 py-2 text-[10px] font-bold uppercase text-orange-600 hover:bg-orange-50 disabled:opacity-40 disabled:cursor-not-allowed transition-colors"
+                                                                                        >
+                                                                                            Waive Late Fee
+                                                                                        </button>
+                                                                                    </div>
+                                                                                </>
+                                                                            )}
+                                                                        </div>
                                                                     </td>
                                                                 )}
                                                             </tr>
@@ -713,31 +764,34 @@ function FeeCollectContent() {
                                                                         {loadingAdjustments[item.id] ? (
                                                                             <div className="text-sm text-gray-400 italic">Loading adjustments...</div>
                                                                         ) : adjustmentHistory[item.id]?.length ? (
-                                                                            <div className="space-y-3 text-sm">
-                                                                                {adjustmentHistory[item.id].map(adj => (
-                                                                                    <div key={adj.id} className="border-l-4 border-blue-200 pl-4 bg-white p-3 rounded shadow-sm">
-                                                                                        <div className="flex justify-between items-center mb-1">
-                                                                                            <span className="font-bold text-gray-700">
-                                                                                                {adj.discountName || adj.type.replaceAll('_', ' ')}
-                                                                                            </span>
-                                                                                            <span className="font-bold text-blue-600">₹ {adj.amount.toLocaleString()}</span>
+                                                                            <>
+                                                                                <div className="text-[10px] font-black uppercase tracking-widest text-gray-400 mb-2">Adjustments ({adjustmentHistory[item.id].length})</div>
+                                                                                <div className="space-y-3 text-sm">
+                                                                                    {adjustmentHistory[item.id].map(adj => (
+                                                                                        <div key={adj.id} className="border-l-4 border-blue-200 pl-4 bg-white p-3 rounded shadow-sm">
+                                                                                            <div className="flex justify-between items-center mb-1">
+                                                                                                <span className="font-bold text-gray-700">
+                                                                                                    {adj.discountName || adj.type.replaceAll('_', ' ')}
+                                                                                                </span>
+                                                                                                <span className="font-bold text-blue-600">₹ {adj.amount.toLocaleString()}</span>
+                                                                                            </div>
+                                                                                            <div className="text-[10px] uppercase font-bold text-gray-400 flex flex-wrap gap-4 mt-2">
+                                                                                                {adj.discountType && <span>Type: {adj.discountType}</span>}
+                                                                                                {adj.createdByName && <span>By: {adj.createdByName}</span>}
+                                                                                                <span>
+                                                                                                    {new Date(adj.createdAt).toLocaleString(undefined, {
+                                                                                                        year: 'numeric', month: 'short', day: 'numeric',
+                                                                                                        hour: '2-digit', minute: '2-digit'
+                                                                                                    })}
+                                                                                                </span>
+                                                                                            </div>
+                                                                                            {adj.remarks && (
+                                                                                                <div className="text-xs text-gray-500 italic mt-2 border-t pt-2">&quot;{adj.remarks}&quot;</div>
+                                                                                            )}
                                                                                         </div>
-                                                                                        <div className="text-[10px] uppercase font-bold text-gray-400 flex flex-wrap gap-4 mt-2">
-                                                                                            {adj.discountType && <span>Type: {adj.discountType}</span>}
-                                                                                            {adj.createdByName && <span>By: {adj.createdByName}</span>}
-                                                                                            <span>
-                                                                                                {new Date(adj.createdAt).toLocaleString(undefined, {
-                                                                                                    year: 'numeric', month: 'short', day: 'numeric',
-                                                                                                    hour: '2-digit', minute: '2-digit'
-                                                                                                })}
-                                                                                            </span>
-                                                                                        </div>
-                                                                                        {adj.remarks && (
-                                                                                            <div className="text-xs text-gray-500 italic mt-2 border-t pt-2">&quot;{adj.remarks}&quot;</div>
-                                                                                        )}
-                                                                                    </div>
-                                                                                ))}
-                                                                            </div>
+                                                                                    ))}
+                                                                                </div>
+                                                                            </>
                                                                         ) : (
                                                                             <div className="text-sm text-gray-400 italic text-center py-2">
                                                                                 No adjustments recorded for this assignment.

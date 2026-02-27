@@ -96,6 +96,20 @@ export default function Sidebar() {
   const [schoolId, setSchoolId] = useState<string | null>(null);
   const [schoolName, setSchoolName] = useState<string | null>(null);
   const [expandedMenus, setExpandedMenus] = useState<Record<string, boolean>>({});
+  const [isCollapsed, setIsCollapsed] = useState(false);
+
+  useEffect(() => {
+    const saved = localStorage.getItem("sidebar-collapsed");
+    if (saved === "true") setIsCollapsed(true);
+  }, []);
+
+  const toggleSidebar = () => {
+    setIsCollapsed(prev => {
+      const newVal = !prev;
+      localStorage.setItem("sidebar-collapsed", String(newVal));
+      return newVal;
+    });
+  };
 
   useEffect(() => {
     setSchoolId(localStorage.getItem("schoolId"));
@@ -166,10 +180,19 @@ export default function Sidebar() {
   };
 
   return (
-    <aside className="w-64 bg-white border-r flex flex-col h-screen">
-      <div className="p-4 border-b">
-        <div className="text-xl font-bold text-blue-600 tracking-tight">
-          {getRoleDisplay(user?.role)}
+    <aside className={`${isCollapsed ? "w-20" : "w-64"} bg-white border-r flex flex-col h-screen transition-all duration-300 relative group`}>
+      {/* Collapse Toggle Button */}
+      <button
+        onClick={toggleSidebar}
+        className="absolute -right-3 top-10 bg-white border border-gray-200 rounded-full w-6 h-6 flex items-center justify-center shadow-sm hover:shadow-md hover:bg-gray-50 z-50 transition-all text-[10px] text-gray-400 hover:text-blue-600"
+        title={isCollapsed ? "Expand Sidebar" : "Collapse Sidebar"}
+      >
+        {isCollapsed ? "→" : "←"}
+      </button>
+
+      <div className={`p-4 border-b flex items-center ${isCollapsed ? "justify-center" : "justify-between"}`}>
+        <div className={`text-xl font-extrabold text-blue-600 tracking-tighter transition-all duration-300 ${isCollapsed ? "scale-110" : ""}`}>
+          {isCollapsed ? "S" : getRoleDisplay(user?.role)}
         </div>
       </div>
 
@@ -192,26 +215,31 @@ export default function Sidebar() {
                       showToast(restriction.message, "warning");
                       if (restriction.redirectPath) router.push(restriction.redirectPath);
                     } else {
+                      if (isCollapsed) setIsCollapsed(false);
                       toggleMenu(item.name);
                     }
                   }}
                   className={`
-                    w-full px-4 py-2.5 rounded-lg flex items-center justify-between transition-all
+                    w-full px-4 py-2.5 rounded-lg flex items-center justify-between transition-all group/item
                     ${active ? "bg-blue-50 text-blue-700 font-bold" : "text-gray-700 hover:bg-gray-100"}
                     ${restriction.isRestricted ? "opacity-50 cursor-not-allowed" : ""}
+                    ${isCollapsed ? "justify-center" : ""}
                   `}
+                  title={isCollapsed ? item.name : ""}
                 >
                   <div className="flex items-center gap-3">
-                    <span className="text-lg">{item.icon}</span>
-                    <span className="text-sm font-semibold tracking-wide uppercase">{item.name}</span>
+                    <span className={`text-lg transition-transform ${isCollapsed ? "group-hover/item:scale-110" : ""}`}>{item.icon}</span>
+                    {!isCollapsed && <span className="text-sm font-semibold tracking-wide uppercase whitespace-nowrap overflow-hidden">{item.name}</span>}
                   </div>
-                  <span className={`transform transition-transform text-[10px] ${isExpanded ? "rotate-180" : ""}`}>
-                    ▼
-                  </span>
+                  {!isCollapsed && (
+                    <span className={`transform transition-transform text-[10px] ${isExpanded ? "rotate-180" : ""}`}>
+                      ▼
+                    </span>
+                  )}
                 </button>
 
-                {isExpanded && !restriction.isRestricted && (
-                  <div className="ml-9 mt-1 space-y-0.5 border-l-2 border-blue-50 pl-2">
+                {isExpanded && !restriction.isRestricted && !isCollapsed && (
+                  <div className="ml-9 mt-1 space-y-0.5 border-l-2 border-blue-50 pl-2 overflow-hidden animate-in slide-in-from-top-2 duration-200">
                     {item.children.map(child => {
                       const childHasAccess = child.roles.includes(userRole as string);
                       if (!childHasAccess) return null;
@@ -262,20 +290,22 @@ export default function Sidebar() {
                 }
               }}
               className={`
-                block px-4 py-2.5 rounded-lg flex items-center gap-3 transition-all
+                px-4 py-2.5 rounded-lg flex items-center transition-all group/item
                 ${active ? "bg-blue-100 text-blue-700 font-bold" : "text-gray-700 hover:bg-gray-100"}
                 ${restriction.isRestricted ? "opacity-50 cursor-not-allowed" : ""}
+                ${isCollapsed ? "justify-center" : "gap-3"}
               `}
+              title={isCollapsed ? item.name : ""}
             >
-              <span className="text-lg">{item.icon}</span>
-              <span className="text-sm">{item.name}</span>
+              <span className={`text-lg transition-transform ${isCollapsed ? "group-hover/item:scale-110" : ""}`}>{item.icon}</span>
+              {!isCollapsed && <span className="text-sm whitespace-nowrap overflow-hidden">{item.name}</span>}
             </Link>
           );
         })}
       </nav>
 
-      {schoolName && (user?.role === "SUPER_ADMIN" || user?.role === "PLATFORM_ADMIN") && (
-        <div className="mx-2 mb-2 p-3 bg-blue-50 rounded-lg flex items-center justify-between text-[11px] border border-blue-100 shadow-sm">
+      {schoolName && !isCollapsed && (user?.role === "SUPER_ADMIN" || user?.role === "PLATFORM_ADMIN") && (
+        <div className="mx-2 mb-2 p-3 bg-blue-50 rounded-lg flex items-center justify-between text-[11px] border border-blue-100 shadow-sm animate-in fade-in duration-300">
           <div className="flex items-center gap-2 text-blue-700 font-medium truncate">
             <span>📍</span> {schoolName}
           </div>
@@ -288,9 +318,13 @@ export default function Sidebar() {
       <div className="border-t p-4">
         <button
           onClick={logout}
-          className="w-full flex items-center justify-center gap-2 bg-red-50 text-red-600 px-4 py-2.5 rounded-lg hover:bg-red-100 transition-all font-semibold text-sm border border-red-100"
+          className={`
+            w-full flex items-center justify-center bg-red-50 text-red-600 py-2.5 rounded-lg hover:bg-red-100 transition-all font-semibold text-sm border border-red-100
+            ${isCollapsed ? "px-0" : "px-4 gap-2"}
+          `}
+          title={isCollapsed ? "Logout" : ""}
         >
-          <span>🚪</span> Logout
+          <span>🚪</span> {!isCollapsed && "Logout"}
         </button>
       </div>
     </aside>

@@ -205,9 +205,9 @@ public class FeeChallanService {
         Font contentFont = FontFactory.getFont(FontFactory.HELVETICA, 10);
         Font contentMutedFont = FontFactory.getFont(FontFactory.HELVETICA, 8, Color.GRAY);
 
-        PdfPTable table = new PdfPTable(5);
+        PdfPTable table = new PdfPTable(7);
         table.setWidthPercentage(100);
-        table.setWidths(new float[] { 2.8f, 1.2f, 1.3f, 1.4f, 1.4f });
+        table.setWidths(new float[] { 2.5f, 1.1f, 1.1f, 1.2f, 1.2f, 1.2f, 1.3f });
 
         // Header Row
         PdfPCell headerCell1 = new PdfPCell(new Phrase("Fee Type", headerFont));
@@ -221,23 +221,35 @@ public class FeeChallanService {
         headerCell2.setPadding(8);
         table.addCell(headerCell2);
 
-        PdfPCell headerCell3 = new PdfPCell(new Phrase("Annual (₹)", headerFont));
+        PdfPCell headerCell3 = new PdfPCell(new Phrase("Annual (INR)", headerFont));
         headerCell3.setBackgroundColor(new Color(41, 128, 185));
         headerCell3.setHorizontalAlignment(Element.ALIGN_RIGHT);
         headerCell3.setPadding(8);
         table.addCell(headerCell3);
 
-        PdfPCell headerCell4 = new PdfPCell(new Phrase("Due Till Date (₹)", headerFont));
+        PdfPCell headerCell4 = new PdfPCell(new Phrase("Due Till Date (INR)", headerFont));
         headerCell4.setBackgroundColor(new Color(41, 128, 185));
         headerCell4.setHorizontalAlignment(Element.ALIGN_RIGHT);
         headerCell4.setPadding(8);
         table.addCell(headerCell4);
 
-        PdfPCell headerCell5 = new PdfPCell(new Phrase("Pending Now (₹)", headerFont));
+        PdfPCell headerCell5 = new PdfPCell(new Phrase("Pending Principal (INR)", headerFont));
         headerCell5.setBackgroundColor(new Color(41, 128, 185));
         headerCell5.setHorizontalAlignment(Element.ALIGN_RIGHT);
         headerCell5.setPadding(8);
         table.addCell(headerCell5);
+
+        PdfPCell headerCell6 = new PdfPCell(new Phrase("Pending Late Fee (INR)", headerFont));
+        headerCell6.setBackgroundColor(new Color(41, 128, 185));
+        headerCell6.setHorizontalAlignment(Element.ALIGN_RIGHT);
+        headerCell6.setPadding(8);
+        table.addCell(headerCell6);
+
+        PdfPCell headerCell7 = new PdfPCell(new Phrase("Total Payable Now (INR)", headerFont));
+        headerCell7.setBackgroundColor(new Color(41, 128, 185));
+        headerCell7.setHorizontalAlignment(Element.ALIGN_RIGHT);
+        headerCell7.setPadding(8);
+        table.addCell(headerCell7);
 
         // Fee Rows
         BigDecimal totalAmount = ZERO;
@@ -245,7 +257,14 @@ public class FeeChallanService {
             FeeFrequency frequency = assignment.getFrequency() != null ? assignment.getFrequency() : FeeFrequency.ONE_TIME;
             BigDecimal annualAmount = nz(assignment.getAnnualAmount());
             BigDecimal dueTillDate = nz(assignment.getDueTillDate());
-            BigDecimal pendingNow = nz(assignment.getPendingTillDate());
+            BigDecimal pendingPrincipal = nz(assignment.getPendingTillDate());
+            BigDecimal pendingLateFee = nz(assignment.getLateFeeAccrued())
+                    .subtract(nz(assignment.getLateFeePaid()))
+                    .subtract(nz(assignment.getLateFeeWaived()));
+            if (pendingLateFee.compareTo(ZERO) < 0) {
+                pendingLateFee = ZERO;
+            }
+            BigDecimal totalPayableNow = pendingPrincipal.add(pendingLateFee);
 
             String feeTypeName = assignment.getFeeTypeName() != null ? assignment.getFeeTypeName() : "N/A";
             PdfPCell feeTypeCell = createTableCell(feeTypeName, contentFont, Element.ALIGN_LEFT);
@@ -261,15 +280,17 @@ public class FeeChallanService {
             table.addCell(createTableCell(formatFrequency(frequency), contentFont, Element.ALIGN_CENTER));
             table.addCell(createTableCell(formatIndianRupees(annualAmount), contentFont, Element.ALIGN_RIGHT));
             table.addCell(createTableCell(formatIndianRupees(dueTillDate), contentFont, Element.ALIGN_RIGHT));
-            table.addCell(createTableCell(formatIndianRupees(pendingNow), contentFont, Element.ALIGN_RIGHT));
+            table.addCell(createTableCell(formatIndianRupees(pendingPrincipal), contentFont, Element.ALIGN_RIGHT));
+            table.addCell(createTableCell(formatIndianRupees(pendingLateFee), contentFont, Element.ALIGN_RIGHT));
+            table.addCell(createTableCell(formatIndianRupees(totalPayableNow), contentFont, Element.ALIGN_RIGHT));
 
-            totalAmount = totalAmount.add(pendingNow);
+            totalAmount = totalAmount.add(totalPayableNow);
         }
 
         // Total Row
         Font totalFont = FontFactory.getFont(FontFactory.HELVETICA, 11, Font.BOLD);
-        PdfPCell totalLabelCell = new PdfPCell(new Phrase("Grand Total (Pending Now)", totalFont));
-        totalLabelCell.setColspan(4);
+        PdfPCell totalLabelCell = new PdfPCell(new Phrase("Grand Total (Payable Now)", totalFont));
+        totalLabelCell.setColspan(6);
         totalLabelCell.setPadding(8);
         totalLabelCell.setBackgroundColor(new Color(236, 240, 241));
         totalLabelCell.setHorizontalAlignment(Element.ALIGN_RIGHT);
@@ -415,11 +436,13 @@ public class FeeChallanService {
     }
 
     /**
-     * Format amount in Indian rupee format with ₹ symbol
+     * Format amount in Indian number grouping with an INR prefix.
      */
     private String formatIndianRupees(java.math.BigDecimal amount) {
-        NumberFormat formatter = NumberFormat.getCurrencyInstance(new Locale("en", "IN"));
-        return formatter.format(amount).replace("₹", "₹ "); // Add space after symbol for readability
+        NumberFormat formatter = NumberFormat.getNumberInstance(new Locale("en", "IN"));
+        formatter.setMinimumFractionDigits(2);
+        formatter.setMaximumFractionDigits(2);
+        return "INR " + formatter.format(amount);
     }
 
     /**

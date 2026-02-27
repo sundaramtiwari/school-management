@@ -297,6 +297,15 @@ public class StudentFeeAssignmentService {
             dto.setPendingTillDate(pending.setScale(2, RoundingMode.HALF_UP));
         }
 
+        BigDecimal remainingForSession = annualAmount
+                .subtract(principalPaid)
+                .subtract(totalDiscountAmount)
+                .subtract(sponsorCoveredAmount);
+        if (remainingForSession.compareTo(ZERO) < 0) {
+            remainingForSession = ZERO;
+        }
+        dto.setRemainingForSession(remainingForSession.setScale(2, RoundingMode.HALF_UP));
+
         dto.setStatus(pending.compareTo(BigDecimal.ZERO) <= 0 ? "PAID" : "PENDING");
 
         dto.setActive(sfa.isActive());
