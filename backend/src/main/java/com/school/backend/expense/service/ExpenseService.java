@@ -97,32 +97,25 @@ public class ExpenseService {
             throw new InvalidOperationException("Cannot create voucher in inactive session");
         }
 
-        int attempts = 0;
-        while (attempts < 3) {
-            attempts++;
-            String voucherNumber = nextVoucherNumber(schoolId, sessionId);
-            try {
-                ExpenseVoucher saved = expenseVoucherRepository.save(ExpenseVoucher.builder()
-                        .voucherNumber(voucherNumber)
-                        .expenseDate(req.getExpenseDate())
-                        .expenseHead(head)
-                        .amount(req.getAmount())
-                        .paymentMode(req.getPaymentMode())
-                        .description(trimToNull(req.getDescription()))
-                        .referenceNumber(trimToNull(req.getReferenceNumber()))
-                        .sessionId(sessionId)
-                        .createdBy(SecurityUtil.userId())
-                        .active(true)
-                        .schoolId(schoolId)
-                        .build());
-                return toVoucherDto(saved);
-            } catch (DataIntegrityViolationException ex) {
-                if (attempts >= 3) {
-                    throw ex;
-                }
-            }
+        String voucherNumber = nextVoucherNumber(schoolId, sessionId);
+        try {
+            ExpenseVoucher saved = expenseVoucherRepository.save(ExpenseVoucher.builder()
+                    .voucherNumber(voucherNumber)
+                    .expenseDate(req.getExpenseDate())
+                    .expenseHead(head)
+                    .amount(req.getAmount())
+                    .paymentMode(req.getPaymentMode())
+                    .description(trimToNull(req.getDescription()))
+                    .referenceNumber(trimToNull(req.getReferenceNumber()))
+                    .sessionId(sessionId)
+                    .createdBy(SecurityUtil.userId())
+                    .active(true)
+                    .schoolId(schoolId)
+                    .build());
+            return toVoucherDto(saved);
+        } catch (DataIntegrityViolationException ex) {
+            throw new IllegalStateException("Failed to generate voucher number", ex);
         }
-        throw new IllegalStateException("Failed to generate voucher number");
     }
 
     @Transactional(readOnly = true)
@@ -132,10 +125,10 @@ public class ExpenseService {
 
         List<ExpenseVoucher> vouchers = (date == null)
                 ? expenseVoucherRepository.findBySchoolIdAndSessionIdAndActiveTrueOrderByExpenseDateDescIdDesc(schoolId,
-                        sessionId)
+                sessionId)
                 : expenseVoucherRepository
-                        .findBySchoolIdAndSessionIdAndExpenseDateAndActiveTrueOrderByExpenseDateDescIdDesc(schoolId,
-                                sessionId, date);
+                .findBySchoolIdAndSessionIdAndExpenseDateAndActiveTrueOrderByExpenseDateDescIdDesc(schoolId,
+                        sessionId, date);
 
         return vouchers.stream()
                 .map(this::toVoucherDto)

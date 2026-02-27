@@ -63,13 +63,13 @@ public class SchoolClassController {
     @GetMapping("/mine/session/{sessionId}")
     @PreAuthorize("hasAnyRole('SCHOOL_ADMIN', 'TEACHER', 'ACCOUNTANT', 'SUPER_ADMIN', 'PLATFORM_ADMIN')")
     public ResponseEntity<Page<SchoolClassDto>> getBySchoolAndSession(
-            @RequestParam Long schoolId,
-            @RequestParam Long sessionId,
+            @PathVariable Long sessionId,
             @RequestParam(defaultValue = "0") int page,
             @RequestParam(defaultValue = "20") int size,
             @RequestParam(defaultValue = "false") boolean includeInactive) {
         Pageable pageable = PageRequest.of(page, size);
-        return ResponseEntity.ok(service.getBySchoolAndSession(schoolId, sessionId, pageable, includeInactive));
+        return ResponseEntity
+                .ok(service.getBySchoolAndSession(SecurityUtil.schoolId(), sessionId, pageable, includeInactive));
     }
 
     @PatchMapping("/{id}/toggle")

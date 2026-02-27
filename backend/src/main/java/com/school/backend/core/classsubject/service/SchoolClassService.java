@@ -1,6 +1,7 @@
 package com.school.backend.core.classsubject.service;
 
 import com.school.backend.common.exception.ResourceNotFoundException;
+import com.school.backend.common.tenant.SessionContext;
 import com.school.backend.common.tenant.SessionResolver;
 import com.school.backend.common.tenant.TenantContext;
 import com.school.backend.core.classsubject.dto.SchoolClassDto;
@@ -13,6 +14,7 @@ import lombok.RequiredArgsConstructor;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
 import org.springframework.stereotype.Service;
+import org.springframework.transaction.annotation.Transactional;
 
 @Service
 @RequiredArgsConstructor
@@ -126,7 +128,7 @@ public class SchoolClassService {
     }
 
     public Page<SchoolClassDto> getBySchoolAndSession(Long schoolId, Long sessionId, Pageable pageable,
-            boolean includeInactive) {
+                                                      boolean includeInactive) {
         if (includeInactive) {
             return repository.findBySchoolIdAndSessionId(schoolId, sessionId, pageable).map(mapper::toDto);
         } else {
@@ -138,7 +140,7 @@ public class SchoolClassService {
         return repository.findAll(pageable).map(mapper::toDto);
     }
 
-    @org.springframework.transaction.annotation.Transactional
+    @Transactional
     public SchoolClassDto toggleActive(Long id) {
         Long schoolId = TenantContext.getSchoolId();
         SchoolClass schoolClass = repository.findByIdAndSchoolId(id, schoolId)
@@ -146,8 +148,8 @@ public class SchoolClassService {
 
         if (schoolClass.isActive()) {
             // Deactivating: check for active enrollments
-            Long sessionId = com.school.backend.common.tenant.SessionContext.getSessionId();
-            if (sessionId != null && schoolClass.getSessionId().equals(sessionId)) {
+            Long sessionId = SessionContext.getSessionId();
+            if (schoolClass.getSessionId().equals(sessionId)) {
                 long activeEnrollments = enrollmentRepo.countByClassIdAndSessionIdAndActiveTrue(id, sessionId);
                 if (activeEnrollments > 0) {
                     throw new com.school.backend.common.exception.BusinessException(

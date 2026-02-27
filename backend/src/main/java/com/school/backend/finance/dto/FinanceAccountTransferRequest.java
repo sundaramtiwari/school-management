@@ -9,6 +9,8 @@ import java.time.LocalDate;
 
 @Data
 public class FinanceAccountTransferRequest {
+    private Long sessionId;
+
     @NotNull
     private LocalDate transferDate;
 

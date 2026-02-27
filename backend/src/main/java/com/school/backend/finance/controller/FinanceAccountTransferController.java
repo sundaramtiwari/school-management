@@ -22,6 +22,7 @@ public class FinanceAccountTransferController {
     @PreAuthorize("hasAnyRole('SCHOOL_ADMIN', 'ACCOUNTANT', 'SUPER_ADMIN')")
     public FinanceAccountTransferDto createTransfer(@Valid @RequestBody FinanceAccountTransferRequest req) {
         return transferService.createTransfer(
+                req.getSessionId(),
                 req.getTransferDate(),
                 req.getAmount(),
                 req.getReferenceNumber(),

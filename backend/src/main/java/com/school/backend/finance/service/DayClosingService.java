@@ -100,6 +100,7 @@ public class DayClosingService {
         target.setTransferIn(transferIn);
         target.setClosingCash(closingCash);
         target.setClosingBank(closingBank);
+        target.setOverrideAllowed(false);
         target.setClosedBy(SecurityUtil.userId());
         target.setClosedAt(LocalDateTime.now());
 

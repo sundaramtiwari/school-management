@@ -4,8 +4,6 @@ import com.school.backend.common.exception.BusinessException;
 import com.school.backend.common.exception.InvalidOperationException;
 import com.school.backend.common.tenant.SessionContext;
 import com.school.backend.common.tenant.TenantContext;
-import com.school.backend.core.dashboard.dto.DailyCashDashboardDto;
-import com.school.backend.core.dashboard.service.DashboardStatsService;
 import com.school.backend.finance.dto.FinanceAccountTransferDto;
 import com.school.backend.finance.entity.FinanceAccountTransfer;
 import com.school.backend.finance.repository.DayClosingRepository;
@@ -27,14 +25,15 @@ public class FinanceAccountTransferService {
 
     private static final String FROM_ACCOUNT = "CASH";
     private static final String TO_ACCOUNT = "BANK";
+    private static final BigDecimal ZERO = BigDecimal.ZERO;
 
     private final FinanceAccountTransferRepository transferRepository;
     private final AcademicSessionRepository academicSessionRepository;
-    private final DashboardStatsService dashboardStatsService;
     private final DayClosingRepository dayClosingRepository;
 
     @Transactional
     public FinanceAccountTransferDto createTransfer(
+            Long requestedSessionId,
             LocalDate date,
             BigDecimal amount,
             String referenceNumber,
@@ -47,6 +46,9 @@ public class FinanceAccountTransferService {
         Long sessionId = SessionContext.getSessionId();
         if (sessionId == null) {
             throw new InvalidOperationException("Session context is missing in request");
+        }
+        if (requestedSessionId != null && !requestedSessionId.equals(sessionId)) {
+            throw new InvalidOperationException("Session mismatch between request and context");
         }
 
         AcademicSession session = academicSessionRepository.findById(sessionId)
@@ -121,22 +123,19 @@ public class FinanceAccountTransferService {
             LocalDate sessionStart,
             LocalDate transferDate) {
         // Opening balance is currently zero; structure remains compatible for day-closing extension.
-        BigDecimal openingBalance = BigDecimal.ZERO;
-        BigDecimal cumulativeOperationalCash = BigDecimal.ZERO;
+        BigDecimal openingBalance = ZERO;
+        FinanceAccountTransferRepository.MovementAggregate totals = transferRepository
+                .aggregateMovements(schoolId, sessionId, sessionStart, transferDate);
 
-        LocalDate cursor = sessionStart;
-        while (!cursor.isAfter(transferDate)) {
-            DailyCashDashboardDto daily = dashboardStatsService.getDailyCashDashboard(cursor);
-            // add only operational movement; transfers handled separately below
-            cumulativeOperationalCash = cumulativeOperationalCash
-                    .add(nz(daily.getCashRevenue()))
-                    .subtract(nz(daily.getCashExpense()));
-            cursor = cursor.plusDays(1);
-        }
+        BigDecimal cashRevenue = totals != null ? nz(totals.getCashRevenue()) : ZERO;
+        BigDecimal cashExpense = totals != null ? nz(totals.getCashExpense()) : ZERO;
+        BigDecimal transferOut = totals != null ? nz(totals.getTransferOut()) : ZERO;
 
-        BigDecimal previousTransfers = sumTransferAmount(schoolId, sessionId, sessionStart, transferDate);
-        BigDecimal available = openingBalance.add(cumulativeOperationalCash).subtract(previousTransfers);
-        return available.compareTo(BigDecimal.ZERO) < 0 ? BigDecimal.ZERO : available;
+        BigDecimal available = openingBalance
+                .add(cashRevenue)
+                .subtract(cashExpense)
+                .subtract(transferOut);
+        return available.compareTo(ZERO) < 0 ? ZERO : available;
     }
 
     private FinanceAccountTransferDto toDto(FinanceAccountTransfer transfer) {
@@ -163,6 +162,6 @@ public class FinanceAccountTransferService {
     }
 
     private BigDecimal nz(BigDecimal value) {
-        return value != null ? value : BigDecimal.ZERO;
+        return value != null ? value : ZERO;
     }
 }

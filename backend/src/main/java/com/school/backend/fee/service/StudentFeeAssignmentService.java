@@ -201,6 +201,9 @@ public class StudentFeeAssignmentService {
         BigDecimal principalPaid = nz(sfa.getPrincipalPaid());
         BigDecimal totalDiscountAmount = nz(sfa.getTotalDiscountAmount());
         BigDecimal sponsorCoveredAmount = nz(sfa.getSponsorCoveredAmount());
+        BigDecimal lateFeeAccrued = nz(sfa.getLateFeeAccrued());
+        BigDecimal lateFeePaid = nz(sfa.getLateFeePaid());
+        BigDecimal lateFeeWaived = nz(sfa.getLateFeeWaived());
         dto.setNextDueDate(null);
 
         if (frequency != FeeFrequency.ONE_TIME) {
@@ -280,9 +283,12 @@ public class StudentFeeAssignmentService {
             dto.setDueTillDate(dueTillDate);
 
             BigDecimal pendingTillDate = dueTillDate
-                    .subtract(principalPaid)
+                    .add(lateFeeAccrued)
                     .subtract(totalDiscountAmount)
-                    .subtract(sponsorCoveredAmount);
+                    .subtract(sponsorCoveredAmount)
+                    .subtract(principalPaid)
+                    .subtract(lateFeePaid)
+                    .subtract(lateFeeWaived);
             if (pendingTillDate.compareTo(ZERO) < 0) {
                 pendingTillDate = ZERO;
             }
@@ -294,7 +300,17 @@ public class StudentFeeAssignmentService {
 
             BigDecimal dueTillDate = principalPaid.compareTo(annualAmount) >= 0 ? ZERO : annualAmount;
             dto.setDueTillDate(dueTillDate.setScale(2, RoundingMode.HALF_UP));
-            dto.setPendingTillDate(pending.setScale(2, RoundingMode.HALF_UP));
+            BigDecimal pendingTillDate = dueTillDate
+                    .add(lateFeeAccrued)
+                    .subtract(totalDiscountAmount)
+                    .subtract(sponsorCoveredAmount)
+                    .subtract(principalPaid)
+                    .subtract(lateFeePaid)
+                    .subtract(lateFeeWaived);
+            if (pendingTillDate.compareTo(ZERO) < 0) {
+                pendingTillDate = ZERO;
+            }
+            dto.setPendingTillDate(pendingTillDate.setScale(2, RoundingMode.HALF_UP));
         }
 
         BigDecimal remainingForSession = annualAmount
