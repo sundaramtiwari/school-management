@@ -27,6 +27,15 @@ type FeeAssignment = {
     id: number;
     feeTypeName: string;
     amount: number;
+    frequency?: string;
+    periodsPerYear?: number;
+    periodsElapsed?: number;
+    amountPerPeriod?: number;
+    annualAmount?: number;
+    dueTillDate?: number;
+    nextDueDate?: string | null;
+    pendingTillDate?: number;
+    remainingForSession?: number;
     totalDiscountAmount: number;
     sponsorCoveredAmount: number;
     principalPaid: number;
@@ -122,10 +131,8 @@ function FeeCollectContent() {
     const [isProcessing, setIsProcessing] = useState(false);
     const [isDownloading, setIsDownloading] = useState(false);
 
-    const [paymentAmount, setPaymentAmount] = useState("");
     const [paymentMode, setPaymentMode] = useState("CASH");
     const [remarks, setRemarks] = useState("");
-    const [months, setMonths] = useState(1);
 
     /* -------- Initial Load -------- */
     const loadClasses = useCallback(async () => {
@@ -219,9 +226,9 @@ function FeeCollectContent() {
         try {
             setLoading(true);
             const [sumRes, histRes, breakRes] = await Promise.all([
-                api.get(`/api/fees/summary/students/${stdId}?sessionId=${currentSession.id}`),
+                api.get(`/api/fees/summary/students/${stdId}`),
                 api.get(`/api/fees/payments/students/${stdId}`),
-                api.get(`/api/fees/assignments/students/${stdId}?sessionId=${currentSession.id}`)
+                api.get(`/api/fees/assignments/students/${stdId}`)
             ]);
 
             setSummary(sumRes.data);
@@ -285,7 +292,6 @@ function FeeCollectContent() {
             });
 
             showToast("Payment Processed Successfully!", "success");
-            setPaymentAmount("");
             setRemarks("");
             setAllocations({});
             loadStudentData(Number(selectedStudent));
@@ -322,11 +328,11 @@ function FeeCollectContent() {
         try {
             setIsDownloading(true);
             showToast("Generating challan...", "info");
-            const res = await api.get(`/api/fees/challan/student/${selectedStudent}?sessionId=${currentSession.id}&months=${months}`, { responseType: 'blob' });
+            const res = await api.get(`/api/fees/challan/student/${selectedStudent}`, { responseType: 'blob' });
             const url = window.URL.createObjectURL(new Blob([res.data]));
             const link = document.createElement('a');
             link.href = url;
-            link.setAttribute('download', `fee_challan_${selectedStudent}_${months}m.pdf`);
+            link.setAttribute('download', `fee_challan_${selectedStudent}.pdf`);
             document.body.appendChild(link);
             link.click();
             document.body.removeChild(link);
@@ -445,6 +451,8 @@ function FeeCollectContent() {
         }
     }
 
+    const accruedPending = breakdown.reduce((sum, item) => sum + (item.pendingTillDate ?? 0), 0);
+
     return (
         <div className="space-y-6">
             <header>
@@ -485,7 +493,7 @@ function FeeCollectContent() {
                             <div className="bg-gray-900 text-white rounded-2xl p-8 shadow-2xl relative overflow-hidden">
                                 <div className="absolute top-0 right-0 p-4 opacity-10 text-6xl">₹</div>
                                 <h3 className="text-xs font-black uppercase tracking-widest text-gray-400 mb-2">Outstanding Balance</h3>
-                                <p className="text-5xl font-black">₹ {(summary.pendingFee ?? 0).toLocaleString()}</p>
+                                <p className="text-5xl font-black">₹ {accruedPending.toLocaleString()}</p>
 
                                 <div className="mt-6 flex flex-col gap-2 text-[10px] font-bold uppercase tracking-tight border-t border-white/10 pt-4">
                                     <div className="flex justify-between">
@@ -515,18 +523,6 @@ function FeeCollectContent() {
                                 </div>
 
                                 <div className="mt-8 pt-6 border-t border-white/10 space-y-4">
-                                    <div>
-                                        <label className="block text-[10px] font-black uppercase text-gray-400 mb-1.5 ml-1">Billing Duration (Months)</label>
-                                        <select
-                                            className="w-full bg-white/5 border border-white/10 rounded-xl px-4 py-2 text-sm font-bold text-white focus:outline-none focus:ring-1 focus:ring-blue-500"
-                                            value={months}
-                                            onChange={e => setMonths(Number(e.target.value))}
-                                        >
-                                            {[1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12].map(m => (
-                                                <option key={m} value={m} className="bg-gray-900 text-white">{m} Month{m > 1 ? "s" : ""}</option>
-                                            ))}
-                                        </select>
-                                    </div>
                                     <button
                                         onClick={downloadChallan}
                                         disabled={isDownloading}
@@ -600,10 +596,12 @@ function FeeCollectContent() {
                                                 <tr>
                                                     <th className="pb-2 w-8"></th>
                                                     <th className="pb-2">Type</th>
-                                                    <th className="pb-2 text-right">Principal</th>
+                                                    <th className="pb-2 text-right">Annual</th>
+                                                    <th className="pb-2 text-right">Accrued</th>
+                                                    <th className="pb-2 text-right">Next Due</th>
                                                     <th className="pb-2 text-right">Discount</th>
                                                     <th className="pb-2 text-right">Funding</th>
-                                                    <th className="pb-2 text-right">Pending</th>
+                                                    <th className="pb-2 text-right">Pending Now</th>
                                                     <th className="pb-2 text-center">Status</th>
                                                     <th className="pb-2 text-center">Pay Now</th>
                                                     {canUserManageFees && <th className="pb-2 text-center w-36">Actions</th>}
@@ -611,7 +609,8 @@ function FeeCollectContent() {
                                             </thead>
                                             <tbody className="divide-y divide-gray-100">
                                                 {breakdown.map((item) => {
-                                                    const pendingAmount = (item.amount + item.lateFeeAccrued) - item.totalDiscountAmount - item.sponsorCoveredAmount - (item.lateFeeWaived || 0) - (item.principalPaid + item.lateFeePaid);
+                                                    const pendingAmount = item.pendingTillDate ?? 0;
+                                                    const accrualStatus = pendingAmount <= 0 ? "CLEARED" : "DUE";
                                                     const outstandingLateFee = Math.max(0, (item.lateFeeAccrued || 0) - (item.lateFeePaid || 0) - (item.lateFeeWaived || 0));
                                                     return (
                                                         <React.Fragment key={item.id}>
@@ -625,13 +624,15 @@ function FeeCollectContent() {
                                                                     </button>
                                                                 </td>
                                                                 <td className="py-2.5 font-bold text-gray-700">{item.feeTypeName || "Miscellaneous"}</td>
-                                                                <td className="py-2.5 text-right">₹ {item.amount.toLocaleString()}</td>
+                                                                <td className="py-2.5 text-right">₹ {(item.annualAmount ?? 0).toLocaleString()}</td>
+                                                                <td className="py-2.5 text-right">₹ {(item.dueTillDate ?? 0).toLocaleString()}</td>
+                                                                <td className="py-2.5 text-right">{item.nextDueDate ? new Date(item.nextDueDate).toLocaleDateString() : "—"}</td>
                                                                 <td className="py-2.5 text-right text-blue-600">₹ {item.totalDiscountAmount.toLocaleString()}</td>
                                                                 <td className="py-2.5 text-right text-indigo-600">₹ {item.sponsorCoveredAmount.toLocaleString()}</td>
                                                                 <td className="py-2.5 text-right font-black">₹ {Math.max(0, pendingAmount).toLocaleString()}</td>
                                                                 <td className="py-2.5 text-center">
-                                                                    <span className={`px-2 py-0.5 rounded-full text-[9px] font-black uppercase ${item.status === 'PAID' ? 'bg-green-100 text-green-600' : 'bg-red-100 text-red-600'}`}>
-                                                                        {item.status}
+                                                                    <span className={`px-2 py-0.5 rounded-full text-[9px] font-black uppercase ${accrualStatus === 'CLEARED' ? 'bg-green-100 text-green-600' : 'bg-red-100 text-red-600'}`}>
+                                                                        {accrualStatus}
                                                                     </span>
                                                                 </td>
                                                                 <td className="py-2.5 text-center">
@@ -645,7 +646,7 @@ function FeeCollectContent() {
                                                                                 value={allocations[item.id]?.principal || ""}
                                                                                 onChange={e => {
                                                                                     const val = e.target.value;
-                                                                                    const pendingPrincipal = item.amount - item.totalDiscountAmount - item.sponsorCoveredAmount - item.principalPaid;
+                                                                                    const pendingPrincipal = item.pendingTillDate ?? 0;
                                                                                     if (Number(val) > pendingPrincipal) {
                                                                                         showToast(`Principal exposure for ${item.feeTypeName} cannot exceed ₹${pendingPrincipal}`, "warning");
                                                                                         return;
@@ -677,7 +678,7 @@ function FeeCollectContent() {
                                                                 </td>
                                                                 {canUserManageFees && (
                                                                     <td className="py-2.5 text-center">
-                                                                        {item.status !== 'PAID' && (
+                                                                        {accrualStatus !== 'CLEARED' && (
                                                                             <div className="flex items-center justify-center gap-1">
                                                                                 <button
                                                                                     onClick={() => {
@@ -708,7 +709,7 @@ function FeeCollectContent() {
                                                             </tr>
                                                             {expandedAssignmentId === item.id && (
                                                                 <tr>
-                                                                    <td colSpan={canUserManageFees ? 8 : 7} className="bg-gray-50 px-6 py-4 border-b border-gray-100">
+                                                                    <td colSpan={canUserManageFees ? 11 : 10} className="bg-gray-50 px-6 py-4 border-b border-gray-100">
                                                                         {loadingAdjustments[item.id] ? (
                                                                             <div className="text-sm text-gray-400 italic">Loading adjustments...</div>
                                                                         ) : adjustmentHistory[item.id]?.length ? (
@@ -750,7 +751,7 @@ function FeeCollectContent() {
                                                 })}
                                                 {breakdown.length === 0 && (
                                                     <tr>
-                                                        <td colSpan={canUserManageFees ? 8 : 7} className="py-8 text-center text-gray-400 italic">No detailed assignments found</td>
+                                                        <td colSpan={canUserManageFees ? 11 : 10} className="py-8 text-center text-gray-400 italic">No detailed assignments found</td>
                                                     </tr>
                                                 )}
                                             </tbody>

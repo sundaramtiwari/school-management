@@ -27,7 +27,7 @@ export default function FeesDashboard() {
         try {
             setLoading(true);
             const [statsRes, paymentsRes] = await Promise.all([
-                api.get(`/api/fees/summary/stats?sessionId=${currentSession.id}`),
+                api.get("/api/fees/summary/stats"),
                 api.get("/api/fees/payments/recent")
             ]);
             setStats({

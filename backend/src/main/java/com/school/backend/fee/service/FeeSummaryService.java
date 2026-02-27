@@ -20,6 +20,7 @@ import com.school.backend.school.repository.AcademicSessionRepository;
 import com.school.backend.user.security.SecurityUtil;
 import lombok.RequiredArgsConstructor;
 import org.springframework.data.domain.Page;
+import org.springframework.data.domain.PageImpl;
 import org.springframework.data.domain.PageRequest;
 import org.springframework.data.domain.Pageable;
 import org.springframework.stereotype.Service;
@@ -31,7 +32,10 @@ import java.time.LocalDate;
 import java.time.Month;
 import java.time.temporal.ChronoUnit;
 import java.util.ArrayList;
+import java.util.HashMap;
 import java.util.List;
+import java.util.Map;
+import java.util.stream.Collectors;
 
 @Service
 @RequiredArgsConstructor
@@ -48,6 +52,7 @@ public class FeeSummaryService {
     private final StudentFeeAssignmentRepository assignmentRepository;
     private final FeePaymentRepository paymentRepository;
     private final AcademicSessionRepository sessionRepository;
+    private final StudentFeeAssignmentService studentFeeAssignmentService;
 
     // ---------------------------------------------------
     // DASHBOARD STATS
@@ -155,14 +160,10 @@ public class FeeSummaryService {
 
         BigDecimal totalPaid = totalPrincipalPaid.add(totalLateFeePaid);
 
-        BigDecimal pending = computePendingTotals(
-                totalFeeAccrued,
-                totalLateFeeAccrued,
-                totalDiscountAmount,
-                totalSponsorCoveredAmount,
-                totalLateFeeWaived,
-                totalPrincipalPaid,
-                totalLateFeePaid);
+        BigDecimal accruedPending = assignments.stream()
+                .map(studentFeeAssignmentService::toDto)
+                .map(d -> nz(d.getPendingTillDate()))
+                .reduce(ZERO, BigDecimal::add);
 
         FeeSummaryDto dto = new FeeSummaryDto();
         dto.setStudentId(studentId);
@@ -176,8 +177,8 @@ public class FeeSummaryService {
         dto.setTotalLateFeeAccrued(totalLateFeeAccrued.setScale(SCALE_2, ROUNDING_MODE_HALF_UP));
         dto.setTotalLateFeePaid(totalLateFeePaid.setScale(SCALE_2, ROUNDING_MODE_HALF_UP));
         dto.setTotalLateFeeWaived(totalLateFeeWaived.setScale(SCALE_2, ROUNDING_MODE_HALF_UP));
-        dto.setPendingFee(pending.setScale(SCALE_2, ROUNDING_MODE_HALF_UP));
-        dto.setFeePending(pending.compareTo(ZERO) > INT_ZERO);
+        dto.setPendingFee(accruedPending.setScale(SCALE_2, ROUNDING_MODE_HALF_UP));
+        dto.setFeePending(accruedPending.compareTo(ZERO) > INT_ZERO);
 
         return dto;
     }
@@ -319,8 +320,7 @@ public class FeeSummaryService {
         }
 
         BigDecimal effectiveMinAmountDue = new BigDecimal("0.01");
-
-        return studentRepository.countDefaulters(
+        List<DefaulterDto> defaulters = findDefaulterDtos(
                 schoolId,
                 sessionId,
                 null,
@@ -328,6 +328,7 @@ public class FeeSummaryService {
                 effectiveMinAmountDue,
                 null,
                 sessionStart);
+        return defaulters.size();
     }
 
     @Transactional(readOnly = true)
@@ -369,65 +370,111 @@ public class FeeSummaryService {
                 ? minAmountDue
                 : new BigDecimal("0.01");
 
-        Page<Object[]> rawPage = studentRepository.findDefaulterDetails(
+        List<DefaulterDto> filtered = findDefaulterDtos(
                 schoolId,
                 effectiveSessionId,
                 classId,
                 (search != null && search.trim().isEmpty()) ? null : search,
                 effectiveMinAmountDue,
                 maxPaymentDate,
-                sessionStart,
-                pageable);
+                sessionStart);
 
+        int start = (int) pageable.getOffset();
+        int end = Math.min(start + pageable.getPageSize(), filtered.size());
+        if (start >= filtered.size()) {
+            return new PageImpl<>(List.of(), pageable, filtered.size());
+        }
+        return new PageImpl<>(filtered.subList(start, end), pageable, filtered.size());
+    }
+
+    private List<DefaulterDto> findDefaulterDtos(
+            Long schoolId,
+            Long sessionId,
+            Long classId,
+            String search,
+            BigDecimal minAmountDue,
+            LocalDate maxPaymentDate,
+            LocalDate sessionStart) {
+        List<Object[]> candidates = studentRepository.findDefaulterCandidates(
+                schoolId,
+                sessionId,
+                classId,
+                search,
+                maxPaymentDate,
+                sessionStart);
+        if (candidates.isEmpty()) {
+            return List.of();
+        }
+
+        List<Long> studentIds = candidates.stream()
+                .map(row -> ((Number) row[0]).longValue())
+                .toList();
+        Map<Long, AccruedSummary> accruedByStudent = computeAccruedByStudent(studentIds, sessionId);
         LocalDate today = LocalDate.now();
 
-        final LocalDate finalSessionStart = sessionStart;
+        return candidates.stream()
+                .map(row -> {
+                    Long studentId = ((Number) row[0]).longValue();
+                    String firstName = (String) row[1];
+                    String lastName = (String) row[2];
+                    String admissionNumber = (String) row[3];
+                    String contactNumber = (String) row[4];
+                    String className = (String) row[5];
+                    String classSection = (String) row[6];
+                    LocalDate lastPaymentDate = row[7] instanceof java.sql.Date
+                            ? ((java.sql.Date) row[7]).toLocalDate()
+                            : (LocalDate) row[7];
 
-        return rawPage.map(row -> {
-            Long studentId = ((Number) row[0]).longValue();
-            String firstName = (String) row[1];
-            String lastName = (String) row[2];
-            String admissionNumber = (String) row[3];
-            String contactNumber = (String) row[4];
-            String className = (String) row[5];
-            String classSection = (String) row[6];
+                    AccruedSummary summary = accruedByStudent.getOrDefault(studentId, AccruedSummary.ZERO);
+                    BigDecimal accruedPending = nz(summary.pendingTillDate());
+                    LocalDate overdueFrom = lastPaymentDate != null ? lastPaymentDate : sessionStart;
+                    long daysOverdue = Math.max(ChronoUnit.DAYS.between(overdueFrom, today), 0);
 
-            BigDecimal totalAssigned = toBigDecimal(row[7]);
-            BigDecimal totalLateFeeAccrued = toBigDecimal(row[8]);
-            BigDecimal totalDiscountAmount = toBigDecimal(row[9]);
-            BigDecimal totalSponsorCoveredAmount = toBigDecimal(row[10]);
-            BigDecimal totalLateFeeWaived = toBigDecimal(row[11]);
-            BigDecimal totalPrincipalPaid = toBigDecimal(row[12]);
-            BigDecimal totalLateFeePaid = toBigDecimal(row[13]);
-            LocalDate lastPaymentDate = row[14] instanceof java.sql.Date
-                    ? ((java.sql.Date) row[14]).toLocalDate()
-                    : (LocalDate) row[14];
+                    return DefaulterDto.builder()
+                            .studentId(studentId)
+                            .studentName(firstName + " " + (lastName != null ? lastName : ""))
+                            .admissionNumber(admissionNumber)
+                            .className(className != null ? className : "")
+                            .classSection(classSection != null ? classSection : "")
+                            .amountDue(accruedPending)
+                            .lateFeeAccrued(nz(summary.lateFeeAccrued()))
+                            .lastPaymentDate(lastPaymentDate)
+                            .daysOverdue(daysOverdue)
+                            .parentContact(contactNumber != null ? contactNumber : "")
+                            .build();
+                })
+                .filter(dto -> dto.getAmountDue().compareTo(minAmountDue) >= 0)
+                .collect(Collectors.toList());
+    }
 
-            BigDecimal pending = computePendingTotals(
-                    totalAssigned,
-                    totalLateFeeAccrued,
-                    totalDiscountAmount,
-                    totalSponsorCoveredAmount,
-                    totalLateFeeWaived,
-                    totalPrincipalPaid,
-                    totalLateFeePaid);
+    private Map<Long, AccruedSummary> computeAccruedByStudent(List<Long> studentIds, Long sessionId) {
+        Map<Long, AccruedSummary> accrued = new HashMap<>();
+        if (studentIds == null || studentIds.isEmpty()) {
+            return accrued;
+        }
 
-            LocalDate overdueFrom = lastPaymentDate != null ? lastPaymentDate : finalSessionStart;
-            long daysOverdue = Math.max(ChronoUnit.DAYS.between(overdueFrom, today), 0);
+        List<StudentFeeAssignment> assignments = assignmentRepository
+                .findByStudentIdInAndSessionIdAndActiveTrue(studentIds, sessionId);
 
-            return DefaulterDto.builder()
-                    .studentId(studentId)
-                    .studentName(firstName + " " + (lastName != null ? lastName : ""))
-                    .admissionNumber(admissionNumber)
-                    .className(className != null ? className : "")
-                    .classSection(classSection != null ? classSection : "")
-                    .amountDue(pending)
-                    .lateFeeAccrued(totalLateFeeAccrued)
-                    .lastPaymentDate(lastPaymentDate)
-                    .daysOverdue(daysOverdue)
-                    .parentContact(contactNumber != null ? contactNumber : "")
-                    .build();
-        });
+        Map<Long, List<StudentFeeAssignment>> byStudent = assignments.stream()
+                .collect(Collectors.groupingBy(StudentFeeAssignment::getStudentId));
+
+        for (Long studentId : studentIds) {
+            List<StudentFeeAssignment> studentAssignments = byStudent.getOrDefault(studentId, List.of());
+            BigDecimal pending = studentAssignments.stream()
+                    .map(studentFeeAssignmentService::toDto)
+                    .map(d -> nz(d.getPendingTillDate()))
+                    .reduce(ZERO, BigDecimal::add);
+            BigDecimal lateFeeAccrued = studentAssignments.stream()
+                    .map(a -> nz(a.getLateFeeAccrued()))
+                    .reduce(ZERO, BigDecimal::add);
+            accrued.put(studentId, new AccruedSummary(pending, lateFeeAccrued));
+        }
+        return accrued;
+    }
+
+    private record AccruedSummary(BigDecimal pendingTillDate, BigDecimal lateFeeAccrued) {
+        private static final AccruedSummary ZERO = new AccruedSummary(BigDecimal.ZERO, BigDecimal.ZERO);
     }
 
     private Long validateAndGetSessionId() {

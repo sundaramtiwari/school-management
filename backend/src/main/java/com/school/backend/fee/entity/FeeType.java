@@ -29,4 +29,8 @@ public class FeeType extends TenantEntity {
 
     @Builder.Default
     private boolean active = true;
+
+    @Builder.Default
+    @Column(nullable = false, columnDefinition = "boolean default false")
+    private boolean transportBased = false;
 }

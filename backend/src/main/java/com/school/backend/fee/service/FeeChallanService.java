@@ -16,14 +16,13 @@ import com.lowagie.text.Chunk;
 import com.lowagie.text.DocumentException;
 import com.school.backend.common.exception.InvalidOperationException;
 import com.school.backend.common.exception.ResourceNotFoundException;
+import com.school.backend.common.enums.FeeFrequency;
 import com.school.backend.common.tenant.SessionContext;
 import com.school.backend.common.tenant.TenantContext;
 import com.school.backend.core.student.entity.Student;
 import com.school.backend.core.student.repository.StudentRepository;
-import com.school.backend.fee.entity.FeeStructure;
+import com.school.backend.fee.dto.StudentFeeAssignmentDto;
 import com.school.backend.fee.entity.StudentFeeAssignment;
-import com.school.backend.common.enums.FeeFrequency;
-import com.school.backend.fee.repository.FeeStructureRepository;
 import com.school.backend.fee.repository.StudentFeeAssignmentRepository;
 import com.school.backend.school.entity.School;
 import com.school.backend.school.repository.AcademicSessionRepository;
@@ -35,6 +34,8 @@ import org.springframework.transaction.annotation.Transactional;
 
 import java.awt.Color;
 import java.io.ByteArrayOutputStream;
+import java.math.BigDecimal;
+import java.math.RoundingMode;
 import java.text.NumberFormat;
 import java.time.LocalDate;
 import java.time.Month;
@@ -47,14 +48,15 @@ import java.util.Locale;
 public class FeeChallanService {
 
     private static final DateTimeFormatter DATE_FORMATTER = DateTimeFormatter.ofPattern("dd-MMM-yyyy");
+    private static final BigDecimal ZERO = BigDecimal.ZERO;
     private final StudentRepository studentRepository;
     private final SchoolRepository schoolRepository;
-    private final FeeStructureRepository feeStructureRepository;
     private final StudentFeeAssignmentRepository assignmentRepository;
     private final AcademicSessionRepository academicSessionRepository;
+    private final StudentFeeAssignmentService studentFeeAssignmentService;
 
     @Transactional(readOnly = true)
-    public byte[] generateChallan(Long studentId, int months) {
+    public byte[] generateChallan(Long studentId) {
         Long schoolId = TenantContext.getSchoolId();
         Long sessionId = SessionContext.getSessionId();
         if (sessionId == null) {
@@ -81,6 +83,9 @@ public class FeeChallanService {
         if (assignments.isEmpty()) {
             throw new IllegalArgumentException("No fee assignments found for student in session " + sessionName);
         }
+        List<StudentFeeAssignmentDto> enrichedAssignments = assignments.stream()
+                .map(studentFeeAssignmentService::toDto)
+                .toList();
 
         try (ByteArrayOutputStream out = new ByteArrayOutputStream()) {
             Document document = new Document(PageSize.A4);
@@ -90,9 +95,9 @@ public class FeeChallanService {
 
             // Build the challan
             addSchoolHeader(document, school);
-            addChallanTitle(document, sessionName, months);
+            addChallanTitle(document, sessionName);
             addStudentDetails(document, student);
-            java.math.BigDecimal totalAmount = addFeeBreakdown(document, assignments, months);
+            BigDecimal totalAmount = addFeeBreakdown(document, enrichedAssignments);
             addPaymentDetails(document, sessionName, totalAmount);
             addFooter(document, school);
 
@@ -148,13 +153,9 @@ public class FeeChallanService {
         document.add(new Paragraph(" "));
     }
 
-    private void addChallanTitle(Document document, String session, int months) throws DocumentException {
+    private void addChallanTitle(Document document, String session) throws DocumentException {
         Font titleFont = FontFactory.getFont(FontFactory.HELVETICA, 14, Font.BOLD, Color.BLACK);
-        String titleStr = "FEE PAYMENT CHALLAN";
-        if (months > 1) {
-            titleStr += " - ADVANCE (" + months + " MONTHS)";
-        }
-        Paragraph title = new Paragraph(titleStr, titleFont);
+        Paragraph title = new Paragraph("FEE PAYMENT CHALLAN (ACCRUED)", titleFont);
         title.setAlignment(Element.ALIGN_CENTER);
         document.add(title);
 
@@ -198,15 +199,15 @@ public class FeeChallanService {
         document.add(new Paragraph(" "));
     }
 
-    private java.math.BigDecimal addFeeBreakdown(Document document, List<StudentFeeAssignment> assignments,
-            int monthsToPay)
+    private BigDecimal addFeeBreakdown(Document document, List<StudentFeeAssignmentDto> assignments)
             throws DocumentException {
         Font headerFont = FontFactory.getFont(FontFactory.HELVETICA, 11, Font.BOLD, Color.WHITE);
         Font contentFont = FontFactory.getFont(FontFactory.HELVETICA, 10);
+        Font contentMutedFont = FontFactory.getFont(FontFactory.HELVETICA, 8, Color.GRAY);
 
-        PdfPTable table = new PdfPTable(4);
+        PdfPTable table = new PdfPTable(5);
         table.setWidthPercentage(100);
-        table.setWidths(new float[] { 3f, 1.2f, 0.8f, 1.5f });
+        table.setWidths(new float[] { 2.8f, 1.2f, 1.3f, 1.4f, 1.4f });
 
         // Header Row
         PdfPCell headerCell1 = new PdfPCell(new Phrase("Fee Type", headerFont));
@@ -220,55 +221,55 @@ public class FeeChallanService {
         headerCell2.setPadding(8);
         table.addCell(headerCell2);
 
-        PdfPCell headerCell3 = new PdfPCell(new Phrase("Qty", headerFont));
+        PdfPCell headerCell3 = new PdfPCell(new Phrase("Annual (₹)", headerFont));
         headerCell3.setBackgroundColor(new Color(41, 128, 185));
-        headerCell3.setHorizontalAlignment(Element.ALIGN_CENTER);
+        headerCell3.setHorizontalAlignment(Element.ALIGN_RIGHT);
         headerCell3.setPadding(8);
         table.addCell(headerCell3);
 
-        PdfPCell headerCell4 = new PdfPCell(new Phrase("Subtotal (₹)", headerFont));
+        PdfPCell headerCell4 = new PdfPCell(new Phrase("Due Till Date (₹)", headerFont));
         headerCell4.setBackgroundColor(new Color(41, 128, 185));
         headerCell4.setHorizontalAlignment(Element.ALIGN_RIGHT);
         headerCell4.setPadding(8);
         table.addCell(headerCell4);
 
+        PdfPCell headerCell5 = new PdfPCell(new Phrase("Pending Now (₹)", headerFont));
+        headerCell5.setBackgroundColor(new Color(41, 128, 185));
+        headerCell5.setHorizontalAlignment(Element.ALIGN_RIGHT);
+        headerCell5.setPadding(8);
+        table.addCell(headerCell5);
+
         // Fee Rows
-        java.math.BigDecimal totalAmount = java.math.BigDecimal.ZERO;
-        for (StudentFeeAssignment assignment : assignments) {
-            FeeStructure structure = feeStructureRepository.findById(assignment.getFeeStructureId())
-                    .orElse(null);
+        BigDecimal totalAmount = ZERO;
+        for (StudentFeeAssignmentDto assignment : assignments) {
+            FeeFrequency frequency = assignment.getFrequency() != null ? assignment.getFrequency() : FeeFrequency.ONE_TIME;
+            BigDecimal annualAmount = nz(assignment.getAnnualAmount());
+            BigDecimal dueTillDate = nz(assignment.getDueTillDate());
+            BigDecimal pendingNow = nz(assignment.getPendingTillDate());
 
-            if (structure != null && structure.isActive()) {
-                int multiplier = 1;
-                if (structure.getFrequency() == FeeFrequency.MONTHLY) {
-                    multiplier = monthsToPay;
-                } else if (structure.getFrequency() == FeeFrequency.QUARTERLY) {
-                    multiplier = (int) Math.ceil((double) monthsToPay / 3);
-                } else if (structure.getFrequency() == FeeFrequency.HALF_YEARLY) {
-                    multiplier = (int) Math.ceil((double) monthsToPay / 6);
-                }
-
-                java.math.BigDecimal subtotal = structure.getAmount()
-                        .multiply(java.math.BigDecimal.valueOf(multiplier));
-
-                // Fee Type
-                table.addCell(createTableCell(structure.getFeeType().getName(), contentFont, Element.ALIGN_LEFT));
-                // Frequency
-                table.addCell(
-                        createTableCell(formatFrequency(structure.getFrequency()), contentFont, Element.ALIGN_CENTER));
-                // Qty (Months/Units)
-                table.addCell(createTableCell(String.valueOf(multiplier), contentFont, Element.ALIGN_CENTER));
-                // Amount
-                table.addCell(createTableCell(formatIndianRupees(subtotal), contentFont, Element.ALIGN_RIGHT));
-
-                totalAmount = totalAmount.add(subtotal);
+            String feeTypeName = assignment.getFeeTypeName() != null ? assignment.getFeeTypeName() : "N/A";
+            PdfPCell feeTypeCell = createTableCell(feeTypeName, contentFont, Element.ALIGN_LEFT);
+            String advanceNote = buildAdvanceNote(assignment);
+            if (!advanceNote.isBlank()) {
+                Phrase feePhrase = new Phrase();
+                feePhrase.add(new Chunk(feeTypeName + "\n", contentFont));
+                feePhrase.add(new Chunk(advanceNote, contentMutedFont));
+                feeTypeCell.setPhrase(feePhrase);
             }
+            table.addCell(feeTypeCell);
+
+            table.addCell(createTableCell(formatFrequency(frequency), contentFont, Element.ALIGN_CENTER));
+            table.addCell(createTableCell(formatIndianRupees(annualAmount), contentFont, Element.ALIGN_RIGHT));
+            table.addCell(createTableCell(formatIndianRupees(dueTillDate), contentFont, Element.ALIGN_RIGHT));
+            table.addCell(createTableCell(formatIndianRupees(pendingNow), contentFont, Element.ALIGN_RIGHT));
+
+            totalAmount = totalAmount.add(pendingNow);
         }
 
         // Total Row
         Font totalFont = FontFactory.getFont(FontFactory.HELVETICA, 11, Font.BOLD);
-        PdfPCell totalLabelCell = new PdfPCell(new Phrase("Grand Total", totalFont));
-        totalLabelCell.setColspan(3);
+        PdfPCell totalLabelCell = new PdfPCell(new Phrase("Grand Total (Pending Now)", totalFont));
+        totalLabelCell.setColspan(4);
         totalLabelCell.setPadding(8);
         totalLabelCell.setBackgroundColor(new Color(236, 240, 241));
         totalLabelCell.setHorizontalAlignment(Element.ALIGN_RIGHT);
@@ -294,6 +295,49 @@ public class FeeChallanService {
         cell.setBorderWidthBottom(0.5f);
         cell.setBorderColorBottom(Color.LIGHT_GRAY);
         return cell;
+    }
+
+    private String buildAdvanceNote(StudentFeeAssignmentDto assignment) {
+        BigDecimal principalPaid = nz(assignment.getPrincipalPaid());
+        BigDecimal dueTillDate = nz(assignment.getDueTillDate());
+        BigDecimal annualAmount = nz(assignment.getAnnualAmount());
+        FeeFrequency frequency = assignment.getFrequency() != null ? assignment.getFrequency() : FeeFrequency.ONE_TIME;
+
+        if (frequency == FeeFrequency.ANNUALLY && principalPaid.compareTo(annualAmount) >= 0) {
+            return "Fully paid for session";
+        }
+        if (frequency == FeeFrequency.ONE_TIME && principalPaid.compareTo(annualAmount) >= 0) {
+            return "Paid";
+        }
+        if (principalPaid.compareTo(dueTillDate) <= 0) {
+            return "";
+        }
+
+        BigDecimal advanceAmount = principalPaid.subtract(dueTillDate);
+        BigDecimal amountPerPeriod = nz(assignment.getAmountPerPeriod());
+        int periodsPerYear = assignment.getPeriodsPerYear() > 0 ? assignment.getPeriodsPerYear() : 1;
+        if (amountPerPeriod.compareTo(ZERO) <= 0) {
+            amountPerPeriod = annualAmount.divide(BigDecimal.valueOf(periodsPerYear), 2, RoundingMode.HALF_UP);
+        }
+        if (amountPerPeriod.compareTo(ZERO) <= 0) {
+            return "";
+        }
+
+        int advancePeriods = advanceAmount.divideToIntegralValue(amountPerPeriod).intValue();
+        if (advancePeriods <= 0) {
+            return "";
+        }
+
+        return switch (frequency) {
+            case MONTHLY -> "Advance covers " + advancePeriods + " month(s)";
+            case QUARTERLY -> "Advance covers " + advancePeriods + " quarter(s)";
+            case HALF_YEARLY -> "Advance covers " + advancePeriods + " half-year period(s)";
+            case ANNUALLY, ONE_TIME -> "";
+        };
+    }
+
+    private BigDecimal nz(BigDecimal value) {
+        return value != null ? value : ZERO;
     }
 
     private void addPaymentDetails(Document document, String session, java.math.BigDecimal totalAmount)

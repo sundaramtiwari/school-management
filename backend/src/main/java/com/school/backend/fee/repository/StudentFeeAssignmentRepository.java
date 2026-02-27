@@ -55,6 +55,8 @@ public interface StudentFeeAssignmentRepository
 
         List<StudentFeeAssignment> findByStudentIdAndSessionId(Long studentId, Long sessionId);
 
+        List<StudentFeeAssignment> findByStudentIdInAndSessionIdAndActiveTrue(List<Long> studentIds, Long sessionId);
+
         List<StudentFeeAssignment> findByStudentIdAndSessionIdAndSchoolIdAndActiveTrueAndDueDateIsNotNullAndDueDateAfter(
                         Long studentId,
                         Long sessionId,

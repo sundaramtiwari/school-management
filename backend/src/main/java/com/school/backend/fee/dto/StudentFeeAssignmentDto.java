@@ -1,5 +1,6 @@
 package com.school.backend.fee.dto;
 
+import com.school.backend.common.enums.FeeFrequency;
 import com.school.backend.common.enums.LateFeeType;
 import com.school.backend.common.enums.LateFeeCapType;
 import lombok.Data;
@@ -18,6 +19,14 @@ public class StudentFeeAssignmentDto {
 
     private BigDecimal amount;
     private String feeTypeName;
+    private FeeFrequency frequency;
+    private int periodsPerYear;
+    private int periodsElapsed;
+    private BigDecimal amountPerPeriod;
+    private BigDecimal annualAmount;
+    private BigDecimal dueTillDate;
+    private LocalDate nextDueDate;
+    private BigDecimal pendingTillDate;
 
     // Snapshot
     private LocalDate dueDate;
@@ -35,7 +44,6 @@ public class StudentFeeAssignmentDto {
     private BigDecimal totalDiscountAmount;
     private BigDecimal sponsorCoveredAmount;
     private BigDecimal principalPaid;
-    private BigDecimal remainingPrincipal;
     private String status;
 
     private boolean active;

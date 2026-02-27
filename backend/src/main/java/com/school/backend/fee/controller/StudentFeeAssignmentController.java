@@ -41,16 +41,16 @@ public class StudentFeeAssignmentController {
 
     @PostMapping("/{assignmentId}/discount")
     @PreAuthorize("hasAnyRole('SCHOOL_ADMIN','ACCOUNTANT','SUPER_ADMIN')")
-    public StudentFeeAssignmentDto applyDiscount(
+    public FeeDiscountApplyResponse applyDiscount(
             @PathVariable Long assignmentId,
             @Valid @RequestBody FeeDiscountApplyRequest req) {
 
-        return assignmentService.toDto(feeDiscountService.applyDiscount(
+        return feeDiscountService.applyDiscount(
                 assignmentId,
                 req.getDiscountDefinitionId(),
                 SecurityUtil.schoolId(),
                 req.getRemarks(),
-                SecurityUtil.userId()));
+                SecurityUtil.userId());
     }
 
     @GetMapping("/{assignmentId}/adjustments")

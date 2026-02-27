@@ -18,6 +18,8 @@ import com.school.backend.common.exception.ResourceNotFoundException;
 import com.school.backend.core.student.entity.Student;
 import com.school.backend.core.student.repository.StudentRepository;
 import com.school.backend.fee.entity.FeePayment;
+import com.school.backend.fee.entity.FeePaymentAllocation;
+import com.school.backend.fee.repository.FeePaymentAllocationRepository;
 import com.school.backend.fee.repository.FeePaymentRepository;
 import com.school.backend.school.entity.School;
 import com.school.backend.school.repository.SchoolRepository;
@@ -27,9 +29,13 @@ import org.springframework.transaction.annotation.Transactional;
 
 import java.awt.Color;
 import java.io.ByteArrayOutputStream;
+import java.math.BigDecimal;
 import java.text.NumberFormat;
 import java.time.format.DateTimeFormatter;
+import java.util.LinkedHashMap;
+import java.util.List;
 import java.util.Locale;
+import java.util.Map;
 
 @Service
 @RequiredArgsConstructor
@@ -37,6 +43,7 @@ public class FeeReceiptService {
 
     private static final DateTimeFormatter DATE_FORMATTER = DateTimeFormatter.ofPattern("dd-MMM-yyyy");
     private final FeePaymentRepository paymentRepository;
+    private final FeePaymentAllocationRepository paymentAllocationRepository;
     private final SchoolRepository schoolRepository;
     private final StudentRepository studentRepository;
 
@@ -51,10 +58,13 @@ public class FeeReceiptService {
         Student student = studentRepository.findById(payment.getStudentId())
                 .orElseThrow(() -> new ResourceNotFoundException("Student not found"));
 
-        return generateReceiptPdf(school, student, payment);
+        List<FeePaymentAllocation> allocations = paymentAllocationRepository
+                .findByFeePaymentIdOrderByIdAsc(paymentId);
+
+        return generateReceiptPdf(school, student, payment, allocations);
     }
 
-    private byte[] generateReceiptPdf(School school, Student student, FeePayment payment) {
+    private byte[] generateReceiptPdf(School school, Student student, FeePayment payment, List<FeePaymentAllocation> allocations) {
         try (ByteArrayOutputStream out = new ByteArrayOutputStream()) {
             Document document = new Document(PageSize.A4);
             PdfWriter.getInstance(document, out);
@@ -70,10 +80,13 @@ public class FeeReceiptService {
             // 3. Student & Payment Details
             addDetailsTable(document, student, payment);
 
-            // 4. Amount Section (Highlighted)
+            // 4. Fee-type wise payment breakup
+            addAllocationBreakdown(document, allocations);
+
+            // 5. Amount Section (Highlighted)
             addAmountSection(document, payment);
 
-            // 5. Footer
+            // 6. Footer
             addFooter(document);
 
             document.close();
@@ -82,6 +95,91 @@ public class FeeReceiptService {
         } catch (Exception e) {
             throw new RuntimeException("Error generating receipt PDF", e);
         }
+    }
+
+    private void addAllocationBreakdown(Document document, List<FeePaymentAllocation> allocations) throws DocumentException {
+        Font headerFont = FontFactory.getFont(FontFactory.HELVETICA, 10, Font.BOLD, Color.WHITE);
+        Font bodyFont = FontFactory.getFont(FontFactory.HELVETICA, 9);
+        Font titleFont = FontFactory.getFont(FontFactory.HELVETICA_BOLD, 11, Color.DARK_GRAY);
+
+        Paragraph title = new Paragraph("Payment Breakdown (By Fee Type)", titleFont);
+        title.setSpacingAfter(6f);
+        document.add(title);
+
+        if (allocations == null || allocations.isEmpty()) {
+            Paragraph empty = new Paragraph("No fee-head allocation details available.", bodyFont);
+            empty.setSpacingAfter(8f);
+            document.add(empty);
+            return;
+        }
+
+        Map<String, BigDecimal[]> byFeeType = new LinkedHashMap<>();
+        for (FeePaymentAllocation allocation : allocations) {
+            String feeTypeName = allocation.getFeeType() != null && allocation.getFeeType().getName() != null
+                    ? allocation.getFeeType().getName()
+                    : "UNKNOWN";
+            BigDecimal principal = allocation.getPrincipalAmount() != null ? allocation.getPrincipalAmount() : BigDecimal.ZERO;
+            BigDecimal late = allocation.getLateFeeAmount() != null ? allocation.getLateFeeAmount() : BigDecimal.ZERO;
+            byFeeType.computeIfAbsent(feeTypeName, k -> new BigDecimal[]{BigDecimal.ZERO, BigDecimal.ZERO});
+            byFeeType.get(feeTypeName)[0] = byFeeType.get(feeTypeName)[0].add(principal);
+            byFeeType.get(feeTypeName)[1] = byFeeType.get(feeTypeName)[1].add(late);
+        }
+
+        PdfPTable table = new PdfPTable(4);
+        table.setWidthPercentage(100);
+        table.setWidths(new float[]{3f, 1.5f, 1.5f, 1.7f});
+        table.setSpacingAfter(10f);
+
+        addHeaderCell(table, "Fee Type", headerFont, Element.ALIGN_LEFT);
+        addHeaderCell(table, "Principal", headerFont, Element.ALIGN_RIGHT);
+        addHeaderCell(table, "Late Fee", headerFont, Element.ALIGN_RIGHT);
+        addHeaderCell(table, "Total Paid", headerFont, Element.ALIGN_RIGHT);
+
+        BigDecimal grandPrincipal = BigDecimal.ZERO;
+        BigDecimal grandLate = BigDecimal.ZERO;
+        for (Map.Entry<String, BigDecimal[]> entry : byFeeType.entrySet()) {
+            BigDecimal principal = entry.getValue()[0];
+            BigDecimal late = entry.getValue()[1];
+            BigDecimal total = principal.add(late);
+            grandPrincipal = grandPrincipal.add(principal);
+            grandLate = grandLate.add(late);
+
+            table.addCell(createBreakdownCell(entry.getKey(), bodyFont, Element.ALIGN_LEFT));
+            table.addCell(createBreakdownCell(formatIndianRupees(principal), bodyFont, Element.ALIGN_RIGHT));
+            table.addCell(createBreakdownCell(formatIndianRupees(late), bodyFont, Element.ALIGN_RIGHT));
+            table.addCell(createBreakdownCell(formatIndianRupees(total), bodyFont, Element.ALIGN_RIGHT));
+        }
+
+        Font totalFont = FontFactory.getFont(FontFactory.HELVETICA_BOLD, 9);
+        PdfPCell totalLabel = new PdfPCell(new Phrase("Grand Total", totalFont));
+        totalLabel.setColspan(3);
+        totalLabel.setHorizontalAlignment(Element.ALIGN_RIGHT);
+        totalLabel.setPadding(6f);
+        totalLabel.setBackgroundColor(new Color(236, 240, 241));
+        table.addCell(totalLabel);
+
+        PdfPCell totalValue = new PdfPCell(new Phrase(formatIndianRupees(grandPrincipal.add(grandLate)), totalFont));
+        totalValue.setHorizontalAlignment(Element.ALIGN_RIGHT);
+        totalValue.setPadding(6f);
+        totalValue.setBackgroundColor(new Color(236, 240, 241));
+        table.addCell(totalValue);
+
+        document.add(table);
+    }
+
+    private void addHeaderCell(PdfPTable table, String text, Font font, int alignment) {
+        PdfPCell headerCell = new PdfPCell(new Phrase(text, font));
+        headerCell.setBackgroundColor(new Color(41, 128, 185));
+        headerCell.setHorizontalAlignment(alignment);
+        headerCell.setPadding(7f);
+        table.addCell(headerCell);
+    }
+
+    private PdfPCell createBreakdownCell(String text, Font font, int alignment) {
+        PdfPCell cell = new PdfPCell(new Phrase(text, font));
+        cell.setHorizontalAlignment(alignment);
+        cell.setPadding(6f);
+        return cell;
     }
 
     private void addSchoolHeader(Document document, School school) throws DocumentException {

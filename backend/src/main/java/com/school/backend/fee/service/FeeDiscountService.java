@@ -3,6 +3,7 @@ package com.school.backend.fee.service;
 import com.school.backend.common.enums.DiscountType;
 import com.school.backend.common.exception.BusinessException;
 import com.school.backend.common.exception.ResourceNotFoundException;
+import com.school.backend.fee.dto.FeeDiscountApplyResponse;
 import com.school.backend.fee.entity.DiscountDefinition;
 import com.school.backend.fee.entity.FeeAdjustment;
 import com.school.backend.fee.entity.StudentFeeAssignment;
@@ -29,7 +30,7 @@ public class FeeDiscountService {
     private final FundingSnapshotService fundingSnapshotService;
 
     @Transactional
-    public StudentFeeAssignment applyDiscount(
+    public FeeDiscountApplyResponse applyDiscount(
             Long assignmentId,
             Long discountDefinitionId,
             Long schoolId,
@@ -47,23 +48,24 @@ public class FeeDiscountService {
             throw new BusinessException("Discount definition is not active.");
         }
 
-        BigDecimal principalDue = calculatePrincipalDue(assignment);
-        if (principalDue.compareTo(ZERO) <= 0) {
-            throw new BusinessException("Discount cannot be applied because no principal is due.");
+        if (feeAdjustmentRepository.existsByAssignmentIdAndDiscountDefinitionIdAndType(
+                assignmentId, discountDefinitionId, FeeAdjustment.AdjustmentType.DISCOUNT)) {
+            throw new IllegalStateException("This discount has already been applied to this fee.");
         }
 
-        BigDecimal calculatedDiscount = calculateDiscountAmount(discountDefinition, assignment.getAmount());
-        if (discountDefinition.getType() == DiscountType.PERCENTAGE) {
-            calculatedDiscount = calculatedDiscount.min(principalDue);
+        BigDecimal remainingPrincipal = calculateRemainingPrincipal(assignment);
+        if (remainingPrincipal.compareTo(ZERO) <= 0) {
+            throw new IllegalStateException("No principal available for discount.");
         }
-        if (calculatedDiscount.compareTo(ZERO) <= 0) {
+
+        BigDecimal requestedDiscount = calculateDiscountAmount(discountDefinition, assignment.getAmount());
+        if (requestedDiscount.compareTo(ZERO) <= 0) {
             throw new BusinessException("Calculated discount must be greater than zero.");
         }
-        if (discountDefinition.getType() == DiscountType.FLAT && calculatedDiscount.compareTo(principalDue) > 0) {
-            throw new BusinessException("Calculated flat discount exceeds remaining principal due.");
-        }
+        BigDecimal appliedDiscount = requestedDiscount.min(remainingPrincipal);
+        boolean capped = requestedDiscount.compareTo(appliedDiscount) > 0;
 
-        BigDecimal updatedTotalDiscount = nz(assignment.getTotalDiscountAmount()).add(calculatedDiscount);
+        BigDecimal updatedTotalDiscount = nz(assignment.getTotalDiscountAmount()).add(appliedDiscount);
         assignment.setTotalDiscountAmount(updatedTotalDiscount);
         fundingSnapshotService.recalculateAndUpdateFundingSnapshot(assignment);
         BigDecimal updatedSponsorCoveredAmount = nz(assignment.getSponsorCoveredAmount());
@@ -79,7 +81,7 @@ public class FeeDiscountService {
         feeAdjustmentRepository.save(FeeAdjustment.builder()
                 .assignmentId(assignment.getId())
                 .type(FeeAdjustment.AdjustmentType.DISCOUNT)
-                .amount(calculatedDiscount)
+                .amount(appliedDiscount)
                 .discountDefinitionId(discountDefinition.getId())
                 .discountNameSnapshot(discountDefinition.getName())
                 .discountTypeSnapshot(discountDefinition.getType())
@@ -90,7 +92,12 @@ public class FeeDiscountService {
                 .build());
 
         assignment.setSponsorCoveredAmount(updatedSponsorCoveredAmount);
-        return assignmentRepository.save(assignment);
+        assignmentRepository.save(assignment);
+        return FeeDiscountApplyResponse.builder()
+                .appliedAmount(appliedDiscount)
+                .capped(capped)
+                .message(capped ? "Discount capped to remaining principal." : "Discount applied successfully.")
+                .build();
     }
 
     private ResourceNotFoundException resolveAssignmentNotFound(Long assignmentId) {
@@ -107,11 +114,11 @@ public class FeeDiscountService {
         return new ResourceNotFoundException("Discount definition not found: " + discountDefinitionId);
     }
 
-    private BigDecimal calculatePrincipalDue(StudentFeeAssignment assignment) {
+    private BigDecimal calculateRemainingPrincipal(StudentFeeAssignment assignment) {
         return nz(assignment.getAmount())
-                .subtract(nz(assignment.getPrincipalPaid()))
                 .subtract(nz(assignment.getTotalDiscountAmount()))
-                .subtract(nz(assignment.getSponsorCoveredAmount()));
+                .subtract(nz(assignment.getSponsorCoveredAmount()))
+                .subtract(nz(assignment.getPrincipalPaid()));
     }
 
     private BigDecimal calculateDiscountAmount(DiscountDefinition definition, BigDecimal assignmentAmount) {

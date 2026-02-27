@@ -3,8 +3,11 @@ package com.school.backend.fee.service;
 import com.school.backend.common.enums.LateFeeCapType;
 import com.school.backend.common.exception.InvalidOperationException;
 import com.school.backend.common.exception.ResourceNotFoundException;
+import com.school.backend.common.enums.FeeFrequency;
 import com.school.backend.common.tenant.SessionContext;
 import com.school.backend.common.tenant.TenantContext;
+import com.school.backend.core.student.entity.StudentEnrollment;
+import com.school.backend.core.student.repository.StudentEnrollmentRepository;
 import com.school.backend.core.student.repository.StudentRepository;
 import com.school.backend.fee.dto.StudentFeeAssignRequest;
 import com.school.backend.fee.dto.StudentFeeAssignmentDto;
@@ -17,13 +20,17 @@ import com.school.backend.fee.repository.StudentFeeAssignmentRepository;
 import com.school.backend.fee.repository.StudentFundingArrangementRepository;
 import com.school.backend.school.entity.AcademicSession;
 import com.school.backend.school.repository.AcademicSessionRepository;
+import com.school.backend.transport.entity.TransportEnrollment;
+import com.school.backend.transport.repository.TransportEnrollmentRepository;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
 import java.math.BigDecimal;
 import java.math.RoundingMode;
+import java.time.YearMonth;
 import java.time.LocalDate;
+import java.time.temporal.ChronoUnit;
 import java.util.List;
 
 @Service
@@ -37,6 +44,8 @@ public class StudentFeeAssignmentService {
     private final StudentRepository studentRepository;
     private final LateFeePolicyRepository lateFeePolicyRepository;
     private final AcademicSessionRepository academicSessionRepository;
+    private final StudentEnrollmentRepository studentEnrollmentRepository;
+    private final TransportEnrollmentRepository transportEnrollmentRepository;
     private final StudentFundingArrangementRepository fundingRepository;
     private final FeeCalculationService feeCalculationService;
 
@@ -152,13 +161,25 @@ public class StudentFeeAssignmentService {
         dto.setFeeStructureId(sfa.getFeeStructureId());
         dto.setSessionId(sfa.getSessionId());
         dto.setAmount(sfa.getAmount());
+        dto.setAnnualAmount(nz(sfa.getAmount()).setScale(2, RoundingMode.HALF_UP));
 
         // Populate Fee Type Name
+        FeeFrequency frequency = FeeFrequency.ONE_TIME;
+        int periodsPerYear = FeeFrequency.ONE_TIME.getPeriodsPerYear();
         feeStructureRepository.findById(sfa.getFeeStructureId()).ifPresent(fs -> {
             if (fs.getFeeType() != null) {
                 dto.setFeeTypeName(fs.getFeeType().getName());
             }
+            dto.setFrequency(fs.getFrequency());
+            dto.setPeriodsPerYear(fs.getFrequency() != null ? fs.getFrequency().getPeriodsPerYear() : 1);
         });
+        if (dto.getFrequency() != null) {
+            frequency = dto.getFrequency();
+            periodsPerYear = Math.max(1, dto.getPeriodsPerYear());
+        } else {
+            dto.setFrequency(frequency);
+            dto.setPeriodsPerYear(periodsPerYear);
+        }
 
         dto.setDueDate(sfa.getDueDate());
         dto.setLateFeeType(sfa.getLateFeeType());
@@ -176,16 +197,107 @@ public class StudentFeeAssignmentService {
         dto.setPrincipalPaid(sfa.getPrincipalPaid());
 
         BigDecimal pending = FeeMath.computePending(sfa);
+        BigDecimal annualAmount = nz(sfa.getAmount()).setScale(2, RoundingMode.HALF_UP);
+        BigDecimal principalPaid = nz(sfa.getPrincipalPaid());
+        BigDecimal totalDiscountAmount = nz(sfa.getTotalDiscountAmount());
+        BigDecimal sponsorCoveredAmount = nz(sfa.getSponsorCoveredAmount());
+        dto.setNextDueDate(null);
+
+        if (frequency != FeeFrequency.ONE_TIME) {
+            int safePeriodsPerYear = Math.max(1, periodsPerYear);
+            int periodLengthMonths = Math.max(1, 12 / safePeriodsPerYear);
+            dto.setPeriodsPerYear(safePeriodsPerYear);
+
+            AcademicSession academicSession = academicSessionRepository.findById(sfa.getSessionId()).orElse(null);
+            LocalDate sessionStartDate = academicSession != null ? academicSession.getStartDate() : null;
+            LocalDate sessionEndDate = academicSession != null ? academicSession.getEndDate() : null;
+
+            LocalDate baseDate;
+            boolean transportBased = false;
+            Long schoolId = TenantContext.getSchoolId();
+            if (schoolId != null) {
+                transportBased = feeStructureRepository.findById(sfa.getFeeStructureId())
+                        .map(FeeStructure::getFeeType)
+                        .map(ft -> ft != null && ft.isTransportBased())
+                        .orElse(false);
+            }
+
+            if (transportBased && schoolId != null) {
+                TransportEnrollment transportEnrollment = transportEnrollmentRepository
+                        .findByStudentIdAndSessionIdAndSchoolIdAndActiveTrue(
+                                sfa.getStudentId(), sfa.getSessionId(), schoolId)
+                        .orElse(null);
+                baseDate = transportEnrollment != null && transportEnrollment.getCreatedAt() != null
+                        ? transportEnrollment.getCreatedAt().toLocalDate()
+                        : null;
+            } else {
+                StudentEnrollment enrollment = studentEnrollmentRepository
+                        .findFirstByStudentIdAndSessionIdAndActiveTrue(sfa.getStudentId(), sfa.getSessionId())
+                        .orElse(null);
+                LocalDate enrollmentDate = enrollment != null ? enrollment.getEnrollmentDate() : null;
+                LocalDate enrollmentStartDate = enrollment != null ? enrollment.getStartDate() : null;
+                baseDate = firstNonNullDate(enrollmentDate, enrollmentStartDate, sessionStartDate);
+            }
+
+            LocalDate today = LocalDate.now();
+            int periodsElapsed;
+            if (baseDate == null || today.isBefore(baseDate)) {
+                periodsElapsed = 0;
+            } else {
+                long zeroBasedMonthsElapsed = ChronoUnit.MONTHS.between(YearMonth.from(baseDate), YearMonth.from(today));
+                periodsElapsed = (int) (Math.floorDiv(zeroBasedMonthsElapsed, periodLengthMonths) + 1);
+            }
+
+            periodsElapsed = Math.max(0, Math.min(periodsElapsed, safePeriodsPerYear));
+            dto.setPeriodsElapsed(periodsElapsed);
+
+            LocalDate nextDueDate;
+            if (baseDate == null) {
+                nextDueDate = null;
+            } else if (today.isBefore(baseDate)) {
+                nextDueDate = baseDate;
+            } else if (periodsElapsed < safePeriodsPerYear) {
+                long monthsToAdd = (long) periodLengthMonths * periodsElapsed;
+                nextDueDate = baseDate.plusMonths(monthsToAdd);
+            } else {
+                nextDueDate = null;
+            }
+            if (sessionEndDate != null && nextDueDate != null && nextDueDate.isAfter(sessionEndDate)) {
+                nextDueDate = null;
+            }
+            dto.setNextDueDate(nextDueDate);
+
+            BigDecimal amountPerPeriod = annualAmount
+                    .divide(BigDecimal.valueOf(safePeriodsPerYear), 2, RoundingMode.HALF_UP);
+            dto.setAmountPerPeriod(amountPerPeriod);
+
+            BigDecimal dueTillDate = amountPerPeriod.multiply(BigDecimal.valueOf(periodsElapsed))
+                    .setScale(2, RoundingMode.HALF_UP);
+            dueTillDate = dueTillDate.min(annualAmount);
+            if (dueTillDate.compareTo(ZERO) < 0) {
+                dueTillDate = ZERO;
+            }
+            dto.setDueTillDate(dueTillDate);
+
+            BigDecimal pendingTillDate = dueTillDate
+                    .subtract(principalPaid)
+                    .subtract(totalDiscountAmount)
+                    .subtract(sponsorCoveredAmount);
+            if (pendingTillDate.compareTo(ZERO) < 0) {
+                pendingTillDate = ZERO;
+            }
+            dto.setPendingTillDate(pendingTillDate.setScale(2, RoundingMode.HALF_UP));
+        } else {
+            dto.setPeriodsPerYear(1);
+            dto.setPeriodsElapsed(1);
+            dto.setAmountPerPeriod(annualAmount);
+
+            BigDecimal dueTillDate = principalPaid.compareTo(annualAmount) >= 0 ? ZERO : annualAmount;
+            dto.setDueTillDate(dueTillDate.setScale(2, RoundingMode.HALF_UP));
+            dto.setPendingTillDate(pending.setScale(2, RoundingMode.HALF_UP));
+        }
 
         dto.setStatus(pending.compareTo(BigDecimal.ZERO) <= 0 ? "PAID" : "PENDING");
-        BigDecimal remainingPrincipal = nz(sfa.getAmount())
-                .subtract(nz(sfa.getPrincipalPaid()))
-                .subtract(nz(sfa.getTotalDiscountAmount()))
-                .subtract(nz(sfa.getSponsorCoveredAmount()));
-        if (remainingPrincipal.compareTo(ZERO) < 0) {
-            remainingPrincipal = ZERO;
-        }
-        dto.setRemainingPrincipal(remainingPrincipal.setScale(2, RoundingMode.HALF_UP));
 
         dto.setActive(sfa.isActive());
 
@@ -194,6 +306,16 @@ public class StudentFeeAssignmentService {
 
     private BigDecimal nz(BigDecimal value) {
         return value != null ? value : ZERO;
+    }
+
+    private LocalDate firstNonNullDate(LocalDate first, LocalDate second, LocalDate third) {
+        if (first != null) {
+            return first;
+        }
+        if (second != null) {
+            return second;
+        }
+        return third;
     }
 
     private LocalDate resolveDerivedDueDate(Long sessionId, Long schoolId, Integer dueDayOfMonth) {

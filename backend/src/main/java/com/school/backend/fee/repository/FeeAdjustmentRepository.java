@@ -9,4 +9,9 @@ public interface FeeAdjustmentRepository extends JpaRepository<FeeAdjustment, Lo
     List<FeeAdjustment> findByAssignmentId(Long assignmentId);
 
     List<FeeAdjustment> findByAssignmentIdOrderByCreatedAtAsc(Long assignmentId);
+
+    boolean existsByAssignmentIdAndDiscountDefinitionIdAndType(
+            Long assignmentId,
+            Long discountDefinitionId,
+            FeeAdjustment.AdjustmentType type);
 }

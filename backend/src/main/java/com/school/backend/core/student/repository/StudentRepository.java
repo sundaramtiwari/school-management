@@ -118,4 +118,26 @@ public interface StudentRepository extends JpaRepository<Student, Long> {
       @Param("sessionStart") LocalDate sessionStart,
       Pageable pageable);
 
+  @Query("""
+      SELECT s.id, s.firstName, s.lastName, s.admissionNumber, s.contactNumber, c.name, c.section,
+             (SELECT MAX(p.paymentDate) FROM FeePayment p WHERE p.studentId = s.id AND p.sessionId = :sessionId)
+      FROM Student s
+      JOIN StudentEnrollment e ON s.id = e.studentId
+      LEFT JOIN SchoolClass c ON e.classId = c.id
+      WHERE s.schoolId = :schoolId
+        AND e.sessionId = :sessionId
+        AND (:classId IS NULL OR e.classId = :classId)
+        AND (:search IS NULL OR LOWER(s.firstName) LIKE LOWER(CONCAT('%', :search, '%'))
+             OR LOWER(s.lastName) LIKE LOWER(CONCAT('%', :search, '%'))
+             OR LOWER(s.admissionNumber) LIKE LOWER(CONCAT('%', :search, '%')))
+        AND (:maxPaymentDate IS NULL OR COALESCE((SELECT MAX(p.paymentDate) FROM FeePayment p WHERE p.studentId = s.id AND p.sessionId = :sessionId), :sessionStart) <= :maxPaymentDate)
+      """)
+  java.util.List<Object[]> findDefaulterCandidates(
+      @Param("schoolId") Long schoolId,
+      @Param("sessionId") Long sessionId,
+      @Param("classId") Long classId,
+      @Param("search") String search,
+      @Param("maxPaymentDate") LocalDate maxPaymentDate,
+      @Param("sessionStart") LocalDate sessionStart);
+
 }

@@ -6,7 +6,6 @@ import { canMutateFinance } from "@/lib/permissions";
 import { useToast } from "@/components/ui/Toast";
 import { Skeleton, TableSkeleton } from "@/components/ui/Skeleton";
 import { useAuth } from "@/context/AuthContext";
-import { useSession } from "@/context/SessionContext";
 import { useRouter } from "next/navigation";
 
 type Defaulter = {
@@ -16,6 +15,7 @@ type Defaulter = {
   className: string;
   classSection: string;
   amountDue: number;
+  lateFeeAccrued?: number;
   lastPaymentDate: string | null;
   daysOverdue: number;
   parentContact: string;
@@ -25,16 +25,7 @@ export default function FeeDefaultersPage() {
   const router = useRouter();
   const { user } = useAuth();
   const { showToast } = useToast();
-  const { sessions, currentSession } = useSession();
   const canManageFinance = canMutateFinance(user?.role);
-
-  const [selectedSessionId, setSelectedSessionId] = useState<string>("");
-
-  useEffect(() => {
-    if (currentSession?.id && !selectedSessionId) {
-      setSelectedSessionId(currentSession.id.toString());
-    }
-  }, [currentSession, selectedSessionId]);
 
   const [defaulters, setDefaulters] = useState<Defaulter[]>([]);
   const [loading, setLoading] = useState(true);
@@ -66,7 +57,7 @@ export default function FeeDefaultersPage() {
 
   useEffect(() => {
     setPage(0);
-  }, [selectedClass, minAmount, minDays, selectedSessionId]);
+  }, [selectedClass, minAmount, minDays]);
 
   const loadClasses = useCallback(async () => {
     try {
@@ -88,7 +79,6 @@ export default function FeeDefaultersPage() {
       if (selectedClass) params.append("classId", selectedClass);
       if (minAmount) params.append("minAmountDue", minAmount);
       if (minDays) params.append("minDaysOverdue", minDays);
-      if (selectedSessionId) params.append("sessionId", selectedSessionId);
 
       const res = await api.get(`/api/fees/defaulters?${params.toString()}`);
 
@@ -101,7 +91,7 @@ export default function FeeDefaultersPage() {
     } finally {
       setLoading(false);
     }
-  }, [page, size, debouncedSearch, selectedClass, minAmount, minDays, selectedSessionId, showToast]);
+  }, [page, size, debouncedSearch, selectedClass, minAmount, minDays, showToast]);
 
   useEffect(() => {
     loadClasses();
@@ -126,7 +116,6 @@ export default function FeeDefaultersPage() {
       if (selectedClass) params.append("classId", selectedClass);
       if (minAmount) params.append("minAmountDue", minAmount);
       if (minDays) params.append("minDaysOverdue", minDays);
-      if (selectedSessionId) params.append("sessionId", selectedSessionId);
 
       const res = await api.get(`/api/fees/defaulters/export?${params.toString()}`);
       const exportData: Defaulter[] = res.data || [];
@@ -136,12 +125,13 @@ export default function FeeDefaultersPage() {
         return;
       }
 
-      const headers = ["Student Name", "Admission No", "Class", "Amount Due", "Days Overdue", "Last Payment", "Parent Contact"];
+      const headers = ["Student Name", "Admission No", "Class", "Accrued Amount Due", "Accrued Late Fee", "Days Overdue", "Last Payment", "Parent Contact"];
       const rows = exportData.map(d => [
         `"${d.studentName}"`,
         `"${d.admissionNumber}"`,
         `"${d.className}-${d.classSection}"`,
         d.amountDue,
+        d.lateFeeAccrued ?? 0,
         d.daysOverdue,
         d.lastPaymentDate || "Never",
         `"${d.parentContact}"`
@@ -193,7 +183,7 @@ export default function FeeDefaultersPage() {
       <header className="flex justify-between items-center">
         <div>
           <h1 className="text-3xl font-bold text-gray-800">Fee Defaulters</h1>
-          <p className="text-gray-500">Students with pending fee payments</p>
+          <p className="text-gray-500">Students with unpaid accrued dues</p>
         </div>
         <button
           onClick={exportToExcel}
@@ -215,7 +205,7 @@ export default function FeeDefaultersPage() {
               ) : (
                 <p className="text-3xl font-bold text-gray-900 mt-2">{totalElements}</p>
               )}
-              <p className="text-xs text-gray-400 mt-1">Students with pending dues</p>
+              <p className="text-xs text-gray-400 mt-1">Students with accrued unpaid dues</p>
             </div>
             <div className="w-12 h-12 bg-red-500 text-white rounded-xl flex items-center justify-center text-xl">
               ⚠️
@@ -226,7 +216,7 @@ export default function FeeDefaultersPage() {
         <div className="bg-white p-6 rounded-2xl border shadow-sm">
           <div className="flex items-start justify-between">
             <div>
-              <p className="text-sm font-medium text-gray-500 uppercase">Total Amount Due</p>
+              <p className="text-sm font-medium text-gray-500 uppercase">Total Accrued Due</p>
               {loading ? (
                 <Skeleton className="h-10 w-24 mt-2" />
               ) : (
@@ -234,7 +224,7 @@ export default function FeeDefaultersPage() {
                   ₹ {totalDue.toLocaleString('en-IN')}
                 </p>
               )}
-              <p className="text-xs text-gray-400 mt-1">Outstanding fees (this page)</p>
+              <p className="text-xs text-gray-400 mt-1">Accrued outstanding (this page)</p>
             </div>
             <div className="w-12 h-12 bg-orange-500 text-white rounded-xl flex items-center justify-center text-xl">
               💰
@@ -276,23 +266,7 @@ export default function FeeDefaultersPage() {
           )}
         </div>
 
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-5 gap-4">
-          <div>
-            <label className="block text-xs font-bold uppercase text-gray-400 mb-2">Session</label>
-            <select
-              value={selectedSessionId}
-              onChange={e => setSelectedSessionId(e.target.value)}
-              className="input w-full font-bold"
-            >
-              <option value="">All Sessions</option>
-              {sessions.map(s => (
-                <option key={s.id} value={s.id}>
-                  {s.name} {s.active ? "(Active)" : ""}
-                </option>
-              ))}
-            </select>
-          </div>
-
+        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
           <div>
             <label className="block text-xs font-bold uppercase text-gray-400 mb-2">Search Student</label>
             <input
@@ -353,8 +327,8 @@ export default function FeeDefaultersPage() {
         ) : defaulters.length === 0 ? (
           <div className="p-20 text-center text-gray-400">
             <p className="text-4xl mb-4">✓</p>
-            <p className="font-semibold text-green-600">No fee defaulters!</p>
-            <p className="text-sm mt-2">All students have cleared their fees</p>
+            <p className="font-semibold text-green-600">No accrued fee defaulters!</p>
+            <p className="text-sm mt-2">All students are clear on dues till date</p>
           </div>
         ) : (
           <table className="w-full text-sm">
@@ -362,7 +336,7 @@ export default function FeeDefaultersPage() {
               <tr>
                 <th className="p-4 text-left">Student Details</th>
                 <th className="p-4 text-center">Class</th>
-                <th className="p-4 text-right">Amount Due</th>
+                <th className="p-4 text-right">Accrued Due</th>
                 <th className="p-4 text-center">Days Overdue</th>
                 <th className="p-4 text-center">Last Payment</th>
                 <th className="p-4 text-center">Contact</th>

@@ -379,7 +379,14 @@ public class TransportEnrollmentService {
      * @return Transport FeeType entity
      */
     private FeeType getOrCreateTransportFeeType(Long schoolId) {
-        return feeTypeRepository.findByNameAndSchoolId("TRANSPORT", schoolId)
+        FeeType feeType = feeTypeRepository.findByNameAndSchoolId("TRANSPORT", schoolId)
+                .map(existing -> {
+                    if (!existing.isTransportBased()) {
+                        existing.setTransportBased(true);
+                        return feeTypeRepository.saveAndFlush(existing);
+                    }
+                    return existing;
+                })
                 .orElseGet(() -> {
                     log.info("Creating TRANSPORT fee type for school {}", schoolId);
                     try {
@@ -387,6 +394,7 @@ public class TransportEnrollmentService {
                                 .name("TRANSPORT")
                                 .description("Transport / Bus Fees")
                                 .active(true)
+                                .transportBased(true)
                                 .schoolId(schoolId)
                                 .build());
                     } catch (DataIntegrityViolationException ex) {
@@ -395,6 +403,11 @@ public class TransportEnrollmentService {
                                 .orElseThrow(() -> ex);
                     }
                 });
+        if (!feeType.isTransportBased()) {
+            feeType.setTransportBased(true);
+            return feeTypeRepository.saveAndFlush(feeType);
+        }
+        return feeType;
     }
 
     /**

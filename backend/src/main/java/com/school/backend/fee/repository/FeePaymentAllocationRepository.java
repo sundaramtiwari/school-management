@@ -11,6 +11,8 @@ import java.util.List;
 
 public interface FeePaymentAllocationRepository extends JpaRepository<FeePaymentAllocation, Long> {
 
+    List<FeePaymentAllocation> findByFeePaymentIdOrderByIdAsc(Long feePaymentId);
+
     @Query("""
             SELECT new com.school.backend.fee.dto.FeeTypeHeadSummaryDto(
                 ft.id,

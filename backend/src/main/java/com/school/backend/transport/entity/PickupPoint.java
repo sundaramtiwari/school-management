@@ -3,8 +3,13 @@ package com.school.backend.transport.entity;
 import com.school.backend.common.entity.TenantEntity;
 import com.school.backend.common.enums.FeeFrequency;
 import jakarta.persistence.*;
-import lombok.*;
+import lombok.AllArgsConstructor;
+import lombok.Getter;
+import lombok.NoArgsConstructor;
+import lombok.Setter;
 import lombok.experimental.SuperBuilder;
+
+import java.math.BigDecimal;
 
 @Entity
 @Table(name = "pickup_points")
@@ -23,7 +28,7 @@ public class PickupPoint extends TenantEntity {
     private String name;
 
     @Column(nullable = false, precision = 15, scale = 2)
-    private java.math.BigDecimal amount;
+    private BigDecimal amount;
 
     @Enumerated(EnumType.STRING)
     @Column(nullable = false, length = 20)

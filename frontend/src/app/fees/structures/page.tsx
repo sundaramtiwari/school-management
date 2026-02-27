@@ -190,7 +190,7 @@ export default function FeeStructuresPage() {
         }
         try {
             setLoading(true);
-            const res = await api.get(`/api/fees/structures/by-class/${classId}?sessionId=${currentSession.id}`);
+            const res = await api.get(`/api/fees/structures/by-class/${classId}`);
             setStructures(res.data || []);
         } catch (e: unknown) {
             showToast("Failed to load configurations: " + getErrorMessage(e), "error");
