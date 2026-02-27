@@ -70,7 +70,6 @@ export default function CreateExpenseModal({ isOpen, onClose, onSuccess }: Creat
         } catch (error: any) {
             showToast(error.message || "Failed to create expense voucher", "error");
         } finally {
-            setLoading(true); // Disable while closing? No, set false.
             setLoading(false);
         }
     };

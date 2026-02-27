@@ -160,6 +160,17 @@ export const financeApi = {
         return response.data;
     },
 
+    // Expense Heads Management
+    createExpenseHead: async (data: { name: string; description?: string }) => {
+        const response = await api.post<ExpenseHeadData>("/api/expenses/heads", data);
+        return response.data;
+    },
+
+    toggleExpenseHeadActive: async (id: number) => {
+        const response = await api.patch<ExpenseHeadData>(`/api/expenses/heads/${id}/toggle-active`);
+        return response.data;
+    },
+
     // Transfers
     createTransfer: async (data: FinanceAccountTransferRequest) => {
         const response = await api.post<FinanceAccountTransferData>("/api/finance/transfers", data);
