@@ -38,7 +38,6 @@ import java.util.List;
 public class StudentFeeAssignmentService {
     private static final BigDecimal ZERO = BigDecimal.ZERO;
 
-
     private final StudentFeeAssignmentRepository assignmentRepository;
     private final FeeStructureRepository feeStructureRepository;
     private final StudentRepository studentRepository;
@@ -120,7 +119,8 @@ public class StudentFeeAssignmentService {
      * Lists fee assignments for a student in the current session context.
      *
      * @param studentId ID of the student whose fee assignments are to be listed.
-     * @return List of StudentFeeAssignmentDto for the specified student and current session.
+     * @return List of StudentFeeAssignmentDto for the specified student and current
+     *         session.
      */
     @Transactional(readOnly = true)
     public List<StudentFeeAssignmentDto> listByStudent(Long studentId) {
@@ -129,14 +129,19 @@ public class StudentFeeAssignmentService {
 
     /**
      * Lists fee assignments for a student within a specific session context.
-     * This is used internally to support session override scenarios, but is not exposed directly via API.
-     * The session context is required to ensure we are showing assignments relevant to the current academic session,
+     * This is used internally to support session override scenarios, but is not
+     * exposed directly via API.
+     * The session context is required to ensure we are showing assignments relevant
+     * to the current academic session,
      * and to prevent accidental cross-session data exposure.
      *
      * @param studentId ID of the student whose fee assignments are to be listed.
-     * @param sessionId Caller should ensure this is a valid session for the current school,
-     *                  typically by using requireSessionId() or validating against SessionResolver.
-     * @return List of StudentFeeAssignmentDto for the specified student and session.
+     * @param sessionId Caller should ensure this is a valid session for the current
+     *                  school,
+     *                  typically by using requireSessionId() or validating against
+     *                  SessionResolver.
+     * @return List of StudentFeeAssignmentDto for the specified student and
+     *         session.
      */
     @Transactional(readOnly = true)
     private List<StudentFeeAssignmentDto> listByStudent(Long studentId, Long sessionId) {
@@ -247,7 +252,8 @@ public class StudentFeeAssignmentService {
             if (baseDate == null || today.isBefore(baseDate)) {
                 periodsElapsed = 0;
             } else {
-                long zeroBasedMonthsElapsed = ChronoUnit.MONTHS.between(YearMonth.from(baseDate), YearMonth.from(today));
+                long zeroBasedMonthsElapsed = ChronoUnit.MONTHS.between(YearMonth.from(baseDate),
+                        YearMonth.from(today));
                 periodsElapsed = (int) (Math.floorDiv(zeroBasedMonthsElapsed, periodLengthMonths) + 1);
             }
 
@@ -283,12 +289,10 @@ public class StudentFeeAssignmentService {
             dto.setDueTillDate(dueTillDate);
 
             BigDecimal pendingTillDate = dueTillDate
-                    .add(lateFeeAccrued)
+                    .add(lateFeeAccrued.subtract(lateFeePaid).subtract(lateFeeWaived).max(ZERO))
                     .subtract(totalDiscountAmount)
                     .subtract(sponsorCoveredAmount)
-                    .subtract(principalPaid)
-                    .subtract(lateFeePaid)
-                    .subtract(lateFeeWaived);
+                    .subtract(principalPaid);
             if (pendingTillDate.compareTo(ZERO) < 0) {
                 pendingTillDate = ZERO;
             }
@@ -301,12 +305,10 @@ public class StudentFeeAssignmentService {
             BigDecimal dueTillDate = principalPaid.compareTo(annualAmount) >= 0 ? ZERO : annualAmount;
             dto.setDueTillDate(dueTillDate.setScale(2, RoundingMode.HALF_UP));
             BigDecimal pendingTillDate = dueTillDate
-                    .add(lateFeeAccrued)
+                    .add(lateFeeAccrued.subtract(lateFeePaid).subtract(lateFeeWaived).max(ZERO))
                     .subtract(totalDiscountAmount)
                     .subtract(sponsorCoveredAmount)
-                    .subtract(principalPaid)
-                    .subtract(lateFeePaid)
-                    .subtract(lateFeeWaived);
+                    .subtract(principalPaid);
             if (pendingTillDate.compareTo(ZERO) < 0) {
                 pendingTillDate = ZERO;
             }

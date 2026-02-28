@@ -160,6 +160,11 @@ export const financeApi = {
         return response.data;
     },
 
+    toggleExpenseActive: async (id: number) => {
+        const response = await api.patch<ExpenseVoucherData>(`/api/expenses/${id}/toggle-active`);
+        return response.data;
+    },
+
     // Expense Heads Management
     createExpenseHead: async (data: { name: string; description?: string }) => {
         const response = await api.post<ExpenseHeadData>("/api/expenses/heads", data);

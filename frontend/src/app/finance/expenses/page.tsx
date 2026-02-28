@@ -19,12 +19,18 @@ export default function ExpensesPage() {
     const [isExporting, setIsExporting] = useState(false);
     const [expenses, setExpenses] = useState<ExpenseVoucherData[]>([]);
     const [isModalOpen, setIsModalOpen] = useState(false);
+    const [isDayClosed, setIsDayClosed] = useState(false);
+    const [isProcessing, setIsProcessing] = useState<number | null>(null);
 
     const fetchExpenses = useCallback(async () => {
         setLoading(true);
         try {
-            const data = await financeApi.getExpensesByDate(selectedDate);
-            setExpenses(data);
+            const [expenseData, summaryData] = await Promise.all([
+                financeApi.getExpensesByDate(selectedDate),
+                financeApi.getDailyCashSummary(selectedDate)
+            ]);
+            setExpenses(expenseData);
+            setIsDayClosed(summaryData.closed);
         } catch (error: any) {
             console.error("Error fetching expenses:", error);
             showToast(error.message || "Failed to fetch expenses", "error");
@@ -32,6 +38,21 @@ export default function ExpensesPage() {
             setLoading(false);
         }
     }, [selectedDate, showToast]);
+
+    const handleToggleActive = async (id: number) => {
+        if (!confirm("Are you sure you want to cancel this expense voucher?")) return;
+
+        setIsProcessing(id);
+        try {
+            await financeApi.toggleExpenseActive(id);
+            showToast("Voucher cancelled successfully", "success");
+            fetchExpenses();
+        } catch (error: any) {
+            showToast(error.message || "Failed to cancel voucher", "error");
+        } finally {
+            setIsProcessing(null);
+        }
+    };
 
     const handleExport = async () => {
         try {
@@ -103,6 +124,7 @@ export default function ExpensesPage() {
                                 <th className="px-6 py-4 font-medium text-gray-500">Payment Mode</th>
                                 <th className="px-6 py-4 font-medium text-gray-500">Created By</th>
                                 <th className="px-6 py-4 font-medium text-gray-500">Status</th>
+                                <th className="px-6 py-4 font-medium text-gray-500 text-right">Actions</th>
                             </tr>
                         </thead>
                         <tbody className="divide-y text-sm text-gray-700">
@@ -152,10 +174,21 @@ export default function ExpensesPage() {
                                             {expense.createdBy}
                                         </td>
                                         <td className="px-6 py-4">
-                                            <span className={`px-2 py-0.5 rounded text-[10px] font-black uppercase border ${expense.active ? 'bg-green-50 text-green-700 border-green-100' : 'bg-red-50 text-red-700 border-red-100'
+                                            <span className={`px-2 py-0.5 rounded text-[10px] font-black uppercase border ${expense.active ? 'bg-green-50 text-green-700 border-green-100' : 'bg-gray-50 text-gray-700 border-gray-200'
                                                 }`}>
-                                                {expense.active ? 'Active' : 'Cancelled'}
+                                                {expense.active ? 'APPROVED' : 'CANCELLED'}
                                             </span>
+                                        </td>
+                                        <td className="px-6 py-4 text-right">
+                                            {expense.active && !isDayClosed && (
+                                                <button
+                                                    onClick={() => handleToggleActive(expense.id)}
+                                                    disabled={isProcessing === expense.id}
+                                                    className="text-red-500 hover:text-red-700 font-bold text-xs disabled:opacity-50"
+                                                >
+                                                    {isProcessing === expense.id ? 'Wait...' : 'Cancel'}
+                                                </button>
+                                            )}
                                         </td>
                                     </tr>
                                 ))

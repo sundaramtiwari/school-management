@@ -27,13 +27,8 @@ type FeeAssignment = {
     id: number;
     feeTypeName: string;
     amount: number;
-    frequency?: string;
-    periodsPerYear?: number;
-    periodsElapsed?: number;
-    amountPerPeriod?: number;
     annualAmount?: number;
     dueTillDate?: number;
-    nextDueDate?: string | null;
     pendingTillDate?: number;
     remainingForSession?: number;
     totalDiscountAmount: number;
@@ -267,6 +262,10 @@ function FeeCollectContent() {
         const totalAmount = calculateTotalAllocated();
         if (totalAmount <= 0) {
             showToast("Please allocate some amount to pay", "warning");
+            return;
+        }
+
+        if (!confirm(`Are you sure you want to process payment of ₹${totalAmount.toLocaleString()}?`)) {
             return;
         }
 
@@ -614,7 +613,6 @@ function FeeCollectContent() {
                                                     <th className="pb-2 text-right">Paid</th>
                                                     <th className="pb-2 text-right">Advance</th>
                                                     <th className="pb-2 text-right">Pending Now</th>
-                                                    <th className="pb-2 text-right">Remaining</th>
                                                     <th className="pb-2 text-center">Status</th>
                                                     <th className="pb-2 text-center">Pay Now</th>
                                                     {canUserManageFees && <th className="pb-2 text-center w-36">Actions</th>}
@@ -661,13 +659,21 @@ function FeeCollectContent() {
                                                                 <td className="py-2.5 text-right text-green-600">₹ {principalPaid.toLocaleString()}</td>
                                                                 <td className="py-2.5 text-right">
                                                                     {advanceAmount > 0 ? (
-                                                                        <span className="text-emerald-600 font-bold">₹ {advanceAmount.toLocaleString()}</span>
+                                                                        <span className="px-2 py-0.5 rounded text-[9px] font-black uppercase bg-emerald-50 text-emerald-700 border border-emerald-100">
+                                                                            Advance Paid
+                                                                        </span>
                                                                     ) : (
                                                                         <span className="text-gray-300">—</span>
                                                                     )}
                                                                 </td>
-                                                                <td className={`py-2.5 text-right font-black ${pendingAmount > 0 ? "text-red-600" : "text-green-600"}`}>₹ {Math.max(0, pendingAmount).toLocaleString()}</td>
-                                                                <td className="py-2.5 text-right font-medium text-gray-400">₹ {remainingAmount.toLocaleString()}</td>
+                                                                <td className="py-2.5 text-right">
+                                                                    <div className={`font-black ${pendingAmount > 0 ? "text-red-600" : "text-green-600"}`}>
+                                                                        ₹ {Math.max(0, pendingAmount).toLocaleString()}
+                                                                    </div>
+                                                                    <div className="text-[8px] text-gray-400 font-bold uppercase mt-0.5">
+                                                                        Remaining Session: ₹ {remainingAmount.toLocaleString()}
+                                                                    </div>
+                                                                </td>
                                                                 <td className="py-2.5 text-center">
                                                                     <span className={`px-2 py-0.5 rounded-full text-[9px] font-black uppercase ${statusColors[accrualStatus]}`}>
                                                                         {accrualStatus}
@@ -729,11 +735,13 @@ function FeeCollectContent() {
                                                                                     <div className="absolute right-0 mt-1 w-40 bg-white border border-gray-100 rounded-xl shadow-xl z-50 py-1.5 overflow-hidden animate-in fade-in zoom-in duration-100">
                                                                                         <button
                                                                                             onClick={() => {
+                                                                                                if (pendingAmount <= 0 || item.totalDiscountAmount > 0) return;
                                                                                                 setSelectedAssignmentForDiscount(item.id);
                                                                                                 setShowDiscountModal(true);
                                                                                                 setActiveActionDropdown(null);
                                                                                             }}
-                                                                                            className="w-full text-left px-4 py-2 text-[10px] font-bold uppercase text-blue-600 hover:bg-blue-50 transition-colors"
+                                                                                            disabled={pendingAmount <= 0 || item.totalDiscountAmount > 0}
+                                                                                            className="w-full text-left px-4 py-2 text-[10px] font-bold uppercase text-blue-600 hover:bg-blue-50 disabled:opacity-40 disabled:cursor-not-allowed transition-colors"
                                                                                         >
                                                                                             Apply Discount
                                                                                         </button>
@@ -760,7 +768,7 @@ function FeeCollectContent() {
                                                             </tr>
                                                             {expandedAssignmentId === item.id && (
                                                                 <tr>
-                                                                    <td colSpan={canUserManageFees ? 11 : 10} className="bg-gray-50 px-6 py-4 border-b border-gray-100">
+                                                                    <td colSpan={canUserManageFees ? 10 : 9} className="bg-gray-50 px-6 py-4 border-b border-gray-100">
                                                                         {loadingAdjustments[item.id] ? (
                                                                             <div className="text-sm text-gray-400 italic">Loading adjustments...</div>
                                                                         ) : adjustmentHistory[item.id]?.length ? (
@@ -805,7 +813,7 @@ function FeeCollectContent() {
                                                 })}
                                                 {breakdown.length === 0 && (
                                                     <tr>
-                                                        <td colSpan={canUserManageFees ? 11 : 10} className="py-8 text-center text-gray-400 italic">No detailed assignments found</td>
+                                                        <td colSpan={canUserManageFees ? 10 : 9} className="py-8 text-center text-gray-400 italic">No detailed assignments found</td>
                                                     </tr>
                                                 )}
                                             </tbody>

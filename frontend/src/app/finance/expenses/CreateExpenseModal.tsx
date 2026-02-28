@@ -3,6 +3,7 @@
 import { useState, useEffect } from "react";
 import Modal from "@/components/ui/Modal";
 import { useToast } from "@/components/ui/Toast";
+import { useSession } from "@/context/SessionContext";
 import { financeApi, ExpenseHeadData, ExpenseVoucherRequest } from "@/lib/financeApi";
 
 interface CreateExpenseModalProps {
@@ -13,6 +14,7 @@ interface CreateExpenseModalProps {
 
 export default function CreateExpenseModal({ isOpen, onClose, onSuccess }: CreateExpenseModalProps) {
     const { showToast } = useToast();
+    const { currentSession } = useSession();
     const [loading, setLoading] = useState(false);
     const [heads, setHeads] = useState<ExpenseHeadData[]>([]);
 
@@ -102,6 +104,9 @@ export default function CreateExpenseModal({ isOpen, onClose, onSuccess }: Creat
             title="Create Expense Voucher"
             footer={footer}
         >
+            <div className="mb-4 text-sm font-medium text-blue-600 bg-blue-50 px-3 py-2 rounded-lg border border-blue-100 italic">
+                Booking to session: {currentSession?.name || "..."}
+            </div>
             <form id="create-expense-form" onSubmit={handleSubmit} className="space-y-4">
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                     <div className="space-y-1">

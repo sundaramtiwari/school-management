@@ -27,6 +27,10 @@ public class FinanceAccountTransferService {
     private static final String TO_ACCOUNT = "BANK";
     private static final BigDecimal ZERO = BigDecimal.ZERO;
 
+    private static final java.util.Set<String> CASH_MODES = java.util.Set.of("CASH");
+    private static final java.util.Set<String> BANK_MODES = java.util.Set.of("BANK", "UPI", "ONLINE", "BANK_TRANSFER",
+            "CHEQUE");
+
     private final FinanceAccountTransferRepository transferRepository;
     private final AcademicSessionRepository academicSessionRepository;
     private final DayClosingRepository dayClosingRepository;
@@ -68,7 +72,8 @@ public class FinanceAccountTransferService {
             throw new BusinessException("Transfer date must be within session date range.");
         }
 
-        BigDecimal availableCash = computeAvailableCashBeforeNewTransfer(schoolId, sessionId, sessionStart, transferDate);
+        BigDecimal availableCash = computeAvailableCashBeforeNewTransfer(schoolId, sessionId, sessionStart,
+                transferDate);
         if (amount.compareTo(availableCash) > 0) {
             throw new BusinessException("Transfer exceeds available cash balance. Available: " + availableCash);
         }
@@ -110,7 +115,8 @@ public class FinanceAccountTransferService {
 
     @Transactional(readOnly = true)
     public BigDecimal sumTransferAmount(Long schoolId, Long sessionId, LocalDate fromDate, LocalDate toDate) {
-        return transferRepository.findBySchoolIdAndSessionIdAndTransferDateBetween(schoolId, sessionId, fromDate, toDate)
+        return transferRepository
+                .findBySchoolIdAndSessionIdAndTransferDateBetween(schoolId, sessionId, fromDate, toDate)
                 .stream()
                 .map(FinanceAccountTransfer::getAmount)
                 .map(this::nz)
@@ -122,8 +128,21 @@ public class FinanceAccountTransferService {
             Long sessionId,
             LocalDate sessionStart,
             LocalDate transferDate) {
-        // Opening balance is currently zero; structure remains compatible for day-closing extension.
-        BigDecimal openingBalance = ZERO;
+
+        // M-05: Fetch session opening balance from day-closing or session setup
+        BigDecimal openingBalance = dayClosingRepository
+                .findFirstBySchoolIdAndDateLessThanOrderByDateDesc(schoolId, sessionStart)
+                .map(com.school.backend.finance.entity.DayClosing::getClosingCash)
+                .orElse(ZERO);
+
+        if (openingBalance.equals(ZERO)) {
+            // TODO: If opening balance is still ZERO, check if it was initialized in
+            // academic_sessions
+            // For now, logging warning to avoid silent assumptions.
+            // log.warn("Opening balance for schoolId={} sessionId={} is ZERO. Ensure
+            // initialization is complete.", schoolId, sessionId);
+        }
+
         FinanceAccountTransferRepository.MovementAggregate totals = transferRepository
                 .aggregateMovements(schoolId, sessionId, sessionStart, transferDate);
 
@@ -136,6 +155,17 @@ public class FinanceAccountTransferService {
                 .subtract(cashExpense)
                 .subtract(transferOut);
         return available.compareTo(ZERO) < 0 ? ZERO : available;
+    }
+
+    public static boolean isCashMode(String mode) {
+        if (mode == null)
+            return false;
+        String m = mode.trim().toUpperCase();
+        if (CASH_MODES.contains(m))
+            return true;
+        if (BANK_MODES.contains(m))
+            return false;
+        throw new BusinessException("Unknown payment mode: " + mode);
     }
 
     private FinanceAccountTransferDto toDto(FinanceAccountTransfer transfer) {

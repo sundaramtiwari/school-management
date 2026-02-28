@@ -102,7 +102,7 @@ public class DashboardStatsService {
                 .findBySchoolIdAndSessionIdAndPaymentDate(schoolId, sessionId, effectiveDate);
         for (FeePayment payment : dailyPayments) {
             BigDecimal amount = nz(payment.getPrincipalPaid()).add(nz(payment.getLateFeePaid()));
-            if (isCashMode(payment.getMode())) {
+            if (com.school.backend.finance.service.FinanceAccountTransferService.isCashMode(payment.getMode())) {
                 cashRevenue = cashRevenue.add(amount);
             } else {
                 bankRevenue = bankRevenue.add(amount);
@@ -114,7 +114,8 @@ public class DashboardStatsService {
                         schoolId, sessionId, effectiveDate);
         for (ExpenseVoucher voucher : dailyExpenses) {
             BigDecimal amount = nz(voucher.getAmount());
-            if (isCashMode(voucher.getPaymentMode() != null ? voucher.getPaymentMode().name() : null)) {
+            if (com.school.backend.finance.service.FinanceAccountTransferService
+                    .isCashMode(voucher.getPaymentMode() != null ? voucher.getPaymentMode().name() : null)) {
                 cashExpense = cashExpense.add(amount);
             } else {
                 bankExpense = bankExpense.add(amount);
@@ -155,11 +156,6 @@ public class DashboardStatsService {
                                 schoolId, sessionId, effectiveDate,
                                 ExpensePaymentMode.CASH))
                 .build();
-    }
-
-    private boolean isCashMode(String mode) {
-        String normalized = mode == null ? "" : mode.trim().toUpperCase();
-        return CASH.equals(normalized);
     }
 
     private BigDecimal nz(BigDecimal value) {

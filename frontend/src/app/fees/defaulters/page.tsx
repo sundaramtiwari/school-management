@@ -28,6 +28,7 @@ export default function FeeDefaultersPage() {
   const canManageFinance = canMutateFinance(user?.role);
 
   const [defaulters, setDefaulters] = useState<Defaulter[]>([]);
+  const [stats, setStats] = useState({ totalAmountDue: 0, criticalCount: 0 });
   const [loading, setLoading] = useState(true);
 
   // Pagination
@@ -80,11 +81,15 @@ export default function FeeDefaultersPage() {
       if (minAmount) params.append("minAmountDue", minAmount);
       if (minDays) params.append("minDaysOverdue", minDays);
 
-      const res = await api.get(`/api/fees/defaulters?${params.toString()}`);
+      const [res, statsRes] = await Promise.all([
+        api.get(`/api/fees/defaulters?${params.toString()}`),
+        api.get("/api/fees/defaulters/stats")
+      ]);
 
       setDefaulters(res.data?.content || []);
       setTotalElements(res.data?.totalElements || 0);
       setTotalPages(res.data?.totalPages || 0);
+      setStats(statsRes.data || { totalAmountDue: 0, criticalCount: 0 });
     } catch (err: unknown) {
       showToast("Failed to load fee defaulters", "error");
       console.error(err);
@@ -221,10 +226,10 @@ export default function FeeDefaultersPage() {
                 <Skeleton className="h-10 w-24 mt-2" />
               ) : (
                 <p className="text-3xl font-bold text-red-600 mt-2">
-                  ₹ {totalDue.toLocaleString('en-IN')}
+                  ₹ {stats.totalAmountDue.toLocaleString('en-IN')}
                 </p>
               )}
-              <p className="text-xs text-gray-400 mt-1">Accrued outstanding (this page)</p>
+              <p className="text-xs text-gray-400 mt-1">Total Outstanding for Session</p>
             </div>
             <div className="w-12 h-12 bg-orange-500 text-white rounded-xl flex items-center justify-center text-xl">
               💰
@@ -240,10 +245,10 @@ export default function FeeDefaultersPage() {
                 <Skeleton className="h-10 w-16 mt-2" />
               ) : (
                 <p className="text-3xl font-bold text-gray-900 mt-2">
-                  {defaulters.filter(d => d.daysOverdue > 60).length}
+                  {stats.criticalCount}
                 </p>
               )}
-              <p className="text-xs text-gray-400 mt-1">&gt; 60 days overdue (this page)</p>
+              <p className="text-xs text-gray-400 mt-1">&gt; 30 days overdue (Session-wide)</p>
             </div>
             <div className="w-12 h-12 bg-yellow-500 text-white rounded-xl flex items-center justify-center text-xl">
               🚨

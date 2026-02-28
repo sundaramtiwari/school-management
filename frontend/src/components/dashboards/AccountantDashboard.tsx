@@ -20,7 +20,7 @@ type Defaulter = {
   studentName: string;
   className: string;
   amountDue: number;
-  daysPending: number;
+  daysOverdue: number;
 };
 
 type AccountantStats = {
@@ -76,7 +76,7 @@ export default function AccountantDashboard() {
       });
 
       setRecentPayments(paymentsRes.data || []);
-      setTopDefaulters(defaultersRes.data || []);
+      setTopDefaulters(defaultersRes.data?.content || []);
 
     } catch (err) {
       console.error("Failed to load accountant dashboard", err);
@@ -368,7 +368,7 @@ export default function AccountantDashboard() {
                       <p className="font-bold text-gray-800">{defaulter.studentName}</p>
                       <p className="text-sm text-gray-600">{defaulter.className}</p>
                       <p className="text-xs text-red-600 mt-1">
-                        {defaulter.daysPending} days overdue
+                        {defaulter.daysOverdue} days overdue
                       </p>
                     </div>
                     <div className="text-right">

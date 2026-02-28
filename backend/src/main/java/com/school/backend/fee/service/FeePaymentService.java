@@ -158,7 +158,8 @@ public class FeePaymentService {
             BigDecimal lateFeeAllocation = lateFeeRequested.min(lateFeeDue);
             BigDecimal principalRemainder = principalRequested;
 
-            // Enforce late-fee-first policy using principal bucket when explicit late fee is lower.
+            // Enforce late-fee-first policy using principal bucket when explicit late fee
+            // is lower.
             BigDecimal lateFeeBalance = lateFeeDue.subtract(lateFeeAllocation);
             if (lateFeeBalance.compareTo(BigDecimal.ZERO) > 0) {
                 lateFeeAllocation = lateFeeAllocation.add(lateFeeBalance);
@@ -398,11 +399,20 @@ public class FeePaymentService {
         if (assignments == null || assignments.isEmpty()) {
             throw new InvalidOperationException("Session context is missing in request");
         }
-        Long assignmentSessionId = assignments.get(0).getSessionId();
-        if (assignmentSessionId == null) {
+
+        Long firstSessionId = assignments.get(0).getSessionId();
+        for (StudentFeeAssignment a : assignments) {
+            if (!Objects.equals(a.getSessionId(), firstSessionId)) {
+                throw new InvalidOperationException(
+                        "Consolidated payments across multiple sessions are not allowed. Found sessions: "
+                                + firstSessionId + " and " + a.getSessionId());
+            }
+        }
+
+        if (firstSessionId == null) {
             throw new InvalidOperationException("Session is missing on fee assignment");
         }
-        return assignmentSessionId;
+        return firstSessionId;
     }
 
     private static final class AssignmentAllocation {

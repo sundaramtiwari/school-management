@@ -47,4 +47,10 @@ public class FeeDefaulterController {
             @RequestParam(required = false) Integer minDaysOverdue) {
         return service.exportDefaulters(search, classId, minAmountDue, minDaysOverdue);
     }
+
+    @GetMapping("/stats")
+    @PreAuthorize("hasAnyRole('SCHOOL_ADMIN', 'ACCOUNTANT', 'SUPER_ADMIN', 'PLATFORM_ADMIN')")
+    public com.school.backend.fee.dto.DefaulterStatsDto getDefaulterStats() {
+        return service.getDefaulterStats();
+    }
 }

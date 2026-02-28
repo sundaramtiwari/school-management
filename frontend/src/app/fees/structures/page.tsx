@@ -434,8 +434,8 @@ export default function FeeStructuresPage() {
                                                 <button
                                                     onClick={() => toggleStructure(fs)}
                                                     className={`px-3 py-1 rounded-lg text-xs font-bold border ${fs.active
-                                                            ? "text-orange-700 border-orange-200 hover:bg-orange-50"
-                                                            : "text-green-700 border-green-200 hover:bg-green-50"
+                                                        ? "text-orange-700 border-orange-200 hover:bg-orange-50"
+                                                        : "text-green-700 border-green-200 hover:bg-green-50"
                                                         }`}
                                                 >
                                                     {fs.active ? "Deactivate" : "Activate"}
@@ -490,7 +490,7 @@ export default function FeeStructuresPage() {
                 <div className="space-y-5">
                     {!!editingStructure && (
                         <p className="text-[11px] text-amber-700 bg-amber-50 border border-amber-100 rounded-lg px-3 py-2">
-                            Changes affect future enrollments only. Existing dues remain unchanged.
+                            Edit Disclaimer: Changes only affect future assignments. Current session dues remain unchanged.
                         </p>
                     )}
                     <div>
@@ -702,8 +702,8 @@ export default function FeeStructuresPage() {
                                             <button
                                                 onClick={() => toggleFeeType(t)}
                                                 className={`text-[10px] px-2 py-1 rounded-md border font-bold ${t.active
-                                                        ? "border-orange-200 text-orange-700 hover:bg-orange-50"
-                                                        : "border-green-200 text-green-700 hover:bg-green-50"
+                                                    ? "border-orange-200 text-orange-700 hover:bg-orange-50"
+                                                    : "border-green-200 text-green-700 hover:bg-green-50"
                                                     }`}
                                             >
                                                 {t.active ? "Deactivate" : "Activate"}
