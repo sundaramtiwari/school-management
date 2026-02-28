@@ -446,17 +446,23 @@ function FeeCollectContent() {
                 <p className="text-gray-500 mt-1">Settle student dues and manage transactional records for <span className="text-blue-600 font-bold">{currentSession?.name || "current session"}</span>.</p>
             </header>
 
-            <div className="bg-white p-6 border rounded-2xl shadow-sm flex flex-wrap gap-6 items-end">
-                <div className="flex-1 min-w-[250px]">
-                    <label className="block text-xs font-bold uppercase text-gray-400 mb-2 ml-1">Class Registry</label>
-                    <select className="input-ref" value={selectedClass} onChange={onClassChange}>
+            <div className="p-3 border rounded-xl flex flex-wrap gap-4 items-center bg-gray-50/50">
+                <div className="flex-1 min-w-[200px]">
+                    <div className="flex items-center gap-2 mb-1.5 ml-1">
+                        <span className="w-1 h-1 bg-gray-300 rounded-full"></span>
+                        <label className="block text-[10px] font-black uppercase text-gray-400 tracking-wider">Class</label>
+                    </div>
+                    <select className="input-ref h-9 text-xs" value={selectedClass} onChange={onClassChange}>
                         <option value="">Select Billing Target Class</option>
                         {classes.map(c => <option key={c.id} value={c.id}>{c.name} {c.section}</option>)}
                     </select>
                 </div>
-                <div className="flex-1 min-w-[250px]">
-                    <label className="block text-xs font-bold uppercase text-gray-400 mb-2 ml-1">Student Account</label>
-                    <select className="input-ref" value={selectedStudent} onChange={onStudentChange} disabled={!selectedClass || loadingStudents}>
+                <div className="flex-1 min-w-[200px]">
+                    <div className="flex items-center gap-2 mb-1.5 ml-1">
+                        <span className="w-1 h-1 bg-gray-300 rounded-full"></span>
+                        <label className="block text-[10px] font-black uppercase text-gray-400 tracking-wider">Student</label>
+                    </div>
+                    <select className="input-ref h-9 text-xs" value={selectedStudent} onChange={onStudentChange} disabled={!selectedClass || loadingStudents}>
                         <option value="">{loadingStudents ? "Loading roster..." : "Select Student Account"}</option>
                         {students.map(s => <option key={s.id} value={s.id}>{s.firstName} {s.lastName} ({s.admissionNumber})</option>)}
                     </select>
@@ -464,57 +470,58 @@ function FeeCollectContent() {
             </div>
 
             {loading ? (
-                <div className="bg-white p-12 rounded-2xl border text-center text-gray-400 italic">
+                <div className="bg-white p-12 rounded-2xl border text-center text-gray-400 italic font-medium">
                     Syncing financial data with ledger...
                 </div>
             ) : (selectedStudent && summary) ? (
-                <div className="flex flex-col gap-6">
-                    {/* Single 3-col grid: left = controls stacked, right = tables stacked with no gap */}
-                    <div className="flex flex-col gap-6">
-                        {/* TOP SECTION: Snapshot Card + Post Payment Transaction (side-by-side on wide monitors) */}
-                        <div className="grid grid-cols-1 lg:grid-cols-2 gap-6 items-stretch">
-                            {/* Finance Position card */}
-                            <div className="bg-gray-900 text-white rounded-2xl p-8 shadow-2xl relative overflow-hidden flex flex-col justify-between">
-                                <div className="absolute top-0 right-0 p-4 opacity-10 text-6xl">₹</div>
+                <div className="space-y-6">
+                    {/* TOP SECTION: Grid for Finance Position + Post Payment */}
+                    <div className="grid grid-cols-1 lg:grid-cols-2 gap-6 items-stretch">
+                        {/* Finance Position card */}
+                        <div className="bg-gray-900 text-white rounded-2xl p-6 shadow-2xl relative overflow-hidden flex flex-col">
+                            {/* Accent Background Rupee Symbol - Re-integrated but subtle */}
+                            <div className="absolute -right-4 -top-4 text-9xl font-black text-white/5 pointer-events-none select-none">₹</div>
+
+                            <div className="flex-1 relative z-10">
+                                <h3 className="text-xs font-black uppercase tracking-widest text-emerald-400 mb-2">Finance Position</h3>
                                 <div>
-                                    <h3 className="text-xs font-black uppercase tracking-widest text-gray-400 mb-2">Finance Position</h3>
-                                    <p className="text-5xl font-black">₹ {remainingForSession.toLocaleString()}</p>
-                                    <p className="text-[10px] text-gray-400 font-bold uppercase mt-1">Total Remaining For Session</p>
+                                    <p className="text-5xl font-black tracking-tight">₹ {remainingForSession.toLocaleString()}</p>
+                                    <p className="text-[10px] text-gray-400 font-bold uppercase mt-1 tracking-widest">Total Remaining For Session</p>
                                 </div>
 
-                                <div className="mt-6 flex flex-col gap-2 text-[10px] font-bold uppercase tracking-tight border-t border-white/10 pt-4">
-                                    <div className="flex justify-between">
-                                        <span className="text-gray-400">Total Annual Principal:</span>
-                                        <span className="text-white">₹ {totalAnnual.toLocaleString()}</span>
+                                <div className="mt-8 flex flex-col gap-2.5 text-[11px] font-medium border-t border-white/10 pt-6">
+                                    <div className="flex justify-between items-center bg-white/5 p-2 rounded-lg border border-white/5">
+                                        <span className="text-gray-400 uppercase text-[9px] font-black tracking-widest">Annual Principal:</span>
+                                        <span className="text-white font-black">₹ {totalAnnual.toLocaleString()}</span>
                                     </div>
-                                    <div className="flex justify-between">
-                                        <span className="text-gray-400">Total Principal Paid:</span>
-                                        <span className="text-green-400">₹ {totalPaid.toLocaleString()}</span>
+                                    <div className="flex justify-between items-center px-2">
+                                        <span className="text-gray-400 uppercase text-[9px] font-black tracking-widest">Principal Paid:</span>
+                                        <span className="text-green-400 font-black">₹ {totalPaid.toLocaleString()}</span>
                                     </div>
-                                    <div className="flex justify-between">
-                                        <span className="text-gray-400">Accrued Till Today:</span>
-                                        <span className="text-blue-400">₹ {totalAccrued.toLocaleString()}</span>
+                                    <div className="flex justify-between items-center px-2">
+                                        <span className="text-gray-400 uppercase text-[9px] font-black tracking-widest">Accrued Till Today:</span>
+                                        <span className="text-blue-400 font-black">₹ {totalAccrued.toLocaleString()}</span>
                                     </div>
-                                    <div className="flex justify-between">
-                                        <span className="text-gray-400">Accrued Pending Now:</span>
+                                    <div className="flex justify-between items-center bg-red-500/10 p-2 rounded-lg border border-red-500/10">
+                                        <span className="text-gray-400 uppercase text-[9px] font-black tracking-widest">Pending Now:</span>
                                         <span className="text-red-400 font-black">₹ {accruedPending.toLocaleString()}</span>
                                     </div>
-                                    <div className="flex justify-between border-t border-white/5 pt-2 mt-1">
-                                        <span className="text-gray-400">Advance Paid:</span>
-                                        <span className="text-emerald-400">₹ {totalAdvance.toLocaleString()}</span>
+                                    <div className="flex justify-between items-center px-2 mt-1">
+                                        <span className="text-gray-400 uppercase text-[9px] font-black tracking-widest">Advance Paid:</span>
+                                        <span className="text-emerald-400 font-black">₹ {totalAdvance.toLocaleString()}</span>
                                     </div>
-                                    <div className="flex justify-between border-t border-white/5 pt-2 mt-1">
-                                        <span className="text-gray-400">Accrued Late Fees (O/S):</span>
-                                        <span className="text-orange-400">₹ {((summary.totalLateFeeAccrued ?? 0) - (summary.totalLateFeePaid ?? 0) - (summary.totalLateFeeWaived ?? 0)).toLocaleString()}</span>
+                                    <div className="flex justify-between items-center px-2">
+                                        <span className="text-gray-400 uppercase text-[9px] font-black tracking-widest">O/S Late Fees:</span>
+                                        <span className="text-orange-400 font-black">₹ {((summary.totalLateFeeAccrued ?? 0) - (summary.totalLateFeePaid ?? 0) - (summary.totalLateFeeWaived ?? 0)).toLocaleString()}</span>
                                     </div>
                                 </div>
                             </div>
 
-                            <div className="mt-8 pt-6 border-t border-white/10 space-y-4">
+                            <div className="mt-6 pt-4 border-t border-white/10 relative z-10">
                                 <button
                                     onClick={downloadChallan}
                                     disabled={isDownloading}
-                                    className="w-full bg-white/10 hover:bg-white/20 text-white py-3 rounded-xl font-bold transition-all flex items-center justify-center gap-2 border border-white/5 disabled:opacity-50"
+                                    className="w-full bg-white/10 hover:bg-white/20 text-white py-3 rounded-xl font-bold transition-all flex items-center justify-center gap-2 border border-white/5 disabled:opacity-50 text-[10px] uppercase tracking-widest"
                                 >
                                     {isDownloading ? "⏳ Generating..." : "📄 Generate Academic Challan"}
                                 </button>
@@ -522,22 +529,23 @@ function FeeCollectContent() {
                         </div>
 
                         {/* Post Payment Transaction form */}
-                        <div className="bg-white border rounded-2xl p-8 shadow-sm space-y-5 flex flex-col justify-between">
-                            <h3 className="font-black text-gray-800 border-b pb-4 text-xs uppercase tracking-widest">Post Payment Transaction</h3>
-                            <div className="grid grid-cols-1 md:grid-cols-2 gap-6 items-start">
-                                <div className="space-y-4">
+                        <div className="bg-white border rounded-2xl p-5 shadow-sm space-y-3.5 flex flex-col">
+                            <h3 className="font-black text-gray-800 border-b pb-2.5 text-[10px] uppercase tracking-widest">Post Payment Transaction</h3>
+                            <div className="flex-1 space-y-4">
+                                {/* Row 1: Amount + Channel */}
+                                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                                     <div>
                                         <label className="block text-[10px] font-black uppercase text-gray-400 mb-1 ml-1">Total Collection Amount</label>
                                         <div className="relative">
                                             <span className="absolute left-4 top-1/2 -translate-y-1/2 font-bold text-gray-400">₹</span>
-                                            <div className="input-ref pl-10 text-xl font-black bg-gray-50 flex items-center">
+                                            <div className="input-ref pl-10 text-lg font-black bg-gray-50 flex items-center h-10">
                                                 {calculateTotalAllocated().toLocaleString(undefined, { minimumFractionDigits: 2 })}
                                             </div>
                                         </div>
                                     </div>
                                     <div>
                                         <label className="block text-[10px] font-black uppercase text-gray-400 mb-1 ml-1">Payment Channel</label>
-                                        <select className="input-ref font-bold" value={paymentMode} onChange={e => setPaymentMode(e.target.value)}>
+                                        <select className="input-ref font-bold h-10 text-xs" value={paymentMode} onChange={e => setPaymentMode(e.target.value)}>
                                             <option value="CASH">Liquid Cash</option>
                                             <option value="ONLINE">Digital/UPI</option>
                                             <option value="BANK_TRANSFER">Bank Transfer</option>
@@ -545,29 +553,30 @@ function FeeCollectContent() {
                                         </select>
                                     </div>
                                 </div>
-                                <div className="space-y-4">
-                                    <div>
-                                        <label className="block text-[10px] font-black uppercase text-gray-400 mb-1 ml-1">Internal Remarks</label>
-                                        <textarea
-                                            placeholder="Reference or narration..."
-                                            className="input-ref h-[106px] text-sm"
-                                            value={remarks}
-                                            onChange={e => setRemarks(e.target.value)}
-                                        />
-                                    </div>
+
+                                {/* Row 2: Remarks */}
+                                <div>
+                                    <label className="block text-[10px] font-black uppercase text-gray-400 mb-1 ml-1">Internal Remarks</label>
+                                    <textarea
+                                        placeholder="Reference or narration..."
+                                        className="input-ref text-xs min-h-[48px] py-2"
+                                        value={remarks}
+                                        onChange={e => setRemarks(e.target.value)}
+                                    />
                                 </div>
                             </div>
-                            <div className="pt-4 border-t mt-4">
+
+                            <div className="pt-2.5 border-t mt-1.5">
                                 {canUserCollectFees ? (
                                     <button
                                         onClick={makePayment}
                                         disabled={calculateTotalAllocated() <= 0 || isProcessing}
-                                        className="w-full bg-green-600 hover:bg-green-700 text-white py-4 rounded-xl font-black shadow-lg shadow-green-200 transition-all disabled:opacity-50 uppercase text-xs tracking-widest"
+                                        className="w-full bg-green-600 hover:bg-green-700 text-white py-2.5 rounded-xl font-black shadow-lg shadow-green-200 transition-all disabled:opacity-50 uppercase text-[10px] tracking-widest"
                                     >
                                         {isProcessing ? "Transacting..." : "Commit Transaction"}
                                     </button>
                                 ) : (
-                                    <div className="p-4 bg-red-50 text-red-600 rounded-xl text-xs font-bold text-center border border-red-100">
+                                    <div className="p-3 bg-red-50 text-red-600 rounded-xl text-[10px] font-bold text-center border border-red-100">
                                         You do not have permission to collect fees.
                                     </div>
                                 )}
@@ -575,15 +584,13 @@ function FeeCollectContent() {
                         </div>
                     </div>
 
-                    {/* BOTTOM SECTION: Fee Breakdown + Transaction Audit Log (Stacked beneath) */}
-                    <div className="flex flex-col">
-
-                        {/* Fee Breakdown — top half of right column */}
-                        <div className="bg-white border border-b-0 rounded-t-2xl overflow-hidden shadow-sm">
-                            <div className="p-6 border-b border-gray-100 flex items-center justify-between bg-gray-50/50">
+                    <div className="space-y-12">
+                        {/* Fee Breakdown — Spans Whole Row */}
+                        <div className="bg-white border rounded-2xl shadow-sm overflow-visible">
+                            <div className="p-6 border-b border-gray-100 flex items-center justify-between bg-gray-50/50 rounded-t-2xl">
                                 <h3 className="text-xs font-black uppercase tracking-widest text-gray-500">Fee Breakdown</h3>
                             </div>
-                            <div className="p-6 overflow-x-auto">
+                            <div className="p-6 overflow-x-auto pb-24">
                                 <div className="min-w-fit">
                                     <table className="w-full text-left text-[11px]">
                                         <thead className="text-gray-400 font-bold uppercase border-b">
@@ -804,8 +811,8 @@ function FeeCollectContent() {
                             </div>
                         </div>
 
-                        {/* Transaction Audit Log — directly below fee breakdown, no gap */}
-                        <div className="bg-white border rounded-b-2xl shadow-sm overflow-hidden">
+                        {/* Transaction Audit Log — follow fee breakdown with generous gap */}
+                        <div className="bg-white border rounded-2xl shadow-sm overflow-hidden">
                             <div className="p-6 border-b font-black text-xs uppercase tracking-widest text-gray-400 bg-gray-50/50">Transaction Audit Log</div>
                             <div className="overflow-auto">
                                 <table className="w-full text-sm">
@@ -856,7 +863,7 @@ function FeeCollectContent() {
                         </div>
 
                     </div>
-                </div>
+                </div >
             ) : (
                 <div className="p-32 text-center bg-gray-50 rounded-3xl border border-dashed border-gray-300 text-gray-400 italic">
                     <div className="max-w-xs mx-auto space-y-4">
@@ -868,7 +875,8 @@ function FeeCollectContent() {
                         </div>
                     </div>
                 </div>
-            )}
+            )
+            }
 
             {/* Discount Modal */}
             <Modal
@@ -1008,6 +1016,6 @@ function FeeCollectContent() {
                     </div>
                 </div>
             </Modal>
-        </div>
+        </div >
     );
 }

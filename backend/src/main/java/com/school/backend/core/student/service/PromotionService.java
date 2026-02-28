@@ -16,6 +16,7 @@ import com.school.backend.school.repository.AcademicSessionRepository;
 import com.school.backend.testmanagement.repository.ExamRepository;
 import com.school.backend.user.security.SecurityUtil;
 import lombok.RequiredArgsConstructor;
+import org.jspecify.annotations.NonNull;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -38,7 +39,7 @@ public class PromotionService {
     private final ExamRepository examRepository;
 
     @Transactional
-    public List<PromotionRecord> promoteStudents(PromotionRequest request) {
+    public List<PromotionRecord> promoteStudents(@NonNull PromotionRequest request) {
         if (request.getStudentIds() == null || request.getStudentIds().isEmpty()) {
             throw new IllegalArgumentException("studentIds must not be empty");
         }
@@ -73,12 +74,12 @@ public class PromotionService {
     }
 
     private PromotionRecord processSingleStudent(Long studentId,
-            PromotionRequest request,
-            SchoolClass targetClass,
-            LocalDate today,
-            LocalDateTime now,
-            String promotedBy,
-            AdmissionType admissionType) {
+                                                 PromotionRequest request,
+                                                 SchoolClass targetClass,
+                                                 LocalDate today,
+                                                 LocalDateTime now,
+                                                 String promotedBy,
+                                                 AdmissionType admissionType) {
         if (!studentRepository.existsById(studentId)) {
             throw new ResourceNotFoundException("Student not found: " + studentId);
         }

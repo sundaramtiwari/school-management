@@ -51,13 +51,20 @@ export function SessionProvider({ children }: { children: React.ReactNode }) {
       const fetchedSessions = sessionsRes.data;
       setSessions(fetchedSessions);
 
-      // STRICT: Determine active session from list (isActive flag)
-      const activeSession = fetchedSessions.find(s => s.active);
-      if (activeSession) {
-        setCurrentSessionState(activeSession);
-      } else {
-        setCurrentSessionState(null);
+      // 1. Check if user has a preference in localStorage
+      const preferredSessionId = localStorage.getItem("sessionId");
+
+      let selected: AcademicSession | null = null;
+      if (preferredSessionId) {
+        selected = fetchedSessions.find(s => s.id.toString() === preferredSessionId) || null;
       }
+
+      // 2. Fallback to the global active session if no preference or preferred not found
+      if (!selected) {
+        selected = fetchedSessions.find(s => s.active) || null;
+      }
+
+      setCurrentSessionState(selected);
 
     } catch (error) {
       console.error("Failed to fetch sessions", error);
@@ -118,13 +125,8 @@ export function SessionProvider({ children }: { children: React.ReactNode }) {
 
   // Axios interceptor to inject X-Session-Id header
   useEffect(() => {
-    if (currentSessionId) {
-      localStorage.setItem("sessionId", currentSessionId.toString());
-    } else {
-      localStorage.removeItem("sessionId");
-    }
-
     const interceptor = api.interceptors.request.use((config) => {
+      // Prioritize the actual state (per-user)
       if (currentSessionId) {
         config.headers["X-Session-Id"] = currentSessionId.toString();
       }

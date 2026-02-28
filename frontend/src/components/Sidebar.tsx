@@ -47,7 +47,7 @@ const menu = [
       { name: "Fee Defaulters", path: "/fees/defaulters", icon: "⚠️", roles: ["SUPER_ADMIN", "SCHOOL_ADMIN", "ACCOUNTANT"] },
       { name: "Expenses", path: "/finance/expenses", icon: "💸", roles: ["SUPER_ADMIN", "SCHOOL_ADMIN", "ACCOUNTANT"] },
       { name: "Expense Heads", path: "/finance/expense-heads", icon: "🏷️", roles: ["SUPER_ADMIN", "SCHOOL_ADMIN", "ACCOUNTANT"] },
-      { name: "Transfer Cash to Bank", path: "/finance/daily-cash", icon: "💹", roles: ["SUPER_ADMIN", "SCHOOL_ADMIN", "ACCOUNTANT"] },
+      { name: "Daily Cash", path: "/finance/daily-cash", icon: "💹", roles: ["SUPER_ADMIN", "SCHOOL_ADMIN", "ACCOUNTANT"] },
       { name: "Monthly P&L", path: "/finance/monthly-pl", icon: "📈", roles: ["SUPER_ADMIN", "SCHOOL_ADMIN", "ACCOUNTANT"] },
       { name: "Session P&L", path: "/finance/session-pl", icon: "🏦", roles: ["SUPER_ADMIN", "SCHOOL_ADMIN", "ACCOUNTANT"] },
     ]

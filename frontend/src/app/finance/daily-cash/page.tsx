@@ -189,7 +189,7 @@ export default function DailyCashPage() {
                                         disabled={summary?.closed}
                                         className="w-full text-left px-4 py-2.5 text-sm text-gray-700 hover:bg-gray-50 flex items-center gap-3 disabled:opacity-40 disabled:grayscale transition-colors"
                                     >
-                                        <span className="text-base">📥</span> Record Cash Deposit
+                                        <span className="text-base">📥</span> Transfer Cash to Bank
                                     </button>
 
                                     {!summary?.closed ? (

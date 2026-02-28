@@ -2,6 +2,7 @@ package com.school.backend.user.service;
 
 import com.school.backend.common.enums.UserRole;
 import com.school.backend.common.exception.ResourceNotFoundException;
+import com.school.backend.common.tenant.SessionContext;
 import com.school.backend.common.tenant.TenantContext;
 import com.school.backend.core.classsubject.service.ClassSubjectService;
 import com.school.backend.core.teacher.repository.TeacherRepository;
@@ -96,6 +97,9 @@ public class UserService {
                         if (user.getSchool() != null) {
                             schoolRepository.findById(user.getSchool().getId()).ifPresent(s -> {
                                 Long currentSessionId = s.getCurrentSessionId();
+                                if (currentSessionId == null) {
+                                    currentSessionId = SessionContext.getSessionId();
+                                }
                                 if (currentSessionId != null) {
                                     classSubjectService.deactivateAllForTeacherInSession(teacher.getId(),
                                             currentSessionId);
