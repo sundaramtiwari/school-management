@@ -48,7 +48,8 @@ public class PromotionService {
         }
 
         SchoolClass targetClass = schoolClassRepository.findById(request.getTargetClassId())
-                .orElseThrow(() -> new ResourceNotFoundException("Target class not found: " + request.getTargetClassId()));
+                .orElseThrow(
+                        () -> new ResourceNotFoundException("Target class not found: " + request.getTargetClassId()));
 
         if (!request.getTargetSessionId().equals(targetClass.getSessionId())) {
             throw new InvalidOperationException("targetClass must belong to targetSession");
@@ -72,19 +73,21 @@ public class PromotionService {
     }
 
     private PromotionRecord processSingleStudent(Long studentId,
-                                                 PromotionRequest request,
-                                                 SchoolClass targetClass,
-                                                 LocalDate today,
-                                                 LocalDateTime now,
-                                                 String promotedBy,
-                                                 AdmissionType admissionType) {
+            PromotionRequest request,
+            SchoolClass targetClass,
+            LocalDate today,
+            LocalDateTime now,
+            String promotedBy,
+            AdmissionType admissionType) {
         if (!studentRepository.existsById(studentId)) {
             throw new ResourceNotFoundException("Student not found: " + studentId);
         }
 
-        List<StudentEnrollment> activeEnrollments = studentEnrollmentRepository.findActiveByStudentIdForUpdate(studentId);
+        List<StudentEnrollment> activeEnrollments = studentEnrollmentRepository
+                .findActiveByStudentIdForUpdate(studentId);
         if (activeEnrollments.size() != 1) {
-            throw new InvalidOperationException("Student must have exactly one active enrollment: " + studentId);
+            throw new InvalidOperationException(
+                    "Student must have exactly one active enrollment. Please verify the student's enrollment status.");
         }
 
         StudentEnrollment currentEnrollment = activeEnrollments.get(0);
@@ -99,7 +102,7 @@ public class PromotionService {
                 currentEnrollment.getSessionId(), currentEnrollment.getClassId());
         if (nonLockedExamCount > 0) {
             throw new InvalidOperationException(
-                    "All exams must be LOCKED for source session/class before promotion. studentId=" + studentId);
+                    "All exams must be LOCKED for the current session/class before a student can be promoted. Please lock all exams first.");
         }
 
         currentEnrollment.setActive(false);

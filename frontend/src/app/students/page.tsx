@@ -66,6 +66,7 @@ type LedgerEntry = {
   active?: boolean;
   totalAssigned: number | string;
   totalDiscount: number | string;
+  totalLateFee: number | string;
   totalPaid: number | string;
   totalPending: number | string;
 };
@@ -138,6 +139,7 @@ export default function StudentsPage() {
   const [loadingProfile, setLoadingProfile] = useState(false);
   const [withdrawStudent, setWithdrawStudent] = useState<Student | null>(null);
   const [isEditing, setIsEditing] = useState(false);
+  const [profileTab, setProfileTab] = useState<"overview" | "ledger" | "enrollments" | "promotions">("overview");
   const [ledgerLoading, setLedgerLoading] = useState(false);
   const [ledgerData, setLedgerData] = useState<LedgerEntry[]>([]);
 
@@ -1202,6 +1204,12 @@ export default function StudentsPage() {
                 className={`px-3 py-1.5 rounded-md text-base font-medium ${profileTab === "enrollments" ? "bg-blue-600 text-white hover:bg-blue-700" : "bg-white border border-gray-300 text-gray-700 hover:bg-gray-50"}`}
               >
                 Enrollments
+              </button>
+              <button
+                onClick={() => setProfileTab("promotions")}
+                className={`px-3 py-1.5 rounded-md text-base font-medium ${profileTab === "promotions" ? "bg-blue-600 text-white hover:bg-blue-700" : "bg-white border border-gray-300 text-gray-700 hover:bg-gray-50"}`}
+              >
+                Promotions
               </button>
             </div>
             {canUserEditStudent && profileStudent && (

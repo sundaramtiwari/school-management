@@ -2,7 +2,7 @@
 
 import { useCallback, useEffect, useMemo, useState } from "react";
 import Modal from "@/components/ui/Modal";
-import { api } from "@/lib/api";
+import { api, extractApiError } from "@/lib/api";
 import { useToast } from "@/components/ui/Toast";
 
 type Student = {
@@ -158,8 +158,8 @@ export default function PromotionModal({
       showToast("Students promoted successfully", "success");
       onSuccess();
       setResults(response.data);
-    } catch {
-      showToast("Failed to promote students", "error");
+    } catch (err) {
+      showToast(extractApiError(err, "Failed to promote students"), "error");
     } finally {
       setLoading(false);
     }

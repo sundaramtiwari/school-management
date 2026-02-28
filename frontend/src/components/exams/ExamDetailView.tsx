@@ -4,7 +4,7 @@ import { useCallback, useEffect, useMemo, useState } from "react";
 import { examApi } from "@/lib/examApi";
 import { studentApi } from "@/lib/studentApi";
 import { classSubjectApi } from "@/lib/classSubjectApi";
-import { api } from "@/lib/api";
+import { api, extractApiError } from "@/lib/api";
 import { useToast } from "@/components/ui/Toast";
 import Modal from "@/components/ui/Modal";
 import MarksheetMVP from "./MarksheetMVP";
@@ -153,8 +153,8 @@ export default function ExamDetailView({ exam: initialExam, classId, onClose }: 
             showToast("Subject added successfully", "success");
             setShowAddSubject(false);
             void loadSubjects();
-        } catch {
-            showToast("Failed to add subject", "error");
+        } catch (err) {
+            showToast(extractApiError(err, "Failed to add subject"), "error");
         }
     }
 
@@ -177,8 +177,8 @@ export default function ExamDetailView({ exam: initialExam, classId, onClose }: 
                 showToast(`Marks saved successfully (${data.savedCount} entries)`, "success");
             }
             void loadExistingMarks();
-        } catch {
-            showToast("Failed to save marks", "error");
+        } catch (err) {
+            showToast(extractApiError(err, "Failed to save marks"), "error");
         } finally {
             setIsSavingMarks(false);
         }
@@ -190,11 +190,8 @@ export default function ExamDetailView({ exam: initialExam, classId, onClose }: 
             setExam(res.data);
             setConfirmAction(null);
             showToast("Exam published successfully!", "success");
-        } catch (e: unknown) {
-            const msg = typeof e === "object" && e !== null && "message" in e
-                ? String((e as { message?: string }).message || "Failed to publish exam")
-                : "Failed to publish exam";
-            showToast(msg, "error");
+        } catch (err) {
+            showToast(extractApiError(err, "Failed to publish exam"), "error");
         }
     }
 
@@ -204,11 +201,8 @@ export default function ExamDetailView({ exam: initialExam, classId, onClose }: 
             setExam(res.data);
             setConfirmAction(null);
             showToast("Exam locked successfully!", "success");
-        } catch (e: unknown) {
-            const msg = typeof e === "object" && e !== null && "message" in e
-                ? String((e as { message?: string }).message || "Failed to lock exam")
-                : "Failed to lock exam";
-            showToast(msg, "error");
+        } catch (err) {
+            showToast(extractApiError(err, "Failed to lock exam"), "error");
         }
     }
 

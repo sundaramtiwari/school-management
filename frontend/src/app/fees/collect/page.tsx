@@ -2,7 +2,7 @@
 
 import React, { useCallback, useEffect, useState, type ChangeEvent, Suspense } from "react";
 import { useSearchParams } from "next/navigation";
-import { api } from "@/lib/api";
+import { api, extractApiError } from "@/lib/api";
 import { canCollectFees, canManageFees } from "@/lib/permissions";
 import { useToast } from "@/components/ui/Toast";
 import { useSession } from "@/context/SessionContext";
@@ -57,23 +57,6 @@ type DiscountDefinition = {
     active: boolean;
 };
 
-function extractApiErrorMessage(error: unknown): string | null {
-    if (
-        typeof error === "object"
-        && error !== null
-        && "response" in error
-        && typeof (error as { response?: unknown }).response === "object"
-        && (error as { response?: unknown }).response !== null
-        && "data" in ((error as { response: { data?: unknown } }).response)
-        && typeof ((error as { response: { data?: unknown } }).response.data) === "object"
-        && ((error as { response: { data?: unknown } }).response.data) !== null
-        && "message" in (((error as { response: { data: { message?: unknown } } }).response.data))
-        && typeof ((error as { response: { data: { message?: unknown } } }).response.data.message) === "string"
-    ) {
-        return (error as { response: { data: { message: string } } }).response.data.message;
-    }
-    return null;
-}
 
 export default function FeeCollectPage() {
     return (
@@ -294,7 +277,7 @@ function FeeCollectContent() {
             setAllocations({});
             loadStudentData(Number(selectedStudent));
         } catch (e: unknown) {
-            const message = extractApiErrorMessage(e) || "Processing failed";
+            const message = extractApiError(e, "Processing failed");
             showToast(message, "error");
         } finally {
             setIsProcessing(false);
@@ -392,7 +375,7 @@ function FeeCollectContent() {
                 });
             }
         } catch (e: unknown) {
-            showToast(extractApiErrorMessage(e) || "Failed to apply discount", "error");
+            showToast(extractApiError(e, "Failed to apply discount"), "error");
         } finally {
             setIsApplyingDiscount(false);
         }
@@ -443,7 +426,7 @@ function FeeCollectContent() {
             }
             showToast("Late fee waived successfully", "success");
         } catch (e: unknown) {
-            showToast(extractApiErrorMessage(e) || "Failed to apply late fee waiver", "error");
+            showToast(extractApiError(e, "Failed to apply late fee waiver"), "error");
         } finally {
             setIsApplyingWaiver(false);
         }

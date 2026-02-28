@@ -1,7 +1,7 @@
 "use client";
 
 import { useCallback, useEffect, useState, type ChangeEvent, type FormEvent } from "react";
-import { api } from "@/lib/api";
+import { api, extractApiError } from "@/lib/api";
 import { useAuth } from "@/context/AuthContext";
 import { useSession } from "@/context/SessionContext";
 import { useToast } from "@/components/ui/Toast";
@@ -141,10 +141,7 @@ export default function TeacherAssignmentsPage() {
       setForm({ teacherId: "", classId: "", subjectId: "" });
       loadSessionData();
     } catch (err: unknown) {
-      const msg = err && typeof err === "object" && "response" in err
-        ? String((err as { response?: { data?: { message?: string } } }).response?.data?.message || "Request failed")
-        : "Request failed";
-      showToast(msg, "error");
+      showToast(extractApiError(err, "Request failed"), "error");
     } finally {
       setIsSubmitting(false);
     }
@@ -155,8 +152,8 @@ export default function TeacherAssignmentsPage() {
       await api.delete(`/api/class-subjects/assignments/${id}`);
       showToast("Assignment deactivated", "success");
       loadSessionData();
-    } catch {
-      showToast("Failed to deactivate assignment", "error");
+    } catch (err) {
+      showToast(extractApiError(err, "Failed to deactivate assignment"), "error");
     }
   }
 

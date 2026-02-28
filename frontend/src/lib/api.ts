@@ -50,3 +50,36 @@ api.interceptors.response.use(
   }
 );
 
+/**
+ * Extracts a user-friendly error message from an API error.
+ *
+ * - For 4xx errors: returns the backend's `message` field, which contains
+ *   the business-level reason (e.g. "All exams must be LOCKED before promotion").
+ * - For 5xx / network errors: returns the provided `fallback` string so that
+ *   internal details never leak to the UI.
+ *
+ * Usage:
+ *   } catch (err) {
+ *     showToast(extractApiError(err, "Failed to promote students"), "error");
+ *   }
+ */
+export function extractApiError(error: unknown, fallback: string): string {
+  if (
+    error &&
+    typeof error === "object" &&
+    "response" in error
+  ) {
+    const axiosError = error as { response?: { status?: number; data?: { message?: string } } };
+    const status = axiosError.response?.status ?? 0;
+    const message = axiosError.response?.data?.message;
+
+    // Only surface backend messages for client errors (4xx).
+    // 5xx responses may carry internal details — use the fallback instead.
+    if (status >= 400 && status < 500 && message && typeof message === "string") {
+      return message;
+    }
+  }
+  return fallback;
+}
+
+
