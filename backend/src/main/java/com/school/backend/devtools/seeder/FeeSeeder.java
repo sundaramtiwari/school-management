@@ -12,10 +12,7 @@ import com.school.backend.fee.entity.FeeType;
 import com.school.backend.fee.entity.LateFeeLog;
 import com.school.backend.fee.entity.LateFeePolicy;
 import com.school.backend.fee.entity.StudentFeeAssignment;
-import com.school.backend.fee.entity.StudentFundingArrangement;
 import com.school.backend.common.enums.FeeFrequency;
-import com.school.backend.common.enums.FundingCoverageMode;
-import com.school.backend.common.enums.FundingCoverageType;
 import com.school.backend.common.enums.LateFeeCapType;
 import com.school.backend.common.enums.LateFeeType;
 import com.school.backend.fee.repository.FeePaymentRepository;
@@ -26,7 +23,6 @@ import com.school.backend.fee.repository.FeeAdjustmentRepository;
 import com.school.backend.fee.repository.LateFeeLogRepository;
 import com.school.backend.fee.repository.LateFeePolicyRepository;
 import com.school.backend.fee.repository.StudentFeeAssignmentRepository;
-import com.school.backend.fee.repository.StudentFundingArrangementRepository;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Component;
 import org.springframework.transaction.annotation.Transactional;
@@ -48,7 +44,6 @@ public class FeeSeeder {
     private final FeeStructureRepository feeStructureRepository;
     private final LateFeePolicyRepository lateFeePolicyRepository;
     private final StudentFeeAssignmentRepository studentFeeAssignmentRepository;
-    private final StudentFundingArrangementRepository studentFundingArrangementRepository;
     private final DiscountDefinitionRepository discountDefinitionRepository;
     private final FeeAdjustmentRepository feeAdjustmentRepository;
     private final FeePaymentRepository feePaymentRepository;
@@ -60,8 +55,7 @@ public class FeeSeeder {
             SessionSeeder.Result sessionResult,
             ClassSubjectSeeder.Result classSubjectResult,
             StudentSeeder.Result studentResult,
-            TransportSeeder.Result transportResult
-    ) {
+            TransportSeeder.Result transportResult) {
         List<FeeType> feeTypesToSave = new ArrayList<>();
         for (Long schoolId : classSubjectResult.classesBySchool().keySet()) {
             feeTypesToSave.add(feeType(schoolId, "Tuition"));
@@ -95,7 +89,8 @@ public class FeeSeeder {
                         .active(true)
                         .build();
                 feeStructuresToSave.add(tuition);
-                structureByClassSessionType.put(key(schoolClass.getId(), schoolClass.getSessionId(), "Tuition"), tuition);
+                structureByClassSessionType.put(key(schoolClass.getId(), schoolClass.getSessionId(), "Tuition"),
+                        tuition);
 
                 FeeStructure exam = FeeStructure.builder()
                         .schoolId(schoolId)
@@ -126,17 +121,16 @@ public class FeeSeeder {
                             .capType(LateFeeCapType.PERCENTAGE)
                             .capValue(BigDecimal.valueOf(20).setScale(2, RoundingMode.HALF_UP))
                             .active(true)
-                            .build()
-            );
+                            .build());
         }
         lateFeePolicyRepository.saveAll(policies);
 
-        List<StudentFundingArrangement> fundingArrangementsToSave = new ArrayList<>();
         List<StudentFeeAssignment> assignmentsToSave = new ArrayList<>();
         List<FeePayment> paymentsToSave = new ArrayList<>();
 
         Map<Long, SessionSeeder.SessionTriplet> sessionsBySchool = sessionResult.sessionsBySchool();
-        Map<Long, Map<Long, List<StudentEnrollment>>> enrollmentsBySchoolAndSession = studentResult.enrollmentsBySchoolAndSession();
+        Map<Long, Map<Long, List<StudentEnrollment>>> enrollmentsBySchoolAndSession = studentResult
+                .enrollmentsBySchoolAndSession();
 
         for (Map.Entry<Long, List<Student>> entry : studentResult.studentsBySchool().entrySet()) {
             Long schoolId = entry.getKey();
@@ -144,27 +138,27 @@ public class FeeSeeder {
             SessionSeeder.SessionTriplet sessions = sessionsBySchool.get(schoolId);
 
             Map<String, StudentBucket> bucketByStudentId = buildBuckets(students);
-            Map<String, StudentFundingArrangement> fundingArrangementByStudentSession = new LinkedHashMap<>();
-
             for (StudentEnrollment enrollment : findEnrollmentsForSchool(enrollmentsBySchoolAndSession, schoolId)) {
-                StudentBucket bucket = bucketByStudentId.getOrDefault(String.valueOf(enrollment.getStudentId()), StudentBucket.FULLY_PAID);
+                StudentBucket bucket = bucketByStudentId.getOrDefault(String.valueOf(enrollment.getStudentId()),
+                        StudentBucket.FULLY_PAID);
                 String classSessionPrefix = key(enrollment.getClassId(), enrollment.getSessionId(), "");
 
                 FeeStructure tuition = structureByClassSessionType.get(classSessionPrefix + "Tuition");
                 FeeStructure exam = structureByClassSessionType.get(classSessionPrefix + "Exam");
                 if (tuition != null) {
-                    assignmentsToSave.add(buildAssignment(tuition, enrollment, sessions, bucket, fundingArrangementByStudentSession, fundingArrangementsToSave));
-                    maybeAddPayment(random, enrollment, assignmentsToSave.get(assignmentsToSave.size() - 1), paymentsToSave);
+                    assignmentsToSave.add(buildAssignment(tuition, enrollment, sessions, bucket));
+                    maybeAddPayment(random, enrollment, assignmentsToSave.get(assignmentsToSave.size() - 1),
+                            paymentsToSave);
                 }
                 if (exam != null) {
-                    assignmentsToSave.add(buildAssignment(exam, enrollment, sessions, bucket, fundingArrangementByStudentSession, fundingArrangementsToSave));
-                    maybeAddPayment(random, enrollment, assignmentsToSave.get(assignmentsToSave.size() - 1), paymentsToSave);
+                    assignmentsToSave.add(buildAssignment(exam, enrollment, sessions, bucket));
+                    maybeAddPayment(random, enrollment, assignmentsToSave.get(assignmentsToSave.size() - 1),
+                            paymentsToSave);
                 }
 
             }
         }
 
-        BatchSaveUtil.saveInBatches(fundingArrangementsToSave, 1_000, studentFundingArrangementRepository::saveAll);
         BatchSaveUtil.saveInBatches(assignmentsToSave, 1_000, studentFeeAssignmentRepository::saveAll);
         seedDiscountExamples(assignmentsToSave, classSubjectResult.classesBySchool().keySet());
         List<LateFeeLog> lateFeeLogsToSave = buildLateFeeLogs(assignmentsToSave);
@@ -212,7 +206,6 @@ public class FeeSeeder {
 
             BigDecimal principalDue = assignment.getAmount()
                     .subtract(assignment.getPrincipalPaid())
-                    .subtract(assignment.getSponsorCoveredAmount())
                     .subtract(assignment.getTotalDiscountAmount());
             if (principalDue.compareTo(BigDecimal.valueOf(100)) <= 0) {
                 continue;
@@ -294,8 +287,6 @@ public class FeeSeeder {
         int fullPaidCutoff = (int) Math.round(total * 0.40);
         int partialPaidCutoff = fullPaidCutoff + (int) Math.round(total * 0.25);
         int overdueCutoff = partialPaidCutoff + (int) Math.round(total * 0.15);
-        int partialSponsorshipCutoff = overdueCutoff + (int) Math.round(total * 0.10);
-        int fullSponsorshipCutoff = partialSponsorshipCutoff + (int) Math.round(total * 0.05);
 
         for (int i = 0; i < students.size(); i++) {
             StudentBucket bucket;
@@ -305,10 +296,6 @@ public class FeeSeeder {
                 bucket = StudentBucket.PARTIAL_PAID;
             } else if (i < overdueCutoff) {
                 bucket = StudentBucket.OVERDUE_WITH_LATE_FEE;
-            } else if (i < partialSponsorshipCutoff) {
-                bucket = StudentBucket.PARTIAL_SPONSORSHIP;
-            } else if (i < fullSponsorshipCutoff) {
-                bucket = StudentBucket.FULL_SPONSORSHIP;
             } else {
                 bucket = StudentBucket.MULTI_SESSION_DEFAULTER;
             }
@@ -319,8 +306,7 @@ public class FeeSeeder {
 
     private List<StudentEnrollment> findEnrollmentsForSchool(
             Map<Long, Map<Long, List<StudentEnrollment>>> enrollmentsBySchoolAndSession,
-            Long schoolId
-    ) {
+            Long schoolId) {
         List<StudentEnrollment> result = new ArrayList<>();
         Map<Long, List<StudentEnrollment>> bySession = enrollmentsBySchoolAndSession.getOrDefault(schoolId, Map.of());
         for (List<StudentEnrollment> sessionEnrollments : bySession.values()) {
@@ -333,46 +319,18 @@ public class FeeSeeder {
             FeeStructure structure,
             StudentEnrollment enrollment,
             SessionSeeder.SessionTriplet sessions,
-            StudentBucket bucket,
-            Map<String, StudentFundingArrangement> fundingArrangementByStudentSession,
-            List<StudentFundingArrangement> fundingArrangementsToSave
-    ) {
+            StudentBucket bucket) {
         BigDecimal amount = structure.getAmount().setScale(2, RoundingMode.HALF_UP);
-        BigDecimal sponsorCovered = BigDecimal.ZERO.setScale(2, RoundingMode.HALF_UP);
         BigDecimal principalPaid = BigDecimal.ZERO.setScale(2, RoundingMode.HALF_UP);
         BigDecimal lateFeeAccrued = BigDecimal.ZERO.setScale(2, RoundingMode.HALF_UP);
         boolean lateFeeApplied = false;
 
-        if (bucket == StudentBucket.PARTIAL_SPONSORSHIP || bucket == StudentBucket.FULL_SPONSORSHIP) {
-            BigDecimal coverage = bucket == StudentBucket.FULL_SPONSORSHIP
-                    ? BigDecimal.valueOf(100)
-                    : BigDecimal.valueOf(50);
-            sponsorCovered = amount.multiply(coverage).divide(BigDecimal.valueOf(100), 2, RoundingMode.HALF_UP);
-            String fundingKey = enrollment.getStudentId() + "::" + enrollment.getSessionId();
-            if (!fundingArrangementByStudentSession.containsKey(fundingKey)) {
-                StudentFundingArrangement arrangement = StudentFundingArrangement.builder()
-                        .schoolId(enrollment.getSchoolId())
-                        .studentId(enrollment.getStudentId())
-                        .sessionId(enrollment.getSessionId())
-                        .coverageType(bucket == StudentBucket.FULL_SPONSORSHIP ? FundingCoverageType.FULL : FundingCoverageType.PARTIAL)
-                        .coverageMode(FundingCoverageMode.PERCENTAGE)
-                        .coverageValue(coverage.setScale(2, RoundingMode.HALF_UP))
-                        .validFrom(LocalDate.of(2024, 4, 1))
-                        .validTo(LocalDate.of(2025, 3, 31))
-                        .active(true)
-                        .build();
-                fundingArrangementByStudentSession.put(fundingKey, arrangement);
-                fundingArrangementsToSave.add(arrangement);
-            }
-        }
-
-        BigDecimal payable = amount.subtract(sponsorCovered).max(BigDecimal.ZERO).setScale(2, RoundingMode.HALF_UP);
+        BigDecimal payable = amount.setScale(2, RoundingMode.HALF_UP);
 
         switch (bucket) {
             case FULLY_PAID -> principalPaid = payable;
             case PARTIAL_PAID ->
-                    principalPaid = payable.multiply(BigDecimal.valueOf(0.50)).setScale(2, RoundingMode.HALF_UP);
-            case PARTIAL_SPONSORSHIP -> principalPaid = payable;
+                principalPaid = payable.multiply(BigDecimal.valueOf(0.50)).setScale(2, RoundingMode.HALF_UP);
             case OVERDUE_WITH_LATE_FEE -> {
                 lateFeeApplied = true;
                 lateFeeAccrued = amount.multiply(BigDecimal.valueOf(0.06)).setScale(2, RoundingMode.HALF_UP);
@@ -381,7 +339,6 @@ public class FeeSeeder {
                 lateFeeApplied = true;
                 lateFeeAccrued = amount.multiply(BigDecimal.valueOf(0.10)).setScale(2, RoundingMode.HALF_UP);
             }
-            case FULL_SPONSORSHIP -> principalPaid = BigDecimal.ZERO.setScale(2, RoundingMode.HALF_UP);
         }
 
         LocalDate dueDate = enrollment.getSessionId().equals(sessions.completed().getId())
@@ -397,7 +354,6 @@ public class FeeSeeder {
                 .feeStructureId(structure.getId())
                 .sessionId(enrollment.getSessionId())
                 .amount(amount)
-                .sponsorCoveredAmount(sponsorCovered)
                 .dueDate(dueDate)
                 .lateFeeType(LateFeeType.PERCENTAGE)
                 .lateFeeValue(BigDecimal.valueOf(2).setScale(2, RoundingMode.HALF_UP))
@@ -418,8 +374,7 @@ public class FeeSeeder {
             Random random,
             StudentEnrollment enrollment,
             StudentFeeAssignment assignment,
-            List<FeePayment> paymentsToSave
-    ) {
+            List<FeePayment> paymentsToSave) {
         if (assignment.getPrincipalPaid().compareTo(BigDecimal.ZERO) > 0) {
             paymentsToSave.add(
                     FeePayment.builder()
@@ -429,11 +384,11 @@ public class FeeSeeder {
                             .principalPaid(assignment.getPrincipalPaid())
                             .lateFeePaid(BigDecimal.ZERO.setScale(2, RoundingMode.HALF_UP))
                             .paymentDate(assignment.getDueDate().minusDays(2 + random.nextInt(4)))
-                            .transactionReference("TXN-" + enrollment.getStudentId() + "-" + enrollment.getClassId() + "-" + random.nextInt(10_000))
+                            .transactionReference("TXN-" + enrollment.getStudentId() + "-" + enrollment.getClassId()
+                                    + "-" + random.nextInt(10_000))
                             .mode("UPI")
                             .remarks("Seeded payment")
-                            .build()
-            );
+                            .build());
         }
     }
 
@@ -448,8 +403,7 @@ public class FeeSeeder {
                                 .computedAmount(assignment.getLateFeeAccrued())
                                 .appliedDate(assignment.getDueDate().plusDays(20))
                                 .reason("Seeded late fee accrual")
-                                .build()
-                );
+                                .build());
             }
         }
         return logs;
@@ -463,8 +417,6 @@ public class FeeSeeder {
         FULLY_PAID,
         PARTIAL_PAID,
         OVERDUE_WITH_LATE_FEE,
-        PARTIAL_SPONSORSHIP,
-        FULL_SPONSORSHIP,
         MULTI_SESSION_DEFAULTER
     }
 }

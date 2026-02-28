@@ -319,8 +319,7 @@ public class FinanceVerificationSeeder {
         for (StudentFeeAssignment assignment : assignments) {
             BigDecimal principalDue = nz(assignment.getAmount())
                     .subtract(nz(assignment.getPrincipalPaid()))
-                    .subtract(nz(assignment.getTotalDiscountAmount()))
-                    .subtract(nz(assignment.getSponsorCoveredAmount()));
+                    .subtract(nz(assignment.getTotalDiscountAmount()));
             if (principalDue.compareTo(BigDecimal.ZERO) < 0) {
                 principalDue = BigDecimal.ZERO;
             }
@@ -359,8 +358,7 @@ public class FinanceVerificationSeeder {
         for (StudentFeeAssignment assignment : assignments) {
             BigDecimal principalDue = nz(assignment.getAmount())
                     .subtract(nz(assignment.getPrincipalPaid()))
-                    .subtract(nz(assignment.getTotalDiscountAmount()))
-                    .subtract(nz(assignment.getSponsorCoveredAmount()));
+                    .subtract(nz(assignment.getTotalDiscountAmount()));
             if (principalDue.compareTo(BigDecimal.ZERO) < 0) {
                 principalDue = BigDecimal.ZERO;
             }
@@ -403,8 +401,7 @@ public class FinanceVerificationSeeder {
 
             BigDecimal principalDue = nz(assignment.getAmount())
                     .subtract(nz(assignment.getPrincipalPaid()))
-                    .subtract(nz(assignment.getTotalDiscountAmount()))
-                    .subtract(nz(assignment.getSponsorCoveredAmount()));
+                    .subtract(nz(assignment.getTotalDiscountAmount()));
 
             BigDecimal lateDue = nz(assignment.getLateFeeAccrued())
                     .subtract(nz(assignment.getLateFeePaid()))

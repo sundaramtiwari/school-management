@@ -67,19 +67,17 @@ public class StudentLedgerService {
             LedgerSummaryDto dto = ledgerMap.computeIfAbsent(sessionId, this::newLedgerEntry);
             dto.setTotalAssigned(row[1] == null ? BigDecimal.ZERO : (BigDecimal) row[1]);
             dto.setTotalDiscount(row[2] == null ? BigDecimal.ZERO : (BigDecimal) row[2]);
-            dto.setTotalFunding(row[3] == null ? BigDecimal.ZERO : (BigDecimal) row[3]);
-            dto.setTotalLateFee(row[4] == null ? BigDecimal.ZERO : (BigDecimal) row[4]);
+            dto.setTotalLateFee(row[3] == null ? BigDecimal.ZERO : (BigDecimal) row[3]);
 
-            BigDecimal lateFeePaid = row[5] == null ? BigDecimal.ZERO : (BigDecimal) row[5];
-            BigDecimal lateFeeWaived = row[6] == null ? BigDecimal.ZERO : (BigDecimal) row[6];
-            BigDecimal principalPaid = row[7] == null ? BigDecimal.ZERO : (BigDecimal) row[7];
+            BigDecimal lateFeePaid = row[4] == null ? BigDecimal.ZERO : (BigDecimal) row[4];
+            BigDecimal lateFeeWaived = row[5] == null ? BigDecimal.ZERO : (BigDecimal) row[5];
+            BigDecimal principalPaid = row[6] == null ? BigDecimal.ZERO : (BigDecimal) row[6];
 
             dto.setTotalPaid(principalPaid.add(lateFeePaid));
             dto.setTotalPending(FeeMath.computePending(StudentFeeAssignment.builder()
                     .amount(dto.getTotalAssigned())
                     .lateFeeAccrued(dto.getTotalLateFee())
                     .totalDiscountAmount(dto.getTotalDiscount())
-                    .sponsorCoveredAmount(dto.getTotalFunding())
                     .lateFeeWaived(lateFeeWaived)
                     .principalPaid(principalPaid)
                     .lateFeePaid(lateFeePaid)
@@ -92,7 +90,6 @@ public class StudentLedgerService {
         dto.setSessionId(sessionId);
         dto.setTotalAssigned(BigDecimal.ZERO);
         dto.setTotalDiscount(BigDecimal.ZERO);
-        dto.setTotalFunding(BigDecimal.ZERO);
         dto.setTotalLateFee(BigDecimal.ZERO);
         dto.setTotalPaid(BigDecimal.ZERO);
         dto.setTotalPending(BigDecimal.ZERO);

@@ -22,17 +22,6 @@ class FeeMathTest {
     }
 
     @Test
-    @DisplayName("computePending should subtract funding only")
-    void computePending_fundingOnly() {
-        StudentFeeAssignment assignment = StudentFeeAssignment.builder()
-                .amount(new BigDecimal("1000.00"))
-                .sponsorCoveredAmount(new BigDecimal("400.00"))
-                .build();
-
-        assertEquals(new BigDecimal("600.00"), FeeMath.computePending(assignment));
-    }
-
-    @Test
     @DisplayName("computePending should subtract waived late fee")
     void computePending_waivedLateFee() {
         StudentFeeAssignment assignment = StudentFeeAssignment.builder()

@@ -42,7 +42,7 @@ public class FeeSummaryService {
 
         private static final int INT_ZERO = 0;
         private static final int SCALE_2 = 2;
-        private static final int DASHBOARD_COMPONENT_COUNT = 7;
+        private static final int DASHBOARD_COMPONENT_COUNT = 6;
         private static final BigDecimal ZERO = BigDecimal.ZERO;
         private static final RoundingMode ROUNDING_MODE_HALF_UP = RoundingMode.HALF_UP;
 
@@ -85,16 +85,14 @@ public class FeeSummaryService {
                 BigDecimal totalAssigned = toBigDecimal(pendingComponents[0]);
                 BigDecimal totalLateFeeAccrued = toBigDecimal(pendingComponents[1]);
                 BigDecimal totalDiscountAmount = toBigDecimal(pendingComponents[2]);
-                BigDecimal totalSponsorCoveredAmount = toBigDecimal(pendingComponents[3]);
-                BigDecimal totalLateFeeWaived = toBigDecimal(pendingComponents[4]);
-                BigDecimal totalPrincipalPaid = toBigDecimal(pendingComponents[5]);
-                BigDecimal totalLateFeePaid = toBigDecimal(pendingComponents[6]);
+                BigDecimal totalLateFeeWaived = toBigDecimal(pendingComponents[3]);
+                BigDecimal totalPrincipalPaid = toBigDecimal(pendingComponents[4]);
+                BigDecimal totalLateFeePaid = toBigDecimal(pendingComponents[5]);
 
                 BigDecimal totalPending = computePendingTotals(
                                 totalAssigned,
                                 totalLateFeeAccrued,
                                 totalDiscountAmount,
-                                totalSponsorCoveredAmount,
                                 totalLateFeeWaived,
                                 totalPrincipalPaid,
                                 totalLateFeePaid);
@@ -164,10 +162,6 @@ public class FeeSummaryService {
                                 .map(a -> nz(a.getTotalDiscountAmount()))
                                 .reduce(ZERO, BigDecimal::add);
 
-                BigDecimal totalSponsorCoveredAmount = assignments.stream()
-                                .map(a -> nz(a.getSponsorCoveredAmount()))
-                                .reduce(ZERO, BigDecimal::add);
-
                 BigDecimal totalLateFeeWaived = assignments.stream()
                                 .map(a -> nz(a.getLateFeeWaived()))
                                 .reduce(ZERO, BigDecimal::add);
@@ -198,7 +192,6 @@ public class FeeSummaryService {
                 dto.setSession(session.getName());
                 dto.setTotalFee(totalFeeAccrued.setScale(SCALE_2, ROUNDING_MODE_HALF_UP));
                 dto.setTotalDiscount(totalDiscountAmount.setScale(SCALE_2, ROUNDING_MODE_HALF_UP));
-                dto.setTotalFunding(totalSponsorCoveredAmount.setScale(SCALE_2, ROUNDING_MODE_HALF_UP));
                 dto.setTotalPaid(totalPaid.setScale(SCALE_2, ROUNDING_MODE_HALF_UP));
                 dto.setTotalLateFeeAccrued(totalLateFeeAccrued.setScale(SCALE_2, ROUNDING_MODE_HALF_UP));
                 dto.setTotalLateFeePaid(totalLateFeePaid.setScale(SCALE_2, ROUNDING_MODE_HALF_UP));
@@ -234,11 +227,10 @@ public class FeeSummaryService {
 
                         BigDecimal totalFee = toBigDecimal(stats[1]);
                         BigDecimal totalDiscount = toBigDecimal(stats[SCALE_2]);
-                        BigDecimal totalSponsor = toBigDecimal(stats[3]);
-                        BigDecimal totalLateFeeAccrued = toBigDecimal(stats[4]);
-                        BigDecimal totalLateFeePaid = toBigDecimal(stats[5]);
-                        BigDecimal totalLateFeeWaived = toBigDecimal(stats[6]);
-                        BigDecimal totalPrincipalPaid = toBigDecimal(stats[7]);
+                        BigDecimal totalLateFeeAccrued = toBigDecimal(stats[3]);
+                        BigDecimal totalLateFeePaid = toBigDecimal(stats[4]);
+                        BigDecimal totalLateFeeWaived = toBigDecimal(stats[5]);
+                        BigDecimal totalPrincipalPaid = toBigDecimal(stats[6]);
 
                         String sessionName = sessionNames.getOrDefault(sessionId, "Unknown Session " + sessionId);
 
@@ -249,7 +241,6 @@ public class FeeSummaryService {
                         summary.setSession(sessionName);
                         summary.setTotalFee(totalFee.setScale(SCALE_2, ROUNDING_MODE_HALF_UP));
                         summary.setTotalDiscount(totalDiscount.setScale(SCALE_2, ROUNDING_MODE_HALF_UP));
-                        summary.setTotalFunding(totalSponsor.setScale(SCALE_2, ROUNDING_MODE_HALF_UP));
 
                         // Total Paid = Principal Paid + Late Fee Paid
                         BigDecimal sessionTotalPaid = totalPrincipalPaid.add(totalLateFeePaid);
@@ -262,7 +253,6 @@ public class FeeSummaryService {
                                         totalFee,
                                         totalLateFeeAccrued,
                                         totalDiscount,
-                                        totalSponsor,
                                         totalLateFeeWaived,
                                         totalPrincipalPaid,
                                         totalLateFeePaid);
@@ -518,7 +508,6 @@ public class FeeSummaryService {
                         BigDecimal amount,
                         BigDecimal lateFeeAccrued,
                         BigDecimal totalDiscountAmount,
-                        BigDecimal sponsorCoveredAmount,
                         BigDecimal lateFeeWaived,
                         BigDecimal principalPaid,
                         BigDecimal lateFeePaid) {
@@ -526,7 +515,6 @@ public class FeeSummaryService {
                                 .amount(amount)
                                 .lateFeeAccrued(lateFeeAccrued)
                                 .totalDiscountAmount(totalDiscountAmount)
-                                .sponsorCoveredAmount(sponsorCoveredAmount)
                                 .lateFeeWaived(lateFeeWaived)
                                 .principalPaid(principalPaid)
                                 .lateFeePaid(lateFeePaid)

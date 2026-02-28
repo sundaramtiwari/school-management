@@ -14,106 +14,103 @@ import java.util.List;
 import java.util.Optional;
 
 public interface StudentFeeAssignmentRepository
-                extends JpaRepository<StudentFeeAssignment, Long> {
+              extends JpaRepository<StudentFeeAssignment, Long> {
 
-        @Lock(LockModeType.PESSIMISTIC_WRITE)
-        @Query("SELECT a FROM StudentFeeAssignment a WHERE a.id = :id")
-        Optional<StudentFeeAssignment> findByIdWithLock(@Param("id") Long id);
+       @Lock(LockModeType.PESSIMISTIC_WRITE)
+       @Query("SELECT a FROM StudentFeeAssignment a WHERE a.id = :id")
+       Optional<StudentFeeAssignment> findByIdWithLock(@Param("id") Long id);
 
-        /**
-         * Find fee assignment for student, structure, and session.
-         * Used for checking if assignment exists and reactivating if needed.
-         *
-         * @param studentId      Student ID
-         * @param feeStructureId Fee Structure ID
-         * @param sessionId      Session ID
-         * @return Optional containing assignment if found
-         */
-        Optional<StudentFeeAssignment> findByStudentIdAndFeeStructureIdAndSessionId(
-                        Long studentId, Long feeStructureId, Long sessionId);
+       /**
+        * Find fee assignment for student, structure, and session.
+        * Used for checking if assignment exists and reactivating if needed.
+        *
+        * @param studentId      Student ID
+        * @param feeStructureId Fee Structure ID
+        * @param sessionId      Session ID
+        * @return Optional containing assignment if found
+        */
+       Optional<StudentFeeAssignment> findByStudentIdAndFeeStructureIdAndSessionId(
+                     Long studentId, Long feeStructureId, Long sessionId);
 
-        Optional<StudentFeeAssignment> findByStudentIdAndFeeStructureIdAndSessionIdAndSchoolId(
-                        Long studentId, Long feeStructureId, Long sessionId, Long schoolId);
+       Optional<StudentFeeAssignment> findByStudentIdAndFeeStructureIdAndSessionIdAndSchoolId(
+                     Long studentId, Long feeStructureId, Long sessionId, Long schoolId);
 
-        Optional<StudentFeeAssignment> findByIdAndSchoolId(Long id, Long schoolId);
+       Optional<StudentFeeAssignment> findByIdAndSchoolId(Long id, Long schoolId);
 
-        @Query(value = "SELECT COUNT(1) > 0 FROM student_fee_assignments WHERE id = :id", nativeQuery = true)
-        boolean existsAnyById(@Param("id") Long id);
+       @Query(value = "SELECT COUNT(1) > 0 FROM student_fee_assignments WHERE id = :id", nativeQuery = true)
+       boolean existsAnyById(@Param("id") Long id);
 
-        boolean existsByStudentIdAndFeeStructureIdAndSessionId(
-                        Long studentId,
-                        Long feeStructureId,
-                        Long sessionId);
+       boolean existsByStudentIdAndFeeStructureIdAndSessionId(
+                     Long studentId,
+                     Long feeStructureId,
+                     Long sessionId);
 
-        boolean existsByStudentIdAndFeeStructureId(Long studentId, Long feeStructureId);
+       boolean existsByStudentIdAndFeeStructureId(Long studentId, Long feeStructureId);
 
-        @Lock(LockModeType.PESSIMISTIC_WRITE)
-        @Query("SELECT a FROM StudentFeeAssignment a WHERE a.studentId = :studentId AND a.sessionId = :sessionId AND a.active = true")
-        List<StudentFeeAssignment> findByStudentIdAndSessionIdWithLock(
-                        @Param("studentId") Long studentId,
-                        @Param("sessionId") Long sessionId);
+       @Lock(LockModeType.PESSIMISTIC_WRITE)
+       @Query("SELECT a FROM StudentFeeAssignment a WHERE a.studentId = :studentId AND a.sessionId = :sessionId AND a.active = true")
+       List<StudentFeeAssignment> findByStudentIdAndSessionIdWithLock(
+                     @Param("studentId") Long studentId,
+                     @Param("sessionId") Long sessionId);
 
-        List<StudentFeeAssignment> findByStudentIdAndSessionId(Long studentId, Long sessionId);
+       List<StudentFeeAssignment> findByStudentIdAndSessionId(Long studentId, Long sessionId);
 
-        List<StudentFeeAssignment> findByStudentIdInAndSessionIdAndActiveTrue(List<Long> studentIds, Long sessionId);
+       List<StudentFeeAssignment> findByStudentIdInAndSessionIdAndActiveTrue(List<Long> studentIds, Long sessionId);
 
-        List<StudentFeeAssignment> findByStudentIdAndSessionIdAndSchoolIdAndActiveTrueAndDueDateIsNotNullAndDueDateAfter(
-                        Long studentId,
-                        Long sessionId,
-                        Long schoolId,
-                        LocalDate withdrawalDate);
+       List<StudentFeeAssignment> findByStudentIdAndSessionIdAndSchoolIdAndActiveTrueAndDueDateIsNotNullAndDueDateAfter(
+                     Long studentId,
+                     Long sessionId,
+                     Long schoolId,
+                     LocalDate withdrawalDate);
 
-        List<StudentFeeAssignment> findByStudentId(Long studentId);
+       List<StudentFeeAssignment> findByStudentId(Long studentId);
 
-        @Query("""
-                            SELECT COALESCE(SUM(a.amount), 0),
-                                   COALESCE(SUM(a.lateFeeAccrued), 0),
-                                   COALESCE(SUM(a.totalDiscountAmount), 0),
-                                   COALESCE(SUM(a.sponsorCoveredAmount), 0),
-                                   COALESCE(SUM(a.lateFeeWaived), 0),
-                                   COALESCE(SUM(a.principalPaid), 0),
-                                   COALESCE(SUM(a.lateFeePaid), 0)
-                            FROM StudentFeeAssignment a
-                            WHERE a.schoolId = :schoolId
-                              AND a.sessionId = :sessionId
-                              AND a.active = true
-                        """)
-        Object[] sumFinancialTotalsBySchoolAndSession(
-                        @Param("schoolId") Long schoolId,
-                        @Param("sessionId") Long sessionId);
+       @Query("""
+                         SELECT COALESCE(SUM(a.amount), 0),
+                                COALESCE(SUM(a.lateFeeAccrued), 0),
+                                COALESCE(SUM(a.totalDiscountAmount), 0),
+                                COALESCE(SUM(a.lateFeeWaived), 0),
+                                COALESCE(SUM(a.principalPaid), 0),
+                                COALESCE(SUM(a.lateFeePaid), 0)
+                         FROM StudentFeeAssignment a
+                         WHERE a.schoolId = :schoolId
+                           AND a.sessionId = :sessionId
+                           AND a.active = true
+                     """)
+       Object[] sumFinancialTotalsBySchoolAndSession(
+                     @Param("schoolId") Long schoolId,
+                     @Param("sessionId") Long sessionId);
 
-        @Query("""
-                            SELECT a.studentId,
-                                   COALESCE(SUM(a.amount), 0),
-                                   COALESCE(SUM(a.lateFeeAccrued), 0),
-                                   COALESCE(SUM(a.lateFeeWaived), 0),
-                                   COALESCE(SUM(a.totalDiscountAmount), 0),
-                                   COALESCE(SUM(a.sponsorCoveredAmount), 0),
-                                   COALESCE(SUM(a.principalPaid), 0),
-                                   COALESCE(SUM(a.lateFeePaid), 0)
-                            FROM StudentFeeAssignment a
-                            WHERE a.schoolId = :schoolId
-                              AND a.sessionId = :sessionId
-                              AND a.active = true
-                            GROUP BY a.studentId
-                        """)
-        List<Object[]> sumAssignedGroupedByStudent(
-                        @Param("schoolId") Long schoolId,
-                        @Param("sessionId") Long sessionId);
+       @Query("""
+                         SELECT a.studentId,
+                                COALESCE(SUM(a.amount), 0),
+                                COALESCE(SUM(a.lateFeeAccrued), 0),
+                                COALESCE(SUM(a.lateFeeWaived), 0),
+                                COALESCE(SUM(a.totalDiscountAmount), 0),
+                                COALESCE(SUM(a.principalPaid), 0),
+                                COALESCE(SUM(a.lateFeePaid), 0)
+                         FROM StudentFeeAssignment a
+                         WHERE a.schoolId = :schoolId
+                           AND a.sessionId = :sessionId
+                           AND a.active = true
+                         GROUP BY a.studentId
+                     """)
+       List<Object[]> sumAssignedGroupedByStudent(
+                     @Param("schoolId") Long schoolId,
+                     @Param("sessionId") Long sessionId);
 
-        @Query("""
-                            SELECT a.sessionId,
-                                   COALESCE(SUM(a.amount), 0),
-                                   COALESCE(SUM(a.totalDiscountAmount), 0),
-                                   COALESCE(SUM(a.sponsorCoveredAmount), 0),
-                                   COALESCE(SUM(a.lateFeeAccrued), 0),
-                                   COALESCE(SUM(a.lateFeePaid), 0),
-                                   COALESCE(SUM(a.lateFeeWaived), 0),
-                                   COALESCE(SUM(a.principalPaid), 0)
-                            FROM StudentFeeAssignment a
-                            WHERE a.studentId = :studentId
-                            GROUP BY a.sessionId
-                        """)
-        List<Object[]> sumFinancialSummaryByStudentGroupedBySession(@Param("studentId") Long studentId);
+       @Query("""
+                         SELECT a.sessionId,
+                                COALESCE(SUM(a.amount), 0),
+                                COALESCE(SUM(a.totalDiscountAmount), 0),
+                                COALESCE(SUM(a.lateFeeAccrued), 0),
+                                COALESCE(SUM(a.lateFeePaid), 0),
+                                COALESCE(SUM(a.lateFeeWaived), 0),
+                                COALESCE(SUM(a.principalPaid), 0)
+                         FROM StudentFeeAssignment a
+                         WHERE a.studentId = :studentId
+                         GROUP BY a.sessionId
+                     """)
+       List<Object[]> sumFinancialSummaryByStudentGroupedBySession(@Param("studentId") Long studentId);
 
 }

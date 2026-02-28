@@ -3,10 +3,7 @@ package com.school.backend.fee.service;
 import com.school.backend.common.enums.FeeFrequency;
 import com.school.backend.core.student.entity.StudentEnrollment;
 import com.school.backend.core.student.repository.StudentEnrollmentRepository;
-import com.school.backend.fee.entity.StudentFundingArrangement;
 import com.school.backend.fee.entity.FeeStructure;
-import com.school.backend.common.enums.FundingCoverageMode;
-import com.school.backend.common.enums.FundingCoverageType;
 import com.school.backend.school.entity.AcademicSession;
 import com.school.backend.school.repository.AcademicSessionRepository;
 import lombok.RequiredArgsConstructor;
@@ -32,27 +29,9 @@ public class FeeCalculationService {
     private final AcademicSessionRepository academicSessionRepository;
     private final StudentEnrollmentRepository enrollmentRepository;
 
-    private static @NonNull BigDecimal getFundingAmount(BigDecimal baseAmount, BigDecimal discountAmount, StudentFundingArrangement funding) {
-        BigDecimal netAfterDiscount = baseAmount.subtract(discountAmount);
-        BigDecimal fundingAmount = ZERO;
-
-        if (funding.getCoverageMode() == FundingCoverageMode.FIXED_AMOUNT) {
-            fundingAmount = funding.getCoverageValue();
-        } else if (funding.getCoverageMode() == FundingCoverageMode.PERCENTAGE) {
-            fundingAmount = netAfterDiscount.multiply(funding.getCoverageValue())
-                    .divide(BigDecimal.valueOf(100), SCALE_2, ROUNDING_HALF_UP);
-        }
-
-        // Cap funding to netAfterDiscount
-        if (fundingAmount.compareTo(netAfterDiscount) > 0) {
-            fundingAmount = netAfterDiscount;
-        }
-        return fundingAmount;
-    }
-
-    public BigDecimal calculateNetPrincipal(BigDecimal amount, BigDecimal discount, BigDecimal funding) {
-        log.debug("Calculating net principal: amount={}, discount={}, funding={}", amount, discount, funding);
-        BigDecimal net = amount.subtract(discount).subtract(funding);
+    public BigDecimal calculateNetPrincipal(BigDecimal amount, BigDecimal discount) {
+        log.debug("Calculating net principal: amount={}, discount={}", amount, discount);
+        BigDecimal net = amount.subtract(discount);
         BigDecimal calculated = net.compareTo(ZERO) < 0 ? ZERO_HALF_UP
                 : net.setScale(SCALE_2, ROUNDING_HALF_UP);
         log.debug("Net principal calculated: {}", calculated);
@@ -94,37 +73,5 @@ public class FeeCalculationService {
             case HALF_YEARLY -> fs.getAmount().multiply(BigDecimal.valueOf(Math.ceil(monthsRemaining / 6.0)));
             default -> fs.getAmount();
         };
-    }
-
-    public BigDecimal calculateFundingSnapshot(BigDecimal baseAmount, BigDecimal discountAmount,
-                                               StudentFundingArrangement funding) {
-        log.debug("Calculating funding snapshot: baseAmount={}, discountAmount={}, fundingActive={}",
-                baseAmount, discountAmount, funding != null && funding.isActive());
-        if (funding == null || !funding.isActive()) {
-            log.debug("Funding skipped: arrangement missing or inactive");
-            return ZERO_HALF_UP;
-        }
-
-        // ✅ Add validity check
-        LocalDate today = LocalDate.now();
-        if (funding.getValidFrom() != null && today.isBefore(funding.getValidFrom())) {
-            log.debug("Funding skipped: not yet valid (validFrom={})", funding.getValidFrom());
-            return ZERO_HALF_UP;  // Not yet valid
-        }
-        if (funding.getValidTo() != null && today.isAfter(funding.getValidTo())) {
-            log.debug("Funding skipped: expired (validTo={})", funding.getValidTo());
-            return ZERO_HALF_UP; // Expired
-        }
-
-        if (funding.getCoverageType() == FundingCoverageType.FULL) {
-            BigDecimal fullCoverage = baseAmount.subtract(discountAmount).setScale(SCALE_2, ROUNDING_HALF_UP);
-            log.debug("Funding calculated (FULL): {}", fullCoverage);
-            return fullCoverage;
-        }
-
-        BigDecimal fundingAmount = getFundingAmount(baseAmount, discountAmount, funding);
-        BigDecimal calculated = fundingAmount.setScale(SCALE_2, ROUNDING_HALF_UP);
-        log.debug("Funding calculated: {}", calculated);
-        return calculated;
     }
 }

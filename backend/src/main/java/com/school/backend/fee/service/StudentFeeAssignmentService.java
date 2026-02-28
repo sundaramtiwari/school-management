@@ -17,7 +17,6 @@ import com.school.backend.fee.entity.StudentFeeAssignment;
 import com.school.backend.fee.repository.FeeStructureRepository;
 import com.school.backend.fee.repository.LateFeePolicyRepository;
 import com.school.backend.fee.repository.StudentFeeAssignmentRepository;
-import com.school.backend.fee.repository.StudentFundingArrangementRepository;
 import com.school.backend.school.entity.AcademicSession;
 import com.school.backend.school.repository.AcademicSessionRepository;
 import com.school.backend.transport.entity.TransportEnrollment;
@@ -45,7 +44,6 @@ public class StudentFeeAssignmentService {
     private final AcademicSessionRepository academicSessionRepository;
     private final StudentEnrollmentRepository studentEnrollmentRepository;
     private final TransportEnrollmentRepository transportEnrollmentRepository;
-    private final StudentFundingArrangementRepository fundingRepository;
     private final FeeCalculationService feeCalculationService;
 
     // ---------------- ASSIGN ----------------
@@ -104,11 +102,6 @@ public class StudentFeeAssignmentService {
 
         // --- Snapshot Funding ---
         BigDecimal discountSnapshot = nz(assignment.getTotalDiscountAmount());
-        BigDecimal fundingSnapshot = fundingRepository
-                .findActiveByStudentAndSession(req.getStudentId(), req.getSessionId())
-                .map(f -> feeCalculationService.calculateFundingSnapshot(finalAmount, discountSnapshot, f))
-                .orElse(BigDecimal.ZERO);
-        assignment.setSponsorCoveredAmount(fundingSnapshot);
 
         return toDto(assignmentRepository.save(assignment));
     }
@@ -198,14 +191,13 @@ public class StudentFeeAssignmentService {
         dto.setLateFeePaid(sfa.getLateFeePaid());
         dto.setLateFeeWaived(sfa.getLateFeeWaived());
         dto.setTotalDiscountAmount(sfa.getTotalDiscountAmount());
-        dto.setSponsorCoveredAmount(sfa.getSponsorCoveredAmount());
+
         dto.setPrincipalPaid(sfa.getPrincipalPaid());
 
         BigDecimal pending = FeeMath.computePending(sfa);
         BigDecimal annualAmount = nz(sfa.getAmount()).setScale(2, RoundingMode.HALF_UP);
         BigDecimal principalPaid = nz(sfa.getPrincipalPaid());
         BigDecimal totalDiscountAmount = nz(sfa.getTotalDiscountAmount());
-        BigDecimal sponsorCoveredAmount = nz(sfa.getSponsorCoveredAmount());
         BigDecimal lateFeeAccrued = nz(sfa.getLateFeeAccrued());
         BigDecimal lateFeePaid = nz(sfa.getLateFeePaid());
         BigDecimal lateFeeWaived = nz(sfa.getLateFeeWaived());
@@ -291,7 +283,6 @@ public class StudentFeeAssignmentService {
             BigDecimal pendingTillDate = dueTillDate
                     .add(lateFeeAccrued.subtract(lateFeePaid).subtract(lateFeeWaived).max(ZERO))
                     .subtract(totalDiscountAmount)
-                    .subtract(sponsorCoveredAmount)
                     .subtract(principalPaid);
             if (pendingTillDate.compareTo(ZERO) < 0) {
                 pendingTillDate = ZERO;
@@ -307,7 +298,6 @@ public class StudentFeeAssignmentService {
             BigDecimal pendingTillDate = dueTillDate
                     .add(lateFeeAccrued.subtract(lateFeePaid).subtract(lateFeeWaived).max(ZERO))
                     .subtract(totalDiscountAmount)
-                    .subtract(sponsorCoveredAmount)
                     .subtract(principalPaid);
             if (pendingTillDate.compareTo(ZERO) < 0) {
                 pendingTillDate = ZERO;
@@ -317,8 +307,7 @@ public class StudentFeeAssignmentService {
 
         BigDecimal remainingForSession = annualAmount
                 .subtract(principalPaid)
-                .subtract(totalDiscountAmount)
-                .subtract(sponsorCoveredAmount);
+                .subtract(totalDiscountAmount);
         if (remainingForSession.compareTo(ZERO) < 0) {
             remainingForSession = ZERO;
         }

@@ -10,7 +10,6 @@ public class LedgerSummaryDto {
     private String sessionName;
     private BigDecimal totalAssigned = BigDecimal.ZERO;
     private BigDecimal totalDiscount = BigDecimal.ZERO;
-    private BigDecimal totalFunding = BigDecimal.ZERO;
     private BigDecimal totalLateFee = BigDecimal.ZERO;
     private BigDecimal totalPaid = BigDecimal.ZERO;
     private BigDecimal totalPending = BigDecimal.ZERO;

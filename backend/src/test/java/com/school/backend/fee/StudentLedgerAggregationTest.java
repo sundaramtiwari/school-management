@@ -96,15 +96,15 @@ public class StudentLedgerAggregationTest extends BaseAuthenticatedIntegrationTe
                 Long fs2Id = createFeeStructure(s2Id, BigDecimal.valueOf(55000));
                 assignFee(studentId, fs2Id, s2Id);
 
-                // Session C: 60000 assigned, 5000 discount, 10000 funding, 20000 paid
+                // Session C: 60000 assigned, 5000 discount, 20000 paid
                 Long s3Id = createSession("2025-26", 2025);
                 Long fs3Id = createFeeStructure(s3Id, BigDecimal.valueOf(60000));
                 Long assignCId = assignFee(studentId, fs3Id, s3Id);
 
-                // Apply discount and funding manually on the assignment to match required state
+                // Apply discount manually on the assignment to match required state
                 // Use jdbcTemplate to bypass JPA filters/session issues.
                 jdbcTemplate.update(
-                                "UPDATE student_fee_assignments SET total_discount_amount = 5000, sponsor_covered_amount = 10000 WHERE id = ?",
+                                "UPDATE student_fee_assignments SET total_discount_amount = 5000 WHERE id = ?",
                                 assignCId);
 
                 payFee(studentId, s3Id, BigDecimal.valueOf(20000));
@@ -128,20 +128,14 @@ public class StudentLedgerAggregationTest extends BaseAuthenticatedIntegrationTe
                 // Totals:
                 // A: 50000 fee, 40000 paid -> 10000 pending
                 // B: 55000 fee, 0 paid -> 55000 pending
-                // C: 60000 fee (45000 net after 5000 disc, 10000 funding), 20000 paid -> 25000
-                // pending
-                // Grand Total Fee: 50000 + 55000 + 60000 = 165000 (wait, usually Total Fee
-                // refers to gross or net? Let's check DTO)
-                // In getStudentFullLedger: summary.setTotalFee(totalFee) where totalFee is
-                // stats[1] (gross assigned amount).
+                // C: 60000 fee (55000 net after 5000 disc), 20000 paid -> 35000 pending
+                // Grand Total Fee: 50000 + 55000 + 60000 = 165000
+                // Grand Total Paid: 40000 + 0 + 20000 = 60000
+                // Grand Total Pending: 10000 + 55000 + 35000 = 100000
 
                 Assertions.assertThat(ledger.getGrandTotalFee()).isEqualByComparingTo(BigDecimal.valueOf(165000));
                 Assertions.assertThat(ledger.getGrandTotalPaid()).isEqualByComparingTo(BigDecimal.valueOf(60000));
-                Assertions.assertThat(ledger.getGrandTotalPending()).isEqualByComparingTo(BigDecimal.valueOf(90000)); // 10k
-                // +
-                // 55k
-                // +
-                // 25k
+                Assertions.assertThat(ledger.getGrandTotalPending()).isEqualByComparingTo(BigDecimal.valueOf(100000));
 
                 // Validate individual session C details if possible (though DTO might be
                 // limited)
@@ -151,7 +145,7 @@ public class StudentLedgerAggregationTest extends BaseAuthenticatedIntegrationTe
                                 .orElseThrow(() -> new AssertionError("Session 2025-26 summary not found"));
                 Assertions.assertThat(cSummary.getTotalFee()).isEqualByComparingTo(BigDecimal.valueOf(60000));
                 Assertions.assertThat(cSummary.getTotalPaid()).isEqualByComparingTo(BigDecimal.valueOf(20000));
-                Assertions.assertThat(cSummary.getPendingFee()).isEqualByComparingTo(BigDecimal.valueOf(25000));
+                Assertions.assertThat(cSummary.getPendingFee()).isEqualByComparingTo(BigDecimal.valueOf(35000));
         }
 
         private void setupSchoolAndLogin() {

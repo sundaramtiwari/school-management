@@ -84,7 +84,6 @@ public class FeeDiscountIntegrationTest extends BaseAuthenticatedIntegrationTest
                 Assertions.assertThat(dto.getAmount()).isEqualByComparingTo(new BigDecimal("1000.00"));
                 Assertions.assertThat(dto.getPrincipalPaid()).isEqualByComparingTo(BigDecimal.ZERO);
                 Assertions.assertThat(dto.getTotalDiscountAmount()).isEqualByComparingTo(new BigDecimal("100.00"));
-                Assertions.assertThat(dto.getSponsorCoveredAmount()).isEqualByComparingTo(BigDecimal.ZERO);
                 Assertions.assertThat(dto.getLateFeeAccrued()).isEqualByComparingTo(BigDecimal.ZERO);
                 Assertions.assertThat(dto.getPendingTillDate()).isEqualByComparingTo(new BigDecimal("900.00"));
 

@@ -43,7 +43,6 @@ public class StudentFeeAssignmentDto {
     private BigDecimal lateFeePaid;
     private BigDecimal lateFeeWaived;
     private BigDecimal totalDiscountAmount;
-    private BigDecimal sponsorCoveredAmount;
     private BigDecimal principalPaid;
     private String status;
 

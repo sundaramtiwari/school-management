@@ -19,7 +19,6 @@ public final class FeeMath {
         BigDecimal pending = nz(assignment.getAmount())
                 .add(nz(assignment.getLateFeeAccrued()))
                 .subtract(nz(assignment.getTotalDiscountAmount()))
-                .subtract(nz(assignment.getSponsorCoveredAmount()))
                 .subtract(nz(assignment.getLateFeeWaived()))
                 .subtract(nz(assignment.getPrincipalPaid()))
                 .subtract(nz(assignment.getLateFeePaid()));

@@ -62,7 +62,6 @@ public interface StudentRepository extends JpaRepository<Student, Long> {
              (SELECT COALESCE(SUM(a.amount), 0) FROM StudentFeeAssignment a WHERE a.studentId = s.id AND a.sessionId = :sessionId AND a.active = true)
              + (SELECT COALESCE(SUM(a.lateFeeAccrued), 0) FROM StudentFeeAssignment a WHERE a.studentId = s.id AND a.sessionId = :sessionId AND a.active = true)
              - (SELECT COALESCE(SUM(a.totalDiscountAmount), 0) FROM StudentFeeAssignment a WHERE a.studentId = s.id AND a.sessionId = :sessionId AND a.active = true)
-             - (SELECT COALESCE(SUM(a.sponsorCoveredAmount), 0) FROM StudentFeeAssignment a WHERE a.studentId = s.id AND a.sessionId = :sessionId AND a.active = true)
              - (SELECT COALESCE(SUM(a.lateFeeWaived), 0) FROM StudentFeeAssignment a WHERE a.studentId = s.id AND a.sessionId = :sessionId AND a.active = true)
              - (SELECT COALESCE(SUM(a.principalPaid), 0) FROM StudentFeeAssignment a WHERE a.studentId = s.id AND a.sessionId = :sessionId AND a.active = true)
              - (SELECT COALESCE(SUM(a.lateFeePaid), 0) FROM StudentFeeAssignment a WHERE a.studentId = s.id AND a.sessionId = :sessionId AND a.active = true)
@@ -83,7 +82,6 @@ public interface StudentRepository extends JpaRepository<Student, Long> {
              (SELECT COALESCE(SUM(a.amount), 0) FROM StudentFeeAssignment a WHERE a.studentId = s.id AND a.sessionId = :sessionId AND a.active = true),
              (SELECT COALESCE(SUM(a.lateFeeAccrued), 0) FROM StudentFeeAssignment a WHERE a.studentId = s.id AND a.sessionId = :sessionId AND a.active = true),
              (SELECT COALESCE(SUM(a.totalDiscountAmount), 0) FROM StudentFeeAssignment a WHERE a.studentId = s.id AND a.sessionId = :sessionId AND a.active = true),
-             (SELECT COALESCE(SUM(a.sponsorCoveredAmount), 0) FROM StudentFeeAssignment a WHERE a.studentId = s.id AND a.sessionId = :sessionId AND a.active = true),
              (SELECT COALESCE(SUM(a.lateFeeWaived), 0) FROM StudentFeeAssignment a WHERE a.studentId = s.id AND a.sessionId = :sessionId AND a.active = true),
              (SELECT COALESCE(SUM(a.principalPaid), 0) FROM StudentFeeAssignment a WHERE a.studentId = s.id AND a.sessionId = :sessionId AND a.active = true),
              (SELECT COALESCE(SUM(a.lateFeePaid), 0) FROM StudentFeeAssignment a WHERE a.studentId = s.id AND a.sessionId = :sessionId AND a.active = true),
@@ -101,7 +99,6 @@ public interface StudentRepository extends JpaRepository<Student, Long> {
              (SELECT COALESCE(SUM(a.amount), 0) FROM StudentFeeAssignment a WHERE a.studentId = s.id AND a.sessionId = :sessionId AND a.active = true)
              + (SELECT COALESCE(SUM(a.lateFeeAccrued), 0) FROM StudentFeeAssignment a WHERE a.studentId = s.id AND a.sessionId = :sessionId AND a.active = true)
              - (SELECT COALESCE(SUM(a.totalDiscountAmount), 0) FROM StudentFeeAssignment a WHERE a.studentId = s.id AND a.sessionId = :sessionId AND a.active = true)
-             - (SELECT COALESCE(SUM(a.sponsorCoveredAmount), 0) FROM StudentFeeAssignment a WHERE a.studentId = s.id AND a.sessionId = :sessionId AND a.active = true)
              - (SELECT COALESCE(SUM(a.lateFeeWaived), 0) FROM StudentFeeAssignment a WHERE a.studentId = s.id AND a.sessionId = :sessionId AND a.active = true)
              - (SELECT COALESCE(SUM(a.principalPaid), 0) FROM StudentFeeAssignment a WHERE a.studentId = s.id AND a.sessionId = :sessionId AND a.active = true)
              - (SELECT COALESCE(SUM(a.lateFeePaid), 0) FROM StudentFeeAssignment a WHERE a.studentId = s.id AND a.sessionId = :sessionId AND a.active = true)

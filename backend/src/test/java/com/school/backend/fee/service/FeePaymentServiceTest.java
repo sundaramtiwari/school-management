@@ -42,132 +42,134 @@ import static org.mockito.Mockito.when;
 @ExtendWith(MockitoExtension.class)
 class FeePaymentServiceTest {
 
-    @Mock
-    private FeePaymentRepository paymentRepository;
-    @Mock
-    private StudentRepository studentRepository;
-    @Mock
-    private StudentFeeAssignmentRepository assignmentRepository;
-    @Mock
-    private LateFeeLogRepository lateFeeLogRepository;
-    @Mock
-    private LateFeeCalculator lateFeeCalculator;
-    @Mock
-    private FeeStructureRepository feeStructureRepository;
-    @Mock
-    private FeePaymentAllocationRepository feePaymentAllocationRepository;
-    @Mock
-    private DayClosingRepository dayClosingRepository;
+        @Mock
+        private FeePaymentRepository paymentRepository;
+        @Mock
+        private StudentRepository studentRepository;
+        @Mock
+        private StudentFeeAssignmentRepository assignmentRepository;
+        @Mock
+        private LateFeeLogRepository lateFeeLogRepository;
+        @Mock
+        private LateFeeCalculator lateFeeCalculator;
+        @Mock
+        private FeeStructureRepository feeStructureRepository;
+        @Mock
+        private FeePaymentAllocationRepository feePaymentAllocationRepository;
+        @Mock
+        private DayClosingRepository dayClosingRepository;
 
-    @InjectMocks
-    private FeePaymentService feePaymentService;
+        @InjectMocks
+        private FeePaymentService feePaymentService;
 
-    @BeforeEach
-    void setUp() {
-        TenantContext.setSchoolId(10L);
-        SessionContext.setSessionId(20L);
-    }
+        @BeforeEach
+        void setUp() {
+                TenantContext.setSchoolId(10L);
+                SessionContext.setSessionId(20L);
+        }
 
-    @AfterEach
-    void tearDown() {
-        TenantContext.clear();
-        SessionContext.clear();
-    }
+        @AfterEach
+        void tearDown() {
+                TenantContext.clear();
+                SessionContext.clear();
+        }
 
-    @Test
-    @DisplayName("pay should reject overpayment using centralized pending formula")
-    void pay_shouldRejectOverpayment() {
-        FeePaymentRequest request = new FeePaymentRequest();
-        request.setStudentId(100L);
-        request.setSessionId(20L);
-        request.setMode("CASH");
-        request.setAllocations(List.of(FeePaymentAllocationRequest.builder()
-                .assignmentId(500L)
-                .principalAmount(new BigDecimal("701.00"))
-                .build()));
+        @Test
+        @DisplayName("pay should reject overpayment using centralized pending formula")
+        void pay_shouldRejectOverpayment() {
+                FeePaymentRequest request = new FeePaymentRequest();
+                request.setStudentId(100L);
+                request.setSessionId(20L);
+                request.setMode("CASH");
+                request.setAllocations(List.of(FeePaymentAllocationRequest.builder()
+                                .assignmentId(500L)
+                                .principalAmount(new BigDecimal("701.00"))
+                                .build()));
 
-        StudentFeeAssignment assignment = StudentFeeAssignment.builder()
-                .id(500L)
-                .studentId(100L)
-                .schoolId(10L)
-                .amount(new BigDecimal("1000.00"))
-                .totalDiscountAmount(new BigDecimal("200.00"))
-                .sponsorCoveredAmount(new BigDecimal("100.00"))
-                .build();
+                StudentFeeAssignment assignment = StudentFeeAssignment.builder()
+                                .id(500L)
+                                .studentId(100L)
+                                .schoolId(10L)
+                                .amount(new BigDecimal("1000.00"))
+                                .totalDiscountAmount(new BigDecimal("200.00"))
+                                .build();
 
-        when(studentRepository.existsById(100L)).thenReturn(true);
-        when(dayClosingRepository.existsBySchoolIdAndDateAndOverrideAllowedFalse(org.mockito.ArgumentMatchers.eq(10L),
-                org.mockito.ArgumentMatchers.any())).thenReturn(false);
-        when(assignmentRepository.findByIdWithLock(500L)).thenReturn(Optional.of(assignment));
-        when(lateFeeCalculator.calculateLateFee(org.mockito.ArgumentMatchers.any(), org.mockito.ArgumentMatchers.any(),
-                org.mockito.ArgumentMatchers.any())).thenReturn(BigDecimal.ZERO);
+                when(studentRepository.existsById(100L)).thenReturn(true);
+                when(dayClosingRepository.existsBySchoolIdAndDateAndOverrideAllowedFalse(
+                                org.mockito.ArgumentMatchers.eq(10L),
+                                org.mockito.ArgumentMatchers.any())).thenReturn(false);
+                when(assignmentRepository.findByIdWithLock(500L)).thenReturn(Optional.of(assignment));
+                when(lateFeeCalculator.calculateLateFee(org.mockito.ArgumentMatchers.any(),
+                                org.mockito.ArgumentMatchers.any(),
+                                org.mockito.ArgumentMatchers.any())).thenReturn(BigDecimal.ZERO);
 
-        assertThrows(BusinessException.class, () -> feePaymentService.pay(request));
+                assertThrows(BusinessException.class, () -> feePaymentService.pay(request));
 
-        verify(paymentRepository, never()).save(org.mockito.ArgumentMatchers.any());
-        verify(assignmentRepository, never()).saveAll(org.mockito.ArgumentMatchers.any());
-    }
+                verify(paymentRepository, never()).save(org.mockito.ArgumentMatchers.any());
+                verify(assignmentRepository, never()).saveAll(org.mockito.ArgumentMatchers.any());
+        }
 
-    @Test
-    @DisplayName("pay should accept late-fee-only allocation when principal is zero")
-    void pay_shouldAcceptLateFeeOnlyAllocation() {
-        FeePaymentRequest request = new FeePaymentRequest();
-        request.setStudentId(100L);
-        request.setSessionId(20L);
-        request.setMode("CASH");
-        request.setPaymentDate(LocalDate.of(2026, 2, 26));
-        request.setAllocations(List.of(FeePaymentAllocationRequest.builder()
-                .assignmentId(500L)
-                .principalAmount(BigDecimal.ZERO)
-                .lateFeeAmount(new BigDecimal("50.00"))
-                .build()));
+        @Test
+        @DisplayName("pay should accept late-fee-only allocation when principal is zero")
+        void pay_shouldAcceptLateFeeOnlyAllocation() {
+                FeePaymentRequest request = new FeePaymentRequest();
+                request.setStudentId(100L);
+                request.setSessionId(20L);
+                request.setMode("CASH");
+                request.setPaymentDate(LocalDate.of(2026, 2, 26));
+                request.setAllocations(List.of(FeePaymentAllocationRequest.builder()
+                                .assignmentId(500L)
+                                .principalAmount(BigDecimal.ZERO)
+                                .lateFeeAmount(new BigDecimal("50.00"))
+                                .build()));
 
-        StudentFeeAssignment assignment = StudentFeeAssignment.builder()
-                .id(500L)
-                .studentId(100L)
-                .schoolId(10L)
-                .feeStructureId(700L)
-                .amount(new BigDecimal("1000.00"))
-                .principalPaid(new BigDecimal("1000.00"))
-                .lateFeeAccrued(new BigDecimal("50.00"))
-                .lateFeePaid(BigDecimal.ZERO)
-                .lateFeeWaived(BigDecimal.ZERO)
-                .totalDiscountAmount(BigDecimal.ZERO)
-                .sponsorCoveredAmount(BigDecimal.ZERO)
-                .build();
+                StudentFeeAssignment assignment = StudentFeeAssignment.builder()
+                                .id(500L)
+                                .studentId(100L)
+                                .schoolId(10L)
+                                .feeStructureId(700L)
+                                .amount(new BigDecimal("1000.00"))
+                                .principalPaid(new BigDecimal("1000.00"))
+                                .lateFeeAccrued(new BigDecimal("50.00"))
+                                .lateFeePaid(BigDecimal.ZERO)
+                                .lateFeeWaived(BigDecimal.ZERO)
+                                .totalDiscountAmount(BigDecimal.ZERO)
+                                .build();
 
-        FeeType feeType = FeeType.builder()
-                .id(900L)
-                .schoolId(10L)
-                .name("TUITION")
-                .build();
-        FeeStructure feeStructure = FeeStructure.builder()
-                .id(700L)
-                .schoolId(10L)
-                .sessionId(20L)
-                .feeType(feeType)
-                .amount(new BigDecimal("1000.00"))
-                .build();
+                FeeType feeType = FeeType.builder()
+                                .id(900L)
+                                .schoolId(10L)
+                                .name("TUITION")
+                                .build();
+                FeeStructure feeStructure = FeeStructure.builder()
+                                .id(700L)
+                                .schoolId(10L)
+                                .sessionId(20L)
+                                .feeType(feeType)
+                                .amount(new BigDecimal("1000.00"))
+                                .build();
 
-        when(studentRepository.existsById(100L)).thenReturn(true);
-        when(dayClosingRepository.existsBySchoolIdAndDateAndOverrideAllowedFalse(org.mockito.ArgumentMatchers.eq(10L),
-                org.mockito.ArgumentMatchers.any())).thenReturn(false);
-        when(assignmentRepository.findByIdWithLock(500L)).thenReturn(Optional.of(assignment));
-        when(lateFeeCalculator.calculateLateFee(any(), any(), any())).thenReturn(BigDecimal.ZERO);
-        when(assignmentRepository.saveAll(any())).thenAnswer(invocation -> invocation.getArgument(0));
-        when(paymentRepository.save(any())).thenAnswer(invocation -> {
-            FeePayment payment = invocation.getArgument(0);
-            payment.setId(111L);
-            return payment;
-        });
-        when(feeStructureRepository.findByIdInAndSchoolId(List.of(700L), 10L)).thenReturn(List.of(feeStructure));
+                when(studentRepository.existsById(100L)).thenReturn(true);
+                when(dayClosingRepository.existsBySchoolIdAndDateAndOverrideAllowedFalse(
+                                org.mockito.ArgumentMatchers.eq(10L),
+                                org.mockito.ArgumentMatchers.any())).thenReturn(false);
+                when(assignmentRepository.findByIdWithLock(500L)).thenReturn(Optional.of(assignment));
+                when(lateFeeCalculator.calculateLateFee(any(), any(), any())).thenReturn(BigDecimal.ZERO);
+                when(assignmentRepository.saveAll(any())).thenAnswer(invocation -> invocation.getArgument(0));
+                when(paymentRepository.save(any())).thenAnswer(invocation -> {
+                        FeePayment payment = invocation.getArgument(0);
+                        payment.setId(111L);
+                        return payment;
+                });
+                when(feeStructureRepository.findByIdInAndSchoolId(List.of(700L), 10L))
+                                .thenReturn(List.of(feeStructure));
 
-        FeePaymentDto result = feePaymentService.pay(request);
+                FeePaymentDto result = feePaymentService.pay(request);
 
-        assertNotNull(result);
-        assertEquals(new BigDecimal("0"), result.getPrincipalPaid());
-        assertEquals(new BigDecimal("50.00"), result.getLateFeePaid());
-        verify(paymentRepository).save(any());
-        verify(feePaymentAllocationRepository).saveAll(any());
-    }
+                assertNotNull(result);
+                assertEquals(new BigDecimal("0"), result.getPrincipalPaid());
+                assertEquals(new BigDecimal("50.00"), result.getLateFeePaid());
+                verify(paymentRepository).save(any());
+                verify(feePaymentAllocationRepository).saveAll(any());
+        }
 }

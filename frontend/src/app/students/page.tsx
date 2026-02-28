@@ -66,8 +66,6 @@ type LedgerEntry = {
   active?: boolean;
   totalAssigned: number | string;
   totalDiscount: number | string;
-  totalFunding: number | string;
-  totalLateFee: number | string;
   totalPaid: number | string;
   totalPending: number | string;
 };
@@ -99,18 +97,6 @@ type PromotionRecordDto = {
   remarks?: string;
   promotedBy: string;
   promotedAt: string;
-};
-
-type StudentFundingArrangement = {
-  id: number;
-  studentId: number;
-  sessionId: number;
-  coverageType: "NONE" | "FULL" | "PARTIAL";
-  coverageMode: "FIXED_AMOUNT" | "PERCENTAGE";
-  coverageValue: number;
-  validFrom: string | null;
-  validTo: string | null;
-  active: boolean;
 };
 
 /* ---------------- Page ---------------- */
@@ -152,7 +138,6 @@ export default function StudentsPage() {
   const [loadingProfile, setLoadingProfile] = useState(false);
   const [withdrawStudent, setWithdrawStudent] = useState<Student | null>(null);
   const [isEditing, setIsEditing] = useState(false);
-  const [profileTab, setProfileTab] = useState<"overview" | "ledger" | "enrollments" | "promotions" | "funding">("overview");
   const [ledgerLoading, setLedgerLoading] = useState(false);
   const [ledgerData, setLedgerData] = useState<LedgerEntry[]>([]);
 
@@ -162,17 +147,7 @@ export default function StudentsPage() {
   const [promotionsLoading, setPromotionsLoading] = useState(false);
   const [promotionsData, setPromotionsData] = useState<PromotionRecordDto[]>([]);
 
-  const [fundingLoading, setFundingLoading] = useState(false);
-  const [fundingData, setFundingData] = useState<StudentFundingArrangement | null>(null);
-  const [fundingHistory, setFundingHistory] = useState<StudentFundingArrangement[]>([]);
-  const [editingFunding, setEditingFunding] = useState(false);
-  const [fundingForm, setFundingForm] = useState({
-    coverageType: "NONE" as "NONE" | "FULL" | "PARTIAL",
-    coverageMode: "FIXED_AMOUNT" as "FIXED_AMOUNT" | "PERCENTAGE",
-    coverageValue: "0",
-    validFrom: "",
-    validTo: "",
-  });
+
 
   const [isSaving, setIsSaving] = useState(false);
   const [studentForm, setStudentForm] = useState({
@@ -206,12 +181,6 @@ export default function StudentsPage() {
     reasonForLeavingPreviousSchool: "",
     classId: "",
     guardians: [] as GuardianFormValue[],
-    // Funding / Sponsorship
-    fundingType: "NONE" as "NONE" | "FULL" | "PARTIAL",
-    fundingMode: "FIXED_AMOUNT" as "FIXED_AMOUNT" | "PERCENTAGE",
-    fundingValue: "0",
-    fundingValidFrom: "",
-    fundingValidTo: "",
   });
 
   /* ---------------- Init ---------------- */
@@ -307,45 +276,6 @@ export default function StudentsPage() {
     }
   }, [showToast]);
 
-  const loadFunding = useCallback(async (studentId: number, sessionId: number) => {
-    try {
-      setFundingLoading(true);
-      setEditingFunding(false);
-      try {
-        const res = await api.get(`/api/fees/funding/student/${studentId}/session/${sessionId}`);
-        const data = res.data;
-        setFundingData(data);
-        setFundingForm({
-          coverageType: data.coverageType,
-          coverageMode: data.coverageMode,
-          coverageValue: data.coverageValue ? data.coverageValue.toString() : "0",
-          validFrom: data.validFrom || "",
-          validTo: data.validTo || "",
-        });
-      } catch {
-        setFundingData(null);
-        setFundingForm({
-          coverageType: "NONE",
-          coverageMode: "FIXED_AMOUNT",
-          coverageValue: "0",
-          validFrom: "",
-          validTo: "",
-        });
-      }
-
-      try {
-        const histRes = await api.get(`/api/fees/funding/student/${studentId}`);
-        setFundingHistory(Array.isArray(histRes.data) ? histRes.data : []);
-      } catch {
-        setFundingHistory([]);
-      }
-    } catch {
-      showToast("Failed to load funding arrangement", "error");
-    } finally {
-      setFundingLoading(false);
-    }
-  }, [showToast]);
-
   useEffect(() => {
     loadClasses();
   }, [currentSession, loadClasses]);
@@ -359,10 +289,8 @@ export default function StudentsPage() {
       void loadEnrollments(profileStudent.id);
     } else if (profileTab === "promotions") {
       void loadPromotions(profileStudent.id);
-    } else if (profileTab === "funding" && currentSession) {
-      void loadFunding(profileStudent.id, currentSession.id);
     }
-  }, [showProfileModal, profileTab, profileStudent?.id, currentSession?.id, loadStudentLedger, loadEnrollments, loadPromotions, loadFunding]);
+  }, [showProfileModal, profileTab, profileStudent?.id, loadStudentLedger, loadEnrollments, loadPromotions]);
 
   /* ---------------- Handlers ---------------- */
 
@@ -408,7 +336,6 @@ export default function StudentsPage() {
       setLedgerData([]);
       setEnrollmentsData([]);
       setPromotionsData([]);
-      setFundingData(null);
       setShowProfileModal(true);
 
       // Fetch full student details
@@ -446,8 +373,6 @@ export default function StudentsPage() {
     setLedgerData([]);
     setEnrollmentsData([]);
     setPromotionsData([]);
-    setFundingData(null);
-    setFundingHistory([]);
     setProfileTab("overview");
   }, []);
 
@@ -512,11 +437,6 @@ export default function StudentsPage() {
       reasonForLeavingPreviousSchool: profileStudent.reasonForLeavingPreviousSchool || "",
       classId: selectedClass?.toString() || "",
       guardians: profileStudent.guardians || [],
-      fundingType: "NONE",
-      fundingMode: "FIXED_AMOUNT",
-      fundingValue: "0",
-      fundingValidFrom: "",
-      fundingValidTo: "",
     });
     setShowProfileModal(false);
     setShowAddModal(true);
@@ -578,49 +498,6 @@ export default function StudentsPage() {
           sessionId: currentSession.id,
         });
 
-        // --- Save Funding arrangement if applicable ---
-        if (studentForm.fundingType !== "NONE") {
-          // Validate funding before saving
-          const value = Number(studentForm.fundingValue);
-
-          if (studentForm.fundingType === "PARTIAL") {
-            if (isNaN(value) || value <= 0) {
-              showToast("Funding value must be greater than 0", "error");
-              setIsSaving(false);
-              return;
-            }
-            if (studentForm.fundingMode === "PERCENTAGE" && value > 100) {
-              showToast("Percentage coverage cannot exceed 100%", "error");
-              setIsSaving(false);
-              return;
-            }
-          }
-
-          if (studentForm.fundingValidFrom && !studentForm.fundingValidTo) {
-            showToast("Valid To date is required if Valid From is set", "error");
-            setIsSaving(false);
-            return;
-          }
-
-          if (studentForm.fundingValidFrom && studentForm.fundingValidTo) {
-            if (new Date(studentForm.fundingValidFrom) >= new Date(studentForm.fundingValidTo)) {
-              showToast("Valid From date must be before Valid To date", "error");
-              setIsSaving(false);
-              return;
-            }
-          }
-
-          await api.post("/api/fees/funding", {
-            studentId,
-            sessionId: currentSession.id,
-            coverageType: studentForm.fundingType,
-            coverageMode: studentForm.fundingMode,
-            coverageValue: value,
-            validFrom: studentForm.fundingValidFrom || null,
-            validTo: studentForm.fundingValidTo || null,
-          });
-        }
-
         showToast("Student enrolled successfully!", "success");
       }
       setShowAddModal(false);
@@ -656,11 +533,6 @@ export default function StudentsPage() {
         reasonForLeavingPreviousSchool: "",
         classId: "",
         guardians: [],
-        fundingType: "NONE",
-        fundingMode: "FIXED_AMOUNT",
-        fundingValue: "0",
-        fundingValidFrom: "",
-        fundingValidTo: "",
       });
 
       if (Number(classId) === Number(selectedClass)) {
@@ -678,66 +550,7 @@ export default function StudentsPage() {
     }
   }
 
-  async function saveFundingEdit() {
-    if (!profileStudent || !currentSession) return;
 
-    if (fundingForm.coverageType !== "NONE") {
-      const value = Number(fundingForm.coverageValue);
-      if (fundingForm.coverageType === "PARTIAL") {
-        if (isNaN(value) || value <= 0) {
-          showToast("Funding value must be greater than 0", "error");
-          return;
-        }
-        if (fundingForm.coverageMode === "PERCENTAGE" && value > 100) {
-          showToast("Percentage coverage cannot exceed 100%", "error");
-          return;
-        }
-      }
-      if (fundingForm.validFrom && !fundingForm.validTo) {
-        showToast("Valid To date is required if Valid From is set", "error");
-        return;
-      }
-      if (fundingForm.validFrom && fundingForm.validTo) {
-        if (new Date(fundingForm.validFrom) >= new Date(fundingForm.validTo)) {
-          showToast("Valid From date must be before Valid To date", "error");
-          return;
-        }
-      }
-    }
-
-    try {
-      setIsSaving(true);
-
-      if (fundingData && fundingData.id) {
-        await api.delete(`/api/fees/funding/${fundingData.id}`);
-      }
-
-      if (fundingForm.coverageType !== "NONE") {
-        await api.post("/api/fees/funding", {
-          studentId: profileStudent.id,
-          sessionId: currentSession.id,
-          coverageType: fundingForm.coverageType,
-          coverageMode: fundingForm.coverageMode,
-          coverageValue: Number(fundingForm.coverageValue),
-          validFrom: fundingForm.validFrom || null,
-          validTo: fundingForm.validTo || null,
-        });
-      }
-
-      showToast("Funding arrangement updated successfully", "success");
-      setEditingFunding(false);
-      void loadFunding(profileStudent.id, currentSession.id);
-
-    } catch (err: unknown) {
-      if (axios.isAxiosError(err)) {
-        showToast(getErrorMessage(err), "error");
-      } else {
-        showToast("Failed to update funding arrangement", "error");
-      }
-    } finally {
-      setIsSaving(false);
-    }
-  }
 
   /* ---------------- UI ---------------- */
 
@@ -867,7 +680,7 @@ export default function StudentsPage() {
                       s.currentStatus === "FAILED" ? "bg-orange-50 text-orange-600 border-orange-100" :
                         s.currentStatus === "LEFT" || s.currentStatus === "WITHDRAWN" || s.currentStatus === "SUSPENDED" ? "bg-red-50 text-red-600 border-red-100" :
                           s.currentStatus === "PASSED_OUT" ? "bg-indigo-50 text-indigo-600 border-indigo-100" :
-                          "bg-gray-50 text-gray-600 border-gray-100"
+                            "bg-gray-50 text-gray-600 border-gray-100"
                       }`}>
                       {s.currentStatus || "UNKNOWN"}
                     </span>
@@ -1313,83 +1126,7 @@ export default function StudentsPage() {
             </div>
           </section>
 
-          {/* Section 6: Funding / Sponsorship (New) */}
-          {canUserAddStudent && (
-            <section className="space-y-4 bg-gray-50 p-4 rounded-lg border border-gray-100 mb-6">
-              <h3 className="text-lg font-semibold border-b border-gray-100 pb-2 flex items-center gap-2">
-                <span className="bg-blue-600 text-white w-5 h-5 rounded-full flex items-center justify-center text-[10px]">6</span>
-                Funding / Sponsorship
-              </h3>
-              <div className="grid grid-cols-3 gap-4">
-                <div className="space-y-1">
-                  <label className="text-[10px] font-bold text-gray-400 ml-1">Coverage Type</label>
-                  <select
-                    name="fundingType"
-                    value={studentForm.fundingType}
-                    onChange={updateStudentField}
-                    className="input-ref"
-                  >
-                    <option value="NONE">None / Self-Paid</option>
-                    <option value="FULL">Full Scholarship (100%)</option>
-                    <option value="PARTIAL">Partial Sponsorship</option>
-                  </select>
-                </div>
 
-                {studentForm.fundingType === "PARTIAL" && (
-                  <>
-                    <div className="space-y-1">
-                      <label className="text-[10px] font-bold text-gray-400 ml-1">Mode</label>
-                      <select
-                        name="fundingMode"
-                        value={studentForm.fundingMode}
-                        onChange={updateStudentField}
-                        className="input-ref"
-                      >
-                        <option value="FIXED_AMOUNT">Fixed Amount ($)</option>
-                        <option value="PERCENTAGE">Percentage (%)</option>
-                      </select>
-                    </div>
-                    <div className="space-y-1">
-                      <label className="text-[10px] font-bold text-gray-400 ml-1">Value</label>
-                      <input
-                        name="fundingValue"
-                        type="number"
-                        placeholder="0.00"
-                        value={studentForm.fundingValue}
-                        onChange={updateStudentField}
-                        className="input-ref"
-                      />
-                    </div>
-                  </>
-                )}
-
-                {studentForm.fundingType !== "NONE" && (
-                  <>
-                    <div className="space-y-1">
-                      <label className="text-[10px] font-bold text-gray-400 ml-1">Valid From</label>
-                      <input
-                        name="fundingValidFrom"
-                        type="date"
-                        value={studentForm.fundingValidFrom}
-                        onChange={updateStudentField}
-                        className="input-ref"
-                      />
-                    </div>
-                    <div className="space-y-1">
-                      <label className="text-[10px] font-bold text-gray-400 ml-1">Valid To</label>
-                      <input
-                        name="fundingValidTo"
-                        type="date"
-                        value={studentForm.fundingValidTo}
-                        onChange={updateStudentField}
-                        className="input-ref"
-                      />
-                    </div>
-                  </>
-                )}
-              </div>
-            </section>
-          )}
 
           {/* Section 7: Remarks */}
           <section className="space-y-4 mb-6">
@@ -1465,12 +1202,6 @@ export default function StudentsPage() {
                 className={`px-3 py-1.5 rounded-md text-base font-medium ${profileTab === "enrollments" ? "bg-blue-600 text-white hover:bg-blue-700" : "bg-white border border-gray-300 text-gray-700 hover:bg-gray-50"}`}
               >
                 Enrollments
-              </button>
-              <button
-                onClick={() => setProfileTab("funding")}
-                className={`px-3 py-1.5 rounded-md text-base font-medium ${profileTab === "funding" ? "bg-blue-600 text-white hover:bg-blue-700" : "bg-white border border-gray-300 text-gray-700 hover:bg-gray-50"}`}
-              >
-                Funding
               </button>
             </div>
             {canUserEditStudent && profileStudent && (
@@ -1662,10 +1393,6 @@ export default function StudentsPage() {
                         <span className="block text-blue-400 uppercase text-[9px] mb-1">Discount (-)</span>
                         <span className="text-blue-600">₹{Number(entry.totalDiscount).toLocaleString()}</span>
                       </div>
-                      <div className="bg-indigo-50 p-2 rounded-lg border border-indigo-100">
-                        <span className="block text-indigo-400 uppercase text-[9px] mb-1">Sponsor Covered (-)</span>
-                        <span className="text-indigo-600">₹{Number(entry.totalFunding).toLocaleString()}</span>
-                      </div>
                       <div className="bg-orange-50 p-2 rounded-lg border border-orange-100">
                         <span className="block text-orange-400 uppercase text-[9px] mb-1">Late Fee (+)</span>
                         <span className="text-orange-600">₹{Number(entry.totalLateFee).toLocaleString()}</span>
@@ -1793,193 +1520,7 @@ export default function StudentsPage() {
             </div>
           )}
 
-          {profileTab === "funding" && (
-            <div className="space-y-4">
-              {fundingLoading ? (
-                <div className="py-10 text-center text-gray-400 italic">Loading funding details...</div>
-              ) : editingFunding ? (
-                <div className="bg-gray-50 p-6 rounded-xl border space-y-4">
-                  <h3 className="text-sm font-semibold border-b pb-2">Edit Funding Arrangement</h3>
-                  <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                    <div className="space-y-1">
-                      <label className="text-[10px] font-bold text-gray-500 uppercase tracking-wider">Coverage Type</label>
-                      <select
-                        value={fundingForm.coverageType}
-                        onChange={(e) => setFundingForm({ ...fundingForm, coverageType: e.target.value as any })}
-                        className="input-ref"
-                      >
-                        <option value="NONE">None / Self-Paid</option>
-                        <option value="FULL">Full Scholarship (100%)</option>
-                        <option value="PARTIAL">Partial Sponsorship</option>
-                      </select>
-                    </div>
 
-                    {fundingForm.coverageType === "PARTIAL" && (
-                      <>
-                        <div className="space-y-1">
-                          <label className="text-[10px] font-bold text-gray-500 uppercase tracking-wider">Mode</label>
-                          <select
-                            value={fundingForm.coverageMode}
-                            onChange={(e) => setFundingForm({ ...fundingForm, coverageMode: e.target.value as any })}
-                            className="input-ref"
-                          >
-                            <option value="FIXED_AMOUNT">Fixed Amount ($)</option>
-                            <option value="PERCENTAGE">Percentage (%)</option>
-                          </select>
-                        </div>
-                        <div className="space-y-1">
-                          <label className="text-[10px] font-bold text-gray-500 uppercase tracking-wider">Value</label>
-                          <input
-                            type="number"
-                            placeholder="0.00"
-                            value={fundingForm.coverageValue}
-                            onChange={(e) => setFundingForm({ ...fundingForm, coverageValue: e.target.value })}
-                            className="input-ref"
-                          />
-                        </div>
-                      </>
-                    )}
-
-                    {fundingForm.coverageType !== "NONE" && (
-                      <>
-                        <div className="space-y-1">
-                          <label className="text-[10px] font-bold text-gray-500 uppercase tracking-wider">Valid From</label>
-                          <input
-                            type="date"
-                            value={fundingForm.validFrom}
-                            onChange={(e) => setFundingForm({ ...fundingForm, validFrom: e.target.value })}
-                            className="input-ref"
-                          />
-                        </div>
-                        <div className="space-y-1">
-                          <label className="text-[10px] font-bold text-gray-500 uppercase tracking-wider">Valid To</label>
-                          <input
-                            type="date"
-                            value={fundingForm.validTo}
-                            onChange={(e) => setFundingForm({ ...fundingForm, validTo: e.target.value })}
-                            className="input-ref"
-                          />
-                        </div>
-                      </>
-                    )}
-                  </div>
-
-                  <div className="flex justify-end gap-2 pt-4 border-t mt-4">
-                    <button
-                      onClick={() => {
-                        setEditingFunding(false);
-                        setFundingForm({
-                          coverageType: fundingData?.coverageType || "NONE",
-                          coverageMode: fundingData?.coverageMode || "FIXED_AMOUNT",
-                          coverageValue: fundingData?.coverageValue ? fundingData.coverageValue.toString() : "0",
-                          validFrom: fundingData?.validFrom || "",
-                          validTo: fundingData?.validTo || "",
-                        });
-                      }}
-                      className="px-4 py-2 rounded-md bg-white border border-gray-300 text-sm font-medium hover:bg-gray-50"
-                    >
-                      Cancel
-                    </button>
-                    <button
-                      onClick={saveFundingEdit}
-                      disabled={isSaving}
-                      className="px-4 py-2 rounded-md bg-blue-600 text-white text-sm font-medium hover:bg-blue-700 disabled:opacity-50"
-                    >
-                      {isSaving ? "Saving..." : "Save Changes"}
-                    </button>
-                  </div>
-                </div>
-              ) : fundingData && fundingData.coverageType !== "NONE" ? (
-                <div className="bg-white p-6 rounded-xl border shadow-sm flex flex-col gap-6 relative">
-                  {canUserEditStudent && (
-                    <button
-                      onClick={() => setEditingFunding(true)}
-                      className="absolute top-4 right-4 text-blue-600 hover:text-blue-800 text-sm font-medium"
-                    >
-                      Edit
-                    </button>
-                  )}
-                  <div className="flex items-center gap-3 border-b border-gray-100 pb-4">
-                    <span className={`w-10 h-10 rounded-full flex items-center justify-center text-xl ${fundingData.coverageType === 'FULL' ? 'bg-green-100 text-green-600' : 'bg-blue-100 text-blue-600'}`}>
-                      💎
-                    </span>
-                    <div>
-                      <h3 className="text-lg font-bold text-gray-800">
-                        {fundingData.coverageType === "FULL" ? "Full Scholarship" : "Partial Sponsorship"}
-                      </h3>
-                      <p className="text-sm text-gray-500 flex items-center gap-2">
-                        <span className="w-2 h-2 rounded-full bg-green-500"></span>
-                        Active Arrangement
-                      </p>
-                    </div>
-                  </div>
-
-                  <div className="grid grid-cols-2 md:grid-cols-4 gap-6">
-                    <div className="space-y-1">
-                      <span className="text-[10px] font-bold text-gray-400 uppercase tracking-wider block">Coverage Value</span>
-                      <span className="text-xl font-bold font-mono text-gray-800">
-                        {fundingData.coverageType === "FULL"
-                          ? "100%"
-                          : fundingData.coverageMode === "PERCENTAGE"
-                            ? `${fundingData.coverageValue}%`
-                            : `₹${Number(fundingData.coverageValue).toLocaleString()}`
-                        }
-                      </span>
-                    </div>
-                    <div className="space-y-1">
-                      <span className="text-[10px] font-bold text-gray-400 uppercase tracking-wider block">Calculation Mode</span>
-                      <span className="text-sm font-medium text-gray-700 bg-gray-100 px-2 py-1 rounded">
-                        {fundingData.coverageMode === "PERCENTAGE" ? "Percentage Based" : "Fixed Amount Deduction"}
-                      </span>
-                    </div>
-                    <div className="space-y-1">
-                      <span className="text-[10px] font-bold text-gray-400 uppercase tracking-wider block">Valid From</span>
-                      <span className="text-sm font-medium text-gray-700">{fundingData.validFrom || "No Start Date"}</span>
-                    </div>
-                    <div className="space-y-1">
-                      <span className="text-[10px] font-bold text-gray-400 uppercase tracking-wider block">Valid To</span>
-                      <span className="text-sm font-medium text-gray-700">{fundingData.validTo || "No Expiry"}</span>
-                    </div>
-                  </div>
-                </div>
-              ) : (
-                <div className="py-12 bg-gray-50 border border-dashed border-gray-300 rounded-xl text-center flex flex-col items-center gap-3">
-                  <span className="text-3xl">💰</span>
-                  <div>
-                    <p className="text-gray-800 font-medium">No Funding Arrangement</p>
-                    <p className="text-gray-500 text-sm">This student pays full fees natively.</p>
-                  </div>
-                  {canUserEditStudent && (
-                    <button
-                      onClick={() => setEditingFunding(true)}
-                      className="mt-2 text-blue-600 bg-blue-50 hover:bg-blue-100 px-4 py-2 rounded-md font-medium text-sm transition-colors border border-blue-200"
-                    >
-                      {fundingHistory.length > 0 ? "+ Re-add Funding" : "+ Add Sponsorship"}
-                    </button>
-                  )}
-                </div>
-              )}
-
-              {fundingHistory.length > 0 && (
-                <div className="mt-6 border-t pt-4">
-                  <h4 className="text-sm font-semibold mb-3">Funding History</h4>
-                  <div className="space-y-2">
-                    {fundingHistory.map((hist) => (
-                      <div key={hist.id} className="flex justify-between items-center p-3 bg-white border border-gray-100 rounded-lg text-sm">
-                        <div>
-                          <span className="font-semibold text-gray-700">{hist.coverageType === "FULL" ? "Full Scholarship" : "Partial Sponsorship"}</span>
-                          <span className="text-xs text-gray-500 ml-2">({hist.coverageMode === "PERCENTAGE" ? hist.coverageValue + "%" : "₹" + hist.coverageValue})</span>
-                        </div>
-                        <span className={`px-2 py-0.5 rounded-full text-[10px] uppercase font-bold ${hist.active ? "bg-green-100 text-green-700" : "bg-gray-100 text-gray-500"}`}>
-                          {hist.active ? "Active" : "Inactive"}
-                        </span>
-                      </div>
-                    ))}
-                  </div>
-                </div>
-              )}
-            </div>
-          )}
         </div>
       </Modal>
     </div >

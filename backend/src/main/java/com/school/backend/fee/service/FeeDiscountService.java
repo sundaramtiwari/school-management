@@ -27,7 +27,6 @@ public class FeeDiscountService {
     private final StudentFeeAssignmentRepository assignmentRepository;
     private final DiscountDefinitionRepository discountDefinitionRepository;
     private final FeeAdjustmentRepository feeAdjustmentRepository;
-    private final FundingSnapshotService fundingSnapshotService;
 
     @Transactional
     public FeeDiscountApplyResponse applyDiscount(
@@ -67,13 +66,10 @@ public class FeeDiscountService {
 
         BigDecimal updatedTotalDiscount = nz(assignment.getTotalDiscountAmount()).add(appliedDiscount);
         assignment.setTotalDiscountAmount(updatedTotalDiscount);
-        fundingSnapshotService.recalculateAndUpdateFundingSnapshot(assignment);
-        BigDecimal updatedSponsorCoveredAmount = nz(assignment.getSponsorCoveredAmount());
 
         BigDecimal principalAfterDiscount = nz(assignment.getAmount())
                 .subtract(nz(assignment.getPrincipalPaid()))
-                .subtract(updatedTotalDiscount)
-                .subtract(updatedSponsorCoveredAmount);
+                .subtract(updatedTotalDiscount);
         if (principalAfterDiscount.compareTo(ZERO) < 0) {
             throw new BusinessException("Discount cannot reduce principal below zero.");
         }
@@ -91,7 +87,6 @@ public class FeeDiscountService {
                 .schoolId(schoolId)
                 .build());
 
-        assignment.setSponsorCoveredAmount(updatedSponsorCoveredAmount);
         assignmentRepository.save(assignment);
         return FeeDiscountApplyResponse.builder()
                 .appliedAmount(appliedDiscount)
@@ -117,14 +112,14 @@ public class FeeDiscountService {
     private BigDecimal calculateRemainingPrincipal(StudentFeeAssignment assignment) {
         return nz(assignment.getAmount())
                 .subtract(nz(assignment.getTotalDiscountAmount()))
-                .subtract(nz(assignment.getSponsorCoveredAmount()))
                 .subtract(nz(assignment.getPrincipalPaid()));
     }
 
     private BigDecimal calculateDiscountAmount(DiscountDefinition definition, BigDecimal assignmentAmount) {
         BigDecimal raw;
         if (definition.getType() == DiscountType.PERCENTAGE) {
-            raw = nz(assignmentAmount).multiply(nz(definition.getAmountValue())).divide(HUNDRED, 6, RoundingMode.HALF_UP);
+            raw = nz(assignmentAmount).multiply(nz(definition.getAmountValue())).divide(HUNDRED, 6,
+                    RoundingMode.HALF_UP);
         } else if (definition.getType() == DiscountType.FLAT) {
             raw = nz(definition.getAmountValue());
         } else {

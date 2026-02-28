@@ -105,8 +105,7 @@ public class FeePaymentService {
 
             BigDecimal principalDueBeforeLate = assignment.getAmount()
                     .subtract(assignment.getPrincipalPaid())
-                    .subtract(assignment.getTotalDiscountAmount())
-                    .subtract(assignment.getSponsorCoveredAmount());
+                    .subtract(assignment.getTotalDiscountAmount());
 
             // 1. Accrue any pending late fees up to today/payment date
             BigDecimal incrementalLateFee = lateFeeCalculator.calculateLateFee(assignment, principalDueBeforeLate,

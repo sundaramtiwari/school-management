@@ -11,7 +11,6 @@ public class FeeSummaryDto {
 
     private java.math.BigDecimal totalFee; // sum of fee structure principal
     private java.math.BigDecimal totalDiscount;
-    private java.math.BigDecimal totalFunding;
     private java.math.BigDecimal totalPaid; // sum of principal + late fee payments
     private java.math.BigDecimal pendingFee; // total (Principal + Accrued Late Fee) - Total Paid
     private java.math.BigDecimal totalLateFeeAccrued;
