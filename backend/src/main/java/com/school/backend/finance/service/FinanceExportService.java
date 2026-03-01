@@ -1,11 +1,9 @@
 package com.school.backend.finance.service;
 
-import com.school.backend.core.dashboard.dto.DailyCashDashboardDto;
-import com.school.backend.core.dashboard.service.DashboardStatsService;
+import com.school.backend.finance.dto.DailyCashDashboardDto;
 import com.school.backend.expense.dto.ExpenseVoucherDto;
 import com.school.backend.expense.service.ExpenseService;
-import com.school.backend.finance.dto.MonthlyPLResponseDto;
-import com.school.backend.finance.dto.SessionPLResponseDto;
+import com.school.backend.finance.dto.FinancialOverviewDto;
 import com.school.backend.fee.dto.FeeTypeHeadSummaryDto;
 import org.apache.poi.ss.usermodel.Cell;
 import org.apache.poi.ss.usermodel.CellStyle;
@@ -27,21 +25,18 @@ import java.util.Set;
 @Service
 public class FinanceExportService {
 
-    private final DashboardStatsService dashboardStatsService;
-    private final FinanceReportingService financeReportingService;
+    private final FinanceOverviewService financeOverviewService;
     private final ExpenseService expenseService;
 
     public FinanceExportService(
-            DashboardStatsService dashboardStatsService,
-            FinanceReportingService financeReportingService,
+            FinanceOverviewService financeOverviewService,
             ExpenseService expenseService) {
-        this.dashboardStatsService = dashboardStatsService;
-        this.financeReportingService = financeReportingService;
+        this.financeOverviewService = financeOverviewService;
         this.expenseService = expenseService;
     }
 
     public byte[] exportDailyCash(LocalDate date) {
-        DailyCashDashboardDto dto = dashboardStatsService.getDailyCashDashboard(date);
+        DailyCashDashboardDto dto = financeOverviewService.getDailyOverview(date);
         List<ExpenseVoucherDto> expenses = expenseService.getExpensesByDate(date);
 
         try (XSSFWorkbook workbook = new XSSFWorkbook()) {
@@ -52,16 +47,22 @@ public class FinanceExportService {
             int rowIdx = 0;
 
             rowIdx = writeLabelValueDate(sheet, rowIdx, "Date", date, usedColumns);
-            rowIdx = writeLabelValueNumeric(sheet, rowIdx, "Total Revenue", dto.getTotalFeeCollected(), numericStyle, usedColumns);
-            rowIdx = writeLabelValueNumeric(sheet, rowIdx, "Total Expense", dto.getTotalExpense(), numericStyle, usedColumns);
+            rowIdx = writeLabelValueNumeric(sheet, rowIdx, "Total Revenue", dto.getTotalFeeCollected(), numericStyle,
+                    usedColumns);
+            rowIdx = writeLabelValueNumeric(sheet, rowIdx, "Total Expense", dto.getTotalExpense(), numericStyle,
+                    usedColumns);
             rowIdx = writeLabelValueNumeric(sheet, rowIdx, "Net", dto.getNetAmount(), numericStyle, usedColumns);
             rowIdx++;
-            rowIdx = writeLabelValueNumeric(sheet, rowIdx, "Cash Revenue", dto.getCashRevenue(), numericStyle, usedColumns);
-            rowIdx = writeLabelValueNumeric(sheet, rowIdx, "Cash Expense", dto.getCashExpense(), numericStyle, usedColumns);
+            rowIdx = writeLabelValueNumeric(sheet, rowIdx, "Cash Revenue", dto.getCashRevenue(), numericStyle,
+                    usedColumns);
+            rowIdx = writeLabelValueNumeric(sheet, rowIdx, "Cash Expense", dto.getCashExpense(), numericStyle,
+                    usedColumns);
             rowIdx = writeLabelValueNumeric(sheet, rowIdx, "Net Cash", dto.getNetCash(), numericStyle, usedColumns);
             rowIdx++;
-            rowIdx = writeLabelValueNumeric(sheet, rowIdx, "Bank Revenue", dto.getBankRevenue(), numericStyle, usedColumns);
-            rowIdx = writeLabelValueNumeric(sheet, rowIdx, "Bank Expense", dto.getBankExpense(), numericStyle, usedColumns);
+            rowIdx = writeLabelValueNumeric(sheet, rowIdx, "Bank Revenue", dto.getBankRevenue(), numericStyle,
+                    usedColumns);
+            rowIdx = writeLabelValueNumeric(sheet, rowIdx, "Bank Expense", dto.getBankExpense(), numericStyle,
+                    usedColumns);
             rowIdx = writeLabelValueNumeric(sheet, rowIdx, "Net Bank", dto.getNetBank(), numericStyle, usedColumns);
 
             rowIdx += 2;
@@ -87,7 +88,8 @@ public class FinanceExportService {
                 Row r = sheet.createRow(rowIdx++);
                 createTextCell(r, 0, expense.getExpenseHeadName(), usedColumns);
                 createNumericCell(r, 1, expense.getAmount(), numericStyle, usedColumns);
-                createTextCell(r, 2, expense.getPaymentMode() != null ? expense.getPaymentMode().name() : "", usedColumns);
+                createTextCell(r, 2, expense.getPaymentMode() != null ? expense.getPaymentMode().name() : "",
+                        usedColumns);
             }
 
             autosize(sheet, usedColumns);
@@ -97,73 +99,41 @@ public class FinanceExportService {
         }
     }
 
-    public byte[] exportMonthlyPL(int year, int month) {
-        MonthlyPLResponseDto dto = financeReportingService.getMonthlyPL(year, month);
+    public byte[] exportRangePL(LocalDate start, LocalDate end) {
+        FinancialOverviewDto dto = financeOverviewService.getRangeOverview(start, end);
         try (XSSFWorkbook workbook = new XSSFWorkbook()) {
-            Sheet sheet = workbook.createSheet("Monthly P&L");
+            Sheet sheet = workbook.createSheet("P&L Report");
             CellStyle headerStyle = createHeaderStyle(workbook);
             CellStyle numericStyle = createNumericStyle(workbook);
             Set<Integer> usedColumns = new LinkedHashSet<>();
             int rowIdx = 0;
 
             Row header = sheet.createRow(rowIdx++);
-            createHeaderCell(header, 0, "Month", headerStyle, usedColumns);
-            createHeaderCell(header, 1, "Year", headerStyle, usedColumns);
+            createHeaderCell(header, 0, "Period", headerStyle, usedColumns);
             Row headerValues = sheet.createRow(rowIdx++);
-            createTextCell(headerValues, 0, String.valueOf(dto.getMonth()), usedColumns);
-            createTextCell(headerValues, 1, String.valueOf(dto.getYear()), usedColumns);
+            createTextCell(headerValues, 0, dto.getPeriodName(), usedColumns);
 
             rowIdx++;
-            rowIdx = writeLabelValueNumeric(sheet, rowIdx, "Total Revenue", dto.getTotalRevenue(), numericStyle, usedColumns);
-            rowIdx = writeLabelValueNumeric(sheet, rowIdx, "Total Expense", dto.getTotalExpense(), numericStyle, usedColumns);
+            rowIdx = writeLabelValueNumeric(sheet, rowIdx, "Total Revenue", dto.getTotalRevenue(), numericStyle,
+                    usedColumns);
+            rowIdx = writeLabelValueNumeric(sheet, rowIdx, "Total Expense", dto.getTotalExpense(), numericStyle,
+                    usedColumns);
             rowIdx = writeLabelValueNumeric(sheet, rowIdx, "Net Profit", dto.getNetProfit(), numericStyle, usedColumns);
             rowIdx++;
-            rowIdx = writeLabelValueNumeric(sheet, rowIdx, "Cash Revenue", dto.getCashRevenue(), numericStyle, usedColumns);
-            rowIdx = writeLabelValueNumeric(sheet, rowIdx, "Cash Expense", dto.getCashExpense(), numericStyle, usedColumns);
-            rowIdx = writeLabelValueNumeric(sheet, rowIdx, "Net Cash", dto.getNetCash(), numericStyle, usedColumns);
+            rowIdx = writeLabelValueNumeric(sheet, rowIdx, "Cash Revenue", dto.getCashRevenue(), numericStyle,
+                    usedColumns);
+            rowIdx = writeLabelValueNumeric(sheet, rowIdx, "Cash Expense", dto.getCashExpense(), numericStyle,
+                    usedColumns);
             rowIdx++;
-            rowIdx = writeLabelValueNumeric(sheet, rowIdx, "Bank Revenue", dto.getBankRevenue(), numericStyle, usedColumns);
-            rowIdx = writeLabelValueNumeric(sheet, rowIdx, "Bank Expense", dto.getBankExpense(), numericStyle, usedColumns);
-            rowIdx = writeLabelValueNumeric(sheet, rowIdx, "Net Bank", dto.getNetBank(), numericStyle, usedColumns);
+            rowIdx = writeLabelValueNumeric(sheet, rowIdx, "Bank Revenue", dto.getBankRevenue(), numericStyle,
+                    usedColumns);
+            rowIdx = writeLabelValueNumeric(sheet, rowIdx, "Bank Expense", dto.getBankExpense(), numericStyle,
+                    usedColumns);
 
             autosize(sheet, usedColumns);
             return toBytes(workbook);
         } catch (IOException e) {
-            throw new IllegalStateException("Failed to export monthly P&L Excel", e);
-        }
-    }
-
-    public byte[] exportSessionPL() {
-        SessionPLResponseDto dto = financeReportingService.getSessionPL();
-        try (XSSFWorkbook workbook = new XSSFWorkbook()) {
-            Sheet sheet = workbook.createSheet("Session P&L");
-            CellStyle headerStyle = createHeaderStyle(workbook);
-            CellStyle numericStyle = createNumericStyle(workbook);
-            Set<Integer> usedColumns = new LinkedHashSet<>();
-            int rowIdx = 0;
-
-            Row header = sheet.createRow(rowIdx++);
-            createHeaderCell(header, 0, "Session Name", headerStyle, usedColumns);
-            Row headerValue = sheet.createRow(rowIdx++);
-            createTextCell(headerValue, 0, dto.getSessionName(), usedColumns);
-
-            rowIdx++;
-            rowIdx = writeLabelValueNumeric(sheet, rowIdx, "Total Revenue", dto.getTotalRevenue(), numericStyle, usedColumns);
-            rowIdx = writeLabelValueNumeric(sheet, rowIdx, "Total Expense", dto.getTotalExpense(), numericStyle, usedColumns);
-            rowIdx = writeLabelValueNumeric(sheet, rowIdx, "Net Profit", dto.getNetProfit(), numericStyle, usedColumns);
-            rowIdx++;
-            rowIdx = writeLabelValueNumeric(sheet, rowIdx, "Cash Revenue", dto.getCashRevenue(), numericStyle, usedColumns);
-            rowIdx = writeLabelValueNumeric(sheet, rowIdx, "Cash Expense", dto.getCashExpense(), numericStyle, usedColumns);
-            rowIdx = writeLabelValueNumeric(sheet, rowIdx, "Net Cash", dto.getNetCash(), numericStyle, usedColumns);
-            rowIdx++;
-            rowIdx = writeLabelValueNumeric(sheet, rowIdx, "Bank Revenue", dto.getBankRevenue(), numericStyle, usedColumns);
-            rowIdx = writeLabelValueNumeric(sheet, rowIdx, "Bank Expense", dto.getBankExpense(), numericStyle, usedColumns);
-            rowIdx = writeLabelValueNumeric(sheet, rowIdx, "Net Bank", dto.getNetBank(), numericStyle, usedColumns);
-
-            autosize(sheet, usedColumns);
-            return toBytes(workbook);
-        } catch (IOException e) {
-            throw new IllegalStateException("Failed to export session P&L Excel", e);
+            throw new IllegalStateException("Failed to export P&L Excel", e);
         }
     }
 
@@ -188,11 +158,14 @@ public class FinanceExportService {
             for (ExpenseVoucherDto expense : expenses) {
                 Row r = sheet.createRow(rowIdx++);
                 createTextCell(r, 0, expense.getVoucherNumber(), usedColumns);
-                createTextCell(r, 1, expense.getExpenseDate() != null ? expense.getExpenseDate().toString() : "", usedColumns);
+                createTextCell(r, 1, expense.getExpenseDate() != null ? expense.getExpenseDate().toString() : "",
+                        usedColumns);
                 createTextCell(r, 2, expense.getExpenseHeadName(), usedColumns);
                 createNumericCell(r, 3, expense.getAmount(), numericStyle, usedColumns);
-                createTextCell(r, 4, expense.getPaymentMode() != null ? expense.getPaymentMode().name() : "", usedColumns);
-                createTextCell(r, 5, expense.getCreatedBy() != null ? String.valueOf(expense.getCreatedBy()) : "", usedColumns);
+                createTextCell(r, 4, expense.getPaymentMode() != null ? expense.getPaymentMode().name() : "",
+                        usedColumns);
+                createTextCell(r, 5, expense.getCreatedBy() != null ? String.valueOf(expense.getCreatedBy()) : "",
+                        usedColumns);
                 total = total.add(nz(expense.getAmount()));
             }
 
@@ -214,7 +187,8 @@ public class FinanceExportService {
         return rowIdx + 1;
     }
 
-    private int writeLabelValueNumeric(Sheet sheet, int rowIdx, String label, BigDecimal value, CellStyle numericStyle, Set<Integer> usedColumns) {
+    private int writeLabelValueNumeric(Sheet sheet, int rowIdx, String label, BigDecimal value, CellStyle numericStyle,
+            Set<Integer> usedColumns) {
         Row row = sheet.createRow(rowIdx);
         createTextCell(row, 0, label, usedColumns);
         createNumericCell(row, 1, value, numericStyle, usedColumns);
@@ -234,7 +208,8 @@ public class FinanceExportService {
         usedColumns.add(col);
     }
 
-    private void createNumericCell(Row row, int col, BigDecimal value, CellStyle numericStyle, Set<Integer> usedColumns) {
+    private void createNumericCell(Row row, int col, BigDecimal value, CellStyle numericStyle,
+            Set<Integer> usedColumns) {
         Cell cell = row.createCell(col);
         cell.setCellValue(nz(value).doubleValue());
         cell.setCellStyle(numericStyle);

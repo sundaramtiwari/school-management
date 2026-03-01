@@ -4,13 +4,10 @@ import com.school.backend.common.exception.BusinessException;
 import com.school.backend.common.exception.InvalidOperationException;
 import com.school.backend.common.tenant.SessionContext;
 import com.school.backend.common.tenant.TenantContext;
-import com.school.backend.core.dashboard.dto.DailyCashDashboardDto;
-import com.school.backend.core.dashboard.service.DashboardStatsService;
+import com.school.backend.finance.dto.DailyCashDashboardDto;
 import com.school.backend.finance.dto.DayClosingDto;
 import com.school.backend.finance.entity.DayClosing;
 import com.school.backend.finance.repository.DayClosingRepository;
-import com.school.backend.school.entity.AcademicSession;
-import com.school.backend.school.repository.AcademicSessionRepository;
 import com.school.backend.user.security.SecurityUtil;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
@@ -27,9 +24,7 @@ import java.time.LocalDateTime;
 public class DayClosingService {
 
     private final DayClosingRepository dayClosingRepository;
-    private final AcademicSessionRepository academicSessionRepository;
-    private final DashboardStatsService dashboardStatsService;
-    private final FinanceAccountTransferService financeAccountTransferService;
+    private final FinanceOverviewService financeOverviewService;
 
     @Transactional
     public DayClosingDto closeDate(LocalDate date) {
@@ -39,20 +34,11 @@ public class DayClosingService {
         }
 
         Long schoolId = TenantContext.getSchoolId();
+        // Session ID is still needed for generic TenantEntity compliance but Reporting
+        // should be date-based.
         Long sessionId = SessionContext.getSessionId();
         if (sessionId == null) {
             throw new InvalidOperationException("Session context is missing in request");
-        }
-
-        AcademicSession session = academicSessionRepository.findById(sessionId)
-                .filter(s -> schoolId.equals(s.getSchoolId()))
-                .orElseThrow(() -> new InvalidOperationException("Session not found for school: " + sessionId));
-
-        if (session.getStartDate() != null && closeDate.isBefore(session.getStartDate())) {
-            throw new BusinessException("Date is before session start");
-        }
-        if (session.getEndDate() != null && closeDate.isAfter(session.getEndDate())) {
-            throw new BusinessException("Date is after session end");
         }
 
         DayClosing existing = dayClosingRepository.findBySchoolIdAndDate(schoolId, closeDate).orElse(null);
@@ -60,46 +46,32 @@ public class DayClosingService {
             throw new InvalidOperationException("Date already closed");
         }
 
-        DayClosing previous = dayClosingRepository
-                .findFirstBySchoolIdAndDateLessThanOrderByDateDesc(schoolId, closeDate)
-                .orElse(null);
+        // 1. Fetch Today's Overview (includes Opening Balance logic)
+        DailyCashDashboardDto daily = financeOverviewService.getDailyOverview(closeDate);
 
-        BigDecimal openingCash = previous != null ? nz(previous.getClosingCash()) : BigDecimal.ZERO;
-        BigDecimal openingBank = previous != null ? nz(previous.getClosingBank()) : BigDecimal.ZERO;
-
-        DailyCashDashboardDto daily = dashboardStatsService.getDailyCashDashboard(closeDate);
-        BigDecimal transfer = financeAccountTransferService.sumTransferAmount(schoolId, sessionId, closeDate, closeDate);
-
-        BigDecimal cashRevenue = nz(daily.getCashRevenue());
-        BigDecimal bankRevenue = nz(daily.getBankRevenue());
-        BigDecimal cashExpense = nz(daily.getCashExpense());
-        BigDecimal bankExpense = nz(daily.getBankExpense());
-        BigDecimal transferOut = transfer;
-        BigDecimal transferIn = transfer;
-
-        BigDecimal closingCash = openingCash
-                .add(cashRevenue)
-                .subtract(cashExpense)
-                .subtract(transferOut);
-        BigDecimal closingBank = openingBank
-                .add(bankRevenue)
-                .subtract(bankExpense)
-                .add(transferIn);
-
+        // 2. Map totals
         DayClosing target = existing != null ? existing : new DayClosing();
         target.setSchoolId(schoolId);
         target.setSessionId(sessionId);
         target.setDate(closeDate);
-        target.setOpeningCash(openingCash);
-        target.setOpeningBank(openingBank);
-        target.setCashRevenue(cashRevenue);
-        target.setBankRevenue(bankRevenue);
-        target.setCashExpense(cashExpense);
-        target.setBankExpense(bankExpense);
-        target.setTransferOut(transferOut);
-        target.setTransferIn(transferIn);
-        target.setClosingCash(closingCash);
-        target.setClosingBank(closingBank);
+
+        // Opening bases are derived from yesterday in Service
+        // We fetch yesterday explicitly to store it in DayClosing record for audit
+        DayClosing previous = dayClosingRepository
+                .findFirstBySchoolIdAndDateLessThanOrderByDateDesc(schoolId, closeDate)
+                .orElse(null);
+
+        target.setOpeningCash(previous != null ? nz(previous.getClosingCash()) : BigDecimal.ZERO);
+        target.setOpeningBank(previous != null ? nz(previous.getClosingBank()) : BigDecimal.ZERO);
+
+        target.setCashRevenue(daily.getCashRevenue());
+        target.setBankRevenue(daily.getBankRevenue());
+        target.setCashExpense(daily.getCashExpense());
+        target.setBankExpense(daily.getBankExpense());
+        target.setTransferOut(daily.getTransferOut());
+        target.setTransferIn(daily.getTransferIn());
+        target.setClosingCash(daily.getNetCash()); // getNetCash returns closing position
+        target.setClosingBank(daily.getNetBank()); // getNetBank returns closing position
         target.setOverrideAllowed(false);
         target.setClosedBy(SecurityUtil.userId());
         target.setClosedAt(LocalDateTime.now());

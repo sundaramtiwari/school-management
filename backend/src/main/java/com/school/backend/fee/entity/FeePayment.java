@@ -50,6 +50,7 @@ public class FeePayment extends TenantEntity {
     @Column(name = "transaction_reference", length = 100)
     private String transactionReference; // For UPI/online payments
 
+    @Column(nullable = false)
     private String mode; // CASH / UPI / BANK
     private String remarks;
 

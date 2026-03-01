@@ -8,7 +8,7 @@ import { downloadExcel } from "@/lib/fileUtils";
 import Modal from "@/components/ui/Modal";
 import { useAuth } from "@/context/AuthContext";
 
-export default function DailyCashPage() {
+export default function DailyOverview() {
     const { showToast } = useToast();
     const { user } = useAuth();
     const userRole = user?.role?.toUpperCase();
@@ -65,7 +65,7 @@ export default function DailyCashPage() {
 
     useEffect(() => {
         fetchData();
-    }, [selectedDate, showToast]);
+    }, [selectedDate]);
 
     const handlePrint = () => {
         window.print();
@@ -145,12 +145,11 @@ export default function DailyCashPage() {
     };
 
     return (
-        <div className="max-w-7xl mx-auto space-y-6">
-
+        <div className="space-y-6">
             {/* Header controls (hidden when printing) */}
             <div className="flex flex-col sm:flex-row justify-between items-start sm:items-baseline gap-4 print:hidden border-b pb-6">
                 <div className="flex items-baseline gap-3">
-                    <h1 className="text-xl font-bold text-gray-800 tracking-tight">Daily Cash Dashboard</h1>
+                    <h2 className="text-xl font-bold text-gray-800 tracking-tight">Treasury View</h2>
                     {summary?.closed ? (
                         <span className="px-2 py-0.5 bg-red-50 text-red-600 text-[10px] font-bold uppercase tracking-wider rounded-full border border-red-100">
                             Closed

@@ -29,26 +29,19 @@ public class FinanceExportController {
         return excelResponse(payload, "daily_cash_" + date + ".xlsx");
     }
 
-    @GetMapping("/monthly-pl")
+    @GetMapping("/range-pl")
     @PreAuthorize("hasAnyRole('SCHOOL_ADMIN', 'ACCOUNTANT', 'SUPER_ADMIN')")
-    public ResponseEntity<byte[]> exportMonthlyPL(
-            @RequestParam int year,
-            @RequestParam int month) {
-        if (year <= 2000) {
-            throw new BusinessException("Year must be greater than 2000");
+    public ResponseEntity<byte[]> exportRangePL(
+            @RequestParam LocalDate start,
+            @RequestParam LocalDate end) {
+        if (start == null || end == null) {
+            throw new BusinessException("Start and End dates are required");
         }
-        if (month < 1 || month > 12) {
-            throw new BusinessException("Month must be between 1 and 12");
+        if (end.isBefore(start)) {
+            throw new BusinessException("End date cannot be before Start date");
         }
-        byte[] payload = financeExportService.exportMonthlyPL(year, month);
-        return excelResponse(payload, "monthly_pl_" + year + "_" + String.format("%02d", month) + ".xlsx");
-    }
-
-    @GetMapping("/session-pl")
-    @PreAuthorize("hasAnyRole('SCHOOL_ADMIN', 'ACCOUNTANT', 'SUPER_ADMIN')")
-    public ResponseEntity<byte[]> exportSessionPL() {
-        byte[] payload = financeExportService.exportSessionPL();
-        return excelResponse(payload, "session_pl.xlsx");
+        byte[] payload = financeExportService.exportRangePL(start, end);
+        return excelResponse(payload, "pl_report_" + start + "_to_" + end + ".xlsx");
     }
 
     @GetMapping("/expenses")

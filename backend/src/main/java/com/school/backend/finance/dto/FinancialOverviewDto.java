@@ -7,13 +7,16 @@ import lombok.NoArgsConstructor;
 
 import java.math.BigDecimal;
 
+import java.time.LocalDate;
+
 @Data
 @Builder
 @NoArgsConstructor
 @AllArgsConstructor
-public class SessionPLResponseDto {
-    private Long sessionId;
-    private String sessionName;
+public class FinancialOverviewDto {
+    private String periodName;
+    private LocalDate startDate;
+    private LocalDate endDate;
 
     @Builder.Default
     private BigDecimal totalRevenue = BigDecimal.ZERO;
@@ -30,8 +33,4 @@ public class SessionPLResponseDto {
     private BigDecimal cashExpense = BigDecimal.ZERO;
     @Builder.Default
     private BigDecimal bankExpense = BigDecimal.ZERO;
-    @Builder.Default
-    private BigDecimal netCash = BigDecimal.ZERO;
-    @Builder.Default
-    private BigDecimal netBank = BigDecimal.ZERO;
 }

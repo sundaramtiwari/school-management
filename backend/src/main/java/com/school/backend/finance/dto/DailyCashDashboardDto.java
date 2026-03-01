@@ -1,4 +1,4 @@
-package com.school.backend.core.dashboard.dto;
+package com.school.backend.finance.dto;
 
 import com.school.backend.expense.dto.ExpenseHeadTotalDto;
 import com.school.backend.fee.dto.FeeTypeHeadSummaryDto;

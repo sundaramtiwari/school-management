@@ -1,4 +1,4 @@
-package com.school.backend.core.dashboard.dto;
+package com.school.backend.platform.dashboard.dto;
 
 import lombok.Builder;
 import lombok.Data;

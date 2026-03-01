@@ -45,11 +45,9 @@ const menu = [
       { name: "Fee Discounts", path: "/fees/discounts", icon: "🏷️", roles: ["SUPER_ADMIN", "SCHOOL_ADMIN", "ACCOUNTANT"] },
       { name: "Fee Collection", path: "/fees/collect", icon: "💰", roles: ["SUPER_ADMIN", "SCHOOL_ADMIN", "ACCOUNTANT"] },
       { name: "Fee Defaulters", path: "/fees/defaulters", icon: "⚠️", roles: ["SUPER_ADMIN", "SCHOOL_ADMIN", "ACCOUNTANT"] },
+      { name: "Finance Overview", path: "/finance", icon: "📊", roles: ["SUPER_ADMIN", "SCHOOL_ADMIN", "ACCOUNTANT"] },
       { name: "Expenses", path: "/finance/expenses", icon: "💸", roles: ["SUPER_ADMIN", "SCHOOL_ADMIN", "ACCOUNTANT"] },
       { name: "Expense Heads", path: "/finance/expense-heads", icon: "🏷️", roles: ["SUPER_ADMIN", "SCHOOL_ADMIN", "ACCOUNTANT"] },
-      { name: "Daily Cash", path: "/finance/daily-cash", icon: "💹", roles: ["SUPER_ADMIN", "SCHOOL_ADMIN", "ACCOUNTANT"] },
-      { name: "Monthly P&L", path: "/finance/monthly-pl", icon: "📈", roles: ["SUPER_ADMIN", "SCHOOL_ADMIN", "ACCOUNTANT"] },
-      { name: "Session P&L", path: "/finance/session-pl", icon: "🏦", roles: ["SUPER_ADMIN", "SCHOOL_ADMIN", "ACCOUNTANT"] },
     ]
   },
   {
@@ -68,12 +66,12 @@ const menu = [
 
 const REQUIRES_SESSION = [
   "Academics", "Finance", "Classes", "Students", "Fees", "Marksheets", "Attendance", "Exams",
-  "Fee Collection", "Fee Summary", "Fee Structures", "Daily Cash", "Expenses", "Marksheet"
+  "Fee Collection", "Fee Summary", "Fee Structures", "Finance Overview", "Expenses", "Marksheet"
 ];
 
 const REQUIRES_CLASSES = [
   "Students", "Fees", "Marksheets", "Attendance", "Exams", "Finance",
-  "Fee Collection", "Fee Summary", "Fee Structures", "Daily Cash", "Expenses", "Marksheet"
+  "Fee Collection", "Fee Summary", "Fee Structures", "Finance Overview", "Expenses", "Marksheet"
 ];
 
 const getRoleDisplay = (role: string | undefined): string => {

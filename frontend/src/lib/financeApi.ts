@@ -65,23 +65,10 @@ export interface DailyCashSummary {
     closed: boolean;
 }
 
-export interface MonthlyPLData {
-    year: number;
-    month: number;
-    totalRevenue: number;
-    totalExpense: number;
-    netProfit: number;
-    cashRevenue: number;
-    bankRevenue: number;
-    cashExpense: number;
-    bankExpense: number;
-    netCash: number;
-    netBank: number;
-}
-
-export interface SessionPLData {
-    sessionId: number;
-    sessionName: string;
+export interface FinancialOverviewData {
+    periodName: string;
+    startDate: string;
+    endDate: string;
     totalRevenue: number;
     totalExpense: number;
     netProfit: number;
@@ -103,7 +90,7 @@ export interface FeeHeadSummary {
 export const financeApi = {
     // Daily Cash
     getDailyCashSummary: async (date: string) => {
-        const response = await api.get<DailyCashSummary>(`/api/dashboard/daily-cash?date=${date}`);
+        const response = await api.get<DailyCashSummary>(`/api/finance/overview/daily?date=${date}`);
         return response.data;
     },
 
@@ -113,13 +100,8 @@ export const financeApi = {
     },
 
     // P&L Reports
-    getMonthlyPL: async (year: number, month: number) => {
-        const response = await api.get<MonthlyPLData>(`/api/finance/monthly-pl?year=${year}&month=${month}`);
-        return response.data;
-    },
-
-    getSessionPL: async () => {
-        const response = await api.get<SessionPLData>("/api/finance/session-pl");
+    getRangePL: async (start: string, end: string) => {
+        const response = await api.get<FinancialOverviewData>(`/api/finance/overview/range?start=${start}&end=${end}`);
         return response.data;
     },
 
@@ -129,13 +111,8 @@ export const financeApi = {
         return new Blob([response.data], { type: "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet" });
     },
 
-    exportMonthlyPL: async (year: number, month: number) => {
-        const response = await api.get(`/api/finance/export/monthly-pl?year=${year}&month=${month}`, { responseType: "blob" });
-        return new Blob([response.data], { type: "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet" });
-    },
-
-    exportSessionPL: async () => {
-        const response = await api.get("/api/finance/export/session-pl", { responseType: "blob" });
+    exportRangePL: async (start: string, end: string) => {
+        const response = await api.get(`/api/finance/export/range-pl?start=${start}&end=${end}`, { responseType: "blob" });
         return new Blob([response.data], { type: "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet" });
     },
 

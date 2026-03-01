@@ -23,6 +23,11 @@ public interface FinanceAccountTransferRepository extends JpaRepository<FinanceA
     java.math.BigDecimal getTransferOut();
   }
 
+  List<FinanceAccountTransfer> findBySchoolIdAndTransferDateBetween(
+      Long schoolId,
+      LocalDate fromDate,
+      LocalDate toDate);
+
   List<FinanceAccountTransfer> findBySchoolIdAndSessionIdAndTransferDateBetween(
       Long schoolId,
       Long sessionId,
