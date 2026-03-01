@@ -35,8 +35,8 @@ public class FinanceExportIntegrationTest extends BaseAuthenticatedIntegrationTe
         setSessionHeader(sessionId);
 
         assertExcel("/api/finance/export/daily-cash?date=2026-02-25");
-        assertExcel("/api/finance/export/monthly-pl?year=2026&month=2");
-        assertExcel("/api/finance/export/session-pl");
+        assertExcel("/api/finance/export/range-pl?start=2026-02-01&end=2026-02-28");
+        assertExcel("/api/finance/export/range-pl?start=2025-04-01&end=2026-03-31");
         assertExcel("/api/finance/export/expenses?date=2026-02-25");
     }
 

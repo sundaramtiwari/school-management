@@ -31,6 +31,7 @@ public final class SchoolMapper {
         dto.setBoard(entity.getBoard());
         dto.setMedium(entity.getMedium());
         dto.setSchoolCode(entity.getSchoolCode());
+        dto.setAffiliationCode(entity.getAffiliationCode());
 
         dto.setAddress(entity.getAddress());
         dto.setCity(entity.getCity());
@@ -68,6 +69,7 @@ public final class SchoolMapper {
         // TODO: Remove this dto.getSchoolCode before going live. Only for testing
         entity.setSchoolCode(
                 Objects.isNull(dto.getSchoolCode()) ? generateSchoolCode(dto.getName()) : dto.getSchoolCode());
+        entity.setAffiliationCode(dto.getAffiliationCode());
 
         entity.setAddress(dto.getAddress());
         entity.setCity(dto.getCity());
@@ -124,6 +126,8 @@ public final class SchoolMapper {
             entity.setMedium(dto.getMedium());
         if (dto.getSchoolCode() != null)
             entity.setSchoolCode(dto.getSchoolCode());
+        if (dto.getAffiliationCode() != null)
+            entity.setAffiliationCode(dto.getAffiliationCode());
 
         if (dto.getAddress() != null)
             entity.setAddress(dto.getAddress());

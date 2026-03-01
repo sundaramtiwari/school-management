@@ -1,8 +1,8 @@
 package com.school.backend.school.dto;
 
-import com.school.backend.common.enums.UserRole;
 import jakarta.validation.constraints.Email;
 import jakarta.validation.constraints.NotBlank;
+import jakarta.validation.constraints.Size;
 import lombok.Data;
 
 @Data
@@ -29,6 +29,7 @@ public class SchoolOnboardingRequest {
     @NotBlank(message = "State is required")
     private String state;
 
+    @NotBlank(message = "School email is required")
     @Email(message = "Invalid email")
     private String contactEmail;
 
@@ -37,6 +38,7 @@ public class SchoolOnboardingRequest {
     private String pincode;
     private String website;
     private String description;
+    private String affiliationCode;
 
     // Admin User Details
     @NotBlank(message = "Admin email is required")
@@ -44,7 +46,9 @@ public class SchoolOnboardingRequest {
     private String adminEmail;
 
     @NotBlank(message = "Admin password is required")
+    @Size(min = 6, message = "Admin password must be at least 6 characters")
     private String adminPassword;
 
+    @NotBlank(message = "Admin name is required")
     private String adminName;
 }

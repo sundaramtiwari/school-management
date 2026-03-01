@@ -5,10 +5,12 @@ import com.school.backend.core.attendance.enums.AttendanceStatus;
 import com.school.backend.core.attendance.repository.AttendanceRepository;
 import com.school.backend.core.student.repository.StudentRepository;
 import com.school.backend.core.teacher.repository.TeacherRepository;
+import com.school.backend.common.enums.SubscriptionStatus;
 import com.school.backend.platform.dashboard.dto.SchoolAdminStatsDto;
 import com.school.backend.school.entity.AcademicSession;
 import com.school.backend.school.repository.AcademicSessionRepository;
 import com.school.backend.school.repository.SchoolRepository;
+import com.school.backend.school.repository.SubscriptionRepository;
 import com.school.backend.testmanagement.repository.ExamRepository;
 import com.school.backend.transport.repository.TransportEnrollmentRepository;
 import lombok.RequiredArgsConstructor;
@@ -28,6 +30,7 @@ public class PlatformDashboardService {
     private final StudentRepository studentRepository;
     private final TeacherRepository teacherRepository;
     private final AcademicSessionRepository academicSessionRepository;
+    private final SubscriptionRepository subscriptionRepository;
     private final AttendanceRepository attendanceRepository;
     private final ExamRepository examRepository;
     private final TransportEnrollmentRepository transportEnrollmentRepository;
@@ -39,8 +42,8 @@ public class PlatformDashboardService {
         long totalTeachers = teacherRepository.count();
         long totalActiveSessions = academicSessionRepository.countByActiveTrue();
 
-        // Subscription due count is hardcoded to 0 for now as per requirements
-        long subscriptionDueCount = 0;
+        long subscriptionDueCount = subscriptionRepository.countByStatusIn(
+                java.util.Set.of(SubscriptionStatus.PAST_DUE, SubscriptionStatus.SUSPENDED));
 
         return PlatformDashboardResponse.builder()
                 .totalSchools(totalSchools)

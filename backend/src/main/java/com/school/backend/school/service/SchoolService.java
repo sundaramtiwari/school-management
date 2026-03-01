@@ -68,6 +68,7 @@ public class SchoolService {
         school.setPincode(req.getPincode());
         school.setWebsite(req.getWebsite());
         school.setDescription(req.getDescription());
+        school.setAffiliationCode(req.getAffiliationCode());
 
         // Auto-generate schoolCode if not provided
         if (req.getSchoolCode() == null || req.getSchoolCode().isBlank()) {
@@ -82,6 +83,7 @@ public class SchoolService {
         // 3. Create Admin User
         User user = new User();
         user.setEmail(req.getAdminEmail());
+        user.setFullName(req.getAdminName());
         user.setPasswordHash(passwordEncoder.encode(req.getAdminPassword()));
         user.setRole(UserRole.SCHOOL_ADMIN);
         user.setSchool(school);

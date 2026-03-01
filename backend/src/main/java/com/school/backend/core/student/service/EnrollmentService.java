@@ -16,6 +16,7 @@ import com.school.backend.core.student.repository.StudentRepository;
 import com.school.backend.fee.entity.FeeStructure;
 import com.school.backend.fee.repository.FeeStructureRepository;
 import com.school.backend.fee.service.FeeStructureService;
+import com.school.backend.school.service.SubscriptionAccessService;
 import lombok.RequiredArgsConstructor;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
@@ -36,6 +37,7 @@ public class EnrollmentService {
     private final PromotionRecordRepository promotionRepo;
     private final FeeStructureService feeStructureService;
     private final FeeStructureRepository feeStructureRepository;
+    private final SubscriptionAccessService subscriptionAccessService;
 
     @Transactional
     public StudentEnrollmentDto enroll(StudentEnrollmentRequest req) {
@@ -61,6 +63,9 @@ public class EnrollmentService {
         if (activeCount == 1) {
             throw new InvalidOperationException("Student already has an active enrollment for this session.");
         }
+
+        // Cap enforcement for active students (active + enrolled in current session).
+        subscriptionAccessService.validateStudentCreationAllowed(schoolId);
 
         StudentEnrollment ent = enrollmentMapper.toEntity(req);
         ent.setEnrollmentDate(req.getEnrollmentDate() != null ? req.getEnrollmentDate() : LocalDate.now());

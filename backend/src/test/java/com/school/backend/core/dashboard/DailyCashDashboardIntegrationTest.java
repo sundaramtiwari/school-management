@@ -4,7 +4,7 @@ import com.school.backend.common.BaseAuthenticatedIntegrationTest;
 import com.school.backend.common.enums.ExpensePaymentMode;
 import com.school.backend.common.enums.FeeFrequency;
 import com.school.backend.common.enums.Gender;
-import com.school.backend.core.dashboard.dto.DailyCashDashboardDto;
+import com.school.backend.finance.dto.DailyCashDashboardDto;
 import com.school.backend.core.guardian.dto.GuardianCreateRequest;
 import com.school.backend.core.student.dto.StudentCreateRequest;
 import com.school.backend.core.student.dto.StudentDto;
@@ -172,7 +172,7 @@ public class DailyCashDashboardIntegrationTest extends BaseAuthenticatedIntegrat
                                 Object.class);
 
                 ResponseEntity<DailyCashDashboardDto> response = restTemplate.exchange(
-                                "/api/dashboard/daily-cash?date=2026-02-20",
+                                "/api/finance/overview/daily?date=2026-02-20",
                                 HttpMethod.GET,
                                 new HttpEntity<>(headers),
                                 DailyCashDashboardDto.class);

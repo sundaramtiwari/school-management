@@ -49,6 +49,16 @@ public interface StudentRepository extends JpaRepository<Student, Long> {
   boolean existsByAdmissionNumberAndSchoolId(String admissionNumber, Long schoolId);
 
   @Query("""
+      select count(distinct s.id) from Student s
+      join StudentEnrollment e on s.id = e.studentId
+      where s.schoolId = :schoolId
+        and s.active = true
+        and e.sessionId = :sessionId
+        and e.active = true
+      """)
+  long countActiveStudentsInSession(@Param("schoolId") Long schoolId, @Param("sessionId") Long sessionId);
+
+  @Query("""
       SELECT COUNT(DISTINCT s.id)
       FROM Student s
       JOIN StudentEnrollment e ON s.id = e.studentId

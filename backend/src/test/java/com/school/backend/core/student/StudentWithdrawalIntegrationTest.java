@@ -229,6 +229,7 @@ public class StudentWithdrawalIntegrationTest extends BaseAuthenticatedIntegrati
     }
 
     private Long createSchoolAndLogin(String codeSuffix) {
+        loginAsSuperAdmin();
         Map<String, Object> schoolReq = Map.of(
                 "name", "Withdrawal School " + codeSuffix,
                 "displayName", "WS-" + codeSuffix,
@@ -307,13 +308,33 @@ public class StudentWithdrawalIntegrationTest extends BaseAuthenticatedIntegrati
                 .schoolId(schoolId)
                 .sessionId(sessionId)
                 .studentId(studentId)
-                .feeStructureId(feeStructureId)
+                // Ensure uniqueness on (student, fee_structure, session) for tests
+                .feeStructureId(resolveUniqueFeeStructureId(schoolId, sessionId, studentId, feeStructureId))
                 .amount(BigDecimal.valueOf(1000))
                 .dueDate(dueDate)
                 .principalPaid(principalPaid)
                 .lateFeePaid(lateFeePaid)
                 .active(active)
                 .build());
+    }
+
+    private Long resolveUniqueFeeStructureId(Long schoolId, Long sessionId, Long studentId, Long feeStructureId) {
+        boolean exists = assignmentRepository.existsByStudentIdAndFeeStructureIdAndSessionId(
+                studentId, feeStructureId, sessionId);
+        if (!exists) {
+            return feeStructureId;
+        }
+        FeeStructure original = feeStructureRepository.findById(feeStructureId).orElseThrow();
+        FeeStructure cloned = feeStructureRepository.save(FeeStructure.builder()
+                .schoolId(schoolId)
+                .classId(original.getClassId())
+                .sessionId(sessionId)
+                .feeType(original.getFeeType())
+                .amount(original.getAmount())
+                .frequency(original.getFrequency())
+                .active(true)
+                .build());
+        return cloned.getId();
     }
 
     private ResponseEntity<StudentWithdrawalResponse> withdraw(

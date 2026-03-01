@@ -5,7 +5,7 @@ import com.school.backend.common.enums.ExpensePaymentMode;
 import com.school.backend.expense.entity.ExpenseHead;
 import com.school.backend.expense.entity.ExpenseVoucher;
 import com.school.backend.fee.entity.FeePayment;
-import com.school.backend.finance.dto.MonthlyPLResponseDto;
+import com.school.backend.finance.dto.FinancialOverviewDto;
 import com.school.backend.school.entity.School;
 import org.assertj.core.api.Assertions;
 import org.junit.jupiter.api.AfterEach;
@@ -47,7 +47,7 @@ public class MonthlyPLIntegrationTest extends BaseAuthenticatedIntegrationTest {
                 .principalPaid(new BigDecimal("500.00"))
                 .lateFeePaid(new BigDecimal("50.00"))
                 .paymentDate(LocalDate.of(2026, 2, 10))
-                .mode(" cash ")
+                .mode("CASH")
                 .remarks("cash revenue")
                 .build());
 
@@ -128,23 +128,19 @@ public class MonthlyPLIntegrationTest extends BaseAuthenticatedIntegrationTest {
                 .active(true)
                 .build());
 
-        ResponseEntity<MonthlyPLResponseDto> response = restTemplate.exchange(
-                "/api/finance/monthly-pl?year=2026&month=2",
+        ResponseEntity<FinancialOverviewDto> response = restTemplate.exchange(
+                "/api/finance/overview/range?start=2026-02-01&end=2026-02-28",
                 HttpMethod.GET,
                 new HttpEntity<>(headers),
-                MonthlyPLResponseDto.class);
+                FinancialOverviewDto.class);
 
         Assertions.assertThat(response.getStatusCode()).isEqualTo(HttpStatus.OK);
-        MonthlyPLResponseDto body = Objects.requireNonNull(response.getBody());
-        Assertions.assertThat(body.getYear()).isEqualTo(2026);
-        Assertions.assertThat(body.getMonth()).isEqualTo(2);
+        FinancialOverviewDto body = Objects.requireNonNull(response.getBody());
 
         Assertions.assertThat(body.getCashRevenue()).isEqualByComparingTo(new BigDecimal("550.00"));
         Assertions.assertThat(body.getBankRevenue()).isEqualByComparingTo(new BigDecimal("300.00"));
         Assertions.assertThat(body.getCashExpense()).isEqualByComparingTo(new BigDecimal("200.00"));
         Assertions.assertThat(body.getBankExpense()).isEqualByComparingTo(new BigDecimal("80.00"));
-        Assertions.assertThat(body.getNetCash()).isEqualByComparingTo(new BigDecimal("350.00"));
-        Assertions.assertThat(body.getNetBank()).isEqualByComparingTo(new BigDecimal("220.00"));
 
         Assertions.assertThat(body.getTotalRevenue()).isEqualByComparingTo(new BigDecimal("850.00"));
         Assertions.assertThat(body.getTotalExpense()).isEqualByComparingTo(new BigDecimal("280.00"));

@@ -1,19 +1,24 @@
 package com.school.backend.school.entity;
 
+import com.school.backend.common.enums.SubscriptionStatus;
 import com.school.backend.common.entity.TenantEntity;
 import jakarta.persistence.*;
 import lombok.*;
+import lombok.experimental.SuperBuilder;
 
-import java.math.BigDecimal;
-import java.math.RoundingMode;
 import java.time.LocalDate;
 
 @Entity
-@Table(name = "subscriptions")
-@Data
+@Table(name = "subscriptions",
+        indexes = {
+                @Index(name = "idx_subscription_school_id", columnList = "school_id"),
+                @Index(name = "idx_subscription_status", columnList = "status")
+        })
+@Getter
+@Setter
 @NoArgsConstructor
 @AllArgsConstructor
-@Builder
+@SuperBuilder
 @EqualsAndHashCode(callSuper = false, onlyExplicitlyIncluded = true)
 public class Subscription extends TenantEntity {
 
@@ -25,24 +30,25 @@ public class Subscription extends TenantEntity {
     @JoinColumn(name = "school_id", insertable = false, updatable = false)
     private School school;
 
+    @ManyToOne(fetch = FetchType.LAZY)
+    @JoinColumn(name = "pricing_plan_id", nullable = false)
+    private PricingPlan pricingPlan;
+
+    @Enumerated(EnumType.STRING)
+    @Column(nullable = false, length = 20)
+    private SubscriptionStatus status;
+
     @Column(nullable = false)
-    private String planName; // e.g., Basic, Pro, Premium
-
-    private Integer studentLimit;
-    @Column(precision = 15, scale = 2)
-    private BigDecimal monthlyPrice;
-
     private LocalDate startDate;
-    private LocalDate endDate;
 
-    private boolean active;
-    private boolean autoRenew;
+    private LocalDate trialEndDate;
 
-    @PrePersist
-    @PreUpdate
-    private void normalizeMoney() {
-        if (monthlyPrice != null) {
-            monthlyPrice = monthlyPrice.setScale(2, RoundingMode.HALF_UP);
-        }
-    }
+    @Column(name = "expiry_date")
+    private LocalDate expiryDate;
+
+    @Column(nullable = false)
+    private Integer gracePeriodDays;
+
+    @Version
+    private Long version;
 }

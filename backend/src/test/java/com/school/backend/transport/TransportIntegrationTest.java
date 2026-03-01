@@ -90,6 +90,7 @@ public class TransportIntegrationTest extends BaseAuthenticatedIntegrationTest {
                 .active(true)
                 .build());
         sessionId = session.getId();
+        setSessionHeader(sessionId);
 
         testClass = classRepository.save(SchoolClass.builder()
                 .name("X")
@@ -106,6 +107,14 @@ public class TransportIntegrationTest extends BaseAuthenticatedIntegrationTest {
                 .gender(Gender.MALE)
                 .schoolId(testSchool.getId())
                 .currentClass(testClass)
+                .active(true)
+                .build());
+
+        studentEnrollmentRepository.save(com.school.backend.core.student.entity.StudentEnrollment.builder()
+                .schoolId(testSchool.getId())
+                .studentId(testStudent.getId())
+                .classId(testClass.getId())
+                .sessionId(sessionId)
                 .active(true)
                 .build());
     }

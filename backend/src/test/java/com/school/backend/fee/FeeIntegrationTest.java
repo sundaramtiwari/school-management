@@ -161,6 +161,7 @@ public class FeeIntegrationTest extends BaseAuthenticatedIntegrationTest {
                 // Payment 1: Today
                 var p1 = FeePayment.builder()
                                 .studentId(studentId)
+                                .sessionId(sessionId)
                                 .principalPaid(java.math.BigDecimal.valueOf(1000))
                                 .paymentDate(LocalDate.now())
                                 .mode("CASH")
@@ -171,6 +172,7 @@ public class FeeIntegrationTest extends BaseAuthenticatedIntegrationTest {
                 // Payment 2: Yesterday
                 var p2 = FeePayment.builder()
                                 .studentId(studentId)
+                                .sessionId(sessionId)
                                 .principalPaid(java.math.BigDecimal.valueOf(2000))
                                 .paymentDate(LocalDate.now().minusDays(1))
                                 .mode("UPI")
@@ -181,6 +183,7 @@ public class FeeIntegrationTest extends BaseAuthenticatedIntegrationTest {
                 // Payment 3: 2 days ago
                 var p3 = FeePayment.builder()
                                 .studentId(studentId)
+                                .sessionId(sessionId)
                                 .principalPaid(java.math.BigDecimal.valueOf(3000))
                                 .paymentDate(LocalDate.now().minusDays(2))
                                 .mode("BANK")
@@ -212,6 +215,7 @@ public class FeeIntegrationTest extends BaseAuthenticatedIntegrationTest {
                 // 1. Create payment for Current School (SPS001)
                 var p1 = FeePayment.builder()
                                 .studentId(studentId)
+                                .sessionId(sessionId)
                                 .principalPaid(java.math.BigDecimal.valueOf(555))
                                 .paymentDate(LocalDate.now())
                                 .mode("CASH")
@@ -228,6 +232,7 @@ public class FeeIntegrationTest extends BaseAuthenticatedIntegrationTest {
 
                 var p2 = FeePayment.builder()
                                 .studentId(999L) // Dummy student
+                                .sessionId(sessionId)
                                 .principalPaid(java.math.BigDecimal.valueOf(777))
                                 .paymentDate(LocalDate.now())
                                 .mode("UPI")

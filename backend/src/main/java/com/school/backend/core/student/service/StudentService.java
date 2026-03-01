@@ -17,6 +17,7 @@ import com.school.backend.core.student.mapper.StudentMapper;
 import com.school.backend.core.student.repository.StudentEnrollmentRepository;
 import com.school.backend.core.student.repository.StudentGuardianRepository;
 import com.school.backend.core.student.repository.StudentRepository;
+import com.school.backend.school.service.SubscriptionAccessService;
 import com.school.backend.school.service.SetupValidationService;
 import lombok.RequiredArgsConstructor;
 import org.springframework.data.domain.Page;
@@ -41,6 +42,7 @@ public class StudentService {
     private final GuardianService guardianService;
     private final StudentGuardianRepository studentGuardianRepository;
     private final StudentEnrollmentRepository enrollmentRepository;
+    private final SubscriptionAccessService subscriptionAccessService;
 
     private static void updateStudentDetails(StudentUpdateRequest req, Student existing) {
         if (req.getFirstName() != null)
@@ -185,6 +187,9 @@ public class StudentService {
 
         // Validate that at least one class exists
         setupValidationService.ensureAtLeastOneClassExists(schoolId, sessionId);
+
+        // Enforce license cap inside the same transaction using fresh count reads.
+        subscriptionAccessService.validateStudentCreationAllowed(schoolId);
 
         // duplicate check
         if (repository.existsByAdmissionNumberAndSchoolId(req.getAdmissionNumber(), schoolId)) {

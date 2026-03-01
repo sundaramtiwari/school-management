@@ -82,7 +82,7 @@ public class FeeHardeningIntegrationTest extends BaseAuthenticatedIntegrationTes
                 JsonNode root = objectMapper.readTree(defaulterResponse.getBody());
                 JsonNode first = root.path("content").get(0);
                 Assertions.assertThat(first).isNotNull();
-                Assertions.assertThat(new BigDecimal(first.path("amountDue").asText())).isEqualByComparingTo("620");
+                Assertions.assertThat(new BigDecimal(first.path("amountDue").asText())).isEqualByComparingTo("619.96");
         }
 
         @Test

@@ -1,7 +1,7 @@
 package com.school.backend.finance;
 
 import com.school.backend.common.BaseAuthenticatedIntegrationTest;
-import com.school.backend.core.dashboard.dto.DailyCashDashboardDto;
+import com.school.backend.finance.dto.DailyCashDashboardDto;
 import com.school.backend.fee.entity.FeePayment;
 import com.school.backend.finance.dto.FinanceAccountTransferRequest;
 import com.school.backend.school.entity.School;
@@ -62,7 +62,7 @@ public class FinanceAccountTransferIntegrationTest extends BaseAuthenticatedInte
         Assertions.assertThat(transferResp.getStatusCode()).isEqualTo(HttpStatus.OK);
 
         ResponseEntity<DailyCashDashboardDto> dailyResp = restTemplate.exchange(
-                "/api/dashboard/daily-cash?date=" + date,
+                "/api/finance/overview/daily?date=" + date,
                 HttpMethod.GET,
                 new HttpEntity<>(headers),
                 DailyCashDashboardDto.class);

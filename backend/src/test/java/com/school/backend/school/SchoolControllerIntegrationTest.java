@@ -167,6 +167,7 @@ public class SchoolControllerIntegrationTest extends BaseAuthenticatedIntegratio
         req.setState("Uttar Pradesh");
         req.setMedium("English");
         req.setBoard("CBSE");
+        req.setContactEmail("school@onb100.com");
 
         return new HttpEntity<>(req, headers);
     }

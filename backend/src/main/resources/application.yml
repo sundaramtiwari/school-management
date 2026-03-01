@@ -19,6 +19,9 @@ spring:
       hibernate:
         format_sql: true
 
+  flyway:
+    enabled: false
+
   h2:
     console:
       enabled: true

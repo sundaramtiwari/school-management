@@ -54,6 +54,16 @@ public class GlobalExceptionHandler {
                         "message", ex.getMessage()));
     }
 
+    @ExceptionHandler(SubscriptionConcurrencyException.class)
+    public ResponseEntity<Map<String, Object>> handleSubscriptionConcurrency(SubscriptionConcurrencyException ex) {
+        return ResponseEntity.status(HttpStatus.CONFLICT)
+                .body(Map.of(
+                        "timestamp", LocalDateTime.now(),
+                        "status", HttpStatus.CONFLICT.value(),
+                        "error", "Conflict",
+                        "message", ex.getMessage()));
+    }
+
     @ExceptionHandler(IllegalArgumentException.class)
     public ResponseEntity<Map<String, Object>> handleIllegalArgumentException(IllegalArgumentException ex) {
         return ResponseEntity.status(HttpStatus.BAD_REQUEST)

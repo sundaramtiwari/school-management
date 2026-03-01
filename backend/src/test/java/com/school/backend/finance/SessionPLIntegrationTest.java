@@ -5,7 +5,7 @@ import com.school.backend.common.enums.ExpensePaymentMode;
 import com.school.backend.expense.entity.ExpenseHead;
 import com.school.backend.expense.entity.ExpenseVoucher;
 import com.school.backend.fee.entity.FeePayment;
-import com.school.backend.finance.dto.SessionPLResponseDto;
+import com.school.backend.finance.dto.FinancialOverviewDto;
 import com.school.backend.school.entity.School;
 import org.assertj.core.api.Assertions;
 import org.junit.jupiter.api.AfterEach;
@@ -135,23 +135,19 @@ public class SessionPLIntegrationTest extends BaseAuthenticatedIntegrationTest {
                 .active(true)
                 .build());
 
-        ResponseEntity<SessionPLResponseDto> response = restTemplate.exchange(
-                "/api/finance/session-pl",
+        ResponseEntity<FinancialOverviewDto> response = restTemplate.exchange(
+                "/api/finance/overview/range?start=2025-04-01&end=2026-03-31",
                 HttpMethod.GET,
                 new HttpEntity<>(headers),
-                SessionPLResponseDto.class);
+                FinancialOverviewDto.class);
 
         Assertions.assertThat(response.getStatusCode()).isEqualTo(HttpStatus.OK);
-        SessionPLResponseDto body = Objects.requireNonNull(response.getBody());
-        Assertions.assertThat(body.getSessionId()).isEqualTo(sessionId);
-        Assertions.assertThat(body.getSessionName()).isEqualTo("2025-26");
+        FinancialOverviewDto body = Objects.requireNonNull(response.getBody());
 
         Assertions.assertThat(body.getCashRevenue()).isEqualByComparingTo(new BigDecimal("420.00"));
         Assertions.assertThat(body.getBankRevenue()).isEqualByComparingTo(new BigDecimal("300.00"));
         Assertions.assertThat(body.getCashExpense()).isEqualByComparingTo(new BigDecimal("150.00"));
         Assertions.assertThat(body.getBankExpense()).isEqualByComparingTo(new BigDecimal("70.00"));
-        Assertions.assertThat(body.getNetCash()).isEqualByComparingTo(new BigDecimal("270.00"));
-        Assertions.assertThat(body.getNetBank()).isEqualByComparingTo(new BigDecimal("230.00"));
 
         Assertions.assertThat(body.getTotalRevenue()).isEqualByComparingTo(new BigDecimal("720.00"));
         Assertions.assertThat(body.getTotalExpense()).isEqualByComparingTo(new BigDecimal("220.00"));
