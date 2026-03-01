@@ -5,6 +5,7 @@ import org.springframework.data.jpa.repository.JpaRepository;
 import org.springframework.data.jpa.repository.Query;
 import org.springframework.data.repository.query.Param;
 
+import java.math.BigDecimal;
 import java.time.LocalDate;
 import java.util.List;
 
@@ -90,6 +91,19 @@ public interface FinanceAccountTransferRepository extends JpaRepository<FinanceA
   MovementAggregate aggregateMovements(
       @Param("schoolId") Long schoolId,
       @Param("sessionId") Long sessionId,
+      @Param("startDate") LocalDate startDate,
+      @Param("endDate") LocalDate endDate);
+
+  @Query("""
+          SELECT COALESCE(SUM(t.amount), 0)
+          FROM FinanceAccountTransfer t
+          WHERE t.schoolId = :schoolId
+            AND t.transferDate BETWEEN :startDate AND :endDate
+            AND t.fromAccount = 'CASH'
+            AND t.toAccount = 'BANK'
+      """)
+  BigDecimal sumCashToBankTransfers(
+      @Param("schoolId") Long schoolId,
       @Param("startDate") LocalDate startDate,
       @Param("endDate") LocalDate endDate);
 }

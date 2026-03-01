@@ -24,8 +24,8 @@ export default function FinancePage() {
                         <button
                             onClick={() => setActiveTab("daily")}
                             className={`flex items-center gap-2 px-6 py-2.5 rounded-lg text-sm font-bold transition-all ${activeTab === "daily"
-                                    ? "bg-gray-900 text-white shadow-lg"
-                                    : "text-gray-500 hover:text-gray-700 hover:bg-gray-50"
+                                ? "bg-gray-900 text-white shadow-lg"
+                                : "text-gray-500 hover:text-gray-700 hover:bg-gray-50"
                                 }`}
                         >
                             <span>🕒</span> Daily Cash
@@ -33,8 +33,8 @@ export default function FinancePage() {
                         <button
                             onClick={() => setActiveTab("pl")}
                             className={`flex items-center gap-2 px-6 py-2.5 rounded-lg text-sm font-bold transition-all ${activeTab === "pl"
-                                    ? "bg-gray-900 text-white shadow-lg"
-                                    : "text-gray-500 hover:text-gray-700 hover:bg-gray-50"
+                                ? "bg-gray-900 text-white shadow-lg"
+                                : "text-gray-500 hover:text-gray-700 hover:bg-gray-50"
                                 }`}
                         >
                             <span>📊</span> P&L Report
@@ -44,11 +44,12 @@ export default function FinancePage() {
 
                 {/* Content Area */}
                 <div className="bg-white rounded-3xl border border-gray-100 shadow-sm p-6 md:p-10 animate-in fade-in slide-in-from-bottom-2 duration-500">
-                    {activeTab === "daily" ? (
+                    <div className={activeTab === "daily" ? "" : "hidden"}>
                         <DailyOverview />
-                    ) : (
+                    </div>
+                    <div className={activeTab === "pl" ? "" : "hidden"}>
                         <RangePLOverview />
-                    )}
+                    </div>
                 </div>
             </div>
 

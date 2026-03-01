@@ -23,7 +23,6 @@ import java.util.Set;
 public class FinanceOverviewService {
 
         private static final String CASH = "CASH";
-        private static final Set<String> BANK_MODES = Set.of("BANK", "UPI", "ONLINE", "BANK_TRANSFER", "CHEQUE");
 
         private final FeePaymentRepository feePaymentRepository;
         private final FeePaymentAllocationRepository feePaymentAllocationRepository;
@@ -45,22 +44,18 @@ public class FinanceOverviewService {
                 BigDecimal openingBank = yesterday != null ? nz(yesterday.getClosingBank()) : BigDecimal.ZERO;
 
                 // 2. Daily Movements
-                BigDecimal cashRevenue = feePaymentRepository.sumTotalPaidBySchoolDateAndMode(schoolId, effectiveDate,
-                                CASH);
-                BigDecimal bankRevenue = sumBankRevenue(schoolId, effectiveDate);
+                BigDecimal cashRevenue = nz(
+                                feePaymentRepository.sumCashRevenue(schoolId, effectiveDate, effectiveDate));
+                BigDecimal bankRevenue = nz(
+                                feePaymentRepository.sumNonCashRevenue(schoolId, effectiveDate, effectiveDate));
 
-                BigDecimal cashExpense = expenseVoucherRepository.sumExpenseBySchoolDateAndMode(schoolId, effectiveDate,
-                                ExpensePaymentMode.CASH);
-                BigDecimal bankExpense = expenseVoucherRepository.sumExpenseBySchoolDateAndMode(schoolId, effectiveDate,
-                                ExpensePaymentMode.BANK);
+                BigDecimal cashExpense = nz(
+                                expenseVoucherRepository.sumCashExpense(schoolId, effectiveDate, effectiveDate));
+                BigDecimal bankExpense = nz(
+                                expenseVoucherRepository.sumNonCashExpense(schoolId, effectiveDate, effectiveDate));
 
-                BigDecimal transferOut = financeAccountTransferRepository
-                                .findBySchoolIdAndTransferDateBetween(schoolId, effectiveDate, effectiveDate)
-                                .stream()
-                                .filter(t -> CASH.equalsIgnoreCase(t.getFromAccount())
-                                                && "BANK".equalsIgnoreCase(t.getToAccount()))
-                                .map(t -> nz(t.getAmount()))
-                                .reduce(BigDecimal.ZERO, BigDecimal::add);
+                BigDecimal transferOut = nz(financeAccountTransferRepository.sumCashToBankTransfers(schoolId,
+                                effectiveDate, effectiveDate));
 
                 // 3. Closing Positions
                 BigDecimal closingCash = openingCash.add(cashRevenue).subtract(cashExpense).subtract(transferOut);
@@ -105,18 +100,11 @@ public class FinanceOverviewService {
                 BigDecimal expense = nz(
                                 expenseVoucherRepository.sumTotalExpenseBySchoolIdAndDateRange(schoolId, start, end));
 
-                BigDecimal cashRevenue = nz(
-                                feePaymentRepository.sumTotalPaidBySchoolDateRangeAndMode(schoolId, start, end, CASH));
-                BigDecimal bankRevenue = revenue.subtract(cashRevenue);
+                BigDecimal cashRevenue = nz(feePaymentRepository.sumCashRevenue(schoolId, start, end));
+                BigDecimal bankRevenue = nz(feePaymentRepository.sumNonCashRevenue(schoolId, start, end));
 
-                BigDecimal cashExpense = nz(expenseVoucherRepository
-                                .findBySchoolIdAndExpenseDateBetweenAndActiveTrueOrderByExpenseDateDescIdDesc(schoolId,
-                                                start, end)
-                                .stream()
-                                .filter(v -> ExpensePaymentMode.CASH == v.getPaymentMode())
-                                .map(v -> nz(v.getAmount()))
-                                .reduce(BigDecimal.ZERO, BigDecimal::add));
-                BigDecimal bankExpense = expense.subtract(cashExpense);
+                BigDecimal cashExpense = nz(expenseVoucherRepository.sumCashExpense(schoolId, start, end));
+                BigDecimal bankExpense = nz(expenseVoucherRepository.sumNonCashExpense(schoolId, start, end));
 
                 return FinancialOverviewDto.builder()
                                 .periodName(periodName)
@@ -130,15 +118,6 @@ public class FinanceOverviewService {
                                 .cashExpense(cashExpense)
                                 .bankExpense(bankExpense)
                                 .build();
-        }
-
-        private BigDecimal sumBankRevenue(Long schoolId, LocalDate date) {
-                BigDecimal total = BigDecimal.ZERO;
-                for (String mode : BANK_MODES) {
-                        total = total.add(
-                                        nz(feePaymentRepository.sumTotalPaidBySchoolDateAndMode(schoolId, date, mode)));
-                }
-                return total;
         }
 
         private BigDecimal nz(BigDecimal val) {
