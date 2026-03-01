@@ -11,6 +11,7 @@ import { useSession } from "@/context/SessionContext";
 import Modal from "@/components/ui/Modal";
 import { TableSkeleton } from "@/components/ui/Skeleton";
 import { useAuth } from "@/context/AuthContext";
+import { useSubscription } from "@/context/SubscriptionContext";
 import GuardianFormSection, { GuardianFormValue } from "@/components/students/GuardianFormSection";
 import PromotionModal from "@/components/promotion/PromotionModal";
 import WithdrawStudentModal from "@/components/students/WithdrawStudentModal";
@@ -106,6 +107,7 @@ export default function StudentsPage() {
   const { user } = useAuth();
   const { showToast } = useToast();
   const { currentSession, sessions } = useSession();
+  const { usagePercent, usageWarningLevel, subscriptionStatus } = useSubscription();
 
   const canUserAddStudent = canAddStudent(user?.role);
   const canUserPromoteStudents = canPromoteStudents(user?.role);
@@ -558,6 +560,15 @@ export default function StudentsPage() {
 
   return (
     <div className="mx-auto px-6 py-6 space-y-6">
+      {(usageWarningLevel === "WARNING" || usageWarningLevel === "CRITICAL") && (
+        <div className={`p-4 rounded-md border ${usageWarningLevel === "CRITICAL" ? "bg-red-50 border-red-200 text-red-800" : "bg-yellow-50 border-yellow-200 text-yellow-800"}`}>
+          <p className="text-sm font-medium">
+            {usageWarningLevel === "CRITICAL" ? "CRITICAL: Student capacity is over 90%." : "WARNING: Student capacity is over 80%."}
+            {usagePercent >= 100 && " CAPACITY REACHED: New enrollments are blocked."}
+          </p>
+        </div>
+      )}
+
       <div className="flex justify-between items-center">
         <div>
           <h1 className="text-lg font-semibold">Student Directory</h1>
@@ -577,12 +588,21 @@ export default function StudentsPage() {
             )}
             <button
               onClick={() => {
+                if (subscriptionStatus === "SUSPENDED") {
+                  showToast("Subscription is suspended. Cannot add students.", "error");
+                  return;
+                }
+                if (usagePercent >= 100) {
+                  showToast("Capacity reached. Cannot add more students.", "error");
+                  return;
+                }
                 if (selectedClass) {
                   setStudentForm(prev => ({ ...prev, classId: selectedClass.toString() }));
                 }
                 setShowAddModal(true);
               }}
-              className="bg-blue-600 text-white px-6 py-2.5 rounded-md font-medium hover:bg-blue-700 flex items-center gap-2 text-base"
+              disabled={usagePercent >= 100 || subscriptionStatus === "SUSPENDED"}
+              className={`px-6 py-2.5 rounded-md font-medium flex items-center gap-2 text-base ${usagePercent >= 100 || subscriptionStatus === "SUSPENDED" ? "bg-gray-400 cursor-not-allowed text-white" : "bg-blue-600 text-white hover:bg-blue-700"}`}
             >
               <span className="text-xl">+</span> Add Student
             </button>
@@ -729,12 +749,21 @@ export default function StudentsPage() {
                       {canUserAddStudent && students.length === 0 && (
                         <button
                           onClick={() => {
+                            if (subscriptionStatus === "SUSPENDED") {
+                              showToast("Subscription is suspended.", "error");
+                              return;
+                            }
+                            if (usagePercent >= 100) {
+                              showToast("Capacity reached.", "error");
+                              return;
+                            }
                             if (selectedClass) {
                               setStudentForm(prev => ({ ...prev, classId: selectedClass.toString() }));
                             }
                             setShowAddModal(true);
                           }}
-                          className="mt-2 bg-blue-600 text-white px-6 py-2 rounded-md font-medium hover:bg-blue-700"
+                          disabled={usagePercent >= 100 || subscriptionStatus === "SUSPENDED"}
+                          className={`mt-2 px-6 py-2 rounded-md font-medium ${usagePercent >= 100 || subscriptionStatus === "SUSPENDED" ? "bg-gray-400 cursor-not-allowed text-white" : "bg-blue-600 text-white hover:bg-blue-700"}`}
                         >
                           Enroll First Student →
                         </button>

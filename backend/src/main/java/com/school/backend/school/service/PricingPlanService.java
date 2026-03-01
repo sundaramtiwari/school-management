@@ -127,7 +127,7 @@ public class PricingPlanService {
     private void ensureNameUnique(String name, Long currentId) {
         pricingPlanRepository.findByNameIgnoreCase(name.trim())
                 .ifPresent(existing -> {
-                    if (currentId == null || !existing.getId().equals(currentId)) {
+                    if (!existing.getId().equals(currentId)) {
                         throw new SubscriptionRuleViolationException("Pricing plan name already exists: " + name);
                     }
                 });

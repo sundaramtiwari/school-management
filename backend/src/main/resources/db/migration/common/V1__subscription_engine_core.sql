@@ -80,6 +80,8 @@ CREATE TABLE subscription_events (
     days_added INTEGER,
     previous_expiry_date DATE,
     new_expiry_date DATE,
+    previous_status VARCHAR(20),
+    new_status VARCHAR(20),
     reason VARCHAR(500),
     performed_by_user_id BIGINT NOT NULL,
     created_at TIMESTAMP NOT NULL,
@@ -87,7 +89,9 @@ CREATE TABLE subscription_events (
     created_by BIGINT,
     updated_by BIGINT,
     CONSTRAINT fk_subscription_event_subscription FOREIGN KEY (subscription_id) REFERENCES subscriptions(id),
-    CONSTRAINT chk_subscription_event_type CHECK (type IN ('TRIAL_EXTENDED','SUBSCRIPTION_EXTENDED','PLAN_UPGRADED'))
+    CONSTRAINT chk_subscription_event_type CHECK (type IN ('TRIAL_EXTENDED','SUBSCRIPTION_EXTENDED','PLAN_UPGRADED','MANUAL_SUSPENDED','MANUAL_REACTIVATED')),
+    CONSTRAINT chk_subscription_event_prev_status CHECK (previous_status IS NULL OR previous_status IN ('TRIAL','ACTIVE','PAST_DUE','SUSPENDED')),
+    CONSTRAINT chk_subscription_event_new_status CHECK (new_status IS NULL OR new_status IN ('TRIAL','ACTIVE','PAST_DUE','SUSPENDED'))
 );
 
 CREATE INDEX idx_subscription_event_subscription_id ON subscription_events (subscription_id);

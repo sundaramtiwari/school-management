@@ -167,6 +167,14 @@ export default function SchoolAdminDashboard() {
       hoverText: "group-hover:text-indigo-600",
       href: "/fees/structures"
     },
+    {
+      title: "My Subscription",
+      icon: "💳",
+      hoverBorder: "hover:border-teal-500",
+      hoverBg: "hover:bg-teal-50",
+      hoverText: "group-hover:text-teal-600",
+      href: "/subscription"
+    },
   ];
 
   if (!sessionLoading && !currentSession) {

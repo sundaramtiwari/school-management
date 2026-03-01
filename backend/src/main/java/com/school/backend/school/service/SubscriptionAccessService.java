@@ -40,23 +40,33 @@ public class SubscriptionAccessService {
 
     @Transactional(readOnly = true)
     public SubscriptionAccessStatusDto validateSchoolAccess(Long schoolId) {
+        School school = schoolRepository.findById(schoolId)
+                .orElseThrow(() -> new ResourceNotFoundException("School not found: " + schoolId));
+
         Subscription subscription = getSubscriptionForAccess(schoolId, false);
         if (subscription == null) {
-            return defaultStatus();
+            return defaultStatus(school);
         }
         updateLifecycleStatus(subscription);
 
         if (subscription.getStatus() == SubscriptionStatus.SUSPENDED) {
-            throw new SubscriptionRuleViolationException("School access blocked: subscription is suspended.");
+            return buildStatus(subscription, school); // Don't throw, let UI handle it with boolean
         }
-        return buildStatus(subscription, schoolId);
+        return buildStatus(subscription, school);
     }
 
     @Transactional
     public SubscriptionAccessStatusDto validateStudentCreationAllowed(Long schoolId) {
+        School school = schoolRepository.findById(schoolId)
+                .orElseThrow(() -> new ResourceNotFoundException("School not found: " + schoolId));
+
+        if (!school.isActive()) {
+            throw new SubscriptionRuleViolationException("School account is inactive.");
+        }
+
         Subscription subscription = getSubscriptionForAccess(schoolId, true);
         if (subscription == null) {
-            return defaultStatus();
+            return defaultStatus(school);
         }
         updateLifecycleStatus(subscription);
 
@@ -64,7 +74,7 @@ public class SubscriptionAccessService {
             throw new SubscriptionRuleViolationException("Student creation blocked: subscription is suspended.");
         }
 
-        SubscriptionAccessStatusDto status = buildStatus(subscription, schoolId);
+        SubscriptionAccessStatusDto status = buildStatus(subscription, school);
         if (status.getUsagePercent().compareTo(BigDecimal.valueOf(100)) >= 0) {
             throw new SubscriptionRuleViolationException("Student creation blocked: student capacity reached.");
         }
@@ -123,14 +133,15 @@ public class SubscriptionAccessService {
 
         if (today.isAfter(graceLastDate)) {
             subscription.setStatus(SubscriptionStatus.SUSPENDED);
-        } else if (today.isAfter(subscription.getExpiryDate()) && subscription.getStatus() == SubscriptionStatus.ACTIVE) {
+        } else if (today.isAfter(subscription.getExpiryDate())
+                && subscription.getStatus() == SubscriptionStatus.ACTIVE) {
             subscription.setStatus(SubscriptionStatus.PAST_DUE);
         }
     }
 
-    private SubscriptionAccessStatusDto buildStatus(Subscription subscription, Long schoolId) {
+    private SubscriptionAccessStatusDto buildStatus(Subscription subscription, School school) {
         PricingPlan plan = subscription.getPricingPlan();
-        BigDecimal usagePercent = calculateUsagePercent(schoolId, plan.getStudentCap());
+        BigDecimal usagePercent = calculateUsagePercent(school.getId(), plan.getStudentCap());
         UsageWarningLevel usageWarningLevel = calculateUsageWarning(usagePercent, plan);
         long daysToExpiry = calculateDaysToExpiry(subscription);
         ExpiryWarningLevel expiryWarningLevel = calculateExpiryWarning(subscription);
@@ -141,6 +152,7 @@ public class SubscriptionAccessService {
                 .usageWarningLevel(usageWarningLevel)
                 .daysToExpiry(daysToExpiry)
                 .expiryWarningLevel(expiryWarningLevel)
+                .schoolActive(school.isActive())
                 .build();
     }
 
@@ -200,13 +212,14 @@ public class SubscriptionAccessService {
         return ExpiryWarningLevel.NONE;
     }
 
-    private SubscriptionAccessStatusDto defaultStatus() {
+    private SubscriptionAccessStatusDto defaultStatus(School school) {
         return SubscriptionAccessStatusDto.builder()
                 .subscriptionStatus(null)
                 .usagePercent(BigDecimal.ZERO.setScale(2, RoundingMode.HALF_UP))
                 .usageWarningLevel(UsageWarningLevel.NONE)
-                .daysToExpiry(Long.MAX_VALUE)
+                .daysToExpiry(0L)
                 .expiryWarningLevel(ExpiryWarningLevel.NONE)
+                .schoolActive(school.isActive())
                 .build();
     }
 }

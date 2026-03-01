@@ -2,6 +2,8 @@ package com.school.backend.school;
 
 import com.school.backend.common.enums.Gender;
 import com.school.backend.common.enums.SubscriptionStatus;
+import com.school.backend.common.enums.SubscriptionEventType;
+import com.school.backend.common.enums.UserRole;
 import com.school.backend.common.exception.SubscriptionRuleViolationException;
 import com.school.backend.common.tenant.SessionContext;
 import com.school.backend.common.tenant.TenantContext;
@@ -29,6 +31,7 @@ import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.context.SpringBootTest;
 import org.springframework.context.annotation.Import;
+import org.springframework.security.access.AccessDeniedException;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.test.context.ActiveProfiles;
 
@@ -285,6 +288,101 @@ class SubscriptionServiceIntegrationTest {
 
         List<SubscriptionEvent> events = eventRepository.findAll();
         assertEquals(2, events.size());
+    }
+
+    @Test
+    void historyEndpointsDataAccessible_andSchoolScoped() {
+        Long subscriptionId = createPaidSubscription(LocalDate.of(2026, 1, 1));
+        clock.setDate(LocalDate.of(2026, 7, 1));
+
+        UpgradePlanRequest upgradeReq = new UpgradePlanRequest();
+        upgradeReq.setNewPlanId(proPlan.getId());
+        upgradeReq.setNotes("timeline-check");
+        subscriptionService.upgradePlan(subscriptionId, upgradeReq, actor.getId());
+
+        SubscriptionDto extended = subscriptionService.extendSubscription(subscriptionId, 5, "manual extension", actor.getId());
+        assertNotNull(extended.getExpiryDate());
+
+        List<SubscriptionPaymentDto> payments = subscriptionService.getPaymentHistory(subscriptionId, UserRole.PLATFORM_ADMIN, null);
+        List<SubscriptionEventDto> events = subscriptionService.getEventHistory(subscriptionId, UserRole.PLATFORM_ADMIN, null);
+        assertEquals(2, payments.size()); // activation payment + upgrade proration
+        assertEquals(2, events.size());   // plan upgraded + subscription extended
+
+        assertThrows(AccessDeniedException.class,
+                () -> subscriptionService.getPaymentHistory(subscriptionId, UserRole.SCHOOL_ADMIN, school.getId() + 999));
+        assertThrows(AccessDeniedException.class,
+                () -> subscriptionService.getEventHistory(subscriptionId, UserRole.SCHOOL_ADMIN, school.getId() + 999));
+    }
+
+    @Test
+    void manualSuspend_shouldSetSuspended_andCreateEvent() {
+        Long subscriptionId = createPaidSubscription(LocalDate.of(2026, 1, 1));
+
+        ManualSuspendRequest request = new ManualSuspendRequest();
+        request.setReason("Policy breach");
+        SubscriptionDto suspended = subscriptionService.manualSuspend(subscriptionId, request, actor.getId());
+
+        assertEquals(SubscriptionStatus.SUSPENDED, suspended.getStatus());
+        List<SubscriptionEvent> events = eventRepository.findBySubscriptionIdOrderByCreatedAtDesc(subscriptionId);
+        assertFalse(events.isEmpty());
+        SubscriptionEvent latest = events.get(0);
+        assertEquals(SubscriptionEventType.MANUAL_SUSPENDED, latest.getType());
+        assertEquals(SubscriptionStatus.ACTIVE, latest.getPreviousStatus());
+        assertEquals(SubscriptionStatus.SUSPENDED, latest.getNewStatus());
+    }
+
+    @Test
+    void manualReactivate_beforeExpiry_shouldBecomeActive() {
+        Long subscriptionId = createPaidSubscription(LocalDate.of(2026, 1, 1));
+        clock.setDate(LocalDate.of(2026, 6, 1));
+        ManualSuspendRequest suspend = new ManualSuspendRequest();
+        suspend.setReason("Manual hold");
+        subscriptionService.manualSuspend(subscriptionId, suspend, actor.getId());
+
+        SubscriptionDto reactivated = subscriptionService.manualReactivate(subscriptionId, new ManualReactivateRequest(), actor.getId());
+        assertEquals(SubscriptionStatus.ACTIVE, reactivated.getStatus());
+    }
+
+    @Test
+    void manualReactivate_withinGrace_shouldBecomePastDue() {
+        Long subscriptionId = createPaidSubscription(LocalDate.of(2026, 1, 1));
+        clock.setDate(LocalDate.of(2027, 1, 5)); // within grace (expiry 2027-01-01, grace 10)
+        ManualSuspendRequest suspend = new ManualSuspendRequest();
+        suspend.setReason("Manual hold");
+        subscriptionService.manualSuspend(subscriptionId, suspend, actor.getId());
+
+        SubscriptionDto reactivated = subscriptionService.manualReactivate(subscriptionId, new ManualReactivateRequest(), actor.getId());
+        assertEquals(SubscriptionStatus.PAST_DUE, reactivated.getStatus());
+    }
+
+    @Test
+    void manualReactivate_beyondGrace_shouldBeBlocked() {
+        Long subscriptionId = createPaidSubscription(LocalDate.of(2026, 1, 1));
+        clock.setDate(LocalDate.of(2027, 1, 20)); // beyond grace
+        ManualSuspendRequest suspend = new ManualSuspendRequest();
+        suspend.setReason("Manual hold");
+        subscriptionService.manualSuspend(subscriptionId, suspend, actor.getId());
+
+        SubscriptionRuleViolationException ex = assertThrows(SubscriptionRuleViolationException.class,
+                () -> subscriptionService.manualReactivate(subscriptionId, new ManualReactivateRequest(), actor.getId()));
+        assertTrue(ex.getMessage().contains("Record payment"));
+    }
+
+    @Test
+    void adminUsageEndpointData_shouldUseCurrentSessionActiveStudents() {
+        Long subscriptionId = createPaidSubscription(LocalDate.of(2026, 1, 1));
+        createCurrentSessionAndStudents(25);
+
+        AdminSubscriptionUsageDto usage = subscriptionService.getAdminUsageBySchool(school.getId());
+
+        assertEquals(subscriptionId, usage.getSubscriptionId());
+        assertEquals("Basic", usage.getPlanName());
+        assertEquals(SubscriptionStatus.ACTIVE, usage.getSubscriptionStatus());
+        assertEquals(100, usage.getStudentCap());
+        assertEquals(25L, usage.getActiveStudents());
+        assertEquals(new BigDecimal("25.00"), usage.getUsagePercent());
+        assertEquals(LocalDate.of(2027, 1, 1), usage.getExpiryDate());
+        assertEquals(LocalDate.of(2027, 1, 11), usage.getGraceEndDate());
     }
 
     private Long createTrialSubscription(int trialDays) {

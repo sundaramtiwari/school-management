@@ -18,6 +18,7 @@ public class SubscriptionDto {
     private LocalDate startDate;
     private LocalDate trialEndDate;
     private LocalDate expiryDate;
+    private LocalDate graceEndDate;
     private Integer gracePeriodDays;
     private Long version;
     private LocalDateTime createdAt;

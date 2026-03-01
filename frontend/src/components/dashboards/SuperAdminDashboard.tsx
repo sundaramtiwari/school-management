@@ -91,6 +91,20 @@ export default function SuperAdminDashboard() {
       description: "Admin accounts"
     },
     {
+      title: "Subscriptions",
+      icon: "💳",
+      color: "amber",
+      href: "/platform/subscriptions",
+      description: "School plans"
+    },
+    {
+      title: "Pricing Plans",
+      icon: "🏷️",
+      color: "teal",
+      href: "/platform/pricing-plans",
+      description: "Manage plans"
+    },
+    {
       title: "System Settings",
       icon: "⚙️",
       color: "gray",

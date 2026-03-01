@@ -2,6 +2,7 @@ package com.school.backend.school.entity;
 
 import com.school.backend.common.entity.BaseEntity;
 import com.school.backend.common.enums.SubscriptionEventType;
+import com.school.backend.common.enums.SubscriptionStatus;
 import jakarta.persistence.*;
 import lombok.*;
 
@@ -40,6 +41,14 @@ public class SubscriptionEvent extends BaseEntity {
 
     @Column(name = "new_expiry_date")
     private LocalDate newExpiryDate;
+
+    @Enumerated(EnumType.STRING)
+    @Column(name = "previous_status", length = 20)
+    private SubscriptionStatus previousStatus;
+
+    @Enumerated(EnumType.STRING)
+    @Column(name = "new_status", length = 20)
+    private SubscriptionStatus newStatus;
 
     @Column(length = 500)
     private String reason;

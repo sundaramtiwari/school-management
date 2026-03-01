@@ -12,55 +12,56 @@ const menu = [
     name: "Dashboard",
     path: "/",
     icon: "📊",
-    roles: ["SUPER_ADMIN", "PLATFORM_ADMIN", "SCHOOL_ADMIN", "TEACHER", "ACCOUNTANT"]
-  },
-  {
-    name: "Schools",
-    path: "/schools",
-    icon: "🏫",
-    roles: ["SUPER_ADMIN", "PLATFORM_ADMIN"]
+    roles: ["SCHOOL_ADMIN", "TEACHER", "ACCOUNTANT"]
   },
   {
     name: "Academics",
     icon: "🎓",
-    roles: ["SUPER_ADMIN", "PLATFORM_ADMIN", "SCHOOL_ADMIN", "TEACHER", "ACCOUNTANT"],
+    roles: ["SCHOOL_ADMIN", "TEACHER", "ACCOUNTANT"],
     children: [
-      { name: "Students", path: "/students", icon: "👥", roles: ["SUPER_ADMIN", "PLATFORM_ADMIN", "SCHOOL_ADMIN", "TEACHER", "ACCOUNTANT"] },
-      { name: "Classes", path: "/classes", icon: "🏢", roles: ["SUPER_ADMIN", "PLATFORM_ADMIN", "SCHOOL_ADMIN", "TEACHER"] },
-      { name: "Subjects", path: "/subjects", icon: "📚", roles: ["SUPER_ADMIN", "PLATFORM_ADMIN", "SCHOOL_ADMIN", "TEACHER"] },
-      { name: "Staff", path: "/staff", icon: "👨‍🏫", roles: ["SUPER_ADMIN", "PLATFORM_ADMIN", "SCHOOL_ADMIN"] },
-      { name: "Teacher Assignments", path: "/staff/assignments", icon: "📝", roles: ["SUPER_ADMIN", "PLATFORM_ADMIN", "SCHOOL_ADMIN"] },
-      { name: "Attendance", path: "/attendance", icon: "📅", roles: ["SUPER_ADMIN", "PLATFORM_ADMIN", "SCHOOL_ADMIN", "TEACHER"] },
-      { name: "Exams", path: "/exams", icon: "✍️", roles: ["SUPER_ADMIN", "PLATFORM_ADMIN", "SCHOOL_ADMIN", "TEACHER"] },
-      { name: "Marksheet", path: "/marksheets", icon: "📜", roles: ["SUPER_ADMIN", "PLATFORM_ADMIN", "SCHOOL_ADMIN", "TEACHER"] },
+      { name: "Students", path: "/students", icon: "👥", roles: ["SCHOOL_ADMIN", "TEACHER", "ACCOUNTANT"] },
+      { name: "Classes", path: "/classes", icon: "🏢", roles: ["SCHOOL_ADMIN", "TEACHER"] },
+      { name: "Subjects", path: "/subjects", icon: "📚", roles: ["SCHOOL_ADMIN", "TEACHER"] },
+      { name: "Staff", path: "/staff", icon: "👨‍🏫", roles: ["SCHOOL_ADMIN"] },
+      { name: "Teacher Assignments", path: "/staff/assignments", icon: "📝", roles: ["SCHOOL_ADMIN"] },
+      { name: "Attendance", path: "/attendance", icon: "📅", roles: ["SCHOOL_ADMIN", "TEACHER"] },
+      { name: "Exams", path: "/exams", icon: "✍️", roles: ["SCHOOL_ADMIN", "TEACHER"] },
+      { name: "Marksheet", path: "/marksheets", icon: "📜", roles: ["SCHOOL_ADMIN", "TEACHER"] },
     ]
   },
   {
     name: "Finance",
     icon: "💵",
-    roles: ["SUPER_ADMIN", "SCHOOL_ADMIN", "ACCOUNTANT"],
+    roles: ["SCHOOL_ADMIN", "ACCOUNTANT"],
     children: [
-      { name: "Fee Summary", path: "/fees/summary", icon: "📋", roles: ["SUPER_ADMIN", "SCHOOL_ADMIN", "ACCOUNTANT"] },
-      { name: "Fee Structures", path: "/fees/structures", icon: "⚙️", roles: ["SUPER_ADMIN", "SCHOOL_ADMIN", "ACCOUNTANT"] },
-      { name: "Fee Discounts", path: "/fees/discounts", icon: "🏷️", roles: ["SUPER_ADMIN", "SCHOOL_ADMIN", "ACCOUNTANT"] },
-      { name: "Fee Collection", path: "/fees/collect", icon: "💰", roles: ["SUPER_ADMIN", "SCHOOL_ADMIN", "ACCOUNTANT"] },
-      { name: "Fee Defaulters", path: "/fees/defaulters", icon: "⚠️", roles: ["SUPER_ADMIN", "SCHOOL_ADMIN", "ACCOUNTANT"] },
-      { name: "Finance Overview", path: "/finance", icon: "📊", roles: ["SUPER_ADMIN", "SCHOOL_ADMIN", "ACCOUNTANT"] },
-      { name: "Expenses", path: "/finance/expenses", icon: "💸", roles: ["SUPER_ADMIN", "SCHOOL_ADMIN", "ACCOUNTANT"] },
-      { name: "Expense Heads", path: "/finance/expense-heads", icon: "🏷️", roles: ["SUPER_ADMIN", "SCHOOL_ADMIN", "ACCOUNTANT"] },
+      { name: "Fee Summary", path: "/fees/summary", icon: "📋", roles: ["SCHOOL_ADMIN", "ACCOUNTANT"] },
+      { name: "Fee Structures", path: "/fees/structures", icon: "⚙️", roles: ["SCHOOL_ADMIN", "ACCOUNTANT"] },
+      { name: "Fee Discounts", path: "/fees/discounts", icon: "🏷️", roles: ["SCHOOL_ADMIN", "ACCOUNTANT"] },
+      { name: "Fee Collection", path: "/fees/collect", icon: "💰", roles: ["SCHOOL_ADMIN", "ACCOUNTANT"] },
+      { name: "Fee Defaulters", path: "/fees/defaulters", icon: "⚠️", roles: ["SCHOOL_ADMIN", "ACCOUNTANT"] },
+      { name: "Finance Overview", path: "/finance", icon: "📊", roles: ["SCHOOL_ADMIN", "ACCOUNTANT"] },
+      { name: "Expenses", path: "/finance/expenses", icon: "💸", roles: ["SCHOOL_ADMIN", "ACCOUNTANT"] },
+      { name: "Expense Heads", path: "/finance/expense-heads", icon: "🏷️", roles: ["SCHOOL_ADMIN", "ACCOUNTANT"] },
     ]
   },
   {
     name: "Transport",
     path: "/transport",
     icon: "🚌",
-    roles: ["SUPER_ADMIN", "PLATFORM_ADMIN", "SCHOOL_ADMIN"]
+    roles: ["SCHOOL_ADMIN"]
   },
   {
     name: "Sessions",
     path: "/sessions",
     icon: "📅",
-    roles: ["SUPER_ADMIN", "PLATFORM_ADMIN", "SCHOOL_ADMIN"]
+    roles: ["SCHOOL_ADMIN"]
+  },
+  // SCHOOL_ADMIN only — flat link
+  {
+    name: "My Subscription",
+    path: "/subscription",
+    icon: "💳",
+    roles: ["SCHOOL_ADMIN"]
   },
 ];
 
@@ -128,47 +129,22 @@ export default function Sidebar() {
   };
 
   const checkRestriction = (name: string) => {
-    const userRole = user?.role?.toUpperCase();
-
-    // GATING LOGIC
-    // 1. !currentSession (No Session) -> Disable everything except Dashboard, Staff, Transport, Sessions
-    // 2. currentSession && !hasClasses -> Enable Classes. Disable Students, Fees, Attendance, Marksheets, Finance.
-
-    const isSchoolScoped = ["SCHOOL_ADMIN", "TEACHER", "ACCOUNTANT"].includes(userRole as string);
-    const isPlatformRole = ["SUPER_ADMIN", "PLATFORM_ADMIN"].includes(userRole as string);
-
-    if (isSchoolScoped) {
-      if (!currentSession && REQUIRES_SESSION.includes(name)) {
-        return {
-          isRestricted: true,
-          message: "Please create an academic session first.",
-          redirectPath: "/school/setup/session"
-        };
-      }
-      if (currentSession && !hasClasses && REQUIRES_CLASSES.includes(name)) {
-        return {
-          isRestricted: true,
-          message: "Please create at least one class to access this section.",
-          redirectPath: "/classes"
-        };
-      }
-    }
-
-    // Platform Role Gating: If no school selected, block school-specific links
-    // School-specific modules exclude: Dashboard, Schools, Staff, Sessions, Transport
-    const isSchoolModule = !["Dashboard", "Schools", "Staff", "Sessions", "Transport"].includes(name);
-
-    // Group headers themselves should also be gated if they enclose school modules
-    const isGroupHeader = ["Academics", "Finance"].includes(name);
-
-    if (isPlatformRole && (isSchoolModule || isGroupHeader) && !schoolId) {
+    // Tenant Sidebar is ONLY shown to SCHOOL_ADMIN, TEACHER, ACCOUNTANT.
+    // Platform roles use PlatformLayout's sidebar.
+    if (!currentSession && REQUIRES_SESSION.includes(name)) {
       return {
         isRestricted: true,
-        message: "Please select a school first from the Schools list.",
-        redirectPath: "/schools"
+        message: "Please create an academic session first.",
+        redirectPath: "/school/setup/session"
       };
     }
-
+    if (currentSession && !hasClasses && REQUIRES_CLASSES.includes(name)) {
+      return {
+        isRestricted: true,
+        message: "Please create at least one class to access this section.",
+        redirectPath: "/classes"
+      };
+    }
     return { isRestricted: false, message: "", redirectPath: "" };
   };
 
