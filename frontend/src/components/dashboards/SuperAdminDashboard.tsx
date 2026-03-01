@@ -73,14 +73,14 @@ export default function SuperAdminDashboard() {
       title: "Create School",
       icon: "➕",
       color: "blue",
-      href: "/schools",
+      href: "/platform/schools",
       description: "Add new school"
     },
     {
       title: "View Schools",
       icon: "🏫",
       color: "green",
-      href: "/schools",
+      href: "/platform/schools",
       description: "Manage schools"
     },
     {
@@ -244,7 +244,7 @@ export default function SuperAdminDashboard() {
                 <p className="text-4xl mb-3">🏫</p>
                 <p className="text-sm">No schools registered yet</p>
                 <button
-                  onClick={() => router.push('/schools')}
+                  onClick={() => router.push('/platform/schools')}
                   className="mt-4 bg-blue-600 text-white px-6 py-2 rounded-lg hover:bg-blue-700 transition font-semibold text-sm"
                 >
                   Add First School
@@ -263,7 +263,7 @@ export default function SuperAdminDashboard() {
                     </p>
                   </div>
                   <button
-                    onClick={() => router.push(`/schools`)}
+                    onClick={() => router.push(`/platform/schools`)}
                     className="text-blue-600 hover:text-blue-800 text-sm font-semibold"
                   >
                     View →
@@ -274,7 +274,7 @@ export default function SuperAdminDashboard() {
           </div>
           {recentSchools.length > 0 && (
             <button
-              onClick={() => router.push('/schools')}
+              onClick={() => router.push('/platform/schools')}
               className="w-full mt-4 py-2 text-center text-blue-600 hover:text-blue-800 font-semibold text-sm"
             >
               View All Schools ({stats.totalSchools}) →

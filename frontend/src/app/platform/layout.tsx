@@ -8,7 +8,7 @@ import { AuthProvider, useAuth } from "@/context/AuthContext";
 const PLATFORM_ROLES = ["SUPER_ADMIN", "PLATFORM_ADMIN"];
 
 const platformNav = [
-    { name: "Dashboard", path: "/", icon: "📊" },
+    { name: "Dashboard", path: "/platform/dashboard", icon: "📊" },
     { name: "Schools", path: "/platform/schools", icon: "🏫" },
     { name: "Pricing Plans", path: "/platform/pricing-plans", icon: "🏷️" },
     { name: "Subscriptions", path: "/platform/subscriptions", icon: "💳" },

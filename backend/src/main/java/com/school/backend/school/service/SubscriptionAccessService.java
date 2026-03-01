@@ -40,6 +40,9 @@ public class SubscriptionAccessService {
 
     @Transactional(readOnly = true)
     public SubscriptionAccessStatusDto validateSchoolAccess(Long schoolId) {
+        if (schoolId == null) {
+            throw new ResourceNotFoundException("School ID cannot be null for institutional validation.");
+        }
         School school = schoolRepository.findById(schoolId)
                 .orElseThrow(() -> new ResourceNotFoundException("School not found: " + schoolId));
 
@@ -212,6 +215,27 @@ public class SubscriptionAccessService {
         return ExpiryWarningLevel.NONE;
     }
 
+    @Transactional(readOnly = true)
+    public void ensureAccessAllowed(Long schoolId) {
+        if (schoolId == null)
+            return;
+
+        School school = schoolRepository.findById(schoolId)
+                .orElseThrow(() -> new ResourceNotFoundException("School not found: " + schoolId));
+
+        if (!school.isActive()) {
+            throw new SubscriptionRuleViolationException("Access blocked: School account is inactive.");
+        }
+
+        Subscription subscription = getSubscriptionForAccess(schoolId, false);
+        if (subscription != null) {
+            updateLifecycleStatus(subscription);
+            if (subscription.getStatus() == SubscriptionStatus.SUSPENDED) {
+                throw new SubscriptionRuleViolationException("Access blocked: Subscription is suspended.");
+            }
+        }
+    }
+
     private SubscriptionAccessStatusDto defaultStatus(School school) {
         return SubscriptionAccessStatusDto.builder()
                 .subscriptionStatus(null)
@@ -220,6 +244,17 @@ public class SubscriptionAccessService {
                 .daysToExpiry(0L)
                 .expiryWarningLevel(ExpiryWarningLevel.NONE)
                 .schoolActive(school.isActive())
+                .build();
+    }
+
+    public SubscriptionAccessStatusDto getGlobalPermissiveStatus() {
+        return SubscriptionAccessStatusDto.builder()
+                .subscriptionStatus(SubscriptionStatus.ACTIVE) // Safe default for platform menus
+                .usagePercent(BigDecimal.ZERO.setScale(2, RoundingMode.HALF_UP))
+                .usageWarningLevel(UsageWarningLevel.NONE)
+                .daysToExpiry(Long.MAX_VALUE)
+                .expiryWarningLevel(ExpiryWarningLevel.NONE)
+                .schoolActive(true)
                 .build();
     }
 }

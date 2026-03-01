@@ -18,8 +18,7 @@ public class SubscriptionAccessGuardAspect {
 
     private final SubscriptionAccessService accessService;
 
-    @Before(
-            "execution(* com.school.backend.core..controller..*(..))" +
+    @Before("execution(* com.school.backend.core..controller..*(..))" +
             " || execution(* com.school.backend.fee..controller..*(..))" +
             " || execution(* com.school.backend.finance..controller..*(..))" +
             " || execution(* com.school.backend.transport..controller..*(..))" +
@@ -29,10 +28,14 @@ public class SubscriptionAccessGuardAspect {
         if (schoolId == null) {
             return;
         }
+
+        // Platform Admins/Support can bypass the lock for auditing/troubleshooting
         UserRole role = SecurityUtil.role();
-        if (role == UserRole.SUPER_ADMIN || role == UserRole.PLATFORM_ADMIN
-                || role == UserRole.SCHOOL_ADMIN || role == UserRole.TEACHER || role == UserRole.ACCOUNTANT) {
-            accessService.validateSchoolAccess(schoolId);
+        if (role == UserRole.SUPER_ADMIN || role == UserRole.PLATFORM_ADMIN) {
+            return;
         }
+
+        // For all other roles (SCHOOL_ADMIN, TEACHER, etc.), perform hard validation
+        accessService.ensureAccessAllowed(schoolId);
     }
 }

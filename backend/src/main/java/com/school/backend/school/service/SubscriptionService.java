@@ -355,6 +355,9 @@ public class SubscriptionService {
 
     @Transactional(readOnly = true)
     public AdminSubscriptionUsageDto getAdminUsageBySchool(Long schoolId) {
+        if (schoolId == null) {
+            throw new ResourceNotFoundException("School ID cannot be null");
+        }
         School school = schoolRepository.findById(schoolId)
                 .orElseThrow(() -> new ResourceNotFoundException("School not found: " + schoolId));
 
@@ -363,6 +366,9 @@ public class SubscriptionService {
 
     @Transactional(readOnly = true)
     public Map<Long, AdminSubscriptionUsageDto> getAdminUsageBulk(List<Long> schoolIds) {
+        if (schoolIds == null) {
+            return Map.of();
+        }
         List<School> schools = schoolRepository.findAllById(schoolIds);
         return schools.stream()
                 .collect(Collectors.toMap(School::getId, this::getAdminUsage));

@@ -12,56 +12,56 @@ const menu = [
     name: "Dashboard",
     path: "/",
     icon: "📊",
-    roles: ["SCHOOL_ADMIN", "TEACHER", "ACCOUNTANT"]
+    roles: ["SCHOOL_ADMIN", "TEACHER", "ACCOUNTANT", "SUPER_ADMIN", "PLATFORM_ADMIN"]
   },
   {
     name: "Academics",
     icon: "🎓",
-    roles: ["SCHOOL_ADMIN", "TEACHER", "ACCOUNTANT"],
+    roles: ["SCHOOL_ADMIN", "TEACHER", "ACCOUNTANT", "SUPER_ADMIN", "PLATFORM_ADMIN"],
     children: [
-      { name: "Students", path: "/students", icon: "👥", roles: ["SCHOOL_ADMIN", "TEACHER", "ACCOUNTANT"] },
-      { name: "Classes", path: "/classes", icon: "🏢", roles: ["SCHOOL_ADMIN", "TEACHER"] },
-      { name: "Subjects", path: "/subjects", icon: "📚", roles: ["SCHOOL_ADMIN", "TEACHER"] },
+      { name: "Students", path: "/students", icon: "👥", roles: ["SCHOOL_ADMIN", "TEACHER", "ACCOUNTANT", "SUPER_ADMIN", "PLATFORM_ADMIN"] },
+      { name: "Classes", path: "/classes", icon: "🏢", roles: ["SCHOOL_ADMIN", "TEACHER", "SUPER_ADMIN", "PLATFORM_ADMIN"] },
+      { name: "Subjects", path: "/subjects", icon: "📚", roles: ["SCHOOL_ADMIN", "TEACHER", "SUPER_ADMIN", "PLATFORM_ADMIN"] },
       { name: "Staff", path: "/staff", icon: "👨‍🏫", roles: ["SCHOOL_ADMIN"] },
       { name: "Teacher Assignments", path: "/staff/assignments", icon: "📝", roles: ["SCHOOL_ADMIN"] },
-      { name: "Attendance", path: "/attendance", icon: "📅", roles: ["SCHOOL_ADMIN", "TEACHER"] },
-      { name: "Exams", path: "/exams", icon: "✍️", roles: ["SCHOOL_ADMIN", "TEACHER"] },
-      { name: "Marksheet", path: "/marksheets", icon: "📜", roles: ["SCHOOL_ADMIN", "TEACHER"] },
+      { name: "Attendance", path: "/attendance", icon: "📅", roles: ["SCHOOL_ADMIN", "TEACHER", "SUPER_ADMIN", "PLATFORM_ADMIN"] },
+      { name: "Exams", path: "/exams", icon: "✍️", roles: ["SCHOOL_ADMIN", "TEACHER", "SUPER_ADMIN", "PLATFORM_ADMIN"] },
+      { name: "Marksheet", path: "/marksheets", icon: "📜", roles: ["SCHOOL_ADMIN", "TEACHER", "SUPER_ADMIN", "PLATFORM_ADMIN"] },
     ]
   },
   {
     name: "Finance",
     icon: "💵",
-    roles: ["SCHOOL_ADMIN", "ACCOUNTANT"],
+    roles: ["SCHOOL_ADMIN", "ACCOUNTANT", "SUPER_ADMIN", "PLATFORM_ADMIN"],
     children: [
-      { name: "Fee Summary", path: "/fees/summary", icon: "📋", roles: ["SCHOOL_ADMIN", "ACCOUNTANT"] },
-      { name: "Fee Structures", path: "/fees/structures", icon: "⚙️", roles: ["SCHOOL_ADMIN", "ACCOUNTANT"] },
-      { name: "Fee Discounts", path: "/fees/discounts", icon: "🏷️", roles: ["SCHOOL_ADMIN", "ACCOUNTANT"] },
-      { name: "Fee Collection", path: "/fees/collect", icon: "💰", roles: ["SCHOOL_ADMIN", "ACCOUNTANT"] },
-      { name: "Fee Defaulters", path: "/fees/defaulters", icon: "⚠️", roles: ["SCHOOL_ADMIN", "ACCOUNTANT"] },
-      { name: "Finance Overview", path: "/finance", icon: "📊", roles: ["SCHOOL_ADMIN", "ACCOUNTANT"] },
-      { name: "Expenses", path: "/finance/expenses", icon: "💸", roles: ["SCHOOL_ADMIN", "ACCOUNTANT"] },
-      { name: "Expense Heads", path: "/finance/expense-heads", icon: "🏷️", roles: ["SCHOOL_ADMIN", "ACCOUNTANT"] },
+      { name: "Fee Summary", path: "/fees/summary", icon: "📋", roles: ["SCHOOL_ADMIN", "ACCOUNTANT", "SUPER_ADMIN", "PLATFORM_ADMIN"] },
+      { name: "Fee Structures", path: "/fees/structures", icon: "⚙️", roles: ["SCHOOL_ADMIN", "ACCOUNTANT", "SUPER_ADMIN", "PLATFORM_ADMIN"] },
+      { name: "Fee Discounts", path: "/fees/discounts", icon: "🏷️", roles: ["SCHOOL_ADMIN", "ACCOUNTANT", "SUPER_ADMIN", "PLATFORM_ADMIN"] },
+      { name: "Fee Collection", path: "/fees/collect", icon: "💰", roles: ["SCHOOL_ADMIN", "ACCOUNTANT", "SUPER_ADMIN", "PLATFORM_ADMIN"] },
+      { name: "Fee Defaulters", path: "/fees/defaulters", icon: "⚠️", roles: ["SCHOOL_ADMIN", "ACCOUNTANT", "SUPER_ADMIN", "PLATFORM_ADMIN"] },
+      { name: "Finance Overview", path: "/finance", icon: "📊", roles: ["SCHOOL_ADMIN", "ACCOUNTANT", "SUPER_ADMIN", "PLATFORM_ADMIN"] },
+      { name: "Expenses", path: "/finance/expenses", icon: "💸", roles: ["SCHOOL_ADMIN", "ACCOUNTANT", "SUPER_ADMIN", "PLATFORM_ADMIN"] },
+      { name: "Expense Heads", path: "/finance/expense-heads", icon: "🏷️", roles: ["SCHOOL_ADMIN", "ACCOUNTANT", "SUPER_ADMIN", "PLATFORM_ADMIN"] },
     ]
   },
   {
     name: "Transport",
     path: "/transport",
     icon: "🚌",
-    roles: ["SCHOOL_ADMIN"]
+    roles: ["SCHOOL_ADMIN", "SUPER_ADMIN", "PLATFORM_ADMIN"]
   },
   {
     name: "Sessions",
     path: "/sessions",
     icon: "📅",
-    roles: ["SCHOOL_ADMIN"]
+    roles: ["SCHOOL_ADMIN", "SUPER_ADMIN", "PLATFORM_ADMIN"]
   },
   // SCHOOL_ADMIN only — flat link
   {
     name: "My Subscription",
     path: "/subscription",
     icon: "💳",
-    roles: ["SCHOOL_ADMIN"]
+    roles: ["SCHOOL_ADMIN", "SUPER_ADMIN", "PLATFORM_ADMIN"]
   },
 ];
 

@@ -1,26 +1,21 @@
 "use client";
 
 import { useAuth } from "@/context/AuthContext";
-import SuperAdminDashboard from "@/components/dashboards/SuperAdminDashboard";
 import SchoolAdminDashboard from "@/components/dashboards/SchoolAdminDashboard";
 import TeacherDashboard from "@/components/dashboards/TeacherDashboard";
 import AccountantDashboard from "@/components/dashboards/AccountantDashboard";
+import { useRouter } from "next/navigation";
+import { useEffect } from "react";
 
 /**
  * Main Dashboard Page with Role-Based Routing
  * 
  * This component automatically displays the correct dashboard
  * based on the logged-in user's role.
- * 
- * Supported Roles:
- * - SUPER_ADMIN / PLATFORM_ADMIN → SuperAdminDashboard
- * - SCHOOL_ADMIN → SchoolAdminDashboard
- * - TEACHER → TeacherDashboard
- * - ACCOUNTANT → AccountantDashboard
- * - PARENT → (Future: ParentDashboard)
  */
 export default function DashboardPage() {
   const { user, isLoading } = useAuth();
+  const router = useRouter();
 
   // Show loading state while auth is initializing
   if (isLoading) {
@@ -45,13 +40,13 @@ export default function DashboardPage() {
     );
   }
 
-  // Route to appropriate dashboard based on role
   const role = user.role?.toUpperCase();
 
   switch (role) {
     case "SUPER_ADMIN":
     case "PLATFORM_ADMIN":
-      return <SuperAdminDashboard />;
+      router.push("/platform/dashboard");
+      return null;
 
     case "SCHOOL_ADMIN":
       return <SchoolAdminDashboard />;
@@ -63,7 +58,6 @@ export default function DashboardPage() {
       return <AccountantDashboard />;
 
     case "PARENT":
-      // Future: Parent Dashboard
       return (
         <div className="text-center py-20 mx-auto px-6">
           <h1 className="text-lg font-semibold mb-4">Parent Portal</h1>
@@ -72,7 +66,6 @@ export default function DashboardPage() {
       );
 
     default:
-      // Fallback for unknown roles
       return (
         <div className="text-center py-20 mx-auto px-6">
           <h1 className="text-lg font-semibold mb-4">Welcome!</h1>

@@ -10,7 +10,7 @@ import { useEffect } from "react";
 import ErrorBoundary from "@/components/ErrorBoundary";
 
 import SuspensionOverlay from "@/components/subscription/SuspensionOverlay";
-import { useSubscription } from "@/context/SubscriptionProvider";
+import { useSubscription } from "@/context/SubscriptionContext";
 
 function LayoutContent({ children }: { children: React.ReactNode }) {
     const { user, isLoading: authLoading } = useAuth();

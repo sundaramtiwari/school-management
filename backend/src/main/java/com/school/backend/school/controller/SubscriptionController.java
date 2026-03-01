@@ -83,7 +83,15 @@ public class SubscriptionController {
     @GetMapping("/access-status")
     @PreAuthorize("isAuthenticated()")
     public ResponseEntity<SubscriptionAccessStatusDto> getAccessStatus() {
-        return ResponseEntity.ok(subscriptionAccessService.validateSchoolAccess(SecurityUtil.schoolId()));
+        Long schoolId = SecurityUtil.schoolId();
+
+        // If no school context and user is Platform/Super Admin, return permissive
+        // status
+        if (schoolId == null && (SecurityUtil.hasRole("SUPER_ADMIN") || SecurityUtil.hasRole("PLATFORM_ADMIN"))) {
+            return ResponseEntity.ok(subscriptionAccessService.getGlobalPermissiveStatus());
+        }
+
+        return ResponseEntity.ok(subscriptionAccessService.validateSchoolAccess(schoolId));
     }
 
     @PostMapping("/{subscriptionId}/suspend")

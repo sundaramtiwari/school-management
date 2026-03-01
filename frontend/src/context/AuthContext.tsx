@@ -38,7 +38,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     switch (role) {
       case "SUPER_ADMIN":
       case "PLATFORM_ADMIN":
-        router.push("/schools"); // Platform admins manage schools
+        router.push("/platform/dashboard");
         break;
       case "SCHOOL_ADMIN":
         router.push("/"); // Dashboard with school overview
